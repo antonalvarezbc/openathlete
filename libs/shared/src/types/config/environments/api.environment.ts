@@ -84,30 +84,27 @@ export const ApiEnvSchema = z
       .optional()
       .describe('Comma-separated list of allowed CORS origins'),
 
-    // Strava OAuth
+    // Strava OAuth (optional)
     STRAVA_CLIENT_ID: z
       .string()
-      .min(1, 'STRAVA_CLIENT_ID is required for Strava integration')
-      .describe('Strava OAuth client ID'),
+      .optional()
+      .describe('Strava OAuth client ID (optional)'),
 
     STRAVA_CLIENT_SECRET: z
       .string()
-      .min(1, 'STRAVA_CLIENT_SECRET is required for Strava integration')
-      .describe('Strava OAuth client secret'),
+      .optional()
+      .describe('Strava OAuth client secret (optional)'),
 
     STRAVA_REDIRECT_URI: z
       .string()
       .url('STRAVA_REDIRECT_URI must be a valid URL')
-      .min(1, 'STRAVA_REDIRECT_URI is required for Strava OAuth callback')
-      .describe('Strava OAuth redirect URI'),
+      .optional()
+      .describe('Strava OAuth redirect URI (optional)'),
 
     STRAVA_WEBHOOK_TOKEN: z
       .string()
-      .min(
-        1,
-        'STRAVA_WEBHOOK_TOKEN is required for Strava webhook verification',
-      )
-      .describe('Token for verifying Strava webhook requests'),
+      .optional()
+      .describe('Token for verifying Strava webhook requests (optional)'),
 
     // Garmin OAuth (optional)
     GARMIN_CLIENT_ID: z
@@ -165,59 +162,60 @@ export const ApiEnvSchema = z
     //   .optional()
     //   .describe('Coros OAuth redirect URI (optional)'),
 
-    // Polar OAuth
+    // Polar OAuth (optional)
     POLAR_CLIENT_ID: z
       .string()
-      .min(1, 'POLAR_CLIENT_ID is required for Polar integration')
-      .describe('Polar OAuth client ID'),
+      .optional()
+      .describe('Polar OAuth client ID (optional)'),
 
     POLAR_CLIENT_SECRET: z
       .string()
-      .min(1, 'POLAR_CLIENT_SECRET is required for Polar integration')
-      .describe('Polar OAuth client secret'),
+      .optional()
+      .describe('Polar OAuth client secret (optional)'),
 
     POLAR_REDIRECT_URI: z
       .string()
       .url('POLAR_REDIRECT_URI must be a valid URL')
-      .min(1, 'POLAR_REDIRECT_URI is required for Polar OAuth callback')
-      .describe('Polar OAuth redirect URI'),
+      .optional()
+      .describe('Polar OAuth redirect URI (optional)'),
 
     POLAR_WEBHOOK_URL: z
       .string()
       .url('POLAR_WEBHOOK_URL must be a valid URL')
-      .min(1, 'POLAR_WEBHOOK_URL is required for Polar webhook configuration')
-      .describe('URL where Polar webhooks will be received'),
+      .optional()
+      .describe('URL where Polar webhooks will be received (optional)'),
 
     POLAR_WEBHOOK_SECRET_KEY: z
       .string()
-      .min(
-        1,
-        'POLAR_WEBHOOK_SECRET_KEY is required for Polar webhook verification',
-      )
-      .describe('Secret key for verifying Polar webhook requests'),
+      .optional()
+      .describe(
+        'Secret key for verifying Polar webhook requests (optional)',
+      ),
 
-    // Email service (Brevo)
+    // Email service (Brevo, optional)
     BREVO_API_KEY: z
       .string()
-      .min(1, 'BREVO_API_KEY is required for sending emails')
-      .describe('Brevo (formerly Sendinblue) API key for email service'),
+      .optional()
+      .describe(
+        'Brevo (formerly Sendinblue) API key for email service (optional)',
+      ),
 
     BREVO_FROM_EMAIL: z
       .string()
       .email('BREVO_FROM_EMAIL must be a valid email address')
-      .min(1, 'BREVO_FROM_EMAIL is required for sending emails')
-      .describe('Default sender email address for Brevo emails'),
+      .optional()
+      .describe('Default sender email address for Brevo emails (optional)'),
 
-    // AI Services
+    // AI Services (optional)
     OPENAI_API_KEY: z
       .string()
-      .min(1, 'OPENAI_API_KEY is required for AI features')
-      .describe('OpenAI API key for AI-powered features'),
+      .optional()
+      .describe('OpenAI API key for AI-powered features (optional)'),
 
     GOOGLE_GENERATIVE_AI_API_KEY: z
       .string()
-      .min(1, 'GOOGLE_GENERATIVE_AI_API_KEY is required for Google AI features')
-      .describe('Google Generative AI API key'),
+      .optional()
+      .describe('Google Generative AI API key (optional)'),
 
     // AI Model Configuration (optional, uses defaults if not provided)
     AI_MODEL_EVENT_GENERATION: z
