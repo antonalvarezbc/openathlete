@@ -261,7 +261,7 @@ export function AthleteDashboardHeader({
                           <span
                             className={`text-lg font-bold ${textColors[index % textColors.length]}`}
                           >
-                            {metric.value}
+                            {Number(metric.value.toFixed(2))}
                           </span>
                           <span className="text-[10px] font-normal text-muted-foreground">
                             {unit}

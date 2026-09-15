@@ -16,6 +16,8 @@ export const ApiEnvSchema = z
       .default('false')
       .transform((value) => value === 'true'),
 
+    GARMIN_UNOFFICIAL_DIRECTORY: z.string().optional(),
+
     // Core application configuration
     ENV: z
       .nativeEnum(ENV, {

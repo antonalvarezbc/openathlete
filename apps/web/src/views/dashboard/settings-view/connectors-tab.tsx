@@ -45,6 +45,7 @@ import {
   getProviderSyncCapabilities,
 } from '@openathlete/shared';
 
+import { ManualGarminCard } from './manual-garmin-card';
 import { SettingsSection } from './settings-section';
 
 const SUPPORTED_PROVIDERS: ConnectorProvider[] = [
@@ -214,6 +215,7 @@ export function ConnectorsTab() {
 
   return (
     <div className="space-y-6">
+      <ManualGarminCard />
       <SettingsSection
         title={m.connectors()}
         description={m.connect_activity_tracking_services()}

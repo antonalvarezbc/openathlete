@@ -981,5 +981,15 @@
   "no_people_available_for_conversation": "No people available to start a conversation",
   "edited": "Edited",
   "login_invalid_credentials": "Email or password is incorrect. If you have not registered on this server, create an account first.",
-  "login_request_failed": "Unable to sign in. Check that the server is running and try again."
+  "login_request_failed": "Unable to sign in. Check that the server is running and try again.",
+  "garmin_manual_title": "Garmin · manual sync",
+  "garmin_manual_description": "Activities and recovery for athlete {athleteId}. Garmin is contacted only when you press the button.",
+  "garmin_manual_button": "Update from Garmin",
+  "garmin_manual_running": "Updating…",
+  "garmin_manual_last_success": "Last successful update: {date}",
+  "garmin_manual_never": "None yet",
+  "garmin_manual_result": "Last result: {imported} new activities, {skipped} skipped, {metrics} metrics saved.",
+  "garmin_manual_warnings": "Some data was unavailable or skipped. See the connector documentation for import limits.",
+  "garmin_manual_failed": "The update could not be completed. Check the status before trying again.",
+  "garmin_manual_status_failed": "Could not check the manual Garmin connection."
 }

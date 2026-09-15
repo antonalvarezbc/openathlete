@@ -49,7 +49,8 @@ export function MetricCard({
         {metric ? (
           <>
             <div className="text-2xl font-bold">
-              {metric.value} <span className="text-sm font-normal">{unit}</span>
+              {Number(metric.value.toFixed(2))}{' '}
+              <span className="text-sm font-normal">{unit}</span>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {format(new Date(metric.date), 'PPP')}

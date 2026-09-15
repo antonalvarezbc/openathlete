@@ -981,5 +981,15 @@
   "no_people_available_for_conversation": "Aucune personne disponible pour démarrer une conversation",
   "edited": "édité",
   "login_invalid_credentials": "Adresse e-mail ou mot de passe incorrect. Si vous ne vous êtes pas inscrit sur ce serveur, créez d’abord un compte.",
-  "login_request_failed": "Connexion impossible. Vérifiez que le serveur fonctionne et réessayez."
+  "login_request_failed": "Connexion impossible. Vérifiez que le serveur fonctionne et réessayez.",
+  "garmin_manual_title": "Garmin · synchronisation manuelle",
+  "garmin_manual_description": "Activités et récupération de l’athlète {athleteId}. Garmin est consulté uniquement lorsque vous appuyez sur le bouton.",
+  "garmin_manual_button": "Actualiser depuis Garmin",
+  "garmin_manual_running": "Actualisation…",
+  "garmin_manual_last_success": "Dernière actualisation réussie : {date}",
+  "garmin_manual_never": "Aucune",
+  "garmin_manual_result": "Dernier résultat : {imported} nouvelles activités, {skipped} ignorées, {metrics} mesures enregistrées.",
+  "garmin_manual_warnings": "Certaines données sont indisponibles ou ignorées. Consultez la documentation du connecteur pour les limites d’import.",
+  "garmin_manual_failed": "L’actualisation a échoué. Vérifiez l’état avant de réessayer.",
+  "garmin_manual_status_failed": "Impossible de vérifier la connexion Garmin manuelle."
 }

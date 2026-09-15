@@ -107,6 +107,9 @@ export function MetricChart({
             <LineChart data={chartData}>
               <XAxis dataKey="date" tick={{ fontSize: 12 }} tickMargin={10} />
               <YAxis
+                tickFormatter={(value: number) =>
+                  String(Number(value.toFixed(2)))
+                }
                 tick={{ fontSize: 12 }}
                 tickMargin={10}
                 label={{
@@ -121,7 +124,10 @@ export function MetricChart({
                   <ChartTooltipContent
                     formatter={(value) => (
                       <>
-                        {value} {metricUnitMap[selectedType]}
+                        {typeof value === 'number'
+                          ? Number(value.toFixed(2))
+                          : value}{' '}
+                        {metricUnitMap[selectedType]}
                       </>
                     )}
                   />
