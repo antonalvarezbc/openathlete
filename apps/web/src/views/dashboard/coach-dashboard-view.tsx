@@ -74,8 +74,8 @@ export function CoachDashboardView() {
   const { data, isLoading } = useCoachDashboardQuery(start, end);
 
   return (
-    <div className="px-0 pt-6 h-full flex flex-col min-h-0">
-      <div className="mb-6 px-6 flex items-start justify-between">
+    <div className="px-0 pt-6 h-full flex flex-col min-h-0 min-w-0">
+      <div className="mb-6 px-6 flex flex-wrap gap-3 items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold">{m.coach_dashboard()}</h1>
           <p className="text-muted-foreground">{m.coach_dashboard_title()}</p>
@@ -95,9 +95,9 @@ export function CoachDashboardView() {
         </Select>
       </div>
 
-      <div className="border-t rounded-none bg-background flex-1 min-h-0 flex flex-col relative">
+      <div className="border-t rounded-none bg-background flex-1 min-h-0 min-w-0 flex flex-col relative">
         <div className="absolute left-[239px] top-0 bottom-0 w-4 pointer-events-none bg-gradient-to-r from-black/6 to-transparent dark:from-white/10 z-[45] border-l" />
-        <div className="flex-1 min-h-0 overflow-x-auto relative">
+        <div className="flex-1 min-h-0 min-w-0 overflow-x-auto relative">
           <div className="relative min-w-[1560px] flex flex-col h-full">
             <div className="sticky top-0 z-[25] bg-background grid grid-cols-[240px_200px_140px_140px_140px_140px_140px_140px_140px_140px] border-b shrink-0">
               <div className="sticky left-0 z-[35] bg-background border-r pl-4 pr-2 h-10 flex items-center font-medium">

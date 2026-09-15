@@ -5,6 +5,7 @@ import ical, {
   ICalEvent,
   ICalEventData,
 } from 'ical-generator';
+import { randomUUID } from 'node:crypto';
 
 import {
   BadRequestException,
@@ -294,7 +295,10 @@ export class EventService {
         name,
         type,
         [type.toLocaleLowerCase()]: {
-          create: rest,
+          create:
+            type === EVENT_TYPE.ACTIVITY
+              ? { ...rest, externalId: `manual:${randomUUID()}` }
+              : rest,
         },
       },
       include: EVENT_INCLUDES,

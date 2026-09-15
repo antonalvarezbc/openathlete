@@ -165,9 +165,9 @@ function LayoutContent({ children }: P) {
           <MobileLayout>{children}</MobileLayout>
         ) : (
           <>
-            <div className="flex w-full">
+            <div className="flex min-w-0 flex-1">
               <TemplateLibrarySidebar />
-              <SidebarInset className="flex-1">{children}</SidebarInset>
+              <SidebarInset className="min-w-0 flex-1">{children}</SidebarInset>
             </div>
             <ChatBubble />
             <ChatWindow />

@@ -45,8 +45,15 @@ export const noteEventSchema = baseEventSchema.extend({
 export const activityEventSchema = baseEventSchema.extend({
   type: z.literal(EVENT_TYPE.ACTIVITY),
   sport: z.nativeEnum(SPORT_TYPE),
+  // Manual activity summaries must supply the metrics required by persistence.
+  // Units match imported activities: meters, seconds and meters per second.
+  distance: z.number().finite().nonnegative(),
+  elevationGain: z.number().finite().nonnegative(),
+  movingTime: z.number().int().nonnegative(),
+  averageSpeed: z.number().finite().nonnegative(),
+  maxSpeed: z.number().finite().nonnegative(),
   description: z.string().optional(),
-  rpe: z.number().optional().nullable(),
+  rpe: z.number().min(0).max(1).optional().nullable(),
 });
 
 export const createEventDtoSchema = z.discriminatedUnion('type', [
