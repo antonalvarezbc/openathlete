@@ -1,3 +1,4 @@
+import { useCurrentSubscription } from '@/api/subscription';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useUserRoles } from '@/contexts/auth';
 import { SubscriptionSettingsPage } from '@/pages/dashboard/settings/subscription';
@@ -17,6 +18,9 @@ import { TrainingZonesTab } from './training-zones-tab';
 
 export function SettingsView() {
   const roles = useUserRoles();
+  const { data: subscription } = useCurrentSubscription();
+  const billingEnabled =
+    !!subscription && !subscription.selfHosted && !isPaymentDisabled();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(tabParam || 'connectors');
@@ -53,7 +57,7 @@ export function SettingsView() {
               <TabsTrigger value="coaches">{m.coaches()}</TabsTrigger>
             )}
             <TabsTrigger value="invitations">{m.invitations()}</TabsTrigger>
-            {!isPaymentDisabled() && (
+            {billingEnabled && (
               <TabsTrigger value="subscription">{m.subscription()}</TabsTrigger>
             )}
             <TabsTrigger value="contribute">{m.contribute()}</TabsTrigger>
@@ -80,7 +84,7 @@ export function SettingsView() {
         <TabsContent value="invitations" className="mt-6">
           <InvitationsTab />
         </TabsContent>
-        {!isPaymentDisabled() && (
+        {billingEnabled && (
           <TabsContent value="subscription" className="mt-6">
             <SubscriptionSettingsPage />
           </TabsContent>

@@ -65,7 +65,8 @@ export function NavUser() {
 
   const fullName = `${user.firstName || ''} ${user.lastName || ''}`;
   const currentPlan = subscription?.plan as SubscriptionPlan | undefined;
-  const planName = currentPlan ? planNameMap[currentPlan] : null;
+  const planName =
+    currentPlan && !subscription?.selfHosted ? planNameMap[currentPlan] : null;
   return (
     <SidebarMenu>
       <SidebarMenuItem>

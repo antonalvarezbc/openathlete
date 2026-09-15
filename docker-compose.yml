@@ -48,6 +48,7 @@ services:
     environment:
       # Core configuration
       ENV: ${ENV:-development}
+      SELF_HOSTED: ${SELF_HOSTED:-false}
       NODE_ENV: ${NODE_ENV:-production}
       PORT: ${PORT:-3000}
       

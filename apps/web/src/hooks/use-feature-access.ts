@@ -30,6 +30,13 @@ export function useFeatureAccess(featureName: FeatureName) {
       return false;
     }
 
+    if (subscription.selfHosted) {
+      return (
+        featureName === FeatureName.AI_GENERATION ||
+        featureName === FeatureName.AI_RPE_QUESTIONS
+      );
+    }
+
     // Check if subscription is active (active or trialing)
     if (!isSubscriptionActive(subscription.status as SubscriptionStatus)) {
       return false;
@@ -64,6 +71,8 @@ export function useAthleteLimit() {
     if (!subscription) {
       return 3; // Default free plan limit
     }
+
+    if (subscription.selfHosted) return null;
 
     // If subscription is not active, return FREE plan limits
     if (!isSubscriptionActive(subscription.status as SubscriptionStatus)) {

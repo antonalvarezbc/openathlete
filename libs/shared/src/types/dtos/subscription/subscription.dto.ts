@@ -9,6 +9,7 @@ import {
  * Current subscription DTO
  */
 export const currentSubscriptionDtoSchema = z.object({
+  selfHosted: z.boolean().optional(),
   subscriptionId: z.number(),
   plan: subscriptionPlanSchema,
   status: subscriptionStatusSchema,

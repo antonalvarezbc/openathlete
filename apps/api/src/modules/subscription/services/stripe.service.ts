@@ -1,6 +1,10 @@
 import Stripe from 'stripe';
 
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { SubscriptionPlan } from '@openathlete/shared';
@@ -9,18 +13,31 @@ import { ApiEnvSchemaType } from '@openathlete/shared';
 @Injectable()
 export class StripeService {
   private readonly logger = new Logger(StripeService.name);
-  private readonly stripe: Stripe;
+  private readonly client?: Stripe;
+
+  private get stripe(): Stripe {
+    if (!this.client) {
+      throw new ServiceUnavailableException(
+        'Billing is disabled in self-hosted mode',
+      );
+    }
+    return this.client;
+  }
   private readonly priceIds: Record<SubscriptionPlan, string>;
 
   constructor(
     private readonly configService: ConfigService<ApiEnvSchemaType, true>,
   ) {
+    if (this.configService.get('SELF_HOSTED') === true) {
+      this.priceIds = {} as Record<SubscriptionPlan, string>;
+      return;
+    }
     const secretKey = this.configService.get('STRIPE_SECRET_KEY');
     if (!secretKey) {
       throw new Error('STRIPE_SECRET_KEY is not set');
     }
 
-    this.stripe = new Stripe(secretKey, {
+    this.client = new Stripe(secretKey, {
       apiVersion: '2025-11-17.clover',
     });
 

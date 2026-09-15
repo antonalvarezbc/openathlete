@@ -76,6 +76,12 @@ function isSubscriptionActive(status: SubscriptionStatus): boolean {
 }
 
 export function SubscriptionSettingsPage() {
+  const { data: subscription } = useCurrentSubscription();
+  if (!subscription || subscription.selfHosted) return null;
+  return <BillingSettingsPage />;
+}
+
+function BillingSettingsPage() {
   const { data: subscription, isLoading } = useCurrentSubscription();
   const { data: invoices } = useInvoices();
   const cancelMutation = useCancelSubscription();

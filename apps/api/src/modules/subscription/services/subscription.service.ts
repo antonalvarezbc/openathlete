@@ -6,6 +6,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 import {
   SubscriptionPlan as PrismaSubscriptionPlan,
@@ -13,6 +14,7 @@ import {
   SubscriptionStatus,
 } from '@openathlete/database';
 import {
+  ApiEnvSchemaType,
   SubscriptionPlan,
   getMaxAthletes,
   planHasAIFeatures,
@@ -35,6 +37,7 @@ export class SubscriptionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly stripeService: StripeService,
+    private readonly configService: ConfigService<ApiEnvSchemaType, true>,
   ) {}
 
   /**
@@ -372,6 +375,10 @@ export class SubscriptionService {
    * Get max athletes for a user's plan
    */
   async getMaxAthletesForUser(userId: number): Promise<number | null> {
+    if (this.configService.get('SELF_HOSTED') === true) {
+      await this.assertUserExistsForSubscription(userId);
+      return null;
+    }
     const subscription = await this.getOrCreateSubscription(userId);
 
     if (!this.isSubscriptionActive(subscription.status)) {
@@ -409,6 +416,10 @@ export class SubscriptionService {
    * Check if user has access to AI features
    */
   async hasAIFeaturesAccess(userId: number): Promise<boolean> {
+    if (this.configService.get('SELF_HOSTED') === true) {
+      await this.assertUserExistsForSubscription(userId);
+      return true;
+    }
     const subscription = await this.getOrCreateSubscription(userId);
 
     if (!this.isSubscriptionActive(subscription.status)) {

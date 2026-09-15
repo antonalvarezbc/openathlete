@@ -11,6 +11,11 @@ import { NODE_ENV } from '../node-environment.enum';
  */
 export const ApiEnvSchema = z
   .object({
+    SELF_HOSTED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
+
     // Core application configuration
     ENV: z
       .nativeEnum(ENV, {
@@ -188,9 +193,7 @@ export const ApiEnvSchema = z
     POLAR_WEBHOOK_SECRET_KEY: z
       .string()
       .optional()
-      .describe(
-        'Secret key for verifying Polar webhook requests (optional)',
-      ),
+      .describe('Secret key for verifying Polar webhook requests (optional)'),
 
     // Email service (Brevo, optional)
     BREVO_API_KEY: z
