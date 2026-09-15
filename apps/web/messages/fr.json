@@ -979,5 +979,7 @@
   "new_conversation": "Nouvelle conversation",
   "select_people_to_talk_with": "Sélectionnez les personnes avec qui vous souhaitez dialoguer",
   "no_people_available_for_conversation": "Aucune personne disponible pour démarrer une conversation",
-  "edited": "édité"
+  "edited": "édité",
+  "login_invalid_credentials": "Adresse e-mail ou mot de passe incorrect. Si vous ne vous êtes pas inscrit sur ce serveur, créez d’abord un compte.",
+  "login_request_failed": "Connexion impossible. Vérifiez que le serveur fonctionne et réessayez."
 }
