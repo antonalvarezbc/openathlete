@@ -1,0 +1,38 @@
+{
+  "plan": {
+    "name": "PRUEBA JSON · dos semanas",
+    "description": "Datos ficticios para comprobar la importación. No es una prescripción para un atleta real.",
+    "goal": "Verificar fechas, sesiones y revisión del entrenador",
+    "sportType": "RUNNING",
+    "distance": 10000,
+    "duration": 2
+  },
+  "cycles": [{
+    "name": "Prueba de base",
+    "description": "Una sesión por semana para facilitar la comprobación.",
+    "phase": "BASE",
+    "weeks": [
+      {"weekNumber": 1, "theme": "Comprobar domingo", "sessions": [{
+        "dayOfWeek": 0,
+        "name": "PRUEBA JSON · domingo 1",
+        "sport": "RUNNING",
+        "description": "Sesión ficticia de 30 minutos.",
+        "goalDuration": 1800,
+        "goalDistance": 4000,
+        "goalElevationGain": 100,
+        "goalRpe": 3,
+        "workout": {"steps": [{"stepType": "STEADY", "durationType": "TIME", "durationValue": 1800}]}
+      }]},
+      {"weekNumber": 2, "theme": "Segunda semana", "sessions": [{
+        "dayOfWeek": 0,
+        "name": "PRUEBA JSON · domingo 2",
+        "sport": "RUNNING",
+        "description": "Segunda sesión ficticia de 40 minutos.",
+        "goalDuration": 2400,
+        "goalDistance": 5000,
+        "goalElevationGain": 200,
+        "goalRpe": 4
+      }]}
+    ]
+  }]
+}

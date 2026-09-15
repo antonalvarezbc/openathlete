@@ -14,6 +14,7 @@ import { ContributeTab } from './contribute-tab';
 import { EquipmentTab } from './equipment-tab';
 import { InvitationsTab } from './invitations-tab';
 import { ProfileTab } from './profile-tab';
+import { TrainingPlanTab } from './training-plan-tab';
 import { TrainingZonesTab } from './training-zones-tab';
 
 export function SettingsView() {
@@ -46,6 +47,9 @@ export function SettingsView() {
           <TabsList className="w-max md:w-auto flex-nowrap md:flex-wrap min-w-full md:min-w-0">
             <TabsTrigger value="connectors">{m.connectors()}</TabsTrigger>
             <TabsTrigger value="profile">{m.profile()}</TabsTrigger>
+            <TabsTrigger value="training_plan">
+              {m.training_plan_settings()}
+            </TabsTrigger>
             <TabsTrigger value="equipment">{m.equipment()}</TabsTrigger>
             <TabsTrigger value="training_zones">
               {m.training_zones()}
@@ -68,6 +72,9 @@ export function SettingsView() {
         </TabsContent>
         <TabsContent value="profile" className="mt-6">
           <ProfileTab />
+        </TabsContent>
+        <TabsContent value="training_plan" className="mt-6">
+          <TrainingPlanTab />
         </TabsContent>
         <TabsContent value="equipment" className="mt-6">
           <EquipmentTab />

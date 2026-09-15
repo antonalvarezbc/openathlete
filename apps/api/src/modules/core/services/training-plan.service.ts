@@ -1,12 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 
-import { PlanStatus } from '@openathlete/database';
+import { PlanStatus, Prisma } from '@openathlete/database';
 import {
   EVENT_TYPE,
+  ImportPlanBodyDto,
   SEOPlanData,
-  WorkoutStepDto,
+  buildPlanSchedule,
   createWorkoutSchema,
   mapWorkoutDtoToPrisma,
+  trainingPlanImportSchema,
 } from '@openathlete/shared';
 
 import { AuthUser } from '../../auth/decorators/user.decorator';
@@ -16,217 +23,239 @@ import { PrismaService } from '../../prisma/services/prisma.service';
 export class TrainingPlanService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async authorize(
+    user: AuthUser,
+    athleteId: number,
+    db: Prisma.TransactionClient = this.prisma,
+  ) {
+    const athlete = await db.athlete.findFirst({
+      where: {
+        athleteId,
+        OR: [
+          { userId: user.userId },
+          { coachAthletes: { some: { userId: user.userId } } },
+        ],
+      },
+    });
+    if (!athlete)
+      throw new ForbiddenException('You cannot manage this athlete');
+  }
+
+  async listPlans(user: AuthUser, athleteId: number) {
+    await this.authorize(user, athleteId);
+    return this.prisma.trainingPlan.findMany({
+      where: { athleteId },
+      orderBy: { startDate: 'desc' },
+      select: {
+        trainingPlanId: true,
+        name: true,
+        startDate: true,
+        endDate: true,
+      },
+    });
+  }
+
   async importSeoPlan(
     user: AuthUser,
-    planData: SEOPlanData,
+    input: SEOPlanData,
     startDate: Date | string,
+    options: Partial<ImportPlanBodyDto> = {},
+    token?: string,
   ) {
-    const athleteId = user?.athlete?.athleteId;
-
-    if (!athleteId) {
-      throw new Error('Athlete ID is required');
+    const parsed = trainingPlanImportSchema.safeParse(input);
+    if (!parsed.success) throw new BadRequestException(parsed.error.issues);
+    const planData = parsed.data;
+    const athleteId = options.athleteId ?? user.athlete?.athleteId;
+    if (!athleteId) throw new BadRequestException('Athlete ID is required');
+    let schedule: ReturnType<typeof buildPlanSchedule>;
+    try {
+      schedule = buildPlanSchedule(
+        planData,
+        startDate,
+        options.timeZone ?? 'UTC',
+      );
+    } catch {
+      throw new BadRequestException('Invalid start date or time zone');
     }
-
-    // Convert startDate to Date if it's a string (from JSON)
-    const startDateObj =
-      startDate instanceof Date ? startDate : new Date(startDate);
-
-    // Validate startDate
-    if (!startDateObj || isNaN(startDateObj.getTime())) {
-      throw new Error('Invalid start date provided');
-    }
-
-    // Calculate end date based on plan duration (in weeks)
-    const endDate = new Date(startDateObj);
-    endDate.setDate(endDate.getDate() + planData.plan.duration * 7);
-
-    // Create TrainingPlan
-    const trainingPlan = await this.prisma.trainingPlan.create({
-      data: {
-        athleteId,
-        name: planData.plan.name,
-        description: planData.plan.description,
-        goal: planData.plan.goal,
-        startDate: startDateObj,
-        endDate,
-        status: PlanStatus.DRAFT,
-      },
-    });
-
-    // Calculate dates for each week
-    let currentWeekStart = new Date(startDateObj);
-    const weekDates: Array<{ start: Date; end: Date }> = [];
-
-    for (let i = 0; i < planData.plan.duration; i++) {
-      const weekEnd = new Date(currentWeekStart);
-      weekEnd.setDate(weekEnd.getDate() + 6);
-      weekEnd.setHours(23, 59, 59, 999);
-
-      weekDates.push({
-        start: new Date(currentWeekStart),
-        end: weekEnd,
-      });
-
-      currentWeekStart = new Date(weekEnd);
-      currentWeekStart.setDate(currentWeekStart.getDate() + 1);
-      currentWeekStart.setHours(0, 0, 0, 0);
-    }
-
-    // Create cycles and weeks
-    let weekIndex = 0;
-    for (const cycleData of planData.cycles) {
-      // Calculate cycle dates based on its weeks
-      const cycleStartWeek = weekIndex;
-      const cycleEndWeek = weekIndex + cycleData.weeks.length - 1;
-
-      if (cycleEndWeek >= weekDates.length) {
-        throw new Error('Cycle weeks exceed plan duration');
-      }
-
-      const cycleStartDate = weekDates[cycleStartWeek].start;
-      const cycleEndDate = weekDates[cycleEndWeek].end;
-
-      // Create Cycle
-      const cycle = await this.prisma.cycle.create({
-        data: {
-          athleteId,
-          trainingPlanId: trainingPlan.trainingPlanId,
-          name: cycleData.name,
-          description: cycleData.description,
-          phase: cycleData.phase,
-          color: cycleData.color || null,
-          startDate: cycleStartDate,
-          endDate: cycleEndDate,
-        },
-      });
-
-      // Create TrainingWeeks and Events
-      for (const weekData of cycleData.weeks) {
-        if (weekIndex >= weekDates.length) {
-          break;
-        }
-
-        const weekDatesData = weekDates[weekIndex];
-
-        // Create TrainingWeek
-        const trainingWeek = await this.prisma.trainingWeek.create({
-          data: {
-            cycleId: cycle.cycleId,
-            weekNumber: weekData.weekNumber,
-            startDate: weekDatesData.start,
-            endDate: weekDatesData.end,
-            theme: weekData.theme || null,
-          },
-        });
-
-        // Create Events for each session
-        for (const session of weekData.sessions) {
-          // Calculate session date based on dayOfWeek
-          const sessionDate = new Date(weekDatesData.start);
-          const dayOffset = session.dayOfWeek - sessionDate.getDay();
-          sessionDate.setDate(sessionDate.getDate() + dayOffset);
-          sessionDate.setHours(9, 0, 0, 0); // Default to 9 AM
-
-          // Calculate end date (default to 1 hour duration if not specified)
-          const sessionEndDate = new Date(sessionDate);
-          if (session.goalDuration) {
-            sessionEndDate.setTime(
-              sessionDate.getTime() + session.goalDuration * 1000,
-            );
-          } else {
-            sessionEndDate.setHours(sessionDate.getHours() + 1);
+    // Validate every workout before writing. Invalid steps must never be silently discarded.
+    for (const cycle of planData.cycles)
+      for (const week of cycle.weeks)
+        for (const session of week.sessions) {
+          if (session.workout) {
+            const workout = createWorkoutSchema.safeParse(session.workout);
+            if (!workout.success)
+              throw new BadRequestException(workout.error.issues);
           }
-
-          // Create event directly with Prisma to link it to training week
-          const createdEvent = await this.prisma.event.create({
-            data: {
-              athleteId,
-              startDate: sessionDate,
-              endDate: sessionEndDate,
-              name: session.name,
-              type: EVENT_TYPE.TRAINING,
-              trainingWeekId: trainingWeek.trainingWeekId,
-              training: {
-                create: {
-                  sport: session.sport,
-                  description: session.description,
-                  goalDistance: session.goalDistance || null,
-                  goalDuration: session.goalDuration || null,
-                  goalElevationGain: session.goalElevationGain || null,
-                  goalRpe:
-                    session.goalRpe !== null && session.goalRpe !== undefined
-                      ? session.goalRpe / 10
-                      : null,
-                },
+        }
+    try {
+      return await this.prisma.$transaction(
+        async (tx) => {
+          await this.authorize(user, athleteId, tx);
+          if (token) {
+            const claimed = await tx.temporaryTrainingPlan.updateMany({
+              where: {
+                id: token,
+                importedAt: null,
+                expiresAt: { gt: new Date() },
               },
-            },
-            include: {
-              training: true,
+              data: { importedAt: new Date() },
+            });
+            if (claimed.count !== 1)
+              throw new ConflictException('Plan expired or already imported');
+          }
+          const data = {
+            athleteId,
+            name: planData.plan.name,
+            description: planData.plan.description,
+            goal: planData.plan.goal,
+            startDate: schedule.startDate,
+            endDate: schedule.endDate,
+            status: PlanStatus.ACTIVE,
+          };
+          const duplicate = await tx.trainingPlan.findFirst({
+            where: {
+              athleteId,
+              name: data.name,
+              startDate: data.startDate,
+              ...(options.replacePlanId
+                ? { trainingPlanId: { not: options.replacePlanId } }
+                : {}),
             },
           });
-
-          // Create workout if provided
-          if (session.workout && createdEvent.training) {
-            const parsed = createWorkoutSchema.safeParse({
-              steps: session.workout.steps || [],
+          if (duplicate)
+            throw new ConflictException(
+              'This plan already exists on this date. Select it explicitly to replace it.',
+            );
+          if (options.replacePlanId) {
+            const previous = await tx.trainingPlan.findFirst({
+              where: { trainingPlanId: options.replacePlanId, athleteId },
             });
-            if (parsed.success) {
-              const stepsForCreate = parsed.data.steps;
-              const workoutData = mapWorkoutDtoToPrisma({
-                steps: stepsForCreate,
-              });
-
-              // Ensure all steps have orderIndex (safety check)
-              if (workoutData.steps?.create) {
-                workoutData.steps.create = workoutData.steps.create.map(
-                  (step, idx) => {
-                    const updatedStep = {
-                      ...step,
-                      orderIndex: step.orderIndex ?? idx,
-                    };
-                    // Also ensure childSteps in repeatBlock have orderIndex
-                    if (updatedStep.repeatBlock?.create?.childSteps?.create) {
-                      updatedStep.repeatBlock.create.childSteps.create =
-                        updatedStep.repeatBlock.create.childSteps.create.map(
-                          (child: WorkoutStepDto, childIdx: number) => ({
-                            ...child,
-                            orderIndex: child.orderIndex ?? childIdx,
-                          }),
-                        );
-                    }
-                    return updatedStep;
+            if (!previous)
+              throw new ForbiddenException('You cannot replace this plan');
+            const events = await tx.event.findMany({
+              where: {
+                trainingWeek: {
+                  cycle: { trainingPlanId: previous.trainingPlanId },
+                },
+              },
+              include: {
+                templates: true,
+                training: {
+                  include: {
+                    workout: { include: { providerWorkoutExports: true } },
                   },
-                );
-              }
-
-              await this.prisma.workout.create({
+                },
+              },
+            });
+            // Preserve history, comments, completed activities and exported sessions.
+            if (
+              previous.startDate <= new Date() ||
+              events.some(
+                (event) =>
+                  event.startDate <= new Date() ||
+                  event.type !== EVENT_TYPE.TRAINING ||
+                  !event.training ||
+                  event.training.relatedActivityId ||
+                  event.training.messageThreadId ||
+                  event.templates.length ||
+                  event.training.workout?.providerWorkoutExports.length,
+              )
+            ) {
+              throw new ConflictException(
+                'Only future plans without activities, comments, templates or exports can be replaced',
+              );
+            }
+            const eventIds = events.map((event) => event.eventId);
+            await tx.eventTraining.deleteMany({
+              where: { eventId: { in: eventIds } },
+            });
+            await tx.event.deleteMany({ where: { eventId: { in: eventIds } } });
+            await tx.cycle.deleteMany({
+              where: { trainingPlanId: previous.trainingPlanId },
+            });
+          }
+          const plan = options.replacePlanId
+            ? await tx.trainingPlan.update({
+                where: { trainingPlanId: options.replacePlanId },
+                data,
+              })
+            : await tx.trainingPlan.create({ data });
+          for (const cycle of schedule.cycles) {
+            const savedCycle = await tx.cycle.create({
+              data: {
+                athleteId,
+                trainingPlanId: plan.trainingPlanId,
+                name: cycle.name,
+                description: cycle.description,
+                phase: cycle.phase,
+                color: cycle.color ?? null,
+                startDate: cycle.startDate,
+                endDate: cycle.endDate,
+              },
+            });
+            for (const week of cycle.weeks) {
+              const savedWeek = await tx.trainingWeek.create({
                 data: {
-                  eventTrainingId: createdEvent.training.eventTrainingId,
-                  ...workoutData,
+                  cycleId: savedCycle.cycleId,
+                  weekNumber: week.weekNumber,
+                  theme: week.theme ?? null,
+                  startDate: week.startDate,
+                  endDate: week.endDate,
                 },
               });
+              for (const session of week.sessions) {
+                const event = await tx.event.create({
+                  data: {
+                    athleteId,
+                    name: session.name,
+                    type: EVENT_TYPE.TRAINING,
+                    trainingWeekId: savedWeek.trainingWeekId,
+                    startDate: session.startDate,
+                    endDate: session.endDate,
+                    training: {
+                      create: {
+                        sport: session.sport,
+                        description: session.description,
+                        goalDistance: session.goalDistance ?? null,
+                        goalDuration: session.goalDuration ?? null,
+                        goalElevationGain: session.goalElevationGain ?? null,
+                        goalRpe:
+                          session.goalRpe == null ? null : session.goalRpe / 10,
+                      },
+                    },
+                  },
+                  include: { training: true },
+                });
+                if (session.workout && event.training) {
+                  await tx.workout.create({
+                    data: {
+                      eventTrainingId: event.training.eventTrainingId,
+                      ...mapWorkoutDtoToPrisma(
+                        createWorkoutSchema.parse(session.workout),
+                      ),
+                    },
+                  });
+                }
+              }
             }
           }
-        }
-
-        weekIndex++;
-      }
-    }
-
-    // Return the created training plan with all relations
-    return this.prisma.trainingPlan.findUnique({
-      where: { trainingPlanId: trainingPlan.trainingPlanId },
-      include: {
-        cycles: {
-          include: {
-            weeks: {
-              include: {
-                sessions: true,
-              },
-            },
-          },
+          return plan;
         },
-      },
-    });
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          timeout: 30000,
+        },
+      );
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2034'
+      ) {
+        throw new ConflictException(
+          'The calendar changed during import. Review it before retrying.',
+        );
+      }
+      throw error;
+    }
   }
 }
