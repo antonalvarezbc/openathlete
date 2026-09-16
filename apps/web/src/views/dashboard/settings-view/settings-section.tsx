@@ -9,7 +9,7 @@ import { cn } from '@/utils/shadcn';
 import { ReactNode } from 'react';
 
 type SettingsSectionProps = {
-  title: string;
+  title: ReactNode;
   description?: string;
   action?: ReactNode;
   className?: string;
