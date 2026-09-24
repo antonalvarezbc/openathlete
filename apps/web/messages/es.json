@@ -1207,5 +1207,7 @@
   "admin_mode_confirm": "¿Cambiar el modo de {email} a «{mode}»? Sus permisos se actualizarán en las siguientes solicitudes.",
   "admin_mode_saved": "Modo de cuenta actualizado.",
   "admin_mode_failed": "No se pudo actualizar o cargar la cuenta. Comprueba tu acceso y que haya completado el primer inicio.",
-  "training_zones_load_failed": "No se han podido cargar las zonas de entrenamiento."
+  "training_zones_load_failed": "No se han podido cargar las zonas de entrenamiento.",
+  "garmin_manual_fit_result": "FIT: {imported} incorporados, {failed} fallidos y {pending} pendientes (incluidos los fallidos). Se procesan hasta 3 por actualización; vuelve a pulsar el botón para continuar.",
+  "garmin_manual_fit_failed_ids": "Actividades Garmin con FIT pendiente de reintento: {ids}."
 }

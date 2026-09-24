@@ -1207,5 +1207,7 @@
   "admin_mode_confirm": "Change {email} to “{mode}”? Permissions will update on subsequent requests.",
   "admin_mode_saved": "Account mode updated.",
   "admin_mode_failed": "Could not update or load the account. Check your access and that onboarding is complete.",
-  "training_zones_load_failed": "Could not load training zones."
+  "training_zones_load_failed": "Could not load training zones.",
+  "garmin_manual_fit_result": "FIT: {imported} imported, {failed} failed and {pending} pending (including failures). Up to 3 are processed per sync; press the button again to continue.",
+  "garmin_manual_fit_failed_ids": "Garmin activities with FIT files awaiting retry: {ids}."
 }

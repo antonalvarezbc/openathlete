@@ -26,6 +26,9 @@ interface Status {
     imported: number;
     skipped: number;
     metrics: number;
+    fitsImported?: number;
+    fitsFailed?: string[];
+    fitsPending?: number;
     warnings: string[];
   };
 }
@@ -64,7 +67,7 @@ export function ManualGarminCard({
         await client.post(
           '/provider/garmin-manual/sync',
           { athleteId },
-          { timeout: 160_000 },
+          { timeout: 240_000 },
         )
       ).data,
     retry: false,
@@ -218,6 +221,22 @@ export function ManualGarminCard({
               imported: data.result.imported,
               skipped: data.result.skipped,
               metrics: data.result.metrics,
+            })}
+          </p>
+        )}
+        {data.result?.fitsImported !== undefined && (
+          <p className="text-sm">
+            {m.garmin_manual_fit_result({
+              imported: data.result.fitsImported,
+              failed: data.result.fitsFailed?.length ?? 0,
+              pending: data.result.fitsPending ?? 0,
+            })}
+          </p>
+        )}
+        {!!data.result?.fitsFailed?.length && (
+          <p className="text-sm" role="status">
+            {m.garmin_manual_fit_failed_ids({
+              ids: data.result.fitsFailed.join(', '),
             })}
           </p>
         )}

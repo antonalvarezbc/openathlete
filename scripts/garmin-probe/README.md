@@ -66,7 +66,7 @@ https://pypi.org/project/garminconnect/0.3.15/.
 
 Además del diagnóstico, `sync.py` permite importar desde el botón de Ajustes →
 Conexiones. Es opcional, requiere `SELF_HOSTED=true` y no usa el OAuth oficial.
-No hay cron, webhooks nuevos, polling a Garmin ni reintentos desde la interfaz.
+No hay cron, webhooks nuevos, polling a Garmin ni reintentos automáticos.
 Cargar la pantalla solo consulta el estado local del backend.
 
 ### Configuración inicial del administrador
@@ -86,16 +86,17 @@ Cargar la pantalla solo consulta el estado local del backend.
    este directorio `scripts/garmin-probe` y mantener `SELF_HOSTED=true`.
 5. Reconstruir shared (`pnpm shared build`) y reiniciar el backend. El backend
    debe poder ejecutar `.venv/bin/python`, leer los tokens y escribir `.private/`.
-6. Abrir Ajustes → Conexiones con la cuenta del atleta o un entrenador ya vinculado.
-   El botón «Update from Garmin» aparece según el idioma de la interfaz.
+6. Abrir Ajustes → Conexiones como atleta, o Ajustes → Atletas como entrenador
+   vinculado. El botón «Actualizar desde Garmin» aparece según el idioma.
 
-No se reciben contraseñas ni tokens desde el navegador. Si caduca la sesión,
-ejecutar `probe.py --login` en el servidor. El worker comprueba la identidad
-Garmin antes de devolver datos importables; una cuenta distinta detiene la operación.
-Este MVP admite **una vinculación por instalación**. En un VPS, el directorio
-privado debe estar en almacenamiento persistente, fuera del directorio público.
-Todas las instancias del backend deben compartirlo; no está diseñado para varios
-servidores con sistemas de archivos independientes.
+La configuración anterior es la vinculación heredada por CLI. También se puede
+conectar cada cuenta desde la pantalla de Conexiones del propio atleta, con MFA
+si Garmin lo solicita. Las credenciales se usan para iniciar sesión; se guardan
+tokens privados por atleta, no contraseñas. El entrenador vinculado puede
+sincronizar desde la tabla de Atletas, pero no configurar esas credenciales.
+El worker verifica la identidad Garmin antes de devolver datos importables.
+En un VPS, el almacenamiento privado debe ser persistente y compartido entre
+instancias del backend. Véase [modos y Garmin manual](../../docs/account-modes-and-manual-garmin.md).
 
 ### Alcance de cada pulsación
 
@@ -116,17 +117,28 @@ servidores con sistemas de archivos independientes.
 - Se actualiza el valor existente por atleta/tipo/fecha, conservando las notas.
   La tabla de métricas actual no distingue el origen: también puede actualizar
   un valor introducido manualmente para esa misma fecha y tipo.
-- Las actividades existentes no se modifican. Se reconocen los IDs de esta
+- Los resúmenes existentes se conservan y pueden completarse con FIT. Se reconocen los IDs de esta
   integración y del conector Garmin oficial. Coincidencias exactas de hora con
   otras actividades se omiten y avisan; no hay deduplicación aproximada entre
   plataformas si sus horas difieren.
-- Los resúmenes no incluyen FIT, ruta GPS, series temporales, series adicionales no descritas arriba. No se ejecuta IA, cálculo de carga ni vinculación
-  automática a entrenamientos planificados en este MVP.
+- Hasta tres FIT originales por pulsación, para actividades nuevas o resúmenes
+  existentes sin series de datos. Se guardan GPS, FC, altitud, distancia, cadencia,
+  potencia y vueltas si el archivo las contiene. Los originales quedan en
+  almacenamiento privado; no se descargan otra vez los ya incorporados.
+- Tras guardar el FIT se ejecuta el procesamiento habitual de OA (incluidos GAP,
+  normalización y búsqueda de entrenamientos coincidentes). Se conservan los
+  vínculos que ya existían. No se añade generación de planes con IA.
+- Los FIT fallidos no impiden guardar los otros resúmenes y métricas. La interfaz
+  indica sus IDs y los pendientes: otra pulsación continúa el lote o reintenta.
+  Los FIT con varios originales, corruptos o mayores de 20 MiB se rechazan.
+  Las series con muestras ausentes que el lector no pueda alinear se omiten con
+  aviso; no se importan todos los campos posibles del formato FIT.
 
 El backend protege `GET /provider/garmin-manual/status` y
 `POST /provider/garmin-manual/sync` con JWT y verifica propietario/entrenador.
 Un bloqueo transaccional PostgreSQL impide sincronizaciones simultáneas; hay
-120 segundos de espera entre intentos y 120 segundos máximos para el worker.
+120 segundos de espera entre intentos y 180 segundos máximos para el worker
+(210 segundos para la transacción y 240 para la petición del navegador).
 La biblioteca puede renovar tokens y realizar sus propias consultas de login.
 Un endpoint opcional no disponible (404/501) se omite con aviso. Ante otros
 errores de lectura, autenticación o límites, se aborta la importación completa; las escrituras de
@@ -152,9 +164,10 @@ descritos arriba. No se cambia el comportamiento de sus conectores existentes.
 
 ### Métricas disponibles y límites de esta ampliación
 
-El presupuesto máximo es de 27 llamadas de datos por pulsación: identidad (1),
+El presupuesto base es de 27 llamadas de datos por pulsación: identidad (1),
 actividades (1), resumen diario/HRV/sueño (21), rangos corporal/VO₂/presión (3) y
-edad física (1), además del login/renovación que necesite la biblioteca.
+edad física (1), más hasta 3 descargas FIT (máximo 30 llamadas de datos),
+además del login/renovación que necesite la biblioteca.
 No se consulta Garmin al abrir la ficha ni durante las pruebas automáticas.
 
 No se importan todavía: HR_MAX fisiológica, HR_AVG_DAILY, HR_RESERVE, RMSSD,

@@ -87,3 +87,49 @@ Manual Garmin synchronization is embedded in each athlete row in that table.
 Each button targets that row's athlete ID. Credentials remain exclusively in
 the athlete's own connector settings. Loading the table reads local status only;
 synchronization still requires an explicit click.
+
+## Original FIT import
+
+Manual sync now includes up to three original FIT downloads per click, within the
+existing last-30-days / latest-100-activities window. Opening a page never downloads
+files. The two-minute cooldown and per-athlete lock still apply. Further batches
+require another explicit click; there is no scheduled catch-up.
+
+The Python worker uses the pinned garminconnect ORIGINAL download API. It accepts
+a raw FIT or a ZIP containing exactly one FIT, reads the selected ZIP member in
+memory without extracting paths, and limits compressed and uncompressed files to
+20 MiB. Ambiguous multi-FIT archives, non-FIT originals and oversized files are
+reported as failures. Authentication/rate-limit failures stop the FIT batch.
+Least-recently-attempted ordering prevents failed files from starving other files.
+
+Originals remain in the ignored private directory:
+`.private/fits/<garmin-profile-id>/<activity-id>.fit`.
+Both the account directory and Garmin profile namespace isolate caches. Keep this
+private storage in backups; it contains GPS and health data. Files are not served
+as public URLs. Completed OA streams are excluded from future downloads; cached
+files survive transaction failures. Parse failures discard the cache entry so a
+later manual sync can download it again.
+
+The API matches by Garmin ID and OA athlete, including summaries imported by the
+official Garmin connector. It enriches existing summaries without changing their
+feedback, descriptions or planned-session links. It never guesses using matching
+timestamps; cross-provider matches remain skipped with a warning. Existing
+nonempty streams and existing segments are preserved. No database migration is
+needed.
+
+The existing FIT parser and stream compression store GPS, time, distance, altitude,
+heart rate, cadence and power when present. Laps use existing ActivitySegment
+rows. The parser currently drops missing samples: shortened sensor channels are
+excluded with FitIncompleteChannels rather than incorrectly aligned to time.
+This is not an implementation of all FIT developer fields, strength sets or every
+Garmin metric. Original files remain available for future reprocessing.
+
+Activity processing jobs are submitted after the transaction commits. Failed queue
+submissions are retained in local sync state and retried on the next manual sync.
+The UI reports imported FITs, failed Garmin IDs and pending files (including
+failures). Overall sync timeout is 210 seconds; client timeout is 240 seconds.
+Individual download/parse failures preserve successful summaries and wellness;
+a worker timeout or database transaction failure still fails the sync as a whole.
+
+Validation uses mock Garmin downloads, synthetic SDK-encoded FIT files and
+permission/import regression tests. Automated tests never query Garmin.

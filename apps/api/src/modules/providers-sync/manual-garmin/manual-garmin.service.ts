@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { readFile, rename, writeFile } from 'node:fs/promises';
+import { readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { isAbsolute, join } from 'node:path';
 import { promisify } from 'node:util';
 
@@ -16,6 +16,8 @@ import { ConnectorProvider, EventType } from '@openathlete/database';
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { mapGarminActivityType } from '../../core/helpers/garmin';
 import { PrismaService } from '../../prisma/services/prisma.service';
+import { QueueService } from '../../queue/queue.service';
+import { hasActivityStream, readManualFit } from './manual-garmin-fit';
 import { loginGarmin } from './manual-garmin-login';
 import {
   manualGarminConnection,
@@ -32,9 +34,13 @@ type SyncState = {
     imported: number;
     skipped: number;
     metrics: number;
+    fitsImported: number;
+    fitsFailed: string[];
+    fitsPending: number;
     warnings: string[];
   };
   error?: string;
+  processingPending?: { eventActivityId: number; eventId: number }[];
 };
 
 @Injectable()
@@ -42,9 +48,13 @@ export class ManualGarminService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly queue: QueueService,
   ) {}
 
-  protected async fetchPayload(directory: string): Promise<unknown> {
+  protected async fetchPayload(
+    directory: string,
+    completedFits: string[],
+  ): Promise<unknown> {
     const { stdout } = await execute(
       join(
         this.config.getOrThrow<string>('GARMIN_UNOFFICIAL_DIRECTORY'),
@@ -57,12 +67,13 @@ export class ManualGarminService {
         ),
       ],
       {
-        timeout: 120_000,
+        timeout: 180_000,
         maxBuffer: 2 * 1024 * 1024,
         env: {
           ...process.env,
           PYTHONUNBUFFERED: '1',
           OA_GARMIN_PRIVATE_DIR: join(directory, '.private'),
+          OA_GARMIN_COMPLETED_FITS: JSON.stringify(completedFits),
         },
       },
     );
@@ -84,6 +95,10 @@ export class ManualGarminService {
       );
     }
     return result;
+  }
+
+  protected parseFit(directory: string, profile: string, id: string) {
+    return readManualFit(directory, profile, id);
   }
 
   private async connection(user: AuthUser, requestedAthleteId?: number) {
@@ -200,7 +215,7 @@ export class ManualGarminService {
       ...state,
       running:
         !!state.running &&
-        Date.now() - Date.parse(state.lastAttempt ?? '') < 150_000,
+        Date.now() - Date.parse(state.lastAttempt ?? '') < 240_000,
     };
   }
 
@@ -236,9 +251,26 @@ export class ManualGarminService {
           };
           await this.save(directory, state);
           try {
+            const known = await tx.eventActivity.findMany({
+              where: {
+                provider: ConnectorProvider.GARMIN,
+                event: { athleteId },
+              },
+              select: { externalId: true, stream: true },
+            });
+            const prefix = `garmin-manual:${connection.garminUserProfileId}:`;
+            const completedFits = known
+              .filter((a) => hasActivityStream(a.stream))
+              .map((a) =>
+                a.externalId?.startsWith(prefix)
+                  ? a.externalId.slice(prefix.length)
+                  : a.externalId,
+              )
+              .filter((id): id is string => !!id && /^\d+$/.test(id));
             const payload = manualGarminPayload.parse(
-              await this.fetchPayload(directory),
+              await this.fetchPayload(directory, completedFits),
             );
+            const processingPending = [...(previous.processingPending ?? [])];
             let imported = 0;
             let skipped = 0;
             const warnings = [...payload.warnings];
@@ -246,6 +278,8 @@ export class ManualGarminService {
               const externalId = `garmin-manual:${connection.garminUserProfileId}:${item.id}`;
               const existing = await tx.eventActivity.findFirst({
                 where: {
+                  event: { athleteId },
+                  provider: ConnectorProvider.GARMIN,
                   OR: [
                     { externalId },
                     {
@@ -311,8 +345,71 @@ export class ManualGarminService {
                 update: { value: metric.value },
               });
             }
+            let fitsImported = 0;
+            const fitsFailed: string[] = [];
+            for (const fit of payload.fits) {
+              if (!payload.activities.some((item) => item.id === fit.id))
+                throw new Error('FIT is not part of this sync');
+              if (!fit.ready) {
+                fitsFailed.push(fit.id);
+                continue;
+              }
+              const activity = await tx.eventActivity.findFirst({
+                where: {
+                  event: { athleteId },
+                  provider: ConnectorProvider.GARMIN,
+                  externalId: { in: [prefix + fit.id, fit.id] },
+                },
+                include: { segments: { select: { activitySegmentId: true } } },
+              });
+              // Never guess based on start time or overwrite existing detailed data.
+              if (!activity || hasActivityStream(activity.stream)) continue;
+              let parsed: Awaited<ReturnType<typeof readManualFit>>;
+              try {
+                parsed = await this.parseFit(
+                  directory,
+                  connection.garminUserProfileId,
+                  fit.id,
+                );
+              } catch {
+                // A corrupt cached download may be fetched again on a later click.
+                await unlink(
+                  join(
+                    directory,
+                    '.private',
+                    'fits',
+                    connection.garminUserProfileId,
+                    fit.id + '.fit',
+                  ),
+                ).catch(() => undefined);
+                fitsFailed.push(fit.id);
+                continue;
+              }
+              await tx.eventActivity.update({
+                where: { eventActivityId: activity.eventActivityId },
+                data: { stream: parsed.stream as unknown as object },
+              });
+              // Preserve manual segments and workout associations.
+              if (!activity.segments.length && parsed.segments.length) {
+                await tx.activitySegment.createMany({
+                  data: parsed.segments.map((segment) => ({
+                    ...segment,
+                    eventActivityId: activity.eventActivityId,
+                  })),
+                });
+              }
+              if (parsed.incomplete) warnings.push('FitIncompleteChannels');
+              processingPending.push({
+                eventActivityId: activity.eventActivityId,
+                eventId: activity.eventId,
+              });
+              fitsImported++;
+            }
             const result = {
               imported,
+              fitsImported,
+              fitsFailed,
+              fitsPending: payload.fitsPending + fitsFailed.length,
               skipped,
               metrics: payload.metrics.length,
               warnings: [...new Set(warnings)],
@@ -324,6 +421,7 @@ export class ManualGarminService {
                 running: false,
                 lastSuccess: new Date().toISOString(),
                 result,
+                processingPending,
               },
             };
           } catch (error) {
@@ -339,9 +437,25 @@ export class ManualGarminService {
             throw new ServiceUnavailableException(message);
           }
         },
-        { timeout: 150_000, maxWait: 5000 },
+        { timeout: 210_000, maxWait: 5000 },
       )
       .then(async ({ directory, state }) => {
+        // Queue work only after commit; retain failed submissions for the next manual sync.
+        await this.save(directory, state);
+        const pending = [];
+        for (const job of state.processingPending) {
+          try {
+            await this.queue.addActivityProcessingJob(
+              job.eventActivityId,
+              job.eventId,
+              false,
+            );
+          } catch {
+            pending.push(job);
+          }
+        }
+        state.processingPending = pending;
+        if (pending.length) state.result.warnings.push('FitProcessingPending');
         await this.save(directory, state);
         return state;
       });

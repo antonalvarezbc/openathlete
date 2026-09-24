@@ -6,6 +6,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from fit_files import collect_fits
+
 from health_metrics import (number, metric, map_fields, DAILY_FIELDS, map_body, map_vo2,
                             map_blood_pressure, optional_read)
 
@@ -96,6 +98,14 @@ def main():
         client = Garmin(retry_attempts=0)
         client.login(str(private / 'tokens'))
         result = collect_sync(client, connection, datetime.now(ZoneInfo(connection['timezone'])).date())
+        completed = json.loads(os.environ.get('OA_GARMIN_COMPLETED_FITS', '[]'))
+        try:
+            result.update(collect_fits(client, result['activities'], private,
+                                      connection['garminUserProfileId'], completed))
+        except Exception:
+            # Optional original files must not discard successful summary/wellness reads.
+            result['warnings'].append('FitDownloadFailed')
+            result['fitsPending'] = sum(a['id'] not in completed for a in result['activities'])
         print(json.dumps({'ok': True, **result}, allow_nan=False))
     except Exception as exc:
         # No credentials, exception messages, traces or raw Garmin payloads on stdout.

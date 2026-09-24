@@ -1207,5 +1207,7 @@
   "admin_mode_confirm": "Passer {email} au mode « {mode} » ? Les droits seront actualisés lors des prochaines requêtes.",
   "admin_mode_saved": "Mode du compte mis à jour.",
   "admin_mode_failed": "Impossible de modifier ou charger le compte. Vérifiez vos droits et que la configuration initiale est terminée.",
-  "training_zones_load_failed": "Impossible de charger les zones d’entraînement."
+  "training_zones_load_failed": "Impossible de charger les zones d’entraînement.",
+  "garmin_manual_fit_result": "FIT : {imported} importés, {failed} en échec et {pending} en attente (échecs inclus). Jusqu’à 3 fichiers par synchronisation ; cliquez à nouveau pour continuer.",
+  "garmin_manual_fit_failed_ids": "Activités Garmin dont le FIT est à réessayer : {ids}."
 }

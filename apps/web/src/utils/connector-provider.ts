@@ -9,8 +9,13 @@ export const getConnectorProviderActivityLink = (
       return 'https://www.strava.com/activities/' + externalId;
     case 'FITBIT':
       return 'https://www.fitbit.com/activities/' + externalId;
-    case 'GARMIN':
-      return 'https://connect.garmin.com/modern/activity/' + externalId;
+    case 'GARMIN': {
+      const activityId =
+        /^garmin-manual:\d+:(\d+)$/.exec(externalId)?.[1] ?? externalId;
+      return /^\d+$/.test(activityId)
+        ? 'https://connect.garmin.com/app/activity/' + activityId
+        : undefined;
+    }
     case 'APPLE_HEALTH':
       return 'https://www.apple.com/healthcare/health-records/';
   }

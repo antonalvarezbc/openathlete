@@ -6,9 +6,17 @@ import { ConfigService } from '@nestjs/config';
 
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PrismaService } from '../../prisma/services/prisma.service';
+import { QueueService } from '../../queue/queue.service';
 import { loginGarmin } from './manual-garmin-login';
 import { manualGarminPayload } from './manual-garmin.schema';
 import { ManualGarminService } from './manual-garmin.service';
+
+// Load the installed ESM SDK through Node 22 rather than Jest's CJS transformer.
+jest.mock('@garmin/fitsdk', () =>
+  process.getBuiltinModule('module').createRequire(__filename)(
+    '@garmin/fitsdk',
+  ),
+);
 
 jest.mock('./manual-garmin-login', () => ({ loginGarmin: jest.fn() }));
 
@@ -35,8 +43,12 @@ const payload = {
 };
 class TestService extends ManualGarminService {
   fetch = jest.fn().mockResolvedValue(payload);
-  protected fetchPayload() {
-    return this.fetch();
+  parse = jest.fn();
+  protected parseFit() {
+    return this.parse();
+  }
+  protected fetchPayload(directory: string, completed: string[]) {
+    return this.fetch(directory, completed);
   }
 }
 
@@ -51,7 +63,12 @@ describe('manual Garmin import', () => {
   } as AuthUser;
   const tx = {
     $queryRaw: jest.fn(),
-    eventActivity: { findFirst: jest.fn() },
+    eventActivity: {
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      update: jest.fn(),
+    },
+    activitySegment: { createMany: jest.fn() },
     event: { findFirst: jest.fn(), create: jest.fn() },
     athleteMetric: { upsert: jest.fn() },
   };
@@ -60,6 +77,7 @@ describe('manual Garmin import', () => {
     coachAthlete: { findFirst: jest.fn() },
     $transaction: jest.fn(),
   };
+  const queue = { addActivityProcessingJob: jest.fn() };
   beforeEach(async () => {
     jest.resetAllMocks();
     directory = await mkdtemp(join(tmpdir(), 'oa-garmin-test-'));
@@ -78,12 +96,14 @@ describe('manual Garmin import', () => {
       (fn: (client: typeof tx) => unknown) => fn(tx),
     );
     tx.$queryRaw.mockResolvedValue([{ locked: true }]);
+    tx.eventActivity.findMany.mockResolvedValue([]);
     service = new TestService(
       prisma as unknown as PrismaService,
       new ConfigService({
         SELF_HOSTED: true,
         GARMIN_UNOFFICIAL_DIRECTORY: directory,
       }),
+      queue as unknown as QueueService,
     );
   });
   afterEach(async () => {
@@ -153,6 +173,9 @@ describe('manual Garmin import', () => {
     const result = await service.sync(user);
     expect(result.result).toEqual({
       imported: 1,
+      fitsImported: 0,
+      fitsFailed: [],
+      fitsPending: 0,
       skipped: 0,
       metrics: 1,
       warnings: [],
@@ -186,6 +209,146 @@ describe('manual Garmin import', () => {
     expect(tx.athleteMetric.upsert).not.toHaveBeenCalled();
     expect(JSON.stringify(await service.status(user))).not.toContain('secret');
   });
+
+  const detailed = {
+    eventActivityId: 7,
+    eventId: 8,
+    stream: null,
+    segments: [],
+  };
+  function readyFit() {
+    service.fetch.mockResolvedValue({
+      ...payload,
+      fits: [{ id: '456', ready: true }],
+      fitsPending: 2,
+    });
+    service.parse.mockResolvedValue({
+      stream: { time: [0, 1], heartrate: [120, 121] },
+      segments: [
+        {
+          segmentType: 'LAP',
+          name: 'Lap 1',
+          orderIndex: 0,
+          startTimeSeconds: 0,
+          endTimeSeconds: 1,
+        },
+      ],
+      incomplete: false,
+    });
+    tx.eventActivity.findFirst.mockResolvedValue(detailed);
+  }
+  it('backfills an existing activity without duplicating it or changing its feedback', async () => {
+    readyFit();
+    const result = await service.sync(user);
+    expect(result.result).toMatchObject({
+      imported: 0,
+      fitsImported: 1,
+      fitsPending: 2,
+    });
+    expect(tx.event.create).not.toHaveBeenCalled();
+    expect(tx.eventActivity.update).toHaveBeenCalledWith({
+      where: { eventActivityId: 7 },
+      data: { stream: { time: [0, 1], heartrate: [120, 121] } },
+    });
+    expect(tx.activitySegment.createMany).toHaveBeenCalledTimes(1);
+    expect(queue.addActivityProcessingJob).toHaveBeenCalledWith(7, 8, false);
+    expect(tx.eventActivity.findFirst).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: {
+          event: { athleteId: 2 },
+          provider: 'GARMIN',
+          externalId: { in: ['garmin-manual:123:456', '456'] },
+        },
+      }),
+    );
+  });
+  it('imports details for a newly created summary', async () => {
+    readyFit();
+    tx.eventActivity.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(detailed);
+    const result = await service.sync(user);
+    expect(result.result).toMatchObject({ imported: 1, fitsImported: 1 });
+    expect(tx.event.create).toHaveBeenCalledTimes(1);
+  });
+  it('preserves existing segments and workout links', async () => {
+    readyFit();
+    tx.eventActivity.findFirst.mockResolvedValue({
+      ...detailed,
+      segments: [{ activitySegmentId: 55 }],
+    });
+    await service.sync(user);
+    expect(tx.activitySegment.createMany).not.toHaveBeenCalled();
+  });
+  it('does not download completed streams or overwrite them', async () => {
+    readyFit();
+    tx.eventActivity.findMany.mockResolvedValue([
+      { externalId: 'garmin-manual:123:456', stream: { time: [0] } },
+    ]);
+    tx.eventActivity.findFirst.mockResolvedValue({
+      ...detailed,
+      stream: { time: [0] },
+    });
+    await service.sync(user);
+    expect(service.fetch).toHaveBeenCalledWith(directory, ['456']);
+    expect(service.parse).not.toHaveBeenCalled();
+    expect(tx.eventActivity.update).not.toHaveBeenCalled();
+  });
+  it('keeps summary and metrics when a FIT cannot be parsed', async () => {
+    readyFit();
+    service.parse.mockRejectedValue(new Error('private raw data'));
+    const result = await service.sync(user);
+    expect(result.result).toMatchObject({
+      fitsImported: 0,
+      fitsFailed: ['456'],
+      fitsPending: 3,
+      metrics: 1,
+    });
+    expect(JSON.stringify(result)).not.toContain('private raw data');
+    expect(tx.eventActivity.update).not.toHaveBeenCalled();
+    expect(queue.addActivityProcessingJob).not.toHaveBeenCalled();
+  });
+  it('reports download failures without parsing or discarding summaries', async () => {
+    service.fetch.mockResolvedValue({
+      ...payload,
+      fits: [{ id: '456', ready: false }],
+    });
+    const result = await service.sync(user);
+    expect(result.result).toMatchObject({
+      imported: 1,
+      fitsFailed: ['456'],
+      fitsPending: 1,
+    });
+    expect(service.parse).not.toHaveBeenCalled();
+  });
+  it('does not attach FITs to ambiguous cross-provider matches', async () => {
+    readyFit();
+    tx.eventActivity.findFirst.mockResolvedValue(null);
+    tx.event.findFirst.mockResolvedValue({ eventId: 99 });
+    await service.sync(user);
+    expect(tx.event.create).not.toHaveBeenCalled();
+    expect(tx.eventActivity.update).not.toHaveBeenCalled();
+  });
+  it('retains failed queue submissions for the next manual sync', async () => {
+    readyFit();
+    queue.addActivityProcessingJob.mockRejectedValue(
+      new Error('queue offline'),
+    );
+    const result = await service.sync(user);
+    expect(result.processingPending).toEqual([
+      { eventActivityId: 7, eventId: 8 },
+    ]);
+    expect(result.result?.warnings).toContain('FitProcessingPending');
+    await writeFile(
+      join(directory, '.private/sync-state.json'),
+      JSON.stringify({ ...result, lastAttempt: '2020-01-01T00:00:00Z' }),
+    );
+    queue.addActivityProcessingJob.mockResolvedValue(undefined);
+    service.fetch.mockResolvedValue(payload);
+    const next = await service.sync(user);
+    expect(next.processingPending).toEqual([]);
+  });
+
   it('validates dates and numeric values before persistence', () => {
     expect(
       manualGarminPayload.safeParse({
