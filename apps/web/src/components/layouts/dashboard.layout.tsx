@@ -1,4 +1,8 @@
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import {
+  SidebarInset,
+  SidebarProvider,
+  useSidebar,
+} from '@/components/ui/sidebar';
 import { useUserRoles } from '@/contexts/auth';
 import { SpaceConsumer, SpaceProvider } from '@/contexts/space';
 import { m } from '@/paraglide/messages';
@@ -28,6 +32,7 @@ import {
   DraggableType,
 } from '../create-event-from-template-dialog/dnd-types';
 import { MobileLayout } from '../mobile/mobile-layout';
+import { MobileWebHeader } from '../mobile/mobile-web-header';
 import { PlanImportHandler } from '../plan-import-handler';
 import { AppSidebar } from '../sidebar/app-sidebar';
 import { SportIcon } from '../sport-icon/sport-icon';
@@ -39,6 +44,7 @@ interface P {
 function LayoutContent({ children }: P) {
   const { onDragStart, onDragEnd, activeItem } = useSharedDnd() || {};
   const roles = useUserRoles();
+  const { isMobile, openMobile } = useSidebar();
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -169,9 +175,12 @@ function LayoutContent({ children }: P) {
           <>
             <div className="flex min-w-0 flex-1">
               {roles?.includes('COACH') && <TemplateLibrarySidebar />}
-              <SidebarInset className="min-w-0 flex-1">{children}</SidebarInset>
+              <SidebarInset className="min-w-0 flex-1 max-md:pt-[calc(4rem+env(safe-area-inset-top))]">
+                <MobileWebHeader />
+                {children}
+              </SidebarInset>
             </div>
-            <ChatBubble />
+            {!(isMobile && openMobile) && <ChatBubble />}
             <ChatWindow />
           </>
         )}

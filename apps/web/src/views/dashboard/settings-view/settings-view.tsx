@@ -43,6 +43,19 @@ export function SettingsView() {
       : []),
     ...(isCoach ? ['training_plan', 'athletes'] : []),
   ];
+  const tabLabels: Record<string, string> = {
+    profile: m.profile(),
+    administration: m.account_administration(),
+    invitations: m.invitations(),
+    contribute: m.contribute(),
+    subscription: m.subscription(),
+    connectors: m.connectors(),
+    equipment: m.equipment(),
+    training_zones: m.training_zones(),
+    coaches: m.coaches(),
+    training_plan: m.training_plan_settings(),
+    athletes: m.athletes(),
+  };
   const visibleTab = allowedTabs.includes(activeTab) ? activeTab : 'profile';
   // Update active tab when URL param changes
   useEffect(() => {
@@ -61,7 +74,22 @@ export function SettingsView() {
     <div className="w-full p-4 md:p-8">
       <h1 className="text-2xl font-semibold hidden md:block">{m.settings()}</h1>
       <Tabs value={visibleTab} onValueChange={handleTabChange} className="mt-4">
-        <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
+        <label className="block md:hidden">
+          <span className="sr-only">{m.settings()}</span>
+          <select
+            data-mobile-settings-select
+            className="h-12 w-full rounded-md border bg-background px-3 text-base text-foreground"
+            value={visibleTab}
+            onChange={(event) => handleTabChange(event.target.value)}
+          >
+            {allowedTabs.map((tab) => (
+              <option key={tab} value={tab}>
+                {tabLabels[tab]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="hidden md:block overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
           <TabsList className="w-max md:w-auto flex-nowrap md:flex-wrap min-w-full md:min-w-0">
             {isAthlete && (
               <TabsTrigger value="connectors">{m.connectors()}</TabsTrigger>
