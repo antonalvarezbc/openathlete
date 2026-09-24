@@ -9,6 +9,7 @@ jest.mock('../../../mastra/agents/plan-adaptation.agent', () => ({
 }));
 
 const user = {
+  roles: ['COACH' as const],
   userId: 3,
   email: 'qa@openathlete.test',
   athlete: { athleteId: 3 },

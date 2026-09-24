@@ -163,6 +163,7 @@ export class AuthService {
         select: {
           userId: true,
           email: true,
+          roles: true,
           athlete: {
             select: {
               athleteId: true,

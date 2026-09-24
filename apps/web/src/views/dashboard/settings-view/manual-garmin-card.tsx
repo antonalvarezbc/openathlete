@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { useSpaceContext } from '@/contexts/space';
 import { m } from '@/paraglide/messages';
 import client from '@/utils/axios';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -14,6 +15,8 @@ import { useState } from 'react';
 
 interface Status {
   enabled: boolean;
+  connected?: boolean;
+  canConfigure?: boolean;
   athleteId?: number;
   lastAttempt?: string;
   lastSuccess?: string;
@@ -27,13 +30,31 @@ interface Status {
   };
 }
 
-export function ManualGarminCard() {
+export function ManualGarminCard({
+  athleteId,
+  configure = false,
+  compact = false,
+}: {
+  athleteId?: number;
+  configure?: boolean;
+  compact?: boolean;
+}) {
+  const { space } = useSpaceContext();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
+  const [mfa, setMfa] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
   const cache = useQueryClient();
   const [error, setError] = useState<string>();
   const status = useQuery({
-    queryKey: ['garmin-manual-status'],
+    queryKey: ['garmin-manual-status', athleteId],
     queryFn: async () =>
-      (await client.get<Status>('/provider/garmin-manual/status')).data,
+      (
+        await client.get<Status>('/provider/garmin-manual/status', {
+          params: { athleteId },
+        })
+      ).data,
     retry: false,
     refetchOnWindowFocus: false,
   });
@@ -42,7 +63,7 @@ export function ManualGarminCard() {
       (
         await client.post(
           '/provider/garmin-manual/sync',
-          {},
+          { athleteId },
           { timeout: 160_000 },
         )
       ).data,
@@ -62,21 +83,122 @@ export function ManualGarminCard() {
       void status.refetch();
     },
   });
+  const login = useMutation({
+    mutationFn: async () => {
+      const input = {
+        ...(mfa ? { code } : { email, password }),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      };
+      setPassword('');
+      setCode('');
+      return (
+        await client.post<{ mfaRequired?: boolean; connected?: boolean }>(
+          '/provider/garmin-manual/connect',
+          input,
+          { timeout: 160000 },
+        )
+      ).data;
+    },
+    retry: false,
+    onMutate: () => setError(undefined),
+    onSuccess: async (reply) => {
+      setMfa(!!reply.mfaRequired);
+      if (reply.connected) {
+        setShowLogin(false);
+        setEmail('');
+        await status.refetch();
+      }
+    },
+    onError: () => {
+      setMfa(false);
+      setError(m.garmin_login_failed());
+    },
+  });
   if (status.isError)
     return <p role="alert">{m.garmin_manual_status_failed()}</p>;
   if (!status.data?.enabled) return null;
   const data = status.data;
+  const Container = compact ? 'div' : Card;
+  const Content = compact ? 'div' : CardContent;
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{m.garmin_manual_title()}</CardTitle>
-        <CardDescription>
-          {m.garmin_manual_description({ athleteId: String(data.athleteId) })}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <Container>
+      {!compact && (
+        <CardHeader>
+          <CardTitle>{m.garmin_manual_title()}</CardTitle>
+          <CardDescription>
+            {m.garmin_manual_description({ athleteId: String(data.athleteId) })}
+          </CardDescription>
+        </CardHeader>
+      )}
+      <Content className="space-y-3">
+        {!compact && configure && space === 'ATHLETE' && data.canConfigure && (
+          <div className="space-y-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowLogin(!showLogin)}
+              disabled={login.isPending}
+            >
+              {m.garmin_login_setup()}
+            </Button>
+            {showLogin && (
+              <form
+                className="space-y-3 max-w-md"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  login.mutate();
+                }}
+              >
+                <p className="text-sm">{m.garmin_login_help()}</p>
+                {mfa ? (
+                  <label className="block">
+                    {m.garmin_login_code()}
+                    <input
+                      className="w-full border rounded p-2"
+                      value={code}
+                      onChange={(event) => setCode(event.target.value)}
+                      required
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                    />
+                  </label>
+                ) : (
+                  <>
+                    <label className="block">
+                      {m.email()}
+                      <input
+                        className="w-full border rounded p-2"
+                        type="email"
+                        autoComplete="username"
+                        value={email}
+                        onChange={(event) => setEmail(event.target.value)}
+                        required
+                      />
+                    </label>
+                    <label className="block">
+                      {m.password()}
+                      <input
+                        className="w-full border rounded p-2"
+                        type="password"
+                        autoComplete="current-password"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        required
+                      />
+                    </label>
+                  </>
+                )}
+                <Button type="submit" disabled={login.isPending}>
+                  {m.connect()}
+                </Button>
+              </form>
+            )}
+          </div>
+        )}
+        {!data.connected && <p>{m.garmin_login_needed()}</p>}
         <Button
-          disabled={sync.isPending || data.running}
+          disabled={
+            !data.connected || sync.isPending || data.running || login.isPending
+          }
           onClick={() => sync.mutate()}
         >
           {sync.isPending || data.running
@@ -105,7 +227,7 @@ export function ManualGarminCard() {
           </p>
         )}
         {(error || data.error) && <p role="alert">{error || data.error}</p>}
-      </CardContent>
-    </Card>
+      </Content>
+    </Container>
   );
 }

@@ -91,9 +91,10 @@ def main():
     os.umask(0o077)
     try:
         from garminconnect import Garmin
-        connection = json.loads((ROOT / '.private/connection.json').read_text())
+        private = Path(os.environ.get('OA_GARMIN_PRIVATE_DIR', str(ROOT / '.private')))
+        connection = json.loads((private / 'connection.json').read_text())
         client = Garmin(retry_attempts=0)
-        client.login(str(ROOT / '.private/tokens'))
+        client.login(str(private / 'tokens'))
         result = collect_sync(client, connection, datetime.now(ZoneInfo(connection['timezone'])).date())
         print(json.dumps({'ok': True, **result}, allow_nan=False))
     except Exception as exc:

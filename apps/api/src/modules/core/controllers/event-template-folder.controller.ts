@@ -29,11 +29,13 @@ import {
 } from '@openathlete/shared';
 
 import { JwtUser, UserTypeGuard } from 'src/modules/auth';
+import { UserTypes } from 'src/modules/auth/decorators';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
 
 import { EventTemplateFolderService } from '../services/event-template-folder.service';
 
 @ApiTags('Event Template Folder')
+@UserTypes(['COACH'])
 @Controller('event-template-folder')
 export class EventTemplateFolderController {
   constructor(private eventTemplateFolderService: EventTemplateFolderService) {}

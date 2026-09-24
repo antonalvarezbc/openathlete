@@ -7,3 +7,5 @@ export * from './create-account.dto';
 export * from './update-account.dto';
 export * from './password-reset.dto';
 export * from './create-event-template.dto';
+
+export * from './account-mode.dto';

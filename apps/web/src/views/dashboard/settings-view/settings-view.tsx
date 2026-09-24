@@ -1,12 +1,14 @@
 import { useCurrentSubscription } from '@/api/subscription';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useUserRoles } from '@/contexts/auth';
+import { useAuthContext, useUserRoles } from '@/contexts/auth';
+import { useSpaceContext } from '@/contexts/space';
 import { SubscriptionSettingsPage } from '@/pages/dashboard/settings/subscription';
 import { m } from '@/paraglide/messages';
 import { isPaymentDisabled } from '@/utils/capacitor';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
+import { AccountAdministrationTab } from './account-administration-tab';
 import { AthletesTab } from './athletes-tab';
 import { CoachesTab } from './coaches-tab';
 import { ConnectorsTab } from './connectors-tab';
@@ -19,6 +21,10 @@ import { TrainingZonesTab } from './training-zones-tab';
 
 export function SettingsView() {
   const roles = useUserRoles();
+  const { user } = useAuthContext();
+  const { space } = useSpaceContext();
+  const isAthlete = space === 'ATHLETE' && !!roles?.includes('ATHLETE');
+  const isCoach = !!roles?.includes('COACH');
   const { data: subscription } = useCurrentSubscription();
   const billingEnabled =
     !!subscription && !subscription.selfHosted && !isPaymentDisabled();
@@ -26,6 +32,18 @@ export function SettingsView() {
   const tabParam = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(tabParam || 'connectors');
 
+  const allowedTabs = [
+    'profile',
+    ...(user?.isAdmin ? ['administration'] : []),
+    'invitations',
+    'contribute',
+    ...(billingEnabled ? ['subscription'] : []),
+    ...(isAthlete
+      ? ['connectors', 'equipment', 'training_zones', 'coaches']
+      : []),
+    ...(isCoach ? ['training_plan', 'athletes'] : []),
+  ];
+  const visibleTab = allowedTabs.includes(activeTab) ? activeTab : 'profile';
   // Update active tab when URL param changes
   useEffect(() => {
     if (tabParam) {
@@ -42,22 +60,35 @@ export function SettingsView() {
   return (
     <div className="w-full p-4 md:p-8">
       <h1 className="text-2xl font-semibold hidden md:block">{m.settings()}</h1>
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-4">
+      <Tabs value={visibleTab} onValueChange={handleTabChange} className="mt-4">
         <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
           <TabsList className="w-max md:w-auto flex-nowrap md:flex-wrap min-w-full md:min-w-0">
-            <TabsTrigger value="connectors">{m.connectors()}</TabsTrigger>
+            {isAthlete && (
+              <TabsTrigger value="connectors">{m.connectors()}</TabsTrigger>
+            )}
             <TabsTrigger value="profile">{m.profile()}</TabsTrigger>
-            <TabsTrigger value="training_plan">
-              {m.training_plan_settings()}
-            </TabsTrigger>
-            <TabsTrigger value="equipment">{m.equipment()}</TabsTrigger>
-            <TabsTrigger value="training_zones">
-              {m.training_zones()}
-            </TabsTrigger>
-            {roles?.includes('COACH') && (
+            {user?.isAdmin && (
+              <TabsTrigger value="administration">
+                {m.account_administration()}
+              </TabsTrigger>
+            )}
+            {isCoach && (
+              <TabsTrigger value="training_plan">
+                {m.training_plan_settings()}
+              </TabsTrigger>
+            )}
+            {isAthlete && (
+              <TabsTrigger value="equipment">{m.equipment()}</TabsTrigger>
+            )}
+            {isAthlete && (
+              <TabsTrigger value="training_zones">
+                {m.training_zones()}
+              </TabsTrigger>
+            )}
+            {isCoach && (
               <TabsTrigger value="athletes">{m.athletes()}</TabsTrigger>
             )}
-            {roles?.includes('ATHLETE') && (
+            {isAthlete && (
               <TabsTrigger value="coaches">{m.coaches()}</TabsTrigger>
             )}
             <TabsTrigger value="invitations">{m.invitations()}</TabsTrigger>
@@ -67,27 +98,44 @@ export function SettingsView() {
             <TabsTrigger value="contribute">{m.contribute()}</TabsTrigger>
           </TabsList>
         </div>
-        <TabsContent value="connectors" className="mt-6">
-          <ConnectorsTab />
-        </TabsContent>
+        {isAthlete && (
+          <TabsContent value="connectors" className="mt-6">
+            <ConnectorsTab />
+          </TabsContent>
+        )}
+        {user?.isAdmin && (
+          <TabsContent value="administration" className="mt-6">
+            <AccountAdministrationTab />
+          </TabsContent>
+        )}
         <TabsContent value="profile" className="mt-6">
           <ProfileTab />
         </TabsContent>
-        <TabsContent value="training_plan" className="mt-6">
-          <TrainingPlanTab />
-        </TabsContent>
-        <TabsContent value="equipment" className="mt-6">
-          <EquipmentTab />
-        </TabsContent>
-        <TabsContent value="training_zones" className="mt-6">
-          <TrainingZonesTab />
-        </TabsContent>
-        <TabsContent value="athletes" className="mt-6">
-          <AthletesTab />
-        </TabsContent>
-        <TabsContent value="coaches" className="mt-6">
-          <CoachesTab />
-        </TabsContent>
+        {isCoach && (
+          <TabsContent value="training_plan" className="mt-6">
+            <TrainingPlanTab />
+          </TabsContent>
+        )}
+        {isAthlete && (
+          <TabsContent value="equipment" className="mt-6">
+            <EquipmentTab />
+          </TabsContent>
+        )}
+        {isAthlete && (
+          <TabsContent value="training_zones" className="mt-6">
+            <TrainingZonesTab />
+          </TabsContent>
+        )}
+        {isCoach && (
+          <TabsContent value="athletes" className="mt-6">
+            <AthletesTab />
+          </TabsContent>
+        )}
+        {isAthlete && (
+          <TabsContent value="coaches" className="mt-6">
+            <CoachesTab />
+          </TabsContent>
+        )}
         <TabsContent value="invitations" className="mt-6">
           <InvitationsTab />
         </TabsContent>

@@ -28,6 +28,7 @@ import {
 } from '@openathlete/shared';
 
 import { JwtUser, UserTypeGuard } from 'src/modules/auth';
+import { UserTypes } from 'src/modules/auth/decorators';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
 import { FeatureAccessGuard, RequireFeature } from 'src/modules/subscription';
 
@@ -35,6 +36,7 @@ import { EventGenerationService } from '../services/event-generation.service';
 import { EventModificationService } from '../services/event-modification.service';
 
 @ApiTags('Agent')
+@UserTypes(['COACH'])
 @Controller('agent/ai')
 export class AIFeaturesController {
   constructor(

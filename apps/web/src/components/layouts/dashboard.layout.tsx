@@ -1,4 +1,5 @@
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { useUserRoles } from '@/contexts/auth';
 import { SpaceConsumer, SpaceProvider } from '@/contexts/space';
 import { m } from '@/paraglide/messages';
 import { isCapacitor } from '@/utils/capacitor';
@@ -37,6 +38,7 @@ interface P {
 
 function LayoutContent({ children }: P) {
   const { onDragStart, onDragEnd, activeItem } = useSharedDnd() || {};
+  const roles = useUserRoles();
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -166,7 +168,7 @@ function LayoutContent({ children }: P) {
         ) : (
           <>
             <div className="flex min-w-0 flex-1">
-              <TemplateLibrarySidebar />
+              {roles?.includes('COACH') && <TemplateLibrarySidebar />}
               <SidebarInset className="min-w-0 flex-1">{children}</SidebarInset>
             </div>
             <ChatBubble />
@@ -174,7 +176,7 @@ function LayoutContent({ children }: P) {
           </>
         )}
       </SpaceConsumer>
-      <PlanImportHandler />
+      {roles?.includes('COACH') && <PlanImportHandler />}
       <DragOverlay dropAnimation={null} style={{ cursor: 'grabbing' }}>
         {getDragOverlayContent()}
       </DragOverlay>

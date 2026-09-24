@@ -138,12 +138,16 @@ export class PlanAdaptationService {
     db: Prisma.TransactionClient = this.prisma,
     now = new Date(),
   ) {
+    if (!user.roles?.includes('COACH'))
+      throw new ForbiddenException('Coach role required');
     const athlete = await db.athlete.findFirst({
       where: {
         athleteId: request.athleteId,
         OR: [
-          { userId: user.userId },
-          { coachAthletes: { some: { userId: user.userId } } },
+          ...(user.roles?.includes('ATHLETE') ? [{ userId: user.userId }] : []),
+          ...(user.roles?.includes('COACH')
+            ? [{ coachAthletes: { some: { userId: user.userId } } }]
+            : []),
         ],
       },
       select: { athleteId: true, user: { select: { language: true } } },

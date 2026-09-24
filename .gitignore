@@ -65,3 +65,6 @@ repomix-output.xml
 
 # TypeScript incremental build caches
 *.tsbuildinfo
+
+# Local development notes
+local.md

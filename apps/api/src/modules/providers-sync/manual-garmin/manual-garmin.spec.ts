@@ -6,8 +6,11 @@ import { ConfigService } from '@nestjs/config';
 
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PrismaService } from '../../prisma/services/prisma.service';
+import { loginGarmin } from './manual-garmin-login';
 import { manualGarminPayload } from './manual-garmin.schema';
 import { ManualGarminService } from './manual-garmin.service';
+
+jest.mock('./manual-garmin-login', () => ({ loginGarmin: jest.fn() }));
 
 const payload = {
   ok: true,
@@ -41,6 +44,7 @@ describe('manual Garmin import', () => {
   let directory: string;
   let service: TestService;
   const user = {
+    roles: ['ATHLETE' as const],
     userId: 1,
     email: 'athlete@example.test',
     athlete: { athleteId: 2 },
@@ -91,6 +95,59 @@ describe('manual Garmin import', () => {
     expect(service.fetch).not.toHaveBeenCalled();
     await expect(service.sync({ ...user, userId: 99 })).rejects.toThrow();
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+  it('linked coach can sync but cannot configure athlete credentials', async () => {
+    const coach: AuthUser = {
+      ...user,
+      userId: 9,
+      roles: ['COACH'],
+      athlete: { athleteId: 9 },
+    };
+    prisma.coachAthlete.findFirst.mockResolvedValue({
+      athleteId: 2,
+      userId: 9,
+    });
+    const status = await service.status(coach, 2);
+    expect(status).toMatchObject({
+      enabled: true,
+      connected: true,
+      canConfigure: false,
+    });
+    await service.sync(coach, 2);
+    expect(service.fetch).toHaveBeenCalledTimes(1);
+    await expect(
+      service.connect(coach, {
+        email: 'owner@example.test',
+        password: 'not-real',
+        timezone: 'Europe/Madrid',
+      }),
+    ).rejects.toThrow();
+    expect(loginGarmin).not.toHaveBeenCalled();
+  });
+  it('only owner may authenticate; status exposes no credentials', async () => {
+    (loginGarmin as jest.Mock).mockResolvedValue({ mfaRequired: true });
+    expect(
+      await service.connect(user, {
+        email: 'owner@example.test',
+        password: 'not-real',
+        timezone: 'Europe/Madrid',
+      }),
+    ).toEqual({ mfaRequired: true });
+    expect(loginGarmin).toHaveBeenCalledWith(
+      1,
+      directory,
+      join(directory, 'accounts', '2', '.private'),
+      expect.objectContaining({ athleteId: 2 }),
+    );
+    await expect(
+      service.connect(
+        { ...user, userId: 99 },
+        { timezone: 'Europe/Madrid', code: '123456' },
+      ),
+    ).rejects.toThrow();
+    expect(JSON.stringify(await service.status(user))).not.toContain(
+      'not-real',
+    );
   });
   it('imports atomically into the bound athlete and enforces cooldown', async () => {
     const result = await service.sync(user);

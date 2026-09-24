@@ -20,6 +20,7 @@ import { m } from '@/paraglide/messages';
 import { getPath } from '@/routes/paths';
 import { AnalyticsEvent } from '@/utils/analytics-events';
 import { cn } from '@/utils/shadcn';
+import { isAxiosError } from 'axios';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTheme } from 'next-themes';
@@ -218,7 +219,12 @@ export function OnboardingView() {
       navigate(getPath(['dashboard']));
     },
     onError: (error) => {
-      toast.error(error.message || m.onboarding_error());
+      toast.error(
+        isAxiosError(error) &&
+          error.response?.data?.code === 'ACCOUNT_MODE_ADMIN_REQUIRED'
+          ? m.account_mode_locked()
+          : m.onboarding_error(),
+      );
     },
   });
 
@@ -362,6 +368,7 @@ export function OnboardingView() {
               </h2>
               <p className="text-muted-foreground mt-2 text-sm sm:text-base">
                 {m.onboarding_role_selection_subtitle()}
+                <span className="block mt-2">{m.account_mode_locked()}</span>
               </p>
             </div>
             <div className="grid gap-3 sm:gap-4">

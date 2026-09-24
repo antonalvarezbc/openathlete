@@ -2,12 +2,16 @@ import client from '@/utils/axios';
 
 import {
   CreateTrainingZoneDto,
+  TrainingZone,
+  TrainingZoneValue,
   UpdateTrainingZoneDto,
 } from '@openathlete/shared';
 
 export class TrainingZoneAPI {
   static async getAllForAthlete(athleteId: number) {
-    const res = await client.get(`/training-zone/athlete/${athleteId}`);
+    const res = await client.get<
+      (TrainingZone & { values: TrainingZoneValue[] })[]
+    >(`/training-zone/athlete/${athleteId}`);
     return res.data;
   }
 

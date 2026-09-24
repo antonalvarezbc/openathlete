@@ -32,8 +32,10 @@ export class TrainingPlanService {
       where: {
         athleteId,
         OR: [
-          { userId: user.userId },
-          { coachAthletes: { some: { userId: user.userId } } },
+          ...(user.roles?.includes('ATHLETE') ? [{ userId: user.userId }] : []),
+          ...(user.roles?.includes('COACH')
+            ? [{ coachAthletes: { some: { userId: user.userId } } }]
+            : []),
         ],
       },
     });
@@ -62,6 +64,8 @@ export class TrainingPlanService {
     options: Partial<ImportPlanBodyDto> = {},
     token?: string,
   ) {
+    if (!user.roles?.includes('COACH'))
+      throw new ForbiddenException('Coach role required');
     const parsed = trainingPlanImportSchema.safeParse(input);
     if (!parsed.success) throw new BadRequestException(parsed.error.issues);
     const planData = parsed.data;

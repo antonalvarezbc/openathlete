@@ -189,6 +189,7 @@ describe('JSON import limits', () => {
 
 describe('JSON import transaction boundary', () => {
   const user = {
+    roles: ['COACH' as const],
     userId: 3,
     email: 'qa@example.test',
     athlete: { athleteId: 3 },

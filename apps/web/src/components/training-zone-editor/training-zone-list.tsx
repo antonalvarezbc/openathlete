@@ -1,5 +1,4 @@
-import { useGetMyAthleteQuery } from '@/api/athlete';
-import { useDeleteTrainingZone } from '@/api/training-zone';
+import { useGetTrainingZones } from '@/api/training-zone';
 import { LoadingScreen } from '@/components/loading-screen';
 import { Button } from '@/components/ui/button';
 import {
@@ -9,6 +8,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { useUserRoles } from '@/contexts/auth';
 import { m } from '@/paraglide/messages';
 import { useMemo, useState } from 'react';
 
@@ -23,20 +23,26 @@ interface TrainingZoneListProps {
 }
 
 export function TrainingZoneList({ athleteId, type }: TrainingZoneListProps) {
-  const { data: athlete, isLoading: athleteLoading } = useGetMyAthleteQuery();
+  const roles = useUserRoles();
+  const canEdit = roles?.includes('COACH') ?? false;
+  const {
+    data: trainingZones,
+    isLoading,
+    isError,
+  } = useGetTrainingZones(athleteId);
   const [editMode, setEditMode] = useState(false);
-
-  const deleteZone = useDeleteTrainingZone();
 
   const zones = useMemo(() => {
     return (
-      athlete?.trainingZones
-        .filter((z) => z.type === type)
+      trainingZones
+        ?.filter((z) => z.type === type)
         .sort((a, b) => a.index - b.index) || []
     );
-  }, [athlete, type]);
+  }, [trainingZones, type]);
 
-  if (athleteLoading || !athlete) return <LoadingScreen />;
+  if (isLoading) return <LoadingScreen />;
+  if (isError || !trainingZones)
+    return <p role="alert">{m.training_zones_load_failed()}</p>;
 
   return (
     <div className="space-y-4">
@@ -46,31 +52,31 @@ export function TrainingZoneList({ athleteId, type }: TrainingZoneListProps) {
             ? m.no_training_zones_defined()
             : `${zones.length} ${m.training_zones()}`}
         </p>
-        <Dialog open={editMode} onOpenChange={setEditMode}>
-          <DialogTrigger asChild>
-            <Button variant="default" size="sm">
-              {zones.length === 0 ? m.create_zones() : m.edit_zones()}
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
+        {canEdit && (
+          <Dialog open={editMode} onOpenChange={setEditMode}>
+            <DialogTrigger asChild>
+              <Button variant="default" size="sm">
                 {zones.length === 0 ? m.create_zones() : m.edit_zones()}
-              </DialogTitle>
-            </DialogHeader>
-            <TrainingZoneBulkEditor
-              athleteId={athleteId}
-              type={type}
-              zones={zones}
-              onComplete={() => setEditMode(false)}
-            />
-          </DialogContent>
-        </Dialog>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {zones.length === 0 ? m.create_zones() : m.edit_zones()}
+                </DialogTitle>
+              </DialogHeader>
+              <TrainingZoneBulkEditor
+                athleteId={athleteId}
+                type={type}
+                zones={zones}
+                onComplete={() => setEditMode(false)}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
-      {zones.length > 0 && (
-        <TrainingZoneTable zones={zones} onDelete={deleteZone.mutate} />
-      )}
+      {zones.length > 0 && <TrainingZoneTable zones={zones} />}
     </div>
   );
 }

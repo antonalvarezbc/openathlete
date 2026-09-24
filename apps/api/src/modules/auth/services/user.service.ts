@@ -3,6 +3,7 @@ import * as argon2 from 'argon2';
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -34,6 +35,7 @@ import { SendEmailEvent } from 'src/events';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
 import { AuthUser } from '../decorators/user.decorator';
+import { isAccountAdministrator } from './account-administration.service';
 import { AthleteInvitationService } from './athlete-invitation.service';
 import { CoachInvitationService } from './coach-invitation.service';
 import { TokenService } from './token.service';
@@ -74,7 +76,7 @@ export class UserService {
     });
 
   public getMe = async (user: AuthUser) => {
-    return await this.prisma.user.findUniqueOrThrow({
+    const account = await this.prisma.user.findUniqueOrThrow({
       where: { userId: user.userId },
       select: {
         userId: true,
@@ -87,6 +89,13 @@ export class UserService {
         language: true,
       },
     });
+    return {
+      ...account,
+      isAdmin: isAccountAdministrator(
+        user.userId,
+        this.configService.get('ADMIN_USER_IDS'),
+      ),
+    };
   };
 
   public updateLanguage = async (user: AuthUser, language: Language) => {
@@ -341,91 +350,107 @@ export class UserService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Update user roles, gender, and mark onboarding as completed
-    await this.prisma.user.update({
-      where: { userId: user.userId },
-      data: {
-        gender: data.gender as Gender | undefined,
-        onboardingCompleted: true,
-      },
-    });
-
-    // Get athlete record
-    const athlete = await this.prisma.athlete.findUnique({
-      where: { userId: user.userId },
-    });
-
-    if (!athlete) {
-      throw new NotFoundException('Athlete record not found');
-    }
-
-    // Create metrics if provided
-    const metricsToCreate: Array<{
-      type: MetricType;
-      date: Date;
-      value: number;
-    }> = [];
-
-    if (data.weight) {
-      metricsToCreate.push({
-        type: 'WEIGHT',
-        date: today,
-        value: data.weight,
+    await this.prisma.$transaction(async (tx) => {
+      // Update user roles, gender, and mark onboarding as completed
+      const claimed = await tx.user.updateMany({
+        where: { userId: user.userId, onboardingCompleted: false },
+        data: {
+          roles: data.roles,
+          gender: data.gender as Gender | undefined,
+          onboardingCompleted: true,
+        },
       });
-    }
+      if (claimed.count !== 1)
+        throw new ForbiddenException({
+          code: 'ACCOUNT_MODE_ADMIN_REQUIRED',
+          message:
+            'Onboarding is already complete. Only an administrator can change account mode.',
+        });
 
-    if (data.height) {
-      metricsToCreate.push({
-        type: 'HEIGHT',
-        date: today,
-        value: data.height,
+      // Get athlete record
+      const athlete = await tx.athlete.findUnique({
+        where: { userId: user.userId },
       });
-    }
 
-    if (data.hrMax) {
-      metricsToCreate.push({
-        type: 'HR_MAX',
-        date: today,
-        value: data.hrMax,
-      });
-    }
+      if (!athlete) {
+        throw new NotFoundException('Athlete record not found');
+      }
 
-    if (data.hrRest) {
-      metricsToCreate.push({
-        type: 'HR_REST',
-        date: today,
-        value: data.hrRest,
-      });
-    }
+      // Create metrics if provided
+      const metricsToCreate: Array<{
+        type: MetricType;
+        date: Date;
+        value: number;
+      }> = [];
 
-    // Create metrics (upsert to avoid duplicates)
-    for (const metric of metricsToCreate) {
-      await this.prisma.athleteMetric.upsert({
-        where: {
-          athleteId_type_date: {
+      if (data.roles.includes('ATHLETE') && data.weight) {
+        metricsToCreate.push({
+          type: 'WEIGHT',
+          date: today,
+          value: data.weight,
+        });
+      }
+
+      if (data.roles.includes('ATHLETE') && data.height) {
+        metricsToCreate.push({
+          type: 'HEIGHT',
+          date: today,
+          value: data.height,
+        });
+      }
+
+      if (data.roles.includes('ATHLETE') && data.hrMax) {
+        metricsToCreate.push({
+          type: 'HR_MAX',
+          date: today,
+          value: data.hrMax,
+        });
+      }
+
+      if (data.roles.includes('ATHLETE') && data.hrRest) {
+        metricsToCreate.push({
+          type: 'HR_REST',
+          date: today,
+          value: data.hrRest,
+        });
+      }
+
+      // Create metrics (upsert to avoid duplicates)
+      for (const metric of metricsToCreate) {
+        await tx.athleteMetric.upsert({
+          where: {
+            athleteId_type_date: {
+              athleteId: athlete.athleteId,
+              type: metric.type,
+              date: metric.date,
+            },
+          },
+          create: {
             athleteId: athlete.athleteId,
             type: metric.type,
             date: metric.date,
+            value: metric.value,
           },
-        },
-        create: {
-          athleteId: athlete.athleteId,
-          type: metric.type,
-          date: metric.date,
-          value: metric.value,
-        },
-        update: {
-          value: metric.value,
-        },
-      });
-    }
+          update: {
+            value: metric.value,
+          },
+        });
+      }
+    });
 
     // Invite coach if provided
     if (data.coachEmail && data.roles.includes('ATHLETE')) {
-      await this.coachInvitationService.createInvitation(
-        user.userId,
-        data.coachEmail,
-      );
+      try {
+        await this.coachInvitationService.createInvitation(
+          user.userId,
+          data.coachEmail,
+        );
+      } catch {
+        // The chosen mode is already committed; invitation failure must not reopen onboarding.
+        this.logger.warn(
+          'Coach invitation failed after onboarding; it can be retried from settings.',
+        );
+      }
     }
 
     // Invite athletes if provided

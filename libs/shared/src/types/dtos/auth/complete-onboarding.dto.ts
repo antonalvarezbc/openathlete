@@ -1,7 +1,9 @@
 import { z } from 'zod';
 
+import { accountRolesSchema } from './account-mode.dto';
+
 export const completeOnboardingDtoSchema = z.object({
-  roles: z.array(z.enum(['ATHLETE', 'COACH'])).min(1),
+  roles: accountRolesSchema,
   gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
   weight: z.number().positive().optional(),
   height: z.number().positive().optional(),

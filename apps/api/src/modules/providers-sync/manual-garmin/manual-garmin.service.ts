@@ -16,6 +16,7 @@ import { ConnectorProvider, EventType } from '@openathlete/database';
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { mapGarminActivityType } from '../../core/helpers/garmin';
 import { PrismaService } from '../../prisma/services/prisma.service';
+import { loginGarmin } from './manual-garmin-login';
 import {
   manualGarminConnection,
   manualGarminPayload,
@@ -45,12 +46,24 @@ export class ManualGarminService {
 
   protected async fetchPayload(directory: string): Promise<unknown> {
     const { stdout } = await execute(
-      join(directory, '.venv/bin/python'),
-      [join(directory, 'sync.py')],
+      join(
+        this.config.getOrThrow<string>('GARMIN_UNOFFICIAL_DIRECTORY'),
+        '.venv/bin/python',
+      ),
+      [
+        join(
+          this.config.getOrThrow<string>('GARMIN_UNOFFICIAL_DIRECTORY'),
+          'sync.py',
+        ),
+      ],
       {
         timeout: 120_000,
         maxBuffer: 2 * 1024 * 1024,
-        env: { ...process.env, PYTHONUNBUFFERED: '1' },
+        env: {
+          ...process.env,
+          PYTHONUNBUFFERED: '1',
+          OA_GARMIN_PRIVATE_DIR: join(directory, '.private'),
+        },
       },
     );
     const result = JSON.parse(stdout);
@@ -73,34 +86,87 @@ export class ManualGarminService {
     return result;
   }
 
-  private async connection(user: AuthUser) {
-    const directory = this.config.get<string>('GARMIN_UNOFFICIAL_DIRECTORY');
-    if (
-      !this.config.get<boolean>('SELF_HOSTED') ||
-      !directory ||
-      !isAbsolute(directory)
-    )
+  private async connection(user: AuthUser, requestedAthleteId?: number) {
+    const root = this.config.get<string>('GARMIN_UNOFFICIAL_DIRECTORY');
+    if (!this.config.get<boolean>('SELF_HOSTED') || !root || !isAbsolute(root))
       return null;
-    let connection;
+    let legacy: ReturnType<typeof manualGarminConnection.parse> | undefined;
     try {
-      connection = manualGarminConnection.parse(
+      legacy = manualGarminConnection.parse(
+        JSON.parse(
+          await readFile(join(root, '.private/connection.json'), 'utf8'),
+        ),
+      );
+    } catch {}
+    const athleteId =
+      requestedAthleteId ??
+      (user.roles?.includes('ATHLETE')
+        ? user.athlete?.athleteId
+        : legacy?.athleteId);
+    if (!athleteId) return null;
+    const athlete = await this.prisma.athlete.findUnique({
+      where: { athleteId },
+    });
+    const owner =
+      !!athlete &&
+      athlete.userId === user.userId &&
+      !!user.roles?.includes('ATHLETE');
+    const coach =
+      user.roles?.includes('COACH') &&
+      (await this.prisma.coachAthlete.findFirst({
+        where: { athleteId, userId: user.userId },
+      }));
+    if (!athlete || (!owner && !coach)) return null;
+    const directory = join(root, 'accounts', String(athleteId));
+    try {
+      const connection = manualGarminConnection.parse(
         JSON.parse(
           await readFile(join(directory, '.private/connection.json'), 'utf8'),
         ),
       );
-    } catch {
-      throw new ServiceUnavailableException(
-        'Garmin manual: configuración local incompleta.',
-      );
+      if (connection.athleteId !== athleteId)
+        throw new Error('Identity mismatch');
+      return { ...connection, directory, canConfigure: owner };
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT')
+        throw new ServiceUnavailableException(
+          'Garmin manual: configuración local incompleta.',
+        );
     }
-    const athlete = await this.prisma.athlete.findUnique({
-      where: { athleteId: connection.athleteId },
-    });
-    const coach = await this.prisma.coachAthlete.findFirst({
-      where: { athleteId: connection.athleteId, userId: user.userId },
-    });
-    if (!athlete || (athlete.userId !== user.userId && !coach)) return null;
-    return { ...connection, directory };
+    if (legacy?.athleteId === athleteId)
+      return { ...legacy, directory: root, canConfigure: owner };
+    return {
+      athleteId,
+      directory,
+      canConfigure: owner,
+      garminUserProfileId: undefined,
+    };
+  }
+
+  async connect(
+    user: AuthUser,
+    input: {
+      email?: string;
+      password?: string;
+      code?: string;
+      timezone: string;
+    },
+  ) {
+    if (!user.roles?.includes('ATHLETE') || !user.athlete)
+      throw new ForbiddenException();
+    const connection = await this.connection(user, user.athlete.athleteId);
+    if (!connection?.canConfigure) throw new ForbiddenException();
+    const root = this.config.getOrThrow<string>('GARMIN_UNOFFICIAL_DIRECTORY');
+    // Keep existing legacy tokens untouched; new connections belong to the authenticated athlete.
+    return loginGarmin(
+      user.userId,
+      root,
+      join(root, 'accounts', String(connection.athleteId), '.private'),
+      {
+        ...input,
+        athleteId: connection.athleteId,
+      },
+    );
   }
 
   private async state(directory: string): Promise<SyncState> {
@@ -122,12 +188,14 @@ export class ManualGarminService {
     await rename(`${file}.tmp`, file);
   }
 
-  async status(user: AuthUser) {
-    const connection = await this.connection(user);
+  async status(user: AuthUser, athleteId?: number) {
+    const connection = await this.connection(user, athleteId);
     if (!connection) return { enabled: false };
     const state = await this.state(connection.directory);
     return {
       enabled: true,
+      connected: !!connection.garminUserProfileId,
+      canConfigure: connection.canConfigure,
       athleteId: connection.athleteId,
       ...state,
       running:
@@ -136,9 +204,9 @@ export class ManualGarminService {
     };
   }
 
-  async sync(user: AuthUser) {
-    const connection = await this.connection(user);
-    if (!connection) throw new ForbiddenException();
+  async sync(user: AuthUser, requestedAthleteId?: number) {
+    const connection = await this.connection(user, requestedAthleteId);
+    if (!connection?.garminUserProfileId) throw new ForbiddenException();
     const { directory, athleteId } = connection;
     // PostgreSQL lock serializes all API workers; automatically released on rollback/crash.
     return this.prisma

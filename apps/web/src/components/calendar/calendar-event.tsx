@@ -1,5 +1,6 @@
 import { useDeleteEventMutation, useDuplicateEventMutation } from '@/api/event';
 import { useCreateEventTemplateMutation } from '@/api/event-template';
+import { useUserRoles } from '@/contexts/auth';
 import { useIsEventValidated } from '@/hooks/use-event-validation';
 import { m } from '@/paraglide/messages';
 import { AnalyticsEvent } from '@/utils/analytics-events';
@@ -92,8 +93,11 @@ function EventSecondLine({ event }: { event: Event }) {
 }
 
 export function CalendarEvent({ event, wrapped }: P) {
+  const roles = useUserRoles();
+  const canEdit = !!roles?.includes('COACH') || event.type === 'ACTIVITY';
   const posthog = usePostHog();
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    disabled: !canEdit,
     id: event.eventId,
     data: {
       type: 'event',
@@ -252,64 +256,66 @@ export function CalendarEvent({ event, wrapped }: P) {
             </div>
           </CalendarEventTooltipWrapper>
         </ContextMenuTrigger>
-        <ContextMenuContent>
-          <ContextMenuItem
-            onClick={(e) => {
-              editEvent(event.eventId);
-              e.stopPropagation();
-            }}
-          >
-            <Edit2 className="w-4 h-4 mr-2" />
-            {m.edit()}
-          </ContextMenuItem>
-          {event.type === EVENT_TYPE.TRAINING && (
+        {canEdit && (
+          <ContextMenuContent>
             <ContextMenuItem
               onClick={(e) => {
-                createEventTemplateMutation.mutate({
-                  eventId: event.eventId,
-                });
+                editEvent(event.eventId);
                 e.stopPropagation();
               }}
             >
-              <FileText className="w-4 h-4 mr-2" />
-              {m.save_as_template()}
+              <Edit2 className="w-4 h-4 mr-2" />
+              {m.edit()}
             </ContextMenuItem>
-          )}
-          {event.type !== EVENT_TYPE.ACTIVITY && (
-            <>
+            {event.type === EVENT_TYPE.TRAINING && (
               <ContextMenuItem
                 onClick={(e) => {
-                  duplicateEventMutation.mutate({ eventId: event.eventId });
+                  createEventTemplateMutation.mutate({
+                    eventId: event.eventId,
+                  });
                   e.stopPropagation();
                 }}
               >
-                <Copy className="w-4 h-4 mr-2" />
-                {m.duplicate()}
+                <FileText className="w-4 h-4 mr-2" />
+                {m.save_as_template()}
               </ContextMenuItem>
-              <ContextMenuSeparator />
-              <ContextMenuItem
-                onClick={(e) => {
-                  copyEvent(event);
-                  e.stopPropagation();
-                }}
-              >
-                <Copy className="w-4 h-4 mr-2" />
-                {m.copy()}
-              </ContextMenuItem>
-            </>
-          )}
-          <ContextMenuSeparator />
-          <ContextMenuItem
-            variant="destructive"
-            onClick={(e) => {
-              setDeleteEventDialog(true);
-              e.stopPropagation();
-            }}
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            {m.delete_()}
-          </ContextMenuItem>
-        </ContextMenuContent>
+            )}
+            {event.type !== EVENT_TYPE.ACTIVITY && (
+              <>
+                <ContextMenuItem
+                  onClick={(e) => {
+                    duplicateEventMutation.mutate({ eventId: event.eventId });
+                    e.stopPropagation();
+                  }}
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  {m.duplicate()}
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem
+                  onClick={(e) => {
+                    copyEvent(event);
+                    e.stopPropagation();
+                  }}
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  {m.copy()}
+                </ContextMenuItem>
+              </>
+            )}
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              variant="destructive"
+              onClick={(e) => {
+                setDeleteEventDialog(true);
+                e.stopPropagation();
+              }}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {m.delete_()}
+            </ContextMenuItem>
+          </ContextMenuContent>
+        )}
       </ContextMenu>
       <ConfirmAction
         open={deleteEventDialog}

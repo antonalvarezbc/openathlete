@@ -16,6 +16,22 @@ export const ApiEnvSchema = z
       .default('false')
       .transform((value) => value === 'true'),
 
+    ADMIN_USER_IDS: z
+      .string()
+      .default('')
+      .refine(
+        (value) =>
+          value === '' ||
+          value
+            .split(',')
+            .every(
+              (id) =>
+                /^[1-9]\d*$/.test(id.trim()) &&
+                Number.isSafeInteger(Number(id)),
+            ),
+        'ADMIN_USER_IDS must contain comma-separated positive user IDs',
+      ),
+
     GARMIN_UNOFFICIAL_DIRECTORY: z.string().optional(),
 
     // Core application configuration

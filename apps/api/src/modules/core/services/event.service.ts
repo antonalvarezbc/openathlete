@@ -281,7 +281,7 @@ export class EventService {
     if (
       !ability.can(
         'create',
-        subject('Event', { athleteId: finalAthleteId } as Event),
+        subject('Event', { athleteId: finalAthleteId, type } as Event),
       )
     ) {
       throw new ForbiddenException('You are not allowed to create this event');
@@ -416,6 +416,12 @@ export class EventService {
       }),
     );
 
+    if (
+      !user.roles?.includes('COACH') &&
+      data.type &&
+      data.type !== EVENT_TYPE.ACTIVITY
+    )
+      throw new ForbiddenException();
     const workout =
       data.type === EVENT_TYPE.TRAINING ? data.workout : undefined;
 
@@ -913,7 +919,7 @@ export class EventService {
 
     const event = await this.prisma.event.findFirst({
       where: {
-        AND: [{ eventId: eventId }, accessibleBy(ability, 'update').Event],
+        AND: [{ eventId: eventId }, accessibleBy(ability, 'read').Event],
       },
     });
     const activity = await this.prisma.event.findFirst({
@@ -978,7 +984,7 @@ export class EventService {
 
     const event = await this.prisma.event.findFirst({
       where: {
-        AND: [{ eventId: eventId }, accessibleBy(ability, 'update').Event],
+        AND: [{ eventId: eventId }, accessibleBy(ability, 'read').Event],
       },
     });
 
@@ -1085,6 +1091,8 @@ export class EventService {
       throw new NotFoundException('Event not found');
     }
 
+    if (!ability.can('create', subject('Event', event)))
+      throw new ForbiddenException();
     const { startDate, endDate, name, type, athleteId } = event;
 
     const subEntityData: Record<string, unknown> = {

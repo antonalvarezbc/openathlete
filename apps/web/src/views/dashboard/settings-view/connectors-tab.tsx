@@ -215,7 +215,6 @@ export function ConnectorsTab() {
 
   return (
     <div className="space-y-6">
-      <ManualGarminCard />
       <SettingsSection
         title={m.connectors()}
         description={m.connect_activity_tracking_services()}
@@ -494,6 +493,8 @@ export function ConnectorsTab() {
               })}
         </div>
       </SettingsSection>
+
+      <ManualGarminCard configure />
 
       {icalSecret && (
         <SettingsSection

@@ -7,7 +7,9 @@ import { eventKeys } from '@/api/event/event.keys';
 import { useWeeklyLoadSummaryQuery } from '@/api/training-load';
 import { trainingLoadKeys } from '@/api/training-load/training-load.keys';
 import { useCalendarData } from '@/components/calendar/hooks/use-calendar-data';
+import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/ui/loader';
+import { useUserRoles } from '@/contexts/auth';
 import { useFeatureAccess } from '@/hooks/use-feature-access';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { type PageAction, useSetPageActions } from '@/hooks/use-page-actions';
@@ -61,10 +63,12 @@ interface P {
 export function Calendar({
   events,
   athleteId,
-  allowCreate = true,
+  allowCreate: requestedAllowCreate = true,
   onMonthChange,
   isLoading = false,
 }: P) {
+  const roles = useUserRoles();
+  const allowCreate = requestedAllowCreate && !!roles?.includes('COACH');
   const posthog = usePostHog();
   const isMobile = useIsMobile();
   const calendarData = useCalendarData({ events });
@@ -343,6 +347,7 @@ export function Calendar({
 
   const updateCycleDates = useCallback(
     (cycleId: number, startDate: Date, endDate: Date) => {
+      if (!allowCreate) return;
       // Update optimistically immediately for instant UI feedback
       queryClient.setQueriesData<Cycle[]>(
         { queryKey: [cycleKeys.getMyCycles] },
@@ -375,7 +380,7 @@ export function Calendar({
         },
       );
     },
-    [updateCycleMutation, queryClient],
+    [updateCycleMutation, queryClient, allowCreate],
   );
 
   // Persist coloredBy to localStorage
@@ -399,11 +404,20 @@ export function Calendar({
       createEventWithAI: setAIGenerateEventDialog,
       openEventDetails: setEventDetailsOpened,
       eventDetailsOpened,
-      editEvent: (eventId) => setEditEventDialog(eventId),
+      editEvent: (eventId) => {
+        if (
+          roles?.includes('COACH') ||
+          events?.find((e) => e.eventId === eventId)?.type === 'ACTIVITY'
+        )
+          setEditEventDialog(eventId);
+      },
       createCycle: (startDate, endDate) => {
+        if (!allowCreate) return;
         setCreateCycleDialog({ startDate, endDate });
       },
-      editCycle: (cycleId) => setEditCycleDialog(cycleId),
+      editCycle: (cycleId) => {
+        if (allowCreate) setEditCycleDialog(cycleId);
+      },
       viewCycle: (cycleId) => setViewCycleDialog(cycleId),
       updateCycleDates,
       dragSelection,
@@ -614,6 +628,20 @@ export function Calendar({
 
   return (
     <div className="flex flex-col gap-3">
+      {roles?.includes('ATHLETE') && !roles.includes('COACH') && (
+        <Button
+          variant="outline"
+          className="w-fit"
+          onClick={() =>
+            setCreateEventDialog({
+              date: new Date(),
+              type: EVENT_TYPE.ACTIVITY,
+            })
+          }
+        >
+          {m.activity()}
+        </Button>
+      )}
       <EventClipboardProvider>
         <EventContextMenuProvider>
           <CalendarContext.Provider value={memoizedValue}>
