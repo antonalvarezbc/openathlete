@@ -22,6 +22,35 @@ direct settings link.
   tabs remain in use. The separate Capacitor layout remains in place.
 - This change does not redesign every chart or form, or change API permissions.
 
+## Calendar actions
+
+- Athlete-only accounts no longer show the ambiguous `activity` creation button.
+  It opened a completed-activity form, not a planned workout. That form also
+  omitted metrics required by the create-activity API. This change removes the
+  entry point; it does not implement manual activity logging. Existing activity
+  details, feedback and editing remain available.
+- On mobile, a coach with a selected athlete sees a date field and a **Plan**
+  menu: training, template, AI (when available), competition and note. Each action
+  uses the selected date. Touch targets are at least 44px and wrap on narrow screens.
+- The menu reuses the existing dialogs and role checks. The coach overview has no
+  creation action until an athlete is selected. Dual-role accounts retain their
+  existing ability to plan their own training. Desktop planning controls are unchanged.
+- Capacitor's existing page actions use the same options and selected date;
+  duplicate training entries have been removed.
+
+## Days with many events
+
+- The mobile event list inside each day scrolls independently when its content
+  exceeds 20rem or half the viewport height. The date, event count and cycle labels
+  remain outside that scroll region.
+- A localized hint appears only when the list overflows. The region is labelled
+  with its date and becomes keyboard-focusable when scrolling is needed. Scroll
+  gestures stay inside that day; use its header to move through the calendar.
+- Virtualized days and week summaries use measured heights rather than fixed
+  estimates, including when cycle labels wrap or an activity contains a linked
+  training card. The next day no longer covers the final cards.
+- Short lists keep their natural height. Desktop day layouts are unchanged.
+
 ## Verification
 
 Use a linked QA coach/athlete pair rather than a real account when changing
@@ -39,6 +68,21 @@ language or logging out.
 6. With both roles, switch spaces through the existing space selector.
 7. Check the drawer on a short viewport and resize to 768 and 1440px.
    Desktop navigation and settings tabs must be visible; mobile controls hidden.
+
+8. In an athlete-only calendar, confirm there is no `activity` button or planning
+   menu. In a linked athlete's calendar as a coach, check the date field and **Plan**
+   menu at 320, 390, 430 and 767px. Select another date and open training,
+   competition, note, template and AI dialogs; close each without saving.
+   Confirm the chosen date is passed to training and competition forms, touch
+   targets remain reachable, and the menu does not lock the page after closing.
+   At 768px and above, confirm the mobile planning toolbar disappears.
+
+9. With synthetic data, display twelve activities in one day, including a linked
+   training card and several cycle labels, then a day with one activity. At 320,
+   390 and 767px and a short 390 × 480 viewport, swipe within the busy day until
+   the last activity is fully visible. Confirm the outer calendar stays still,
+   the last activity opens on tap, rows do not overlap, and the short list has no
+   scroll hint. Resize to desktop and confirm the inner mobile regions disappear.
 
 Development verification used Chromium touch emulation and a real QA login.
 Role-specific UI responses were simulated; no account roles were changed.

@@ -1209,5 +1209,7 @@
   "admin_mode_failed": "Impossibile aggiornare o caricare l’account. Verifica i permessi e che la configurazione iniziale sia completa.",
   "training_zones_load_failed": "Impossibile caricare le zone di allenamento.",
   "garmin_manual_fit_result": "FIT: {imported} importati, {failed} non riusciti e {pending} in attesa (inclusi gli errori). Fino a 3 per sincronizzazione; premi di nuovo il pulsante per continuare.",
-  "garmin_manual_fit_failed_ids": "Attività Garmin con FIT da riprovare: {ids}."
+  "garmin_manual_fit_failed_ids": "Attività Garmin con FIT da riprovare: {ids}.",
+  "calendar_day_events_label": "Eventi del {date}",
+  "calendar_day_scroll_hint": "Scorri nella lista per vedere tutti gli eventi della giornata."
 }
