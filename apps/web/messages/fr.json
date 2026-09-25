@@ -1250,5 +1250,13 @@
   "workspace_conflict": "Enregistrement impossible : vérifiez si le plan existe, est terminé, possède déjà une course objectif ou si la compétition est terminée ou partagée. Actualisez avant de réessayer.",
   "workspace_invalid": "Vérifiez les champs et les dates. Les courses doivent être dans le plan et les préparatoires avant la course objectif. La modification n’a pas été enregistrée.",
   "workspace_failed": "Impossible de charger ou d’enregistrer les informations. Vérifiez la connexion et réessayez.",
-  "coach_planning": "Planification"
+  "coach_planning": "Planification",
+  "bulk_workouts_select": "Sélectionner des séances",
+  "bulk_workouts_selected": "{count} séances sélectionnées",
+  "bulk_workouts_delete": "Supprimer la sélection",
+  "bulk_workouts_help": "Sélectionnez les séances non réalisées à supprimer. Les activités réalisées et les compétitions sont exclues de cette sélection.",
+  "bulk_workouts_confirm": "Vous allez supprimer {count} séances. Vérifiez la liste : cette action est irréversible.",
+  "bulk_workouts_toggle": "Sélectionner {name}",
+  "bulk_workouts_deleted": "{count} séances supprimées.",
+  "bulk_workouts_failed": "Supprimées : {deleted}. Échecs : {failed}. Vérifiez les séances encore sélectionnées avant de réessayer."
 }

@@ -1250,5 +1250,13 @@
   "workspace_conflict": "Could not save: check whether the plan exists, is closed, already has a target race, or the competition is completed or shared. Refresh before retrying.",
   "workspace_invalid": "Check the fields and dates. Races must be within the plan and preparation races before the target race. The change was not saved.",
   "workspace_failed": "Could not load or save the information. Check your connection and try again.",
-  "coach_planning": "Planning"
+  "coach_planning": "Planning",
+  "bulk_workouts_select": "Select workouts",
+  "bulk_workouts_selected": "{count} workouts selected",
+  "bulk_workouts_delete": "Delete selected",
+  "bulk_workouts_help": "Select the uncompleted workouts to delete. Completed activities and competitions are excluded from this selection.",
+  "bulk_workouts_confirm": "You are about to delete {count} workouts. Review the list: this action cannot be undone.",
+  "bulk_workouts_toggle": "Select {name}",
+  "bulk_workouts_deleted": "Deleted {count} workouts.",
+  "bulk_workouts_failed": "Deleted: {deleted}. Could not delete: {failed}. Review the remaining selection before retrying."
 }

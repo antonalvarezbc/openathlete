@@ -1250,5 +1250,13 @@
   "workspace_conflict": "No se pudo guardar: comprueba si el plan ya existe, está finalizado, ya tiene carrera objetivo o la competición está completada o compartida. Actualiza la vista antes de reintentar.",
   "workspace_invalid": "Revisa los campos y fechas. Las carreras deben estar dentro del plan y las preparatorias antes de la carrera objetivo. No se ha guardado el cambio.",
   "workspace_failed": "No se ha podido cargar o guardar la información. Comprueba la conexión y vuelve a intentarlo.",
-  "coach_planning": "Planificación"
+  "coach_planning": "Planificación",
+  "bulk_workouts_select": "Seleccionar entrenamientos",
+  "bulk_workouts_selected": "{count} entrenamientos seleccionados",
+  "bulk_workouts_delete": "Eliminar seleccionados",
+  "bulk_workouts_help": "Marca los entrenamientos pendientes que quieras eliminar. Las actividades realizadas y las competiciones quedan fuera de esta selección.",
+  "bulk_workouts_confirm": "Vas a eliminar {count} entrenamientos. Revisa la lista: esta acción no se puede deshacer.",
+  "bulk_workouts_toggle": "Seleccionar {name}",
+  "bulk_workouts_deleted": "Se han eliminado {count} entrenamientos.",
+  "bulk_workouts_failed": "Eliminados: {deleted}. No se pudieron eliminar: {failed}. Revisa los que siguen seleccionados antes de reintentar."
 }

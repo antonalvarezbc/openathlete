@@ -35,6 +35,7 @@ import {
   ContextMenuTrigger,
 } from '../ui/context-menu';
 import { CalendarEventTooltipWrapper } from './calendar-event-tooltip-wrapper';
+import { useBulkWorkoutSelection } from './contexts/bulk-workout-selection-context';
 import { useEventClipboard } from './contexts/event-clipboard-context';
 import { useEventContextMenu } from './contexts/event-context-menu-context';
 import { useCalendarContext } from './hooks/use-calendar-context';
@@ -94,10 +95,12 @@ function EventSecondLine({ event }: { event: Event }) {
 
 export function CalendarEvent({ event, wrapped }: P) {
   const roles = useUserRoles();
+  const bulk = useBulkWorkoutSelection();
+  const selectable = !!bulk?.selecting && bulk.eligible.has(event.eventId);
   const canEdit = !!roles?.includes('COACH') || event.type === 'ACTIVITY';
   const posthog = usePostHog();
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    disabled: !canEdit,
+    disabled: !canEdit || bulk?.selecting,
     id: event.eventId,
     data: {
       type: 'event',
@@ -179,7 +182,7 @@ export function CalendarEvent({ event, wrapped }: P) {
         <ContextMenuTrigger className="w-full">
           <CalendarEventTooltipWrapper
             event={event}
-            disabled={isDragging || isAnyContextMenuOpen}
+            disabled={isDragging || isAnyContextMenuOpen || bulk?.selecting}
           >
             <div
               className={cn(
@@ -188,11 +191,16 @@ export function CalendarEvent({ event, wrapped }: P) {
                 wrapped ? 'border-2' : '',
                 !isValidated ? 'opacity-60' : '',
                 isDragging ? 'opacity-30' : '',
+                selectable && bulk?.selected.has(event.eventId)
+                  ? 'ring-2 ring-inset ring-primary'
+                  : '',
               )}
               ref={draggable ? setNodeRef : undefined}
               {...(draggable ? { ...listeners, ...attributes } : {})}
               onClick={(e) => {
-                openEventDetails(event.eventId);
+                if (bulk?.selecting) {
+                  if (selectable) bulk.toggle(event.eventId);
+                } else openEventDetails(event.eventId);
                 e.stopPropagation();
               }}
               onMouseEnter={(e) => {
@@ -206,6 +214,23 @@ export function CalendarEvent({ event, wrapped }: P) {
                 }
               }}
             >
+              {selectable && (
+                <label
+                  className="flex items-center min-h-11 gap-2 px-1 text-sm"
+                  onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  <input
+                    type="checkbox"
+                    className="size-5 accent-primary"
+                    checked={bulk.selected.has(event.eventId)}
+                    disabled={bulk.busy}
+                    onChange={() => bulk.toggle(event.eventId)}
+                    aria-label={m.bulk_workouts_toggle({ name: event.name })}
+                  />
+                  {m.bulk_workouts_toggle({ name: event.name })}
+                </label>
+              )}
               <div className="text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis px-1">
                 {event.type !== EVENT_TYPE.NOTE && (
                   <SportIcon
@@ -256,7 +281,7 @@ export function CalendarEvent({ event, wrapped }: P) {
             </div>
           </CalendarEventTooltipWrapper>
         </ContextMenuTrigger>
-        {canEdit && (
+        {canEdit && !bulk?.selecting && (
           <ContextMenuContent>
             <ContextMenuItem
               onClick={(e) => {

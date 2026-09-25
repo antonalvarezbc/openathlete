@@ -1250,5 +1250,13 @@
   "workspace_conflict": "Salvataggio non riuscito: verifica se il piano esiste, è chiuso, ha già una gara obiettivo o se la competizione è completata o condivisa. Aggiorna prima di riprovare.",
   "workspace_invalid": "Verifica i campi e le date. Le gare devono rientrare nel piano e quelle preparatorie precedere la gara obiettivo. La modifica non è stata salvata.",
   "workspace_failed": "Impossibile caricare o salvare le informazioni. Verifica la connessione e riprova.",
-  "coach_planning": "Pianificazione"
+  "coach_planning": "Pianificazione",
+  "bulk_workouts_select": "Seleziona allenamenti",
+  "bulk_workouts_selected": "{count} allenamenti selezionati",
+  "bulk_workouts_delete": "Elimina selezionati",
+  "bulk_workouts_help": "Seleziona gli allenamenti non completati da eliminare. Le attività completate e le competizioni sono escluse dalla selezione.",
+  "bulk_workouts_confirm": "Stai per eliminare {count} allenamenti. Controlla la lista: questa azione non può essere annullata.",
+  "bulk_workouts_toggle": "Seleziona {name}",
+  "bulk_workouts_deleted": "Eliminati {count} allenamenti.",
+  "bulk_workouts_failed": "Eliminati: {deleted}. Non eliminati: {failed}. Controlla gli allenamenti ancora selezionati prima di riprovare."
 }
