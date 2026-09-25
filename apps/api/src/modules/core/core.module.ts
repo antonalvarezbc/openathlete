@@ -16,6 +16,7 @@ import { EventTemplateFolderController } from './controllers/event-template-fold
 import { EventTemplateController } from './controllers/event-template.controller';
 import { InjuryController } from './controllers/injury.controller';
 import { MetricController } from './controllers/metric.controller';
+import { PlanWorkspaceController } from './controllers/plan-workspace.controller';
 import { ProgressionController } from './controllers/progression.controller';
 import { RecordController } from './controllers/record.controller';
 import { StatisticsController } from './controllers/statistics.controller';
@@ -45,6 +46,7 @@ import {
   TrainingMatchProcessor,
   WeatherProcessor,
 } from './services/pipeline/processors';
+import { PlanWorkspaceService } from './services/plan-workspace.service';
 import { ProgressionService } from './services/progression.service';
 import { RecordService } from './services/record.service';
 import { StatisticsService } from './services/statistics.service';
@@ -62,6 +64,7 @@ import { WeatherService } from './services/weather/weather.service';
     forwardRef(() => ProvidersSyncModule),
   ],
   controllers: [
+    PlanWorkspaceController,
     ActivityFeedbackController,
     EventController,
     EventTemplateController,
@@ -79,6 +82,7 @@ import { WeatherService } from './services/weather/weather.service';
     CycleController,
   ],
   providers: [
+    PlanWorkspaceService,
     EventService,
     WorkoutService,
     EventTemplateService,

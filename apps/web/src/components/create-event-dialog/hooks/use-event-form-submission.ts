@@ -34,6 +34,7 @@ export function useEventFormSubmission(
   athleteId: number,
   workoutSteps: CreateWorkoutStepDto[],
   onClose: () => void,
+  trainingPlanId?: number,
 ) {
   const edit = 'event' in props;
   const create = 'type' in props && 'date' in props;
@@ -83,6 +84,7 @@ export function useEventFormSubmission(
           // Prepare event data, only include dates if they exist
           const baseEventData = {
             ...eventData,
+            ...(create && trainingPlanId ? { trainingPlanId } : {}),
             ...(startDate && { startDate }),
             ...(endDate && { endDate }),
           };
@@ -146,6 +148,7 @@ export function useEventFormSubmission(
     [
       workoutSteps,
       athleteId,
+      trainingPlanId,
       create,
       edit,
       props,

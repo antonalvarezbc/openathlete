@@ -106,10 +106,11 @@ model EventCompetition {
   goalRpe           Float?    @map("goal_rpe")
 
   // relationships
-  event             Event          @relation(fields: [eventId], references: [eventId])
-  eventId           Int            @unique @map("event_id")
-  relatedActivity   EventActivity? @relation(fields: [relatedActivityId], references: [eventActivityId])
-  relatedActivityId Int?           @unique @map("related_activity_id")
+  planRaces         TrainingPlanRace[]
+  event             Event              @relation(fields: [eventId], references: [eventId])
+  eventId           Int                @unique @map("event_id")
+  relatedActivity   EventActivity?     @relation(fields: [relatedActivityId], references: [eventActivityId])
+  relatedActivityId Int?               @unique @map("related_activity_id")
 
   @@map("event_competition")
 }

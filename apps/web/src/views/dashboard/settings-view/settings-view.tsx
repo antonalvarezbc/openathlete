@@ -6,7 +6,7 @@ import { SubscriptionSettingsPage } from '@/pages/dashboard/settings/subscriptio
 import { m } from '@/paraglide/messages';
 import { isPaymentDisabled } from '@/utils/capacitor';
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 
 import { AccountAdministrationTab } from './account-administration-tab';
 import { AthletesTab } from './athletes-tab';
@@ -16,7 +16,6 @@ import { ContributeTab } from './contribute-tab';
 import { EquipmentTab } from './equipment-tab';
 import { InvitationsTab } from './invitations-tab';
 import { ProfileTab } from './profile-tab';
-import { TrainingPlanTab } from './training-plan-tab';
 import { TrainingZonesTab } from './training-zones-tab';
 
 export function SettingsView() {
@@ -41,7 +40,7 @@ export function SettingsView() {
     ...(isAthlete
       ? ['connectors', 'equipment', 'training_zones', 'coaches']
       : []),
-    ...(isCoach ? ['training_plan', 'athletes'] : []),
+    ...(isCoach ? ['athletes'] : []),
   ];
   const tabLabels: Record<string, string> = {
     profile: m.profile(),
@@ -53,7 +52,6 @@ export function SettingsView() {
     equipment: m.equipment(),
     training_zones: m.training_zones(),
     coaches: m.coaches(),
-    training_plan: m.training_plan_settings(),
     athletes: m.athletes(),
   };
   const visibleTab = allowedTabs.includes(activeTab) ? activeTab : 'profile';
@@ -69,6 +67,12 @@ export function SettingsView() {
     setActiveTab(value);
     setSearchParams({ tab: value });
   };
+
+  if (isCoach && tabParam === 'training_plan') {
+    const next = new URLSearchParams(searchParams);
+    next.delete('tab');
+    return <Navigate to={`/dashboard/planning?${next.toString()}`} replace />;
+  }
 
   return (
     <div className="w-full p-4 md:p-8">
@@ -98,11 +102,6 @@ export function SettingsView() {
             {user?.isAdmin && (
               <TabsTrigger value="administration">
                 {m.account_administration()}
-              </TabsTrigger>
-            )}
-            {isCoach && (
-              <TabsTrigger value="training_plan">
-                {m.training_plan_settings()}
               </TabsTrigger>
             )}
             {isAthlete && (
@@ -139,11 +138,6 @@ export function SettingsView() {
         <TabsContent value="profile" className="mt-6">
           <ProfileTab />
         </TabsContent>
-        {isCoach && (
-          <TabsContent value="training_plan" className="mt-6">
-            <TrainingPlanTab />
-          </TabsContent>
-        )}
         {isAthlete && (
           <TabsContent value="equipment" className="mt-6">
             <EquipmentTab />

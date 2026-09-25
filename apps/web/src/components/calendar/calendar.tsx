@@ -70,6 +70,8 @@ import { getWeekEnd, getWeekKey, getWeekStart } from './utils/week';
 interface P {
   events?: Event[];
   athleteId?: number;
+  trainingPlanId?: number;
+  initialDate?: Date;
   allowCreate?: boolean;
   onMonthChange?: (month: Date) => void;
   isLoading?: boolean;
@@ -78,6 +80,8 @@ interface P {
 export function Calendar({
   events,
   athleteId,
+  trainingPlanId,
+  initialDate,
   allowCreate: requestedAllowCreate = true,
   onMonthChange,
   isLoading = false,
@@ -86,8 +90,10 @@ export function Calendar({
   const allowCreate = requestedAllowCreate && !!roles?.includes('COACH');
   const posthog = usePostHog();
   const isMobile = useIsMobile();
-  const [planningDate, setPlanningDate] = useState(() => new Date());
-  const calendarData = useCalendarData({ events });
+  const [planningDate, setPlanningDate] = useState(
+    () => initialDate ?? new Date(),
+  );
+  const calendarData = useCalendarData({ events, defaultMonth: initialDate });
   const { data: cycles } = useGetMyCyclesQuery(undefined, athleteId);
   const { hasAccess: hasAIAccess } = useFeatureAccess(
     FeatureName.AI_GENERATION,
@@ -443,6 +449,7 @@ export function Calendar({
       summaryType,
       setSummaryType,
       athleteId,
+      trainingPlanId,
       allowCreate,
       filter,
       setFilter,
@@ -465,6 +472,7 @@ export function Calendar({
       eventDetailsOpened,
       allowCreate,
       athleteId,
+      trainingPlanId,
       weeklyLoadSummaryMap,
       weeklyLoadSummaryLoading,
       estimatingEvents,
@@ -503,6 +511,7 @@ export function Calendar({
             startDate,
             endDate,
             athleteId,
+            trainingPlanId,
           },
           template, // Pass template for optimistic update
         });
@@ -544,6 +553,7 @@ export function Calendar({
     [
       athleteId,
       events,
+      trainingPlanId,
       useTemplateMutation,
       updateEventMutation,
       duplicateEventMutation,

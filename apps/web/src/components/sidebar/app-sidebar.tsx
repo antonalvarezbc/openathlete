@@ -52,9 +52,9 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
       type SidebarItem = Parameters<typeof NavMain>[0]['items'][number];
       const baseItems: SidebarItem[] = [
         {
-          title: m.dashboard(),
-          url: getPath(['dashboard', 'coach']),
-          icon: PieChart,
+          title: m.coach_planning(),
+          url: getPath(['dashboard', 'planning']),
+          icon: Calendar,
           spaces: ['COACH'] as UserRole[],
         },
         {

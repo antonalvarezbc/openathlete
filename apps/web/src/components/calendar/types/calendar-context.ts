@@ -29,6 +29,7 @@ export type CalendarContextType = {
   filter: (event: Event) => boolean;
   setFilter: Dispatch<SetStateAction<(event: Event) => boolean>>;
   athleteId?: number;
+  trainingPlanId?: number;
   allowCreate: boolean;
   coloredBy: COLORED_BY | null;
   setColoredBy: (coloredBy: COLORED_BY | null) => void;

@@ -4,6 +4,7 @@ import { EVENT_TYPE, SPORT_TYPE } from '../../misc';
 import { createWorkoutStepDtoSchema } from './workout.dto';
 
 const baseEventSchema = z.object({
+  trainingPlanId: z.number().int().positive().optional(),
   startDate: z.coerce.date(),
   endDate: z.coerce.date(),
   name: z.string().min(1).max(100),

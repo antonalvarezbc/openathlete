@@ -1,3 +1,6 @@
+import { ZodValidationPipe } from 'nestjs-zod';
+
+import { Body, Param, Patch, Post } from '@nestjs/common';
 import {
   Controller,
   Get,
@@ -15,17 +18,47 @@ import {
 } from '@nestjs/swagger';
 
 import { Athlete } from '@openathlete/database';
+import {
+  CreateAthleteInjury,
+  SaveAthleteInjury,
+  createAthleteInjurySchema,
+  saveAthleteInjurySchema,
+} from '@openathlete/shared';
 import { AthleteInjury, INJURY_STATUS } from '@openathlete/shared';
 
 import { JwtUser, UserTypeGuard } from 'src/modules/auth';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
 
+import { UserTypes } from '../../auth';
 import { InjuryService } from '../services/injury.service';
 
 @ApiTags('Injury')
 @Controller('injury')
 export class InjuryController {
   constructor(private injuryService: InjuryService) {}
+
+  @UseGuards(AuthGuard('jwt'), UserTypeGuard)
+  @UserTypes(['COACH'])
+  @Post()
+  create(
+    @JwtUser() user: AuthUser,
+    @Body(new ZodValidationPipe(createAthleteInjurySchema))
+    data: CreateAthleteInjury,
+  ) {
+    return this.injuryService.create(user, data);
+  }
+
+  @UseGuards(AuthGuard('jwt'), UserTypeGuard)
+  @UserTypes(['COACH'])
+  @Patch(':id')
+  update(
+    @JwtUser() user: AuthUser,
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ZodValidationPipe(saveAthleteInjurySchema))
+    data: SaveAthleteInjury,
+  ) {
+    return this.injuryService.update(user, id, data);
+  }
 
   @UseGuards(AuthGuard('jwt'), UserTypeGuard)
   @ApiBearerAuth()
@@ -135,7 +168,8 @@ export class InjuryController {
   })
   getInjuries(
     @JwtUser() user: AuthUser,
-    @Query('athleteId', ParseIntPipe) athleteId?: Athlete['athleteId'],
+    @Query('athleteId', new ParseIntPipe({ optional: true }))
+    athleteId?: Athlete['athleteId'],
   ): Promise<AthleteInjury[]> {
     return this.injuryService.getInjuries(user, athleteId);
   }

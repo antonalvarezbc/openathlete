@@ -13,6 +13,7 @@ import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
 import { TrainingLoadEstimationService } from '../../queue/services/training-load-estimation.service';
+import { authorizePlanAthlete, findPlanWeek } from '../helpers/plan-access';
 import { EVENT_INCLUDES } from './event-includes';
 import { EventService } from './event.service';
 
@@ -252,7 +253,12 @@ export class EventTemplateService {
   async useEventTemplate(
     user: AuthUser,
     eventTemplateId: EventTemplate['eventTemplateId'],
-    dto: { startDate: Date; endDate: Date; athleteId?: number | null },
+    dto: {
+      startDate: Date;
+      endDate: Date;
+      athleteId?: number | null;
+      trainingPlanId?: number;
+    },
   ) {
     // Get the template
     const template = await this.prisma.eventTemplate.findUnique({
@@ -302,9 +308,21 @@ export class EventTemplateService {
       delete subEntityData.estimatedLoad; // Don't copy estimatedLoad from template
     }
 
+    let trainingWeekId: number | undefined;
+    if (dto.trainingPlanId) {
+      await authorizePlanAthlete(this.prisma, user, dto.athleteId ?? 0);
+      trainingWeekId = await findPlanWeek(
+        this.prisma,
+        dto.trainingPlanId,
+        dto.athleteId ?? 0,
+        dto.startDate,
+        dto.endDate,
+      );
+    }
     // Create the new event from template
     const newEvent = await this.prisma.event.create({
       data: {
+        trainingWeekId,
         startDate: dto.startDate,
         endDate: dto.endDate,
         name: templateEvent.name,

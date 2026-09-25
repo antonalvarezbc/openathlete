@@ -133,6 +133,7 @@ export class TrainingPlanService {
           if (options.replacePlanId) {
             const previous = await tx.trainingPlan.findFirst({
               where: { trainingPlanId: options.replacePlanId, athleteId },
+              include: { _count: { select: { races: true } } },
             });
             if (!previous)
               throw new ForbiddenException('You cannot replace this plan');
@@ -153,6 +154,7 @@ export class TrainingPlanService {
             });
             // Preserve history, comments, completed activities and exported sessions.
             if (
+              previous._count?.races > 0 ||
               previous.startDate <= new Date() ||
               events.some(
                 (event) =>

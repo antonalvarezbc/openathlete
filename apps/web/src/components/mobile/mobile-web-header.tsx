@@ -24,7 +24,8 @@ export function MobileWebHeader() {
     settings: m.settings(),
     messages: m.messages(),
     profile: m.profile(),
-    coach: m.dashboard(),
+    coach: m.coach_planning(),
+    planning: m.coach_planning(),
   };
   const athleteId =
     /^\/dashboard\/(?:calendar|statistics|progression|records|metrics|settings)\/(\d+)$/.exec(

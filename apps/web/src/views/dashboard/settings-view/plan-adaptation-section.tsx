@@ -11,6 +11,7 @@ import {
 } from '@/api/plan-adaptation/plan-adaptation.api';
 import { SeoPlanAPI } from '@/api/seo-plan';
 import { trainingLoadKeys } from '@/api/training-load/training-load.keys';
+import { dateInput } from '@/components/plan-workspace/helpers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SparklesIcon } from '@/components/ui/sparkles-icon';
@@ -77,7 +78,11 @@ function StructuredPreview({
   );
 }
 
-export function PlanAdaptationSection() {
+export function PlanAdaptationSection({
+  selection,
+}: {
+  selection?: { athleteId: number; planId: number; startDate: string };
+} = {}) {
   const { data: own } = useGetMyAthleteQuery();
   const { data: coached = [] } = useGetMyCoachedAthletesQuery();
   const athletes = [own, ...coached].filter(
@@ -91,10 +96,13 @@ export function PlanAdaptationSection() {
     maxNewSessions: 2,
     newSessionMinutes: 60,
     newSessionMaxRpe: 4,
-    athleteId: 0,
-    planId: 0,
+    athleteId: selection?.athleteId ?? 0,
+    planId: selection?.planId ?? 0,
     scope: 'NEXT_SESSION',
-    weekStart: monday(),
+    weekStart:
+      selection && dateInput(selection.startDate) > monday()
+        ? dateInput(selection.startDate)
+        : monday(),
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     readiness: 'UNKNOWN',
     currentState: '',
@@ -239,6 +247,7 @@ export function PlanAdaptationSection() {
             <select
               className="block w-full border rounded p-2"
               aria-label={m.athlete()}
+              disabled={!!selection}
               value={request.athleteId || ''}
               onChange={(event) =>
                 updateRequest({
@@ -265,6 +274,7 @@ export function PlanAdaptationSection() {
             <select
               className="block w-full border rounded p-2"
               aria-label={m.training_plan_settings()}
+              disabled={!!selection}
               value={request.planId || ''}
               onChange={(event) => {
                 const planId = Number(event.target.value);

@@ -66,6 +66,11 @@ import {
   reductActivityStreamToResolution,
   uncompressActivityStream,
 } from '../helpers/activity-stream';
+import {
+  authorizePlanAthlete,
+  findPlanWeek,
+  validateLinkedRaceDates,
+} from '../helpers/plan-access';
 import { EVENT_INCLUDES } from './event-includes';
 import { WorkoutService } from './workout.service';
 
@@ -265,7 +270,15 @@ export class EventService {
 
     const workout = data.type === 'TRAINING' ? data.workout : undefined;
 
-    const { type, endDate, startDate, name, athleteId, ...rest } = data;
+    const {
+      type,
+      endDate,
+      startDate,
+      name,
+      athleteId,
+      trainingPlanId,
+      ...rest
+    } = data;
 
     // Remove workout from rest if it exists (it shouldn't be passed to Prisma create)
     if ('workout' in rest) {
@@ -287,9 +300,23 @@ export class EventService {
       throw new ForbiddenException('You are not allowed to create this event');
     }
 
+    let trainingWeekId: number | undefined;
+    if (trainingPlanId) {
+      await authorizePlanAthlete(this.prisma, user, finalAthleteId);
+      if (type === EVENT_TYPE.ACTIVITY)
+        throw new BadRequestException('Activities cannot be planned');
+      trainingWeekId = await findPlanWeek(
+        this.prisma,
+        trainingPlanId,
+        finalAthleteId,
+        startDate,
+        endDate,
+      );
+    }
     const created = await this.prisma.event.create({
       data: {
         athleteId: finalAthleteId,
+        trainingWeekId,
         startDate,
         endDate,
         name,
@@ -438,9 +465,33 @@ export class EventService {
       rest.rpe !== undefined &&
       rest.rpe !== null;
 
+    let trainingWeekId: number | undefined;
+    if (event.trainingWeekId && (startDate || endDate) && event.athleteId) {
+      const week = await this.prisma.trainingWeek.findUnique({
+        where: { trainingWeekId: event.trainingWeekId },
+        include: { cycle: true },
+      });
+      if (week?.cycle.trainingPlanId)
+        trainingWeekId = await findPlanWeek(
+          this.prisma,
+          week.cycle.trainingPlanId,
+          event.athleteId,
+          startDate ?? event.startDate,
+          endDate ?? event.endDate,
+        );
+    }
+    if (event.type === EVENT_TYPE.COMPETITION && (startDate || endDate)) {
+      await validateLinkedRaceDates(
+        this.prisma,
+        eventId,
+        startDate ?? event.startDate,
+        endDate ?? event.endDate,
+      );
+    }
     const updatedEvent = await this.prisma.event.update({
       where: { eventId: eventId },
       data: {
+        trainingWeekId,
         startDate,
         endDate,
         name,

@@ -73,6 +73,7 @@ export function useImportPlan(
       // Invalidate relevant queries after successful import
       queryClient.invalidateQueries({ queryKey: [cycleKeys.getMyCycles] });
       queryClient.invalidateQueries({ queryKey: [eventKeys.getMyEvents] });
+      queryClient.invalidateQueries({ queryKey: ['managed-plans'] });
 
       // Call the original onSuccess if provided
       if (originalOnSuccess) {

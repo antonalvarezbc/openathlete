@@ -7,11 +7,14 @@ import {
 } from '@nestjs/common';
 
 import { Athlete } from '@openathlete/database';
+import { CreateAthleteInjury, SaveAthleteInjury } from '@openathlete/shared';
 import { AthleteInjury, INJURY_STATUS } from '@openathlete/shared';
 
 import { CaslAbilityFactory } from 'src/modules/auth';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
+
+import { authorizePlanAthlete } from '../helpers/plan-access';
 
 @Injectable()
 export class InjuryService {
@@ -19,6 +22,29 @@ export class InjuryService {
     private readonly prisma: PrismaService,
     private readonly abilities: CaslAbilityFactory,
   ) {}
+
+  async create(user: AuthUser, data: CreateAthleteInjury) {
+    return this.prisma.$transaction(async (tx) => {
+      await authorizePlanAthlete(tx, user, data.athleteId);
+      return tx.athleteInjury.create({
+        data: { athleteId: data.athleteId, ...data.injury },
+      });
+    });
+  }
+
+  async update(user: AuthUser, injuryId: number, data: SaveAthleteInjury) {
+    return this.prisma.$transaction(async (tx) => {
+      const injury = await tx.athleteInjury.findUnique({
+        where: { athleteInjuryId: injuryId },
+      });
+      if (!injury) throw new NotFoundException('Injury not found');
+      await authorizePlanAthlete(tx, user, injury.athleteId);
+      return tx.athleteInjury.update({
+        where: { athleteInjuryId: injuryId },
+        data,
+      });
+    });
+  }
 
   /**
    * Get all injuries for the authenticated user or specific athlete

@@ -107,6 +107,7 @@ export function ImportPlanDialog({
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [cycleKeys.getMyCycles] });
       queryClient.invalidateQueries({ queryKey: [eventKeys.getMyEvents] });
+      queryClient.invalidateQueries({ queryKey: ['managed-plans'] });
       queryClient.invalidateQueries({ queryKey: ['json-plans'] });
       toast.success(
         m.training_plan_imported_successfully({ planName: data.name }),

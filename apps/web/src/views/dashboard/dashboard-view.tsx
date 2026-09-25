@@ -5,7 +5,7 @@ export function DashboardView() {
   const { space } = useSpaceContext();
 
   if (space === 'COACH') {
-    return <Navigate to="/dashboard/coach" replace />;
+    return <Navigate to="/dashboard/planning" replace />;
   }
 
   return <Navigate to="/dashboard/calendar" replace />;

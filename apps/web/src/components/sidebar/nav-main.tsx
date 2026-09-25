@@ -40,7 +40,18 @@ export function NavMain({
   }[];
 }) {
   const { space } = useSpaceContext();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
+  const isCurrent = (url?: string) => {
+    if (!url) return false;
+    const [path, query] = url.split('?');
+    return (
+      pathname === path &&
+      (!query ||
+        [...new URLSearchParams(query)].every(
+          ([key, value]) => new URLSearchParams(search).get(key) === value,
+        ))
+    );
+  };
   const { isMobile, setOpenMobile } = useSidebar();
 
   const [openStates, setOpenStates] = useState<Record<string, boolean>>(() => {
@@ -130,10 +141,10 @@ export function NavMain({
                 >
                   <Link
                     to={item.url || '#'}
-                    aria-current={pathname === item.url ? 'page' : undefined}
+                    aria-current={isCurrent(item.url) ? 'page' : undefined}
                     onClick={handleLinkClick}
                     className={`flex items-center gap-2 ${
-                      pathname === item.url ? 'font-bold' : ''
+                      isCurrent(item.url) ? 'font-bold' : ''
                     }`}
                   >
                     {item.icon && <item.icon />}
