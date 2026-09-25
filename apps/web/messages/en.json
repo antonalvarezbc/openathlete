@@ -1211,5 +1211,7 @@
   "garmin_manual_fit_result": "FIT: {imported} imported, {failed} failed and {pending} pending (including failures). Up to 3 are processed per sync; press the button again to continue.",
   "garmin_manual_fit_failed_ids": "Garmin activities with FIT files awaiting retry: {ids}.",
   "calendar_day_events_label": "Events on {date}",
-  "calendar_day_scroll_hint": "Scroll within the list to see all events for this day."
+  "calendar_day_scroll_hint": "Scroll within the list to see all events for this day.",
+  "show_password": "Show password",
+  "hide_password": "Hide password"
 }
