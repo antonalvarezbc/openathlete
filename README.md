@@ -496,3 +496,6 @@ hidden and their manual write endpoints reject requests. Official Garmin/Strava
 connections and previously imported activities, metrics and maps remain available.
 See [manual FIT import](docs/manual-fit-import.md) and
 [manual Garmin setup](scripts/garmin-probe/README.md) for enabling each tool.
+
+Official provider credentials must also be configured separately; see
+[connector configuration and unavailable states](docs/provider-configuration.md).

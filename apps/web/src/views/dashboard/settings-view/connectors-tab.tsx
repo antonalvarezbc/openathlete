@@ -1,5 +1,8 @@
 import { useGetMyIcalCalendarSecretQuery } from '@/api/event';
-import { useInstallationFeatures } from '@/api/installation/installation.hooks';
+import {
+  useInstallationFeatures,
+  useProviderConfiguration,
+} from '@/api/installation/installation.hooks';
 import {
   useDisconnectProviderMutation,
   useGetConnectedProvidersQuery,
@@ -35,6 +38,7 @@ import {
 import { connectorProviderLabelMap } from '@/utils/label-map/core/connector-provider.label-map';
 import { openOAuthUrl } from '@/utils/oauth';
 import { cn } from '@/utils/shadcn';
+import { isAxiosError } from 'axios';
 import { CheckCircle2, ChevronDown, Link2, Link2Off } from 'lucide-react';
 import { usePostHog } from 'posthog-js/react';
 import { useState } from 'react';
@@ -59,6 +63,10 @@ const SUPPORTED_PROVIDERS: ConnectorProvider[] = [
 
 export function ConnectorsTab() {
   const { manualGarminSync } = useInstallationFeatures();
+  const providerConfiguration = useProviderConfiguration();
+  const isConfigured = (provider: ConnectorProvider) =>
+    providerConfiguration.isSuccess &&
+    providerConfiguration.data?.[provider] === true;
   const posthog = usePostHog();
   const [disconnectDialogOpen, setDisconnectDialogOpen] = useState(false);
   const [providerToDisconnect, setProviderToDisconnect] =
@@ -92,7 +100,12 @@ export function ConnectorsTab() {
       await openOAuthUrl(response.uri);
     },
     onError: (error) => {
-      toast.error(error.message || m.failed_to_initiate_connection());
+      toast.error(
+        isAxiosError(error) &&
+          error.response?.data?.code === 'PROVIDER_NOT_CONFIGURED'
+          ? m.provider_not_configured_help()
+          : error.message || m.failed_to_initiate_connection(),
+      );
     },
   });
 
@@ -170,7 +183,7 @@ export function ConnectorsTab() {
   };
 
   const handleConnect = (provider: ConnectorProvider) => {
-    getOAuthUriMutation.mutate(provider);
+    if (isConfigured(provider)) getOAuthUriMutation.mutate(provider);
   };
 
   const handleDisconnect = (provider: ConnectorProvider) => {
@@ -244,6 +257,12 @@ export function ConnectorsTab() {
               ))
             : SUPPORTED_PROVIDERS.map((provider) => {
                 const connected = isConnected(provider);
+                const configured = isConfigured(provider);
+                const configurationMessage = providerConfiguration.isPending
+                  ? m.loading()
+                  : providerConfiguration.isError
+                    ? m.provider_configuration_unavailable()
+                    : m.provider_not_configured();
                 const isLoading =
                   getOAuthUriMutation.isPending ||
                   disconnectMutation.isPending ||
@@ -316,9 +335,11 @@ export function ConnectorsTab() {
                               {connectorProviderLabelMap[provider]}
                             </CardTitle>
                             <CardDescription>
-                              {connected
-                                ? m.connected_and_syncing()
-                                : m.not_connected()}
+                              {!configured
+                                ? configurationMessage
+                                : connected
+                                  ? m.connected_and_syncing()
+                                  : m.not_connected()}
                             </CardDescription>
                           </div>
                         </div>
@@ -335,7 +356,15 @@ export function ConnectorsTab() {
                     <CardContent>
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex-1">
-                          {connected ? (
+                          {!configured ? (
+                            <p className="text-sm text-muted-foreground">
+                              {providerConfiguration.isPending
+                                ? m.loading()
+                                : providerConfiguration.isError
+                                  ? m.provider_configuration_unavailable()
+                                  : m.provider_not_configured_help()}
+                            </p>
+                          ) : connected ? (
                             <p className="text-sm text-muted-foreground">
                               {m.provider_account_connected({
                                 provider: connectorProviderLabelMap[provider],
@@ -366,7 +395,7 @@ export function ConnectorsTab() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleConnect(provider)}
-                              disabled={isLoading}
+                              disabled={isLoading || !configured}
                               className="w-full sm:w-auto"
                             >
                               <Link2 className="mr-2 h-4 w-4" />

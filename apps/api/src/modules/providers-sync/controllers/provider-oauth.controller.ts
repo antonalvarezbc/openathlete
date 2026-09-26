@@ -36,8 +36,8 @@ import {
   providerPreferencesSchema,
 } from '@openathlete/shared';
 
-import { JwtUser, UserTypeGuard } from 'src/modules/auth';
-import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
+import { AuthUser, JwtUser } from 'src/modules/auth/decorators/user.decorator';
+import { UserTypeGuard } from 'src/modules/auth/guards/user-type.guard';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
 import {
@@ -46,6 +46,7 @@ import {
   SuuntoWebhookPayload,
 } from '../../core/types/connector';
 import { FullImportResult } from '../base/base-provider.service';
+import { assertProviderConfigured } from '../helpers/provider-configuration';
 import { CorosProviderService, SuuntoProviderService } from '../providers';
 import { GarminProviderService } from '../providers/garmin.provider.service';
 import { PolarProviderService } from '../providers/polar.provider.service';
@@ -149,6 +150,7 @@ export class ProviderOAuthController {
   })
   getAuthorizationUri(@Param('provider') provider: string) {
     const providerEnum = provider.toUpperCase() as ConnectorProvider;
+    assertProviderConfigured(this.configService, providerEnum);
 
     switch (providerEnum) {
       case ConnectorProvider.STRAVA:
@@ -245,6 +247,7 @@ export class ProviderOAuthController {
   ) {
     const { code } = body;
     const providerEnum = provider.toUpperCase() as ConnectorProvider;
+    assertProviderConfigured(this.configService, providerEnum);
 
     const athlete = await this.getAthleteForUser(user);
 

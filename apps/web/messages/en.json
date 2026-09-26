@@ -1317,5 +1317,8 @@
   "garmin_backfill_progress": "{checked} of {total} FIT files reviewed · {updated} activities enriched · {remaining} pending.",
   "garmin_backfill_sources": "{cached} cached files reused · {downloaded} new downloads.",
   "garmin_backfill_next_request": "Next file request no earlier than {date}.",
-  "garmin_backfill_blocked_until": "Garmin requests are paused until {date}. You can start a new action after that time; it will not start automatically."
+  "garmin_backfill_blocked_until": "Garmin requests are paused until {date}. You can start a new action after that time; it will not start automatically.",
+  "provider_not_configured": "Not configured",
+  "provider_not_configured_help": "This connector is not configured for this installation. Contact the administrator.",
+  "provider_configuration_unavailable": "Could not check this connector’s configuration. Reload the page to try again."
 }
