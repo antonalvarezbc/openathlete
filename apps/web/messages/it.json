@@ -1373,5 +1373,15 @@
   "activity_alert_rpe_updated": "L’atleta ha aggiornato l’RPE",
   "activity_alert_rpe_removed": "RPE rimosso",
   "activity_alert_open": "Apri attività",
-  "activity_alert_unavailable": "L’attività non è più disponibile o non hai accesso."
+  "activity_alert_unavailable": "L’attività non è più disponibile o non hai accesso.",
+  "coach_load_ctl": "Carico cronico",
+  "coach_load_atl": "Carico acuto",
+  "coach_load_tsb": "Bilancio del carico (CTL − ATL)",
+  "coach_load_period": "Riepilogo attuale al {date}, sugli ultimi 42 giorni.",
+  "coach_load_error": "Impossibile caricare il carico di allenamento.",
+  "coach_load_retry": "Riprova",
+  "coach_load_coverage": "Sono incluse solo le attività con TRIMP calcolato. L’assenza di carichi non indica riposo.",
+  "coach_load_empty": "Dati insufficienti",
+  "coach_load_requirements": "Nessun carico TRIMP calcolato in questo periodo. Il calcolo richiede registrazioni della frequenza cardiaca, FC massima e FC a riposo.",
+  "dashboard_header_competitions_error": "Impossibile caricare le prossime competizioni."
 }
