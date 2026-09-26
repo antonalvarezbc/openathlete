@@ -137,6 +137,7 @@ export class PlanAdaptationService {
     request: PlanAdaptationRequest,
     db: Prisma.TransactionClient = this.prisma,
     now = new Date(),
+    purpose: 'ADAPTATION' | 'CONSULTATION' = 'ADAPTATION',
   ) {
     if (!user.roles?.includes('COACH'))
       throw new ForbiddenException('Coach role required');
@@ -203,6 +204,7 @@ export class PlanAdaptationService {
       take: request.scope === 'NEXT_SESSION' ? 1 : 29,
     });
     if (
+      purpose === 'ADAPTATION' &&
       !future.length &&
       !(request.scope === 'WEEK' && request.allowNewSessions)
     )
@@ -210,11 +212,11 @@ export class PlanAdaptationService {
         code: 'ADAPTATION_NO_SESSIONS',
         message: 'No future uncompleted sessions in this scope',
       });
-    if (future.length > 28)
+    if (purpose === 'ADAPTATION' && future.length > 28)
       throw new BadRequestException(
         'At most 28 sessions can be adapted at once',
       );
-    if (request.scope === 'NEXT_SESSION') {
+    if (request.scope === 'NEXT_SESSION' && future.length) {
       const parts = Object.fromEntries(
         new Intl.DateTimeFormat('en-GB', {
           timeZone: request.timeZone,

@@ -1277,5 +1277,20 @@
   "fit_import_no_stream": "Le fichier contient uniquement un résumé : aucune série n’est disponible pour les graphiques ou la carte.",
   "fit_import_missing_summary": "La distance ou le dénivelé manque et ne peut pas être calculé depuis les séries. Ces valeurs sont enregistrées à 0 ; vous pouvez les vérifier dans l’activité.",
   "fit_import_unknown_sport": "Sport non reconnu : enregistré comme « Autre ». Vous pouvez le modifier.",
-  "fit_import_source": "Fichier FIT manuel"
+  "fit_import_source": "Fichier FIT manuel",
+  "assistant_title": "Assistant IA",
+  "assistant_help": "Consultez le contexte de l’athlète et discutez de la semaine avec l’IA. Cette conversation ne modifie pas le calendrier et ne synchronise pas Garmin.",
+  "assistant_history_help": "La conversation est temporaire : les 8 derniers échanges sont conservés tant que cet onglet reste ouvert. Elle est effacée lorsque vous changez d’athlète, de plan, de langue, de période ou d’état actuel, ou quittez cet onglet.",
+  "assistant_state": "Sensations et circonstances actuelles (facultatif)",
+  "assistant_context_help": "L’envoi d’une question partage le contexte disponible de l’athlète et la conversation récente avec le fournisseur d’IA configuré. Vous pouvez consulter les données au préalable. Chaque réponse utilise les données actualisées d’OpenAthlete.",
+  "assistant_as_of": "Contexte consulté",
+  "assistant_conversation": "Conversation avec l’assistant",
+  "assistant_empty": "Posez des questions sur les séances prévues, les activités réalisées ou la récupération disponible. Le contexte couvre jusqu’à 28 jours et 100 activités récentes ; l’IA doit signaler les données manquantes.",
+  "assistant_question": "Question à l’assistant",
+  "assistant_placeholder": "Analyse les activités réalisées cette semaine et les mesures disponibles. Que faut-il prendre en compte pour préparer la prochaine séance ?",
+  "assistant_send": "Envoyer la question",
+  "assistant_clear": "Effacer la conversation",
+  "assistant_review_help": "Les réponses sont des suggestions et ne sont pas enregistrées comme entraînements. Pour modifier le calendrier, ouvrez Réviser et adapter avec l’IA, saisissez les décisions de l’entraîneur et vérifiez la proposition avant de l’accepter. La conversation n’est pas transférée automatiquement.",
+  "assistant_choose_plan": "Sélectionnez un athlète et un plan ci-dessus pour ouvrir l’assistant.",
+  "assistant_provider_error": "L’IA n’a pas pu répondre. Vérifiez sa configuration ou réessayez. Le calendrier n’a pas été modifié."
 }

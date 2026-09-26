@@ -4,3 +4,4 @@ export * from './modify-event.dto';
 export * from './generate-event-schema';
 
 export * from './plan-adaptation.dto';
+export * from './coach-assistant.dto';

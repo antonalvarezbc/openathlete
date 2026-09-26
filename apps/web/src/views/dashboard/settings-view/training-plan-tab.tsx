@@ -6,6 +6,7 @@ import {
   ManagedPlan,
   PlanWorkspaceAPI,
 } from '@/api/plan-workspace/plan-workspace.api';
+import { CoachAssistant } from '@/components/coach-assistant/coach-assistant';
 import { AthleteInjuries } from '@/components/plan-workspace/athlete-injuries';
 import {
   Field,
@@ -15,8 +16,11 @@ import {
 import { PlanEditor } from '@/components/plan-workspace/plan-editor';
 import { PlanRaces } from '@/components/plan-workspace/plan-races';
 import { Button } from '@/components/ui/button';
+import { SparklesIcon } from '@/components/ui/sparkles-icon';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useUserRoles } from '@/contexts/auth';
 import { m } from '@/paraglide/messages';
+import { getLocale } from '@/paraglide/runtime';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Calendar, Plus } from 'lucide-react';
 import { useState } from 'react';
@@ -26,6 +30,8 @@ import { PlanAdaptationSection } from './plan-adaptation-section';
 
 export function TrainingPlanTab() {
   const [params, setParams] = useSearchParams();
+  const activeTab = params.get('tab') === 'assistant' ? 'assistant' : 'plan';
+  const [adaptOpen, setAdaptOpen] = useState(false);
   const roles = useUserRoles();
   const { data: own } = useGetMyAthleteQuery();
   const { data: coached = [], isError: athletesError } =
@@ -125,116 +131,173 @@ export function TrainingPlanTab() {
       {!!athleteId && plans.data?.length === 0 && (
         <p className="text-muted-foreground">{m.workspace_no_plans()}</p>
       )}
-      {plan && (
-        <>
-          <section className="space-y-4 rounded-xl border p-4 sm:p-6">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-semibold break-words">
-                  {plan.name}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {displayDate(plan.startDate)} – {displayDate(plan.endDate)} ·{' '}
-                  {
-                    {
-                      DRAFT: m.workspace_draft(),
-                      ACTIVE: m.workspace_active(),
-                      COMPLETED: m.workspace_completed(),
-                      ARCHIVED: m.workspace_archived(),
-                    }[plan.status]
-                  }
-                </p>
-              </div>
-              <Button variant="outline" onClick={() => setEditor(plan)}>
-                {m.workspace_edit_plan()}
-              </Button>
-            </div>
-            <p className="whitespace-pre-wrap break-words">{plan.goal}</p>
-            {plan.description && (
-              <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
-                {plan.description}
-              </p>
-            )}
-            {editable && (
-              <Button asChild>
-                <Link
-                  to={`${calendarPath}?trainingPlanId=${plan.trainingPlanId}&date=${encodeURIComponent(plan.startDate)}`}
-                >
-                  <Calendar className="size-4" />
-                  {m.workspace_plan_sessions()}
-                </Link>
-              </Button>
-            )}
-            <details>
-              <summary className="cursor-pointer py-2 font-medium">
-                {m.workspace_weeks()}
-              </summary>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                {plan.cycles.flatMap((cycle) =>
-                  cycle.weeks.map((week) => (
-                    <Link
-                      key={week.trainingWeekId}
-                      className="rounded-lg border p-3 text-sm hover:bg-muted"
-                      to={`${calendarPath}?trainingPlanId=${plan.trainingPlanId}&date=${encodeURIComponent(week.startDate)}`}
-                    >
-                      <p className="font-medium">
-                        {cycle.name} · {m.week()} {week.weekNumber}
-                      </p>
-                      <p>
-                        {displayDate(week.startDate)} –{' '}
-                        {displayDate(week.endDate)}
-                      </p>
-                      <p className="text-muted-foreground">
-                        {week._count.sessions} {m.events()}
-                      </p>
-                    </Link>
-                  )),
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) =>
+          setParams((previous) => {
+            previous.set('tab', value);
+            return previous;
+          })
+        }
+      >
+        <TabsList
+          className="h-auto min-h-11 w-full sm:w-fit"
+          aria-label={m.coach_planning()}
+        >
+          <TabsTrigger value="plan" className="min-h-10">
+            {m.training_plan_settings()}
+          </TabsTrigger>
+          <TabsTrigger value="assistant" className="min-h-10">
+            <SparklesIcon className="size-4" />
+            {m.assistant_title()}
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="plan" className="space-y-6 pt-4">
+          {plan && (
+            <>
+              <section className="space-y-4 rounded-xl border p-4 sm:p-6">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-semibold break-words">
+                      {plan.name}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {displayDate(plan.startDate)} –{' '}
+                      {displayDate(plan.endDate)} ·{' '}
+                      {
+                        {
+                          DRAFT: m.workspace_draft(),
+                          ACTIVE: m.workspace_active(),
+                          COMPLETED: m.workspace_completed(),
+                          ARCHIVED: m.workspace_archived(),
+                        }[plan.status]
+                      }
+                    </p>
+                  </div>
+                  <Button variant="outline" onClick={() => setEditor(plan)}>
+                    {m.workspace_edit_plan()}
+                  </Button>
+                </div>
+                <p className="whitespace-pre-wrap break-words">{plan.goal}</p>
+                {plan.description && (
+                  <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
+                    {plan.description}
+                  </p>
                 )}
+                {editable && (
+                  <Button asChild>
+                    <Link
+                      to={`${calendarPath}?trainingPlanId=${plan.trainingPlanId}&date=${encodeURIComponent(plan.startDate)}`}
+                    >
+                      <Calendar className="size-4" />
+                      {m.workspace_plan_sessions()}
+                    </Link>
+                  </Button>
+                )}
+                <details>
+                  <summary className="cursor-pointer py-2 font-medium">
+                    {m.workspace_weeks()}
+                  </summary>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {plan.cycles.flatMap((cycle) =>
+                      cycle.weeks.map((week) => (
+                        <Link
+                          key={week.trainingWeekId}
+                          className="rounded-lg border p-3 text-sm hover:bg-muted"
+                          to={`${calendarPath}?trainingPlanId=${plan.trainingPlanId}&date=${encodeURIComponent(week.startDate)}`}
+                        >
+                          <p className="font-medium">
+                            {cycle.name} · {m.week()} {week.weekNumber}
+                          </p>
+                          <p>
+                            {displayDate(week.startDate)} –{' '}
+                            {displayDate(week.endDate)}
+                          </p>
+                          <p className="text-muted-foreground">
+                            {week._count.sessions} {m.events()}
+                          </p>
+                        </Link>
+                      )),
+                    )}
+                  </div>
+                </details>
+              </section>
+              <PlanRaces
+                key={plan.trainingPlanId}
+                plan={plan}
+                onChanged={refresh}
+              />
+            </>
+          )}
+          {!!athleteId && (
+            <AthleteInjuries key={athleteId} athleteId={athleteId} />
+          )}
+          {plan && (
+            <details
+              id="plan-adaptation"
+              className="rounded-xl border p-4 sm:p-6"
+              open={adaptOpen}
+              onToggle={(e) => setAdaptOpen(e.currentTarget.open)}
+            >
+              <summary className="cursor-pointer font-semibold">
+                {m.workspace_adapt()}
+              </summary>
+              <div className="mt-4">
+                <PlanAdaptationSection
+                  key={`${athleteId}-${plan.trainingPlanId}`}
+                  selection={{
+                    athleteId,
+                    planId: plan.trainingPlanId,
+                    startDate: plan.startDate,
+                  }}
+                />
               </div>
             </details>
+          )}
+          <section className="rounded-xl border p-4 sm:p-6 space-y-3">
+            <h3 className="font-semibold">{m.json_plan_import()}</h3>
+            <p className="text-sm text-muted-foreground">
+              {m.json_plan_review_help()}
+            </p>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setParams((previous) => {
+                  previous.set('importPlan', 'json');
+                  return previous;
+                })
+              }
+            >
+              {m.json_plan_import()}
+            </Button>
           </section>
-          <PlanRaces
-            key={plan.trainingPlanId}
-            plan={plan}
-            onChanged={refresh}
-          />
-        </>
-      )}
-      {!!athleteId && <AthleteInjuries key={athleteId} athleteId={athleteId} />}
-      {plan && (
-        <details className="rounded-xl border p-4 sm:p-6">
-          <summary className="cursor-pointer font-semibold">
-            {m.workspace_adapt()}
-          </summary>
-          <div className="mt-4">
-            <PlanAdaptationSection
-              key={`${athleteId}-${plan.trainingPlanId}`}
-              selection={{
-                athleteId,
-                planId: plan.trainingPlanId,
-                startDate: plan.startDate,
+        </TabsContent>
+        <TabsContent value="assistant" className="pt-4">
+          {plan ? (
+            <CoachAssistant
+              key={`${athleteId}-${plan.trainingPlanId}-${getLocale()}`}
+              athleteId={athleteId}
+              planId={plan.trainingPlanId}
+              onAdapt={() => {
+                setAdaptOpen(true);
+                setParams((previous) => {
+                  previous.set('tab', 'plan');
+                  return previous;
+                });
+                requestAnimationFrame(() =>
+                  document
+                    .getElementById('plan-adaptation')
+                    ?.scrollIntoView({ block: 'start', behavior: 'smooth' }),
+                );
               }}
             />
-          </div>
-        </details>
-      )}
-      <section className="rounded-xl border p-4 sm:p-6 space-y-3">
-        <h3 className="font-semibold">{m.json_plan_import()}</h3>
-        <p className="text-sm text-muted-foreground">
-          {m.json_plan_review_help()}
-        </p>
-        <Button
-          variant="outline"
-          onClick={() =>
-            setParams((previous) => {
-              previous.set('importPlan', 'json');
-              return previous;
-            })
-          }
-        >
-          {m.json_plan_import()}
-        </Button>
-      </section>
+          ) : (
+            <p className="rounded-xl border p-4 text-sm text-muted-foreground">
+              {m.assistant_choose_plan()}
+            </p>
+          )}
+        </TabsContent>
+      </Tabs>
       {editor && !!athleteId && (
         <PlanEditor
           key={editor === 'new' ? 'new' : editor.trainingPlanId}

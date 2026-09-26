@@ -1277,5 +1277,20 @@
   "fit_import_no_stream": "The file only contains a summary: there are no series for charts or maps.",
   "fit_import_missing_summary": "Distance or elevation gain is missing and cannot be calculated from the series. These values are stored as 0; you can review them in the activity.",
   "fit_import_unknown_sport": "Unrecognized sport: saved as Other. You can edit it.",
-  "fit_import_source": "Manual FIT file"
+  "fit_import_source": "Manual FIT file",
+  "assistant_title": "AI assistant",
+  "assistant_help": "Review athlete context and discuss the week with AI. This conversation does not change the calendar or sync Garmin.",
+  "assistant_history_help": "The conversation is temporary: the last 8 exchanges are kept while you stay on this tab. It is cleared when you change athlete, plan, language, period or current state, or leave the tab.",
+  "assistant_state": "Current feelings and circumstances (optional)",
+  "assistant_context_help": "Sending a question shares the available athlete context and recent conversation with the configured AI provider. You can review the data first. Each answer fetches current OpenAthlete data again.",
+  "assistant_as_of": "Context retrieved",
+  "assistant_conversation": "Assistant conversation",
+  "assistant_empty": "Ask about planned sessions, completed activities or available recovery data. Context covers up to 28 days and 100 recent activities; the AI should identify missing data.",
+  "assistant_question": "Ask the assistant",
+  "assistant_placeholder": "Review this week’s completed activities and available metrics. What should I consider before planning the next session?",
+  "assistant_send": "Send question",
+  "assistant_clear": "Clear conversation",
+  "assistant_review_help": "Replies are suggestions and are not saved as workouts. To change the calendar, open Review and adapt with AI, enter the coach’s decisions and review the proposal before accepting it. The conversation is not transferred automatically.",
+  "assistant_choose_plan": "Select an athlete and a plan above to open the assistant.",
+  "assistant_provider_error": "AI could not respond. Check its configuration or try again. The calendar has not changed."
 }

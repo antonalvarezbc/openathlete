@@ -1277,5 +1277,20 @@
   "fit_import_no_stream": "El archivo solo contiene un resumen: no hay series para dibujar gráficas o mapas.",
   "fit_import_missing_summary": "Faltan valores de distancia o desnivel y no pueden calcularse a partir de las series. Se guardan como 0; puedes revisarlos en la actividad.",
   "fit_import_unknown_sport": "Deporte no reconocido: se ha guardado como «Otro». Puedes editarlo.",
-  "fit_import_source": "Archivo FIT manual"
+  "fit_import_source": "Archivo FIT manual",
+  "assistant_title": "Asistente IA",
+  "assistant_help": "Consulta el contexto del atleta y comenta la semana con la IA. Esta conversación no modifica el calendario ni sincroniza Garmin.",
+  "assistant_history_help": "La conversación es temporal: se conservan los últimos 8 intercambios mientras permanezcas en esta pestaña. Se borra al cambiar de atleta, plan, idioma, periodo o estado actual, o al salir.",
+  "assistant_state": "Sensaciones y circunstancias actuales (opcional)",
+  "assistant_context_help": "Al enviar una pregunta, se comparte con el proveedor de IA configurado el contexto disponible del atleta y la conversación reciente. Puedes revisar los datos antes. Cada respuesta consulta de nuevo los datos de OpenAthlete.",
+  "assistant_as_of": "Contexto consultado",
+  "assistant_conversation": "Conversación con el asistente",
+  "assistant_empty": "Puedes preguntar por lo planificado, lo realizado o la recuperación disponible. El contexto incluye hasta 28 días y 100 actividades recientes; la IA debe señalar los datos que falten.",
+  "assistant_question": "Pregunta al asistente",
+  "assistant_placeholder": "Revisa lo realizado esta semana y las métricas disponibles. ¿Qué tendría en cuenta para preparar la siguiente sesión?",
+  "assistant_send": "Enviar pregunta",
+  "assistant_clear": "Borrar conversación",
+  "assistant_review_help": "Las respuestas son orientativas y no se guardan como entrenamientos. Para cambiar el calendario, abre Revisar y adaptar con IA, introduce las decisiones del entrenador y revisa la propuesta antes de aceptarla. La conversación no se transfiere automáticamente.",
+  "assistant_choose_plan": "Selecciona un atleta y un plan arriba para abrir el asistente.",
+  "assistant_provider_error": "La IA no pudo responder. Comprueba su configuración o vuelve a intentarlo. No se ha modificado el calendario."
 }

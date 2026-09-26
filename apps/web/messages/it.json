@@ -1277,5 +1277,20 @@
   "fit_import_no_stream": "Il file contiene solo un riepilogo: non ci sono serie per grafici o mappe.",
   "fit_import_missing_summary": "Mancano distanza o dislivello e non è possibile calcolarli dalle serie. Sono salvati come 0; puoi verificarli nell’attività.",
   "fit_import_unknown_sport": "Sport non riconosciuto: salvato come «Altro». Puoi modificarlo.",
-  "fit_import_source": "File FIT manuale"
+  "fit_import_source": "File FIT manuale",
+  "assistant_title": "Assistente IA",
+  "assistant_help": "Consulta il contesto dell’atleta e discuti la settimana con l’IA. Questa conversazione non modifica il calendario e non sincronizza Garmin.",
+  "assistant_history_help": "La conversazione è temporanea: vengono conservati gli ultimi 8 scambi finché rimani in questa scheda. Viene cancellata cambiando atleta, piano, lingua, periodo o stato attuale, oppure uscendo dalla scheda.",
+  "assistant_state": "Sensazioni e circostanze attuali (facoltativo)",
+  "assistant_context_help": "Inviando una domanda condividi il contesto disponibile dell’atleta e la conversazione recente con il fornitore IA configurato. Puoi consultare prima i dati. Ogni risposta recupera nuovamente i dati aggiornati di OpenAthlete.",
+  "assistant_as_of": "Contesto consultato",
+  "assistant_conversation": "Conversazione con l’assistente",
+  "assistant_empty": "Chiedi informazioni su sessioni pianificate, attività completate o recupero disponibile. Il contesto copre fino a 28 giorni e 100 attività recenti; l’IA deve indicare i dati mancanti.",
+  "assistant_question": "Domanda all’assistente",
+  "assistant_placeholder": "Esamina le attività svolte questa settimana e le metriche disponibili. Cosa dovrei considerare per preparare la prossima sessione?",
+  "assistant_send": "Invia domanda",
+  "assistant_clear": "Cancella conversazione",
+  "assistant_review_help": "Le risposte sono suggerimenti e non vengono salvate come allenamenti. Per modificare il calendario, apri Rivedi e adatta con l’IA, inserisci le decisioni dell’allenatore e verifica la proposta prima di accettarla. La conversazione non viene trasferita automaticamente.",
+  "assistant_choose_plan": "Seleziona un atleta e un piano qui sopra per aprire l’assistente.",
+  "assistant_provider_error": "L’IA non ha potuto rispondere. Controlla la configurazione o riprova. Il calendario non è stato modificato."
 }
