@@ -15,6 +15,7 @@ import { EquipmentController } from './controllers/equipment.controller';
 import { EventTemplateFolderController } from './controllers/event-template-folder.controller';
 import { EventTemplateController } from './controllers/event-template.controller';
 import { InjuryController } from './controllers/injury.controller';
+import { ManualFitImportController } from './controllers/manual-fit-import.controller';
 import { MetricController } from './controllers/metric.controller';
 import { PlanWorkspaceController } from './controllers/plan-workspace.controller';
 import { ProgressionController } from './controllers/progression.controller';
@@ -38,6 +39,7 @@ import { EquipmentService } from './services/equipment.service';
 import { EventTemplateFolderService } from './services/event-template-folder.service';
 import { EventTemplateService } from './services/event-template.service';
 import { InjuryService } from './services/injury.service';
+import { ManualFitImportService } from './services/manual-fit-import.service';
 import { MetricService } from './services/metric.service';
 import { ActivityPipelineService } from './services/pipeline/activity-pipeline.service';
 import {
@@ -64,6 +66,7 @@ import { WeatherService } from './services/weather/weather.service';
     forwardRef(() => ProvidersSyncModule),
   ],
   controllers: [
+    ManualFitImportController,
     PlanWorkspaceController,
     ActivityFeedbackController,
     EventController,
@@ -82,6 +85,7 @@ import { WeatherService } from './services/weather/weather.service';
     CycleController,
   ],
   providers: [
+    ManualFitImportService,
     PlanWorkspaceService,
     EventService,
     WorkoutService,

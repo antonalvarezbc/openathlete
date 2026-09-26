@@ -2,7 +2,7 @@ import { Decoder, Stream } from '@garmin/fitsdk';
 
 import { Logger } from '@nestjs/common';
 
-import { ActivityStream } from '@openathlete/shared';
+import { ActivityStream, isValidGpsPoint } from '@openathlete/shared';
 
 import {
   ActivityParseResult,
@@ -75,11 +75,18 @@ export class FitParserStrategy implements ActivityParser {
       return { stream: {}, segments: [] };
     }
 
+    const fit = {
+      fileType: (
+        messages.fileIdMesgs as Array<Record<string, unknown>> | undefined
+      )?.[0]?.type,
+      sessions: messages.sessionMesgs ?? [],
+      decodeErrors: !!errors?.length,
+    };
     const records = (messages.recordMesgs ?? []) as Array<
       Record<string, unknown>
     >;
     if (!records.length) {
-      return { stream: {}, segments: [] };
+      return { stream: {}, segments: [], fit };
     }
 
     const session = (messages.sessionMesgs?.[0] ?? null) as Record<
@@ -154,9 +161,12 @@ export class FitParserStrategy implements ActivityParser {
         time.push(0);
       }
 
-      if (lat !== null && lon !== null) {
-        const latDeg = lat * (180 / 2 ** 31);
-        const lonDeg = lon * (180 / 2 ** 31);
+      const point =
+        lat !== null && lon !== null
+          ? [lat * (180 / 2 ** 31), lon * (180 / 2 ** 31)]
+          : [];
+      if (isValidGpsPoint(point)) {
+        const [latDeg, lonDeg] = point;
 
         if (previousLat !== null && previousLon !== null) {
           cumulativeDistance += calculateDistance(
@@ -170,6 +180,10 @@ export class FitParserStrategy implements ActivityParser {
         latlng.push([latDeg, lonDeg]);
         previousLat = latDeg;
         previousLon = lonDeg;
+      } else {
+        latlng.push([]);
+        previousLat = null;
+        previousLon = null;
       }
 
       if (dist !== null) {
@@ -199,7 +213,7 @@ export class FitParserStrategy implements ActivityParser {
     if (time.length) {
       result.time = time;
     }
-    if (latlng.length) {
+    if (latlng.some(isValidGpsPoint)) {
       result.latlng = latlng;
     }
     if (altitude.length) {
@@ -236,7 +250,7 @@ export class FitParserStrategy implements ActivityParser {
       totalDurationSeconds,
     );
 
-    return { stream: result, segments };
+    return { stream: result, segments, fit };
   }
 
   private buildFitSegments(

@@ -77,6 +77,44 @@ describe('Manual Garmin FIT reader', () => {
     expect(stream.heartrate).toBeUndefined();
     expect(stream.watts).toEqual([200, 201, 202]);
   });
+  it('keeps GPS gaps and their timestamps when reading a cached Garmin FIT', async () => {
+    const sdk = process.getBuiltinModule('module').createRequire(__filename)(
+      '@garmin/fitsdk',
+    );
+    const encoder = new sdk.Encoder();
+    const start = 1000000000;
+    encoder.onMesg(0, {
+      type: 'activity',
+      manufacturer: 'development',
+      product: 1,
+      timeCreated: start,
+    });
+    for (let i = 0; i < 4; i++)
+      encoder.onMesg(20, {
+        timestamp: start + i,
+        heartRate: 100 + i,
+        distance: i * 3,
+        ...(i === 0 || i === 2
+          ? {}
+          : {
+              positionLat: 1000000 + i * 100,
+              positionLong: 2000000 + i * 100,
+            }),
+      });
+    encoder.onMesg(18, {
+      startTime: start,
+      timestamp: start + 3,
+      totalTimerTime: 3,
+      totalElapsedTime: 3,
+      sport: 'running',
+    });
+    await put(Buffer.from(encoder.close()));
+    const result = await readManualFit(directory, '123', '456');
+    const stream = uncompressActivityStream(result.stream);
+    expect(stream.time).toEqual([0, 1, 2, 3]);
+    expect(stream.latlng?.map((p) => p.length)).toEqual([0, 2, 0, 2]);
+    expect(stream.heartrate).toEqual([100, 101, 102, 103]);
+  });
   it('rejects invalid CRC and invalid identifiers', async () => {
     const bytes = Buffer.from(fixtures.complete, 'base64');
     bytes[bytes.length - 1] ^= 255;
