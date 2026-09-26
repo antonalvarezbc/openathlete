@@ -16,6 +16,7 @@ import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { UserTypes } from '../../auth/decorators/user-type.decorator';
 import { AuthUser, JwtUser } from '../../auth/decorators/user.decorator';
 import { UserTypeGuard } from '../../auth/guards/user-type.guard';
+import { ManualFitImportGuard } from '../guards/manual-fit-import.guard';
 import { MAX_MANUAL_FIT_BYTES } from '../helpers/manual-fit-import';
 import {
   ManualFitFile,
@@ -28,7 +29,7 @@ const bodySchema = z
 
 @ApiTags('Activities')
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'), UserTypeGuard)
+@UseGuards(AuthGuard('jwt'), UserTypeGuard, ManualFitImportGuard)
 @UserTypes(['ATHLETE'])
 @Controller('activity-import')
 export class ManualFitImportController {

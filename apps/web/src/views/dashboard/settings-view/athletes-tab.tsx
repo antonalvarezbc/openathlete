@@ -5,6 +5,7 @@ import {
   useInviteAthleteMutation,
   useRemoveAthleteMutation,
 } from '@/api/athlete';
+import { useInstallationFeatures } from '@/api/installation/installation.hooks';
 import { ConfirmAction } from '@/components/confirm-action';
 import { InviteAthleteDialog } from '@/components/invite-athlete-dialog/invite-athlete.dialog';
 import { PaywallDialog } from '@/components/paywall';
@@ -36,6 +37,7 @@ import { ManualGarminCard } from './manual-garmin-card';
 import { SettingsSection } from './settings-section';
 
 export function AthletesTab() {
+  const { manualGarminSync } = useInstallationFeatures();
   const { data: athletes, isPending: isLoadingAthletes } =
     useGetMyCoachedAthletesQuery();
   const nav = useNavigate();
@@ -101,14 +103,19 @@ export function AthletesTab() {
             <TableRow>
               <TableHead>{m.name()}</TableHead>
               <TableHead>{m.email()}</TableHead>
-              <TableHead>{m.garmin_manual_title()}</TableHead>
+              {manualGarminSync && (
+                <TableHead>{m.garmin_manual_title()}</TableHead>
+              )}
               <TableHead className="text-right">{m.actions()}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoadingAthletes
               ? Array.from({ length: 3 }).map((_, i) => (
-                  <SkeletonTableRow key={i} colCount={4} />
+                  <SkeletonTableRow
+                    key={i}
+                    colCount={manualGarminSync ? 4 : 3}
+                  />
                 ))
               : athletes?.map((athlete) => (
                   <TableRow key={athlete.athleteId}>
@@ -116,9 +123,14 @@ export function AthletesTab() {
                       {athlete.user?.firstName} {athlete.user?.lastName}
                     </TableCell>
                     <TableCell>{athlete.user?.email}</TableCell>
-                    <TableCell className="min-w-64 whitespace-normal">
-                      <ManualGarminCard athleteId={athlete.athleteId} compact />
-                    </TableCell>
+                    {manualGarminSync && (
+                      <TableCell className="min-w-64 whitespace-normal">
+                        <ManualGarminCard
+                          athleteId={athlete.athleteId}
+                          compact
+                        />
+                      </TableCell>
+                    )}
                     <TableCell className="text-right">
                       <div className="flex flex-wrap justify-end gap-2">
                         <Button

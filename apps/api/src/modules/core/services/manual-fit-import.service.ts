@@ -7,6 +7,7 @@ import {
   Injectable,
   PayloadTooLargeException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 import { Prisma } from '@openathlete/database';
 import { CompressedActivityStream, isValidGpsPoint } from '@openathlete/shared';
@@ -15,6 +16,7 @@ import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { QueueService } from '../../queue/queue.service';
 import { uncompressActivityStream } from '../helpers/activity-stream';
+import { assertManualFitImportEnabled } from '../helpers/installation-features';
 import {
   MAX_MANUAL_FIT_BYTES,
   prepareManualFit,
@@ -32,9 +34,11 @@ export class ManualFitImportService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly queue: QueueService,
+    private readonly config: ConfigService,
   ) {}
 
   async import(user: AuthUser, file: ManualFitFile | undefined, name: string) {
+    assertManualFitImportEnabled(this.config);
     if (!user.roles?.includes('ATHLETE')) throw new ForbiddenException();
     const athlete = await this.prisma.athlete.findUnique({
       where: { userId: user.userId },

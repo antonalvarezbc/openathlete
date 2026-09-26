@@ -49,6 +49,8 @@ services:
       # Core configuration
       ENV: ${ENV:-development}
       SELF_HOSTED: ${SELF_HOSTED:-false}
+      ENABLE_MANUAL_FIT_IMPORT: ${ENABLE_MANUAL_FIT_IMPORT:-false}
+      ENABLE_MANUAL_GARMIN_SYNC: ${ENABLE_MANUAL_GARMIN_SYNC:-false}
       NODE_ENV: ${NODE_ENV:-production}
       PORT: ${PORT:-3000}
       

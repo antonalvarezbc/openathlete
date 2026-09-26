@@ -1,4 +1,5 @@
 import { useGetMyIcalCalendarSecretQuery } from '@/api/event';
+import { useInstallationFeatures } from '@/api/installation/installation.hooks';
 import {
   useDisconnectProviderMutation,
   useGetConnectedProvidersQuery,
@@ -57,6 +58,7 @@ const SUPPORTED_PROVIDERS: ConnectorProvider[] = [
 ];
 
 export function ConnectorsTab() {
+  const { manualGarminSync } = useInstallationFeatures();
   const posthog = usePostHog();
   const [disconnectDialogOpen, setDisconnectDialogOpen] = useState(false);
   const [providerToDisconnect, setProviderToDisconnect] =
@@ -494,7 +496,7 @@ export function ConnectorsTab() {
         </div>
       </SettingsSection>
 
-      <ManualGarminCard configure />
+      {manualGarminSync && <ManualGarminCard configure />}
 
       {icalSecret && (
         <SettingsSection

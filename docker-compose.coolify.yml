@@ -65,6 +65,8 @@ services:
     environment:
       ENV: ${ENV}
       SELF_HOSTED: ${SELF_HOSTED:-false}
+      ENABLE_MANUAL_FIT_IMPORT: ${ENABLE_MANUAL_FIT_IMPORT:-false}
+      ENABLE_MANUAL_GARMIN_SYNC: ${ENABLE_MANUAL_GARMIN_SYNC:-false}
       NODE_ENV: ${NODE_ENV}
       PORT: ${PORT:-3000}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public

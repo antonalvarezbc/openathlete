@@ -16,6 +16,17 @@ export const ApiEnvSchema = z
       .default('false')
       .transform((value) => value === 'true'),
 
+    // Optional local import tools. Keep installations clean unless explicitly enabled.
+    ENABLE_MANUAL_FIT_IMPORT: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
+
+    ENABLE_MANUAL_GARMIN_SYNC: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
+
     ADMIN_USER_IDS: z
       .string()
       .default('')

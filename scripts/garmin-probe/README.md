@@ -71,7 +71,8 @@ Ajustes → Conexiones del atleta y en la tabla de Atletas del entrenador:
 - **Completar actividades pendientes:** `backfill.py` completa detalles mediante
   los FIT de actividades que ya están importadas en OA.
 
-Es opcional, requiere `SELF_HOSTED=true` y no usa el OAuth oficial. No hay cron,
+Está desactivado por defecto. Requiere `ENABLE_MANUAL_GARMIN_SYNC=true`,
+`SELF_HOSTED=true` y no usa el OAuth oficial. No hay cron,
 webhooks nuevos ni polling a Garmin. Cargar la pantalla solo consulta el estado
 local del backend; ninguna de las dos acciones comienza automáticamente.
 
@@ -90,7 +91,8 @@ local del backend; ninguna de las dos acciones comienza automáticamente.
    El comando rechaza sobrescribir una vinculación existente.
 
 4. En `apps/api/.env`, añadir `GARMIN_UNOFFICIAL_DIRECTORY` con la ruta absoluta a
-   este directorio `scripts/garmin-probe` y mantener `SELF_HOSTED=true`.
+   este directorio `scripts/garmin-probe`, mantener `SELF_HOSTED=true` y añadir
+   `ENABLE_MANUAL_GARMIN_SYNC=true`.
 5. Reconstruir shared (`pnpm shared build`) y reiniciar el backend. El backend
    debe poder ejecutar `.venv/bin/python`, leer los tokens y escribir `.private/`.
 6. Abrir Ajustes → Conexiones como atleta, o Ajustes → Atletas como entrenador
@@ -285,3 +287,19 @@ real tras la siguiente pulsación; los tests solo validan mapeo y límites.
 Para ver los datos importados, abrir la ficha de métricas del atleta en
 `/dashboard/metrics/ID_DEL_ATLETA`. La vista del entrenador sin atleta seleccionado
 no es la ficha de las métricas importadas.
+
+## Ocultar las herramientas manuales en la aplicación
+
+Para una instalación con la interfaz limpia, deja en `apps/api/.env`:
+
+```dotenv
+ENABLE_MANUAL_GARMIN_SYNC=false
+ENABLE_MANUAL_FIT_IMPORT=false
+```
+
+Ambas opciones valen `false` si no se definen. Reinicia la API y recarga la web.
+Se ocultan la tarjeta Garmin manual, su columna en Atletas y la subida manual de
+FIT; los endpoints manuales también se deshabilitan. Las conexiones oficiales y
+los datos ya importados se conservan. Cada herramienta se puede activar por
+separado. Estos ajustes no cambian el comportamiento de los scripts de diagnóstico
+cuando se ejecutan directamente desde la terminal.

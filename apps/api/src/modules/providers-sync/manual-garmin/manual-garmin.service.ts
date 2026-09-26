@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { readFile, rename, unlink, writeFile } from 'node:fs/promises';
-import { isAbsolute, join } from 'node:path';
+import { join } from 'node:path';
 import { promisify } from 'node:util';
 
 import {
@@ -17,6 +17,7 @@ import { ConnectorProvider, EventType, Prisma } from '@openathlete/database';
 
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { mapGarminActivityType } from '../../core/helpers/garmin';
+import { getInstallationFeatures } from '../../core/helpers/installation-features';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { QueueService } from '../../queue/queue.service';
 import {
@@ -205,9 +206,8 @@ export class ManualGarminService implements OnModuleDestroy {
   }
 
   private async connection(user: AuthUser, requestedAthleteId?: number) {
-    const root = this.config.get<string>('GARMIN_UNOFFICIAL_DIRECTORY');
-    if (!this.config.get<boolean>('SELF_HOSTED') || !root || !isAbsolute(root))
-      return null;
+    if (!getInstallationFeatures(this.config).manualGarminSync) return null;
+    const root = this.config.getOrThrow<string>('GARMIN_UNOFFICIAL_DIRECTORY');
     let legacy: ReturnType<typeof manualGarminConnection.parse> | undefined;
     try {
       legacy = manualGarminConnection.parse(
