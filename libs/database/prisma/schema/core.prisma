@@ -47,6 +47,7 @@ model User {
   messageThreadParticipants MessageThreadParticipant[]
   sentMessages              Message[]
   messageReadReceipts       MessageReadReceipt[]
+  activityAnalyses          CoachActivityAnalysis[]
   subscription              Subscription?
 
   // timestamps

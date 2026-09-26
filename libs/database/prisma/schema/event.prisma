@@ -201,6 +201,7 @@ model EventActivity {
   segments            ActivitySegment[]
   feedbackQuestions   ActivityFeedbackQuestion[]
   extractedInjuries   AthleteInjury[] // injuries extracted from feedback
+  coachAnalyses       CoachActivityAnalysis[]
   feedbackEmbedding   ActivityFeedbackEmbedding? // vector embedding of feedback responses
 
   @@unique([externalId]) // Index for fast lookup by external provider ID

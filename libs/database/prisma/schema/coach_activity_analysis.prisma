@@ -1,0 +1,23 @@
+/// Private, versioned AI assessments of completed activities for one coach.
+/// The original analysis and input snapshot are immutable. Only the feedback
+/// draft can be edited; it is never published as an athlete comment implicitly.
+model CoachActivityAnalysis {
+  activityAnalysisId Int           @id @default(autoincrement()) @map("activity_analysis_id")
+  eventActivityId    Int           @map("event_activity_id")
+  coachUserId        Int           @map("coach_user_id")
+  coachContext       String        @map("coach_context")
+  language           String
+  analysis           Json
+  feedbackDraft      String        @map("feedback_draft")
+  contextSnapshot    Json          @map("context_snapshot")
+  model              String
+  promptVersion      String        @map("prompt_version")
+  activity           EventActivity @relation(fields: [eventActivityId], references: [eventActivityId], onDelete: Cascade)
+  coach              User          @relation(fields: [coachUserId], references: [userId], onDelete: Cascade)
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+
+  @@index([coachUserId, eventActivityId, createdAt])
+  @@index([eventActivityId])
+  @@map("coach_activity_analysis")
+}

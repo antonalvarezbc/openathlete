@@ -1,5 +1,8 @@
 import { useGetMyAthleteQuery } from '@/api/athlete';
 import { useGetEventStreamQuery, useGetEventWeatherQuery } from '@/api/event';
+import { SparklesIcon } from '@/components/ui/sparkles-icon';
+import { useAuthContext } from '@/contexts/auth';
+import { useSpaceContext } from '@/contexts/space';
 import { m } from '@/paraglide/messages';
 import { useMemo, useState } from 'react';
 
@@ -7,6 +10,7 @@ import { ActivityEvent, getSportConfig } from '@openathlete/shared';
 
 import { ActivityFeedbackOverlay } from '../activity-feedback/activity-feedback-overlay';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { ActivityDetailsAnalysisTab } from './tabs/activity-details-analysis-tab';
 import { ActivityDetailsOverviewTab } from './tabs/activity-details-overview-tab';
 import { ActivityDetailsSplitsTab } from './tabs/activity-details-splits-tab';
 import { ActivityDetailsWeatherTab } from './tabs/activity-details-weather-tab';
@@ -17,6 +21,9 @@ interface P {
 
 export function ActivityDetails({ event }: P) {
   const { data: athlete } = useGetMyAthleteQuery();
+  const { user } = useAuthContext();
+  const { space } = useSpaceContext();
+  const canAnalyze = space === 'COACH' && user?.roles.includes('COACH');
   const [showNormalView, setShowNormalView] = useState(false);
   const [showEditFeedback, setShowEditFeedback] = useState(false);
   const isMyActivity = athlete?.athleteId === event.athleteId;
@@ -59,15 +66,23 @@ export function ActivityDetails({ event }: P) {
 
       {(!isMyActivity || (showNormalView && !showEditFeedback)) && (
         <Tabs defaultValue="overview" className="flex flex-col gap-4">
-          <TabsList>
-            <TabsTrigger value="overview">{m.overview()}</TabsTrigger>
-            {hasSplits && (
-              <TabsTrigger value="splits">{m.splits()}</TabsTrigger>
-            )}
-            {weather && (
-              <TabsTrigger value="weather">{m.weather()}</TabsTrigger>
-            )}
-          </TabsList>
+          <div className="max-w-full overflow-x-auto">
+            <TabsList className="min-w-max">
+              <TabsTrigger value="overview">{m.overview()}</TabsTrigger>
+              {hasSplits && (
+                <TabsTrigger value="splits">{m.splits()}</TabsTrigger>
+              )}
+              {weather && (
+                <TabsTrigger value="weather">{m.weather()}</TabsTrigger>
+              )}
+              {canAnalyze && (
+                <TabsTrigger value="analysis">
+                  <SparklesIcon className="h-4 w-4" />
+                  {m.activity_analysis_title()}
+                </TabsTrigger>
+              )}
+            </TabsList>
+          </div>
           <TabsContent value="overview">
             <ActivityDetailsOverviewTab
               event={event}
@@ -88,6 +103,14 @@ export function ActivityDetails({ event }: P) {
           {weather && (
             <TabsContent value="weather">
               <ActivityDetailsWeatherTab data={weather} stream={stream} />
+            </TabsContent>
+          )}
+          {canAnalyze && (
+            <TabsContent value="analysis" className="min-w-0">
+              <ActivityDetailsAnalysisTab
+                key={`${user?.userId}-${event.eventId}`}
+                eventId={event.eventId}
+              />
             </TabsContent>
           )}
         </Tabs>
