@@ -1,6 +1,7 @@
 # Adaptar la siguiente sesión o el resto de la semana
 
-En **Ajustes → Plan de entrenamiento → Adaptar plan en curso**:
+En el espacio **Entrenador → Plan de entrenamiento → Revisar y adaptar con IA**
+(`/dashboard/planning`):
 
 1. Elige el atleta y un plan que tenga sesiones pendientes.
 2. Selecciona **Siguiente sesión** o **Resto de la semana**. En el segundo caso,

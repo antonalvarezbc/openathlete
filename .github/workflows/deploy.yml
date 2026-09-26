@@ -9,6 +9,8 @@ env:
 
 jobs:
   build-and-deploy:
+    # Forks must explicitly opt in before publishing to Scaleway.
+    if: ${{ github.repository == 'openathleteorg/openathlete' || vars.ENABLE_SCALEWAY_DEPLOY == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
