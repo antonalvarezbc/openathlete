@@ -29,6 +29,9 @@ const THREAD_INCLUDES = {
   },
   messages: {
     include: {
+      activityNotice: {
+        select: { kind: true, eventId: true, eventName: true, rpe: true },
+      },
       sender: {
         select: {
           userId: true,

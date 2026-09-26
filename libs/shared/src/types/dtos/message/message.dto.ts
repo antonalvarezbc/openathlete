@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { ActivityChatNoticeDto } from './activity-alert.dto';
+
 // ============================================================================
 // Messaging System Types and DTOs
 // ============================================================================
@@ -12,6 +14,7 @@ export interface MessageThread {
   messageThreadId: number;
   title?: string;
   eventTrainingId?: number;
+  eventActivityId?: number | null;
   createdAt: string;
   updatedAt: string;
   participants?: MessageThreadParticipant[];
@@ -37,6 +40,7 @@ export interface MessageThreadParticipant {
 
 // Message Types
 export interface Message {
+  activityNotice?: ActivityChatNoticeDto | null;
   messageId: number;
   messageThreadId: number;
   senderId: number;

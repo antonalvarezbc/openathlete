@@ -14,6 +14,7 @@ import { Message } from '@openathlete/shared';
 
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
+import { ActivityChatNotice } from './activity-chat-notice';
 
 interface MessageMessagesProps {
   messageThreadId: number;
@@ -121,7 +122,11 @@ function MessageBubble({
               </div>
             )}
             <div className="whitespace-pre-wrap break-words">
-              {message.content}
+              {message.activityNotice ? (
+                <ActivityChatNotice notice={message.activityNotice} />
+              ) : (
+                message.content
+              )}
             </div>
 
             <div className="flex items-center gap-2 mt-2">
@@ -148,7 +153,7 @@ function MessageBubble({
                   ) : null}
                 </>
               )}
-              {isUser && (
+              {isUser && !message.activityNotice && (
                 <button
                   onClick={onStartEdit}
                   className="text-xs opacity-60 hover:opacity-100 ml-auto cursor-pointer"

@@ -84,6 +84,7 @@ model Message {
   messageThreadId Int                  @map("message_thread_id")
   sender          User                 @relation(fields: [senderId], references: [userId], onDelete: Cascade)
   senderId        Int                  @map("sender_id")
+  activityNotice ActivityChatNotice?
   readReceipts    MessageReadReceipt[]
 
   // timestamps

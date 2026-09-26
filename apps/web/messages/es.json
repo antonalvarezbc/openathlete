@@ -1358,5 +1358,20 @@
   "activity_analysis_save_feedback": "Guardar borrador de feedback",
   "activity_analysis_discard_draft": "Descartar edición",
   "activity_analysis_unsaved_feedback": "Tienes cambios sin guardar. Guárdalos o descártalos antes de seleccionar otro análisis o generar uno nuevo.",
-  "activity_analysis_saved_context": "Datos utilizados en este análisis guardado"
+  "activity_analysis_saved_context": "Datos utilizados en este análisis guardado",
+  "activity_alert_settings_title": "Avisos en el chat",
+  "activity_alert_settings_help": "Elige qué avisos automáticos quieres recibir de este atleta en vuestra conversación. Tus preferencias no afectan a otros entrenadores. Se aplican a los próximos cambios; los avisos ya guardados se conservan.",
+  "activity_alert_comments": "Comentarios y respuestas del atleta",
+  "activity_alert_rpe": "Cambios de RPE del atleta",
+  "activity_alert_new": "Nuevas actividades",
+  "activity_alert_settings_error": "No se han podido guardar o cargar tus preferencias. Inténtalo de nuevo.",
+  "activity_alert_settings_saved": "Preferencias guardadas.",
+  "activity_alert_retry": "Reintentar",
+  "activity_alert_automatic": "Aviso automático",
+  "activity_alert_uploaded": "Nueva actividad disponible",
+  "activity_alert_comment_updated": "El atleta ha añadido o actualizado un comentario",
+  "activity_alert_rpe_updated": "El atleta ha actualizado el RPE",
+  "activity_alert_rpe_removed": "RPE eliminado",
+  "activity_alert_open": "Abrir actividad",
+  "activity_alert_unavailable": "La actividad ya no está disponible o no tienes acceso."
 }

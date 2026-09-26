@@ -47,6 +47,8 @@ model User {
   messageThreadParticipants MessageThreadParticipant[]
   sentMessages              Message[]
   messageReadReceipts       MessageReadReceipt[]
+  activityAlertSettings     CoachActivityAlertSettings[]
+  activityChatNotices        ActivityChatNotice[]
   activityAnalyses          CoachActivityAnalysis[]
   subscription              Subscription?
 

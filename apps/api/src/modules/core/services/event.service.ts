@@ -60,6 +60,7 @@ import { MessageThreadService } from 'src/modules/messages/services/message-thre
 import { MessageService } from 'src/modules/messages/services/message.service';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
+import { CoachActivityNoticeEvent } from '../../../events/coach-activity-notice.event';
 import { ProviderExportService } from '../../providers-sync/export.service';
 import { TrainingLoadEstimationService } from '../../queue/services/training-load-estimation.service';
 import {
@@ -394,6 +395,15 @@ export class EventService {
         });
     }
 
+    if (created.type === 'ACTIVITY')
+      this.eventEmitter.emit(
+        CoachActivityNoticeEvent.SLUG,
+        new CoachActivityNoticeEvent({
+          eventId: created.eventId,
+          kind: 'ACTIVITY',
+          deliveryKey: `import:${created.eventId}`,
+        }),
+      );
     return this.getEventById(user, created.eventId);
   }
 
@@ -677,12 +687,17 @@ export class EventService {
               {
                 content: description || '',
               },
+              false,
             );
           } else if (description) {
-            await this.messageService.createMessage(user, {
-              messageThreadId: existingThread.messageThreadId,
-              content: description,
-            });
+            await this.messageService.createMessage(
+              user,
+              {
+                messageThreadId: existingThread.messageThreadId,
+                content: description,
+              },
+              false,
+            );
           }
         } else if (description) {
           const eventWithAthlete = await this.prisma.event.findUnique({
@@ -712,10 +727,14 @@ export class EventService {
               participantUserIds,
             });
 
-            await this.messageService.createMessage(user, {
-              messageThreadId: thread.messageThreadId,
-              content: description,
-            });
+            await this.messageService.createMessage(
+              user,
+              {
+                messageThreadId: thread.messageThreadId,
+                content: description,
+              },
+              false,
+            );
           }
         }
       } catch (error) {
@@ -742,6 +761,32 @@ export class EventService {
           }),
         );
       }
+    }
+
+    if (!isTemplate && event.type === 'ACTIVITY' && event.activity) {
+      const changed = (kind: 'RPE' | 'COMMENT') =>
+        this.eventEmitter.emit(
+          CoachActivityNoticeEvent.SLUG,
+          new CoachActivityNoticeEvent({
+            eventId,
+            kind,
+            actorUserId: user.userId,
+            deliveryKey: `edit:${eventId}:${updatedEvent.updatedAt.toISOString()}`,
+            rpe: 'rpe' in rest && rest.rpe != null ? rest.rpe * 10 : null,
+          }),
+        );
+      if (
+        'rpe' in rest &&
+        rest.rpe !== undefined &&
+        rest.rpe !== event.activity.rpe
+      )
+        changed('RPE');
+      if (
+        'description' in rest &&
+        rest.description !== undefined &&
+        rest.description !== event.activity.description
+      )
+        changed('COMMENT');
     }
 
     // Return the full updated event with all includes
