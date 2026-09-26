@@ -8,7 +8,12 @@ import { AuthUser, JwtUser } from '../../auth/decorators/user.decorator';
 import { ManualGarminService } from './manual-garmin.service';
 
 const targetSchema = z
-  .object({ athleteId: z.coerce.number().int().positive().optional() })
+  .object({
+    athleteId: z
+      .union([z.number(), z.string()])
+      .pipe(z.coerce.number().int().positive())
+      .optional(),
+  })
   .strict();
 const loginSchema = z
   .object({
@@ -58,6 +63,24 @@ export class ManualGarminController {
     target: z.infer<typeof targetSchema>,
   ) {
     return this.service.sync(user, target.athleteId);
+  }
+
+  @Post('backfill')
+  backfill(
+    @JwtUser() user: AuthUser,
+    @Body(new ZodValidationPipe(targetSchema))
+    target: z.infer<typeof targetSchema>,
+  ) {
+    return this.service.backfill(user, target.athleteId);
+  }
+
+  @Post('backfill/stop')
+  stopBackfill(
+    @JwtUser() user: AuthUser,
+    @Body(new ZodValidationPipe(targetSchema))
+    target: z.infer<typeof targetSchema>,
+  ) {
+    return this.service.stopBackfill(user, target.athleteId);
   }
 
   @Post('connect')

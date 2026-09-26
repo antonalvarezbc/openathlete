@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from fit_files import collect_fits
+from request_safety import RequestSafety, classify_error, manual_client, operation_lock
 
 from health_metrics import (number, metric, map_fields, DAILY_FIELDS, map_body, map_vo2,
                             map_blood_pressure, optional_read)
@@ -100,25 +100,28 @@ def main():
     logging.disable(logging.CRITICAL)
     os.umask(0o077)
     try:
-        from garminconnect import Garmin
         private = Path(os.environ.get('OA_GARMIN_PRIVATE_DIR', str(ROOT / '.private')))
-        connection = json.loads((private / 'connection.json').read_text())
-        client = Garmin(retry_attempts=0)
-        client.login(str(private / 'tokens'))
-        result = collect_sync(client, connection, datetime.now(ZoneInfo(connection['timezone'])).date())
-        completed = json.loads(os.environ.get('OA_GARMIN_COMPLETED_FITS', '[]'))
-        try:
-            result.update(collect_fits(client, result['activities'], private,
-                                      connection['garminUserProfileId'], completed))
-        except Exception:
-            # Optional original files must not discard successful summary/wellness reads.
-            result['warnings'].append('FitDownloadFailed')
-            result['fitsPending'] = sum(a['id'] not in completed for a in result['activities'])
-        print(json.dumps({'ok': True, **result}, allow_nan=False))
+        lock_directory = Path(os.environ.get('OA_GARMIN_LOCK_DIRECTORY', str(private)))
+        with operation_lock(lock_directory):
+            safety = RequestSafety(lock_directory)
+            try:
+                connection = json.loads((private / 'connection.json').read_text())
+                client = manual_client(safety)
+                client.login(str(private / 'tokens'))
+                result = collect_sync(client, connection, datetime.now(ZoneInfo(connection['timezone'])).date())
+                print(json.dumps({'ok': True, **result}, allow_nan=False))
+            except Exception as exc:
+                safety.fail(exc)
+                raise
     except Exception as exc:
         # No credentials, exception messages, traces or raw Garmin payloads on stdout.
-        code = 'AccountMismatch' if isinstance(exc, ValueError) and str(exc) == 'AccountMismatch' else type(exc).__name__
-        print(json.dumps({'ok': False, 'code': code}))
+        reason, retry_after = classify_error(exc)
+        code = {'RATE_LIMIT': 'RateLimited', 'AUTH': 'AuthenticationFailed',
+                'BUSY': 'Busy', 'COOLDOWN': 'Cooldown'}.get(reason, 'ProviderError')
+        message = {'ok': False, 'code': code}
+        if retry_after is not None:
+            message['retryAfterSeconds'] = retry_after
+        print(json.dumps(message))
 
 
 if __name__ == '__main__':

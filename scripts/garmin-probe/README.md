@@ -64,10 +64,16 @@ https://pypi.org/project/garminconnect/0.3.15/.
 
 ## Conector manual en OpenAthlete (MVP)
 
-Además del diagnóstico, `sync.py` permite importar desde el botón de Ajustes →
-Conexiones. Es opcional, requiere `SELF_HOSTED=true` y no usa el OAuth oficial.
-No hay cron, webhooks nuevos, polling a Garmin ni reintentos automáticos.
-Cargar la pantalla solo consulta el estado local del backend.
+Además del diagnóstico, el conector ofrece dos acciones independientes en
+Ajustes → Conexiones del atleta y en la tabla de Atletas del entrenador:
+
+- **Actualizar Garmin:** `sync.py` importa resúmenes recientes y recuperación.
+- **Completar actividades pendientes:** `backfill.py` completa detalles mediante
+  los FIT de actividades que ya están importadas en OA.
+
+Es opcional, requiere `SELF_HOSTED=true` y no usa el OAuth oficial. No hay cron,
+webhooks nuevos ni polling a Garmin. Cargar la pantalla solo consulta el estado
+local del backend; ninguna de las dos acciones comienza automáticamente.
 
 ### Configuración inicial del administrador
 
@@ -82,12 +88,14 @@ Cargar la pantalla solo consulta el estado local del backend.
    Se genera `.private/connection.json`, excluido de Git, usando la identidad
    Garmin del último informe correcto. No hace ninguna consulta remota.
    El comando rechaza sobrescribir una vinculación existente.
+
 4. En `apps/api/.env`, añadir `GARMIN_UNOFFICIAL_DIRECTORY` con la ruta absoluta a
    este directorio `scripts/garmin-probe` y mantener `SELF_HOSTED=true`.
 5. Reconstruir shared (`pnpm shared build`) y reiniciar el backend. El backend
    debe poder ejecutar `.venv/bin/python`, leer los tokens y escribir `.private/`.
 6. Abrir Ajustes → Conexiones como atleta, o Ajustes → Atletas como entrenador
-   vinculado. El botón «Actualizar desde Garmin» aparece según el idioma.
+   vinculado. Aparecen las acciones «Actualizar Garmin» y «Completar actividades
+   pendientes», según el idioma.
 
 La configuración anterior es la vinculación heredada por CLI. También se puede
 conectar cada cuenta desde la pantalla de Conexiones del propio atleta, con MFA
@@ -98,7 +106,7 @@ El worker verifica la identidad Garmin antes de devolver datos importables.
 En un VPS, el almacenamiento privado debe ser persistente y compartido entre
 instancias del backend. Véase [modos y Garmin manual](../../docs/account-modes-and-manual-garmin.md).
 
-### Alcance de cada pulsación
+### Actualizar Garmin: actividades recientes y recuperación
 
 - Una consulta de hasta 100 resúmenes de actividades; se importan las que empiezan
   en los últimos 30 días. Si se alcanza 100, se muestra una advertencia: no hay
@@ -124,11 +132,36 @@ instancias del backend. Véase [modos y Garmin manual](../../docs/account-modes-
   integración y del conector Garmin oficial. Coincidencias exactas de hora con
   otras actividades se omiten y avisan; no hay deduplicación aproximada entre
   plataformas si sus horas difieren.
-- Hasta tres FIT revisados por pulsación, tanto de actividades nuevas como de
-  actividades ya importadas. Tener una serie de tiempo no equivale a estar completo.
-  Se reutiliza el archivo privado local; solo se descarga si no está en caché.
-  La primera actualización tras esta corrección revisará también los FIT antiguos,
-  por lo que el número de pendientes puede aumentar una vez.
+
+Esta acción no descarga FIT. Su presupuesto base es de 27 lecturas de datos:
+identidad (1), actividades (1), resumen diario/VFC/sueño (21), rangos
+corporal/VO₂/presión (3) y edad física (1), además de las consultas de
+login/renovación necesarias. Hay al menos un segundo de pausa entre respuestas
+y nuevas peticiones HTTP. Un endpoint opcional no disponible (404/501) se omite
+con aviso; cualquier otro error de lectura detiene las consultas restantes.
+Los resúmenes y métricas se guardan en una única transacción. La actualización
+no se completa si falla el worker o la transacción.
+
+### Completar actividades pendientes: detalles FIT
+
+- Parte de los IDs Garmin ya almacenados para ese atleta en OA, incluidos los
+  anteriores a 30 días. No vuelve a pedir el listado de actividades ni el
+  histórico de recuperación. Por tanto, no descubre actividades antiguas que
+  todavía no están importadas en OA.
+- Revisa hasta 100 FIT por acción manual, con un máximo de 20 descargas nuevas.
+  Tener una serie de tiempo no equivale a estar completo. Los archivos privados
+  locales se reutilizan sin login ni consultas a Garmin; la conexión se inicia
+  solo cuando hace falta descargar un archivo. Antes de descargar se verifica
+  el perfil Garmin vinculado, mediante su identidad en la respuesta de FC en
+  reposo; esta comprobación no importa métricas de recuperación.
+- Las peticiones HTTP de esta acción se separan al menos 15 segundos desde la
+  respuesta anterior, incluidas las de autenticación, renovación e identidad.
+  La biblioteca usa un transporte local sin reintentos: el primer error impide
+  que sus mecanismos internos generen nuevas peticiones.
+- Al llegar al límite, se conserva lo importado y se muestra el trabajo pendiente.
+  Otra pulsación explícita, cuando termine la espera indicada, continúa el lote.
+  Un error de descarga, autenticación, lectura FIT o escritura detiene el lote;
+  no se pasa automáticamente a otro archivo ni se reintenta el que ha fallado.
 - Se incorporan GPS, FC, altitud, distancia, cadencia, potencia, temperatura y
   vueltas cuando el archivo las contiene. El resumen de una sesión FIT inequívoca
   puede completar FC, cadencia, potencia y trabajo mecánico (kJ); los kJ no se
@@ -145,29 +178,67 @@ instancias del backend. Véase [modos y Garmin manual](../../docs/account-modes-
   repetitivos; una actualización futura del lector puede volver a revisarlos.
 - Al añadir datos de sensores o resumen se ejecuta el procesamiento habitual de
   OA (incluidos GAP, normalización y búsqueda de entrenamientos coincidentes).
-  Se conservan los vínculos que ya existían. El enriquecimiento de actividades
-  anteriores utiliza el modo de importación histórica: no vuelve a generar
-  feedback IA, notificaciones de nueva actividad ni consultas meteorológicas.
-  Las actividades nuevas conservan su procesamiento habitual.
-- Los FIT fallidos no impiden guardar los otros resúmenes y métricas. La interfaz
-  indica actividades completadas, FIT revisados, IDs fallidos y pendientes:
-  otra pulsación después de dos minutos continúa el lote o reintenta.
-  Los FIT con varios originales, corruptos o mayores de 20 MiB se rechazan.
-  Las series con muestras ausentes que el lector no pueda alinear se omiten con
-  aviso; no se importan todos los campos posibles del formato FIT. Tampoco se
-  añaden en esta corrección modelos para dinámica de carrera, equipamiento del
-  reloj, D− u otros campos que OA no representa actualmente.
+  Se conservan los vínculos que ya existían. Este enriquecimiento utiliza el
+  modo de importación histórica, también para resúmenes recién importados: no
+  genera feedback IA, notificaciones de nueva actividad ni consultas meteorológicas.
+- Cada FIT se importa en una transacción independiente. Una descarga fallida no
+  deshace los archivos incorporados antes ni los resúmenes y métricas de una
+  actualización anterior. Los FIT con varios originales, corruptos o mayores de
+  20 MiB se rechazan. Las series con muestras ausentes que el lector no pueda
+  alinear se omiten con aviso; no se importan todos los campos posibles del FIT.
+  No se añaden modelos para dinámica de carrera, equipamiento del reloj, D− u
+  otros campos que OA no representa actualmente.
 
-El backend protege `GET /provider/garmin-manual/status` y
-`POST /provider/garmin-manual/sync` con JWT y verifica propietario/entrenador.
-Un bloqueo transaccional PostgreSQL impide sincronizaciones simultáneas; hay
-120 segundos de espera entre intentos y 180 segundos máximos para el worker
-(210 segundos para la transacción y 240 para la petición del navegador).
-La biblioteca puede renovar tokens y realizar sus propias consultas de login.
-Un endpoint opcional no disponible (404/501) se omite con aviso. Ante otros
-errores de lectura, autenticación o límites, se aborta la importación completa; las escrituras de
-actividades y métricas se realizan en una única transacción. Los resultados
-locales de la última operación se conservan en `.private/sync-state.json`.
+### Progreso, parada y límites de consultas
+
+- El trabajo se ejecuta en el backend. La pantalla consulta **solo el estado local**
+  cada dos segundos mientras hay una operación activa; ese sondeo no llama a
+  Garmin. Muestra FIT revisados, actividades enriquecidas, archivos reutilizados,
+  descargas nuevas, fallidos, incompatibilidades y pendientes.
+- El contador de pendientes se calcula al actualizar o iniciar un lote y se
+  mantiene durante la importación. Puede quedar desactualizado si se añaden o
+  eliminan actividades por otra vía hasta la siguiente operación manual; abrir
+  la pantalla no vuelve a recorrer el histórico ni lo consulta en Garmin.
+- **Detener** crea una señal local de cancelación. Una petición ya en curso puede
+  terminar; no se inicia la siguiente. Se conserva el trabajo incorporado.
+- Cerrar la página no cancela el trabajo mientras la API siga activa. Al volver
+  se puede ver su progreso o resultado. Reiniciar o perder la API interrumpe el
+  worker; no se reanuda automáticamente. El estado pasa a interrumpido cuando
+  caduca su señal de actividad y requiere otra pulsación explícita.
+- Hay un bloqueo compartido entre cuentas dentro de esta instalación para
+  serializar el login con credenciales, la actualización y la descarga. Entre acciones
+  remotas se esperan dos minutos desde la última respuesta, también si se intenta
+  cambiar de atleta. Las operaciones de una misma cuenta conservan además su
+  protección transaccional en PostgreSQL.
+- Las pausas de un segundo y quince segundos y la prohibición de reintentos del
+  transporte corresponden a las operaciones de lectura con tokens. El login
+  inicial con credenciales y MFA comparte el bloqueo y las esperas entre
+  operaciones, pero conserva la secuencia del SDK, que puede intentar vías de
+  autenticación alternativas. No se garantiza la misma política de reintentos
+  dentro de ese protocolo de login.
+- Un 429 impone al menos una hora de espera, o el plazo `Retry-After` si es mayor.
+  Este bloqueo y la espera normal se conservan en el almacenamiento privado y
+  se muestran en la interfaz. Llegar a la hora indicada no inicia otra consulta:
+  el usuario tiene que volver a pulsar. No se ofrecen garantías sobre la cuota de
+  esta API no oficial; los límites anteriores son precauciones locales de OA.
+- La actualización de resúmenes tiene un máximo de 180 segundos de worker,
+  210 segundos de transacción y 240 segundos en el navegador. El lote FIT tiene
+  un máximo de 15 minutos en el backend, con transacciones breves por archivo.
+  Un tiempo agotado conserva los FIT ya incorporados y requiere continuación manual.
+
+Los endpoints protegidos por JWT verifican propietario o entrenador vinculado:
+
+- `GET /provider/garmin-manual/status`: estado local y progreso.
+- `POST /provider/garmin-manual/sync`: actualizar resúmenes y recuperación.
+- `POST /provider/garmin-manual/backfill`: iniciar un lote FIT manual.
+- `POST /provider/garmin-manual/backfill/stop`: solicitar su parada.
+
+Los resultados y revisiones por versión se conservan en
+`.private/sync-state.json`; el progreso, en `.private/fit-backfill-state.json`.
+La protección compartida usa `.private/request-safety.json` y un bloqueo de
+archivo en el directorio raíz del conector. Los tokens y los FIT permanecen en
+los directorios privados de sus respectivas cuentas/perfiles; no se publican
+como URLs. Incluye ese almacenamiento privado en las copias de seguridad.
 
 ### Validación de la integración
 
@@ -177,22 +248,25 @@ Tests Python: comando de la sección anterior. Tests API:
 pnpm --dir apps/api exec jest manual-garmin --runInBand
 ```
 
-Primera prueba real: pulsar una vez, comprobar una actividad y una métrica en OA;
-tras dos minutos, repetir y comprobar que no crecen los duplicados. No hacer
-consultas remotas desde tests automáticos.
+La validación automática usa respuestas simuladas; no demuestra una ejecución
+real contra Garmin. Para la primera comprobación manual:
+
+1. Pulsar «Actualizar Garmin» una vez y contrastar un resumen y una métrica en OA.
+2. Esperar hasta la hora indicada y pulsar «Completar actividades pendientes».
+   Comprobar progreso y datos de una actividad cuyo FIT contenga GPS.
+3. Probar «Detener»: conservar los datos incorporados y continuar solo mediante
+   otra pulsación, sin repetir las consultas de recuperación.
+4. Tras finalizar, comprobar que no aparecen duplicados y que las actividades ya
+   revisadas no se descargan otra vez. No provocar errores 429 para probarlos:
+   esos casos se verifican con respuestas simuladas.
+
+No hacer consultas remotas desde tests automáticos.
 
 Evita activar a la vez la importación oficial Garmin o la de Strava para las
 mismas actividades: la deduplicación entre proveedores tiene los límites
 descritos arriba. No se cambia el comportamiento de sus conectores existentes.
 
-
 ### Métricas disponibles y límites de esta ampliación
-
-El presupuesto base es de 27 llamadas de datos por pulsación: identidad (1),
-actividades (1), resumen diario/HRV/sueño (21), rangos corporal/VO₂/presión (3) y
-edad física (1), más hasta 3 descargas FIT (máximo 30 llamadas de datos),
-además del login/renovación que necesite la biblioteca.
-No se consulta Garmin al abrir la ficha ni durante las pruebas automáticas.
 
 No se importan todavía: HR_MAX fisiológica, HR_AVG_DAILY, HR_RESERVE, RMSSD,
 Health Snapshots (sus seis métricas), RESPIRATION_RATE_AVG del día, HEIGHT,

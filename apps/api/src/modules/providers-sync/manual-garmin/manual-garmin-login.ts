@@ -49,6 +49,7 @@ export async function loginGarmin(
           ...process.env,
           PYTHONUNBUFFERED: '1',
           OA_GARMIN_PRIVATE_DIR: privateDirectory,
+          OA_GARMIN_LOCK_DIRECTORY: join(root, '.private'),
         },
         stdio: ['pipe', 'pipe', 'pipe'],
       },
@@ -93,7 +94,22 @@ export async function loginGarmin(
           } else if (reply.connected === true) {
             waiter?.resolve({ connected: true });
           } else {
-            waiter?.reject(failure());
+            const code =
+              reply.code === 'BUSY'
+                ? 'GARMIN_BACKFILL_BUSY'
+                : ['RATE_LIMIT', 'COOLDOWN'].includes(reply.code)
+                  ? 'GARMIN_REMOTE_COOLDOWN'
+                  : reply.code === 'AUTH'
+                    ? 'GARMIN_LOGIN_REQUIRED'
+                    : undefined;
+            waiter?.reject(
+              code
+                ? new ServiceUnavailableException({
+                    code,
+                    message: 'Garmin authentication stopped.',
+                  })
+                : failure(),
+            );
             child.kill();
           }
         } catch {

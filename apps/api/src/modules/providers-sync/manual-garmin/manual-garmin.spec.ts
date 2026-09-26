@@ -11,6 +11,15 @@ import {
 } from '../../core/helpers/activity-stream';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { QueueService } from '../../queue/queue.service';
+import {
+  cancelPath,
+  readBackfill,
+  saveBackfill,
+} from './manual-garmin-backfill-state';
+import {
+  BackfillWorkerMessage,
+  BackfillWorkerResult,
+} from './manual-garmin-backfill-worker';
 import { loginGarmin } from './manual-garmin-login';
 import { manualGarminPayload } from './manual-garmin.schema';
 import { ManualGarminService } from './manual-garmin.service';
@@ -48,11 +57,25 @@ const payload = {
 class TestService extends ManualGarminService {
   fetch = jest.fn().mockResolvedValue(payload);
   parse = jest.fn();
+  worker = jest.fn();
+  completion = Promise.resolve();
+  protected launchBackfill(task: () => Promise<void>) {
+    this.completion = task();
+  }
+  protected runBackfillWorker(
+    directory: string,
+    ids: string[],
+    runId: string,
+    onMessage: (message: BackfillWorkerMessage) => Promise<boolean>,
+    signal: AbortSignal,
+  ): Promise<BackfillWorkerResult> {
+    return this.worker(directory, ids, runId, onMessage, signal);
+  }
   protected parseFit() {
     return this.parse();
   }
-  protected fetchPayload(directory: string, completed: string[]) {
-    return this.fetch(directory, completed);
+  protected fetchPayload(directory: string) {
+    return this.fetch(directory);
   }
 }
 
@@ -224,181 +247,43 @@ describe('manual Garmin import', () => {
   const detailed = {
     eventActivityId: 7,
     eventId: 8,
+    externalId: 'garmin-manual:123:456',
     stream: null,
     averageHeartrate: 130,
     maxHeartrate: 155,
     segments: [],
   };
+  const parsed = {
+    stream: { time: [0, 1], heartrate: [120, 121] },
+    segments: [
+      {
+        segmentType: 'LAP',
+        name: 'Lap 1',
+        orderIndex: 0,
+        startTimeSeconds: 0,
+        endTimeSeconds: 1,
+      },
+    ],
+    incomplete: false,
+  };
   function readyFit() {
-    service.fetch.mockResolvedValue({
-      ...payload,
-      fits: [{ id: '456', ready: true }],
-      fitsPending: 2,
-    });
-    service.parse.mockResolvedValue({
-      stream: { time: [0, 1], heartrate: [120, 121] },
-      segments: [
-        {
-          segmentType: 'LAP',
-          name: 'Lap 1',
-          orderIndex: 0,
-          startTimeSeconds: 0,
-          endTimeSeconds: 1,
-        },
-      ],
-      incomplete: false,
-    });
+    tx.eventActivity.findMany.mockResolvedValue([detailed]);
     tx.eventActivity.findFirst.mockResolvedValue(detailed);
+    service.parse.mockResolvedValue(parsed);
+    service.worker.mockImplementation(async (_dir, ids, _runId, message) => {
+      for (const id of ids)
+        if (!(await message({ type: 'fit', id, ready: true, cached: true })))
+          return { reason: 'CANCELLED' };
+      return { reason: 'COMPLETE' };
+    });
   }
-  it('backfills an existing activity without duplicating it or changing its feedback', async () => {
-    readyFit();
-    const result = await service.sync(user);
-    expect(result.result).toMatchObject({
-      imported: 0,
-      fitsImported: 1,
-      fitsPending: 2,
-    });
-    expect(tx.event.create).not.toHaveBeenCalled();
-    expect(tx.eventActivity.update).toHaveBeenCalledWith({
-      where: { eventActivityId: 7 },
-      data: { stream: { time: [0, 1], heartrate: [120, 121] } },
-    });
-    expect(tx.activitySegment.createMany).toHaveBeenCalledTimes(1);
-    expect(queue.addActivityProcessingJob).toHaveBeenCalledWith(7, 8, true);
-    expect(tx.eventActivity.findFirst).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        where: {
-          event: { athleteId: 2 },
-          provider: 'GARMIN',
-          externalId: { in: ['garmin-manual:123:456', '456'] },
-        },
-      }),
-    );
-  });
-  it('imports details for a newly created summary', async () => {
-    readyFit();
-    tx.eventActivity.findFirst
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(detailed);
-    const result = await service.sync(user);
-    expect(result.result).toMatchObject({
-      imported: 1,
-      fitsImported: 1,
-      updated: 0,
-    });
-    expect(queue.addActivityProcessingJob).toHaveBeenCalledWith(7, 8, false);
-    expect(tx.event.create).toHaveBeenCalledTimes(1);
-  });
-  it('preserves existing segments and workout links', async () => {
-    readyFit();
-    tx.eventActivity.findFirst.mockResolvedValue({
-      ...detailed,
-      segments: [{ activitySegmentId: 55 }],
-    });
-    await service.sync(user);
-    expect(tx.activitySegment.createMany).not.toHaveBeenCalled();
-  });
-  it('reviews legacy streams and restores missing GPS without replacing recorded sensors', async () => {
-    readyFit();
-    const stored = compressActivityStream({
-      time: [0, 1],
-      heartrate: [110, 111],
-    });
-    tx.eventActivity.findMany.mockResolvedValue([
-      {
-        eventActivityId: 7,
-        externalId: 'garmin-manual:123:456',
-        stream: stored,
-      },
-    ]);
-    tx.eventActivity.findFirst.mockResolvedValue({
-      ...detailed,
-      stream: stored,
-    });
-    service.parse.mockResolvedValue({
-      stream: compressActivityStream({
-        time: [0, 1],
-        heartrate: [120, 121],
-        latlng: [
-          [40, -3],
-          [40.001, -3.001],
-        ],
-      }),
-      segments: [],
-      incomplete: false,
-    });
-    const result = await service.sync(user);
-    expect(service.fetch).toHaveBeenCalledWith(directory, []);
-    const data = tx.eventActivity.update.mock.calls[0][0].data;
-    expect(Object.keys(data)).toEqual(['stream']);
-    expect(uncompressActivityStream(data.stream)).toEqual({
-      time: [0, 1],
-      heartrate: [110, 111],
-      latlng: [
-        [40, -3],
-        [40.001, -3.001],
-      ],
-    });
-    expect(result.result).toMatchObject({
-      imported: 0,
-      updated: 1,
-      skipped: 0,
-      fitsChecked: 1,
-    });
-    expect(result.fitReviews).toEqual({
-      'garmin-manual:123:456': { version: 1, eventActivityId: 7 },
-    });
-  });
+  async function complete() {
+    await service.backfill(user);
+    await service.completion;
+    return (await readBackfill(directory))!;
+  }
 
-  it('remembers a reviewed indoor FIT even when no GPS was recorded', async () => {
-    readyFit();
-    const stored = { time: [0, 1], heartrate: [120, 121] };
-    tx.eventActivity.findMany.mockResolvedValue([
-      {
-        eventActivityId: 7,
-        externalId: 'garmin-manual:123:456',
-        stream: stored,
-      },
-    ]);
-    tx.eventActivity.findFirst.mockResolvedValue({
-      ...detailed,
-      stream: stored,
-      segments: [{ activitySegmentId: 55 }],
-    });
-    const first = await service.sync(user);
-    expect(first.result).toMatchObject({
-      fitsChecked: 1,
-      fitsImported: 0,
-      updated: 0,
-    });
-    expect(tx.eventActivity.update).not.toHaveBeenCalled();
-    expect(queue.addActivityProcessingJob).not.toHaveBeenCalled();
-    await writeFile(
-      join(directory, '.private/sync-state.json'),
-      JSON.stringify({ ...first, lastAttempt: '2020-01-01T00:00:00Z' }),
-    );
-    service.fetch.mockResolvedValue(payload);
-    await service.sync(user);
-    expect(service.fetch).toHaveBeenLastCalledWith(directory, ['456']);
-    expect(service.parse).toHaveBeenCalledTimes(1);
-  });
-
-  it.each([
-    { version: 0, eventActivityId: 7 },
-    { version: 1, eventActivityId: 99 },
-  ])('reviews stale checks and reimported rows again: %j', async (review) => {
-    tx.eventActivity.findMany.mockResolvedValue([
-      { eventActivityId: 7, externalId: '456', stream: { time: [0, 1] } },
-    ]);
-    await writeFile(
-      join(directory, '.private/sync-state.json'),
-      JSON.stringify({ fitReviews: { 'garmin-manual:123:456': review } }),
-    );
-    await service.sync(user);
-    expect(service.fetch).toHaveBeenCalledWith(directory, []);
-  });
-
-  it('fills nullable summary fields and empty descriptions while retaining coach feedback', async () => {
+  it('fills only missing summary fields and preserves athlete feedback and existing zero', async () => {
     service.fetch.mockResolvedValue({
       ...payload,
       activities: [
@@ -418,51 +303,143 @@ describe('manual Garmin import', () => {
       averageWatts: 0,
       maxWatts: 280,
       weightedAverageWatts: null,
-      description: '',
+      description: 'Coach notes',
       rpe: 0.7,
     });
     const result = await service.sync(user);
     expect(tx.eventActivity.update).toHaveBeenCalledWith({
       where: { eventActivityId: 7 },
-      data: {
-        description: 'From Garmin',
-        averageCadence: 174,
-        weightedAverageWatts: 220,
-      },
+      data: { averageCadence: 174, weightedAverageWatts: 220 },
     });
     expect(result.result).toMatchObject({ updated: 1, skipped: 0 });
     expect(queue.addActivityProcessingJob).toHaveBeenCalledWith(7, 8, true);
+    expect(service.worker).not.toHaveBeenCalled();
   });
 
-  it('preserves existing descriptions and ignores absent summary data', async () => {
+  it('updates summaries and recovery without downloading or parsing any FIT', async () => {
+    readyFit();
     service.fetch.mockResolvedValue({
       ...payload,
-      activities: [
-        {
-          ...payload.activities[0],
-          description: 'From Garmin',
-          averageCadence: null,
-          averageWatts: null,
+      fits: [{ id: '456', ready: true }],
+    });
+    const result = await service.sync(user);
+    expect(result.result).toMatchObject({
+      fitsImported: 0,
+      fitsPending: 1,
+      metrics: 1,
+    });
+    expect(service.worker).not.toHaveBeenCalled();
+    expect(service.parse).not.toHaveBeenCalled();
+    expect(service.fetch).toHaveBeenCalledWith(directory);
+  });
+
+  it('backfills an exact owned activity using local IDs and no summary/wellness queries', async () => {
+    readyFit();
+    const result = await complete();
+    expect(result).toMatchObject({
+      status: 'COMPLETED',
+      reason: 'COMPLETE',
+      checked: 1,
+      updated: 1,
+      cached: 1,
+      downloaded: 0,
+      remaining: 0,
+    });
+    expect(service.fetch).not.toHaveBeenCalled();
+    expect(tx.event.create).not.toHaveBeenCalled();
+    expect(tx.athleteMetric.upsert).not.toHaveBeenCalled();
+    expect(tx.eventActivity.update).toHaveBeenCalledWith({
+      where: { eventActivityId: 7 },
+      data: { stream: parsed.stream },
+    });
+    expect(tx.activitySegment.createMany).toHaveBeenCalledTimes(1);
+    expect(queue.addActivityProcessingJob).toHaveBeenCalledWith(7, 8, true);
+    expect(tx.eventActivity.findFirst).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: {
+          event: { athleteId: 2 },
+          provider: 'GARMIN',
+          externalId: { in: ['garmin-manual:123:456', '456'] },
         },
-      ],
+      }),
+    );
+  });
+
+  it('restores missing GPS and retains recorded sensors, manual laps and feedback', async () => {
+    readyFit();
+    const stream = compressActivityStream({
+      time: [0, 1],
+      heartrate: [110, 111],
     });
     tx.eventActivity.findFirst.mockResolvedValue({
       ...detailed,
+      stream,
+      segments: [{ activitySegmentId: 55 }],
+      rpe: 0.7,
       description: 'Coach notes',
-      averageCadence: 174,
-      averageWatts: null,
     });
-    await service.sync(user);
-    expect(tx.eventActivity.update).not.toHaveBeenCalled();
-    expect(queue.addActivityProcessingJob).not.toHaveBeenCalled();
+    service.parse.mockResolvedValue({
+      ...parsed,
+      stream: {
+        ...parsed.stream,
+        latlng: [
+          [40, -3],
+          [40.001, -3.001],
+        ],
+      },
+    });
+    await complete();
+    const data = tx.eventActivity.update.mock.calls[0][0].data;
+    expect(Object.keys(data)).toEqual(['stream']);
+    expect(uncompressActivityStream(data.stream)).toEqual({
+      time: [0, 1],
+      heartrate: [110, 111],
+      latlng: [
+        [40, -3],
+        [40.001, -3.001],
+      ],
+    });
+    expect(tx.activitySegment.createMany).not.toHaveBeenCalled();
   });
 
-  it('fills missing FIT summaries without overwriting existing measurements', async () => {
+  it('does not download reviewed indoor activities again', async () => {
     readyFit();
+    await complete();
+    tx.eventActivity.findMany.mockResolvedValue([
+      { ...detailed, stream: parsed.stream },
+    ]);
+    service.worker.mockClear();
+    const second = await service.backfill(user);
+    expect(second).toMatchObject({ status: 'COMPLETED', total: 0 });
+    expect(service.worker).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { version: 0, eventActivityId: 7 },
+    { version: 1, eventActivityId: 99 },
+  ])('rechecks an old review or a reimported row: %j', async (review) => {
+    readyFit();
+    tx.eventActivity.findMany.mockResolvedValue([
+      { ...detailed, stream: parsed.stream },
+    ]);
+    await writeFile(
+      join(directory, '.private/sync-state.json'),
+      JSON.stringify({ fitReviews: { 'garmin-manual:123:456': review } }),
+    );
+    expect((await complete()).checked).toBe(1);
+  });
+
+  it('only fills missing FIT summary measurements, including preserving existing zero', async () => {
+    readyFit();
+    tx.eventActivity.findFirst.mockResolvedValue({
+      ...detailed,
+      averageWatts: 0,
+      maxWatts: 400,
+      averageCadence: null,
+      kilojoules: null,
+    });
     service.parse.mockResolvedValue({
-      stream: { time: [0, 1], heartrate: [120, 121] },
-      segments: [],
-      incomplete: false,
+      ...parsed,
       summary: {
         averageCadence: 170,
         averageWatts: 200,
@@ -471,119 +448,217 @@ describe('manual Garmin import', () => {
         averageHeartrate: 120,
       },
     });
-    tx.eventActivity.findFirst.mockResolvedValue({
-      ...detailed,
-      averageWatts: 0,
-      maxWatts: 400,
-      averageCadence: null,
-      kilojoules: null,
-    });
-    await service.sync(user);
+    await complete();
     expect(tx.eventActivity.update).toHaveBeenCalledWith({
       where: { eventActivityId: 7 },
-      data: {
-        stream: { time: [0, 1], heartrate: [120, 121] },
-        averageCadence: 170,
-        kilojoules: 100,
-      },
+      data: { stream: parsed.stream, averageCadence: 170, kilojoules: 100 },
     });
   });
 
-  it('reports incompatible time axes and does not attach new laps or shift GPS', async () => {
+  it('reports incompatible timelines without changing sensors or attaching laps', async () => {
     readyFit();
-    const stored = { time: [10, 20], heartrate: [120, 121] };
     tx.eventActivity.findFirst.mockResolvedValue({
       ...detailed,
-      stream: stored,
+      stream: { time: [10, 20], heartrate: [130, 131] },
     });
-    const parsed = await service.parse();
-    service.parse.mockResolvedValue({
-      ...parsed,
-      stream: {
-        time: [0, 1],
-        latlng: [
-          [40, -3],
-          [40.001, -3.001],
-        ],
-      },
-    });
-    const result = await service.sync(user);
-    expect(result.result).toMatchObject({
-      fitsChecked: 1,
-      fitsImported: 0,
-      fitsIncompatible: ['456'],
-    });
-    expect(result.result.warnings).toContain('FitTimelineMismatch');
+    expect((await complete()).incompatible).toEqual(['456']);
     expect(tx.eventActivity.update).not.toHaveBeenCalled();
     expect(tx.activitySegment.createMany).not.toHaveBeenCalled();
-    expect(result.fitReviews['garmin-manual:123:456'].version).toBe(1);
   });
 
-  it('does not mark a FIT reviewed when database persistence fails', async () => {
+  it('retains pending queue submissions after commit for the next manual operation', async () => {
     readyFit();
-    tx.eventActivity.update.mockRejectedValueOnce(
-      new Error('database unavailable'),
+    queue.addActivityProcessingJob.mockRejectedValue(new Error('offline'));
+    await complete();
+    const state = JSON.parse(
+      await readFile(join(directory, '.private/sync-state.json'), 'utf8'),
     );
-    await expect(service.sync(user)).rejects.toThrow();
+    expect(state.processingPending).toEqual([
+      { eventActivityId: 7, eventId: 8, bulkImport: true },
+    ]);
+    queue.addActivityProcessingJob.mockResolvedValue(undefined);
+    const next = await service.sync(user);
+    expect(next.processingPending).toEqual([]);
+  });
+
+  it('stops after parse or persistence failure, without marking the FIT reviewed', async () => {
+    readyFit();
+    tx.eventActivity.update.mockRejectedValue(
+      new Error('private raw exception'),
+    );
+    const result = await complete();
+    expect(result).toMatchObject({
+      status: 'FAILED',
+      reason: 'ERROR',
+      failed: ['456'],
+      remaining: 1,
+    });
     const state = JSON.parse(
       await readFile(join(directory, '.private/sync-state.json'), 'utf8'),
     );
     expect(state.fitReviews).toBeUndefined();
+    expect(JSON.stringify(result)).not.toContain('private raw');
     expect(queue.addActivityProcessingJob).not.toHaveBeenCalled();
   });
-  it('keeps summary and metrics when a FIT cannot be parsed', async () => {
+
+  it('tries unattempted files before retrying an invalid FIT on the next click', async () => {
     readyFit();
-    service.parse.mockRejectedValue(new Error('private raw data'));
-    const result = await service.sync(user);
-    expect(result.result).toMatchObject({
-      fitsImported: 0,
-      fitsFailed: ['456'],
-      fitsPending: 3,
-      metrics: 1,
-    });
-    expect(JSON.stringify(result)).not.toContain('private raw data');
-    expect(tx.eventActivity.update).not.toHaveBeenCalled();
-    expect(queue.addActivityProcessingJob).not.toHaveBeenCalled();
+    tx.eventActivity.findMany.mockResolvedValue([
+      detailed,
+      { ...detailed, eventActivityId: 9, externalId: '789' },
+    ]);
+    service.parse.mockRejectedValueOnce(new Error('invalid FIT'));
+    expect(await complete()).toMatchObject({ failed: ['456'], remaining: 2 });
+    service.worker.mockResolvedValue({ reason: 'BUDGET' });
+    await complete();
+    expect(service.worker.mock.calls[1][1]).toEqual(['789', '456']);
   });
-  it('reports download failures without parsing or discarding summaries', async () => {
-    service.fetch.mockResolvedValue({
-      ...payload,
-      fits: [{ id: '456', ready: false }],
+
+  it('shows partial progress and stops on throttling without automatic retries', async () => {
+    readyFit();
+    tx.eventActivity.findMany.mockResolvedValue([
+      detailed,
+      { ...detailed, eventActivityId: 9, externalId: '789' },
+    ]);
+    service.worker.mockImplementation(async (_dir, _ids, _runId, message) => {
+      await message({ type: 'fit', id: '456', ready: true, cached: false });
+      return { reason: 'RATE_LIMIT', retryAfterSeconds: 3600 };
     });
-    const result = await service.sync(user);
-    expect(result.result).toMatchObject({
-      imported: 1,
-      fitsFailed: ['456'],
-      fitsPending: 1,
+    expect(await complete()).toMatchObject({
+      status: 'PAUSED',
+      reason: 'RATE_LIMIT',
+      checked: 1,
+      downloaded: 1,
+      remaining: 1,
     });
+    expect(service.worker).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['AUTH', 'COOLDOWN', 'BUSY', 'ERROR', 'BUDGET'] as const)(
+    'records terminal worker state without retries: %s',
+    async (reason) => {
+      readyFit();
+      service.worker.mockResolvedValue({ reason });
+      expect(await complete()).toMatchObject({ reason, remaining: 1 });
+      expect(service.worker).toHaveBeenCalledTimes(1);
+      expect(service.parse).not.toHaveBeenCalled();
+    },
+  );
+
+  it('rejects files outside the authorized snapshot before parsing', async () => {
+    readyFit();
+    service.worker.mockImplementation(async (_dir, _ids, _runId, message) => {
+      await message({ type: 'fit', id: '999', ready: true, cached: true });
+      return { reason: 'COMPLETE' };
+    });
+    expect((await complete()).status).toBe('FAILED');
     expect(service.parse).not.toHaveBeenCalled();
   });
-  it('does not attach FITs to ambiguous cross-provider matches', async () => {
+
+  it('rechecks coach access before every imported file', async () => {
     readyFit();
-    tx.eventActivity.findFirst.mockResolvedValue(null);
-    tx.event.findFirst.mockResolvedValue({ eventId: 99 });
-    await service.sync(user);
-    expect(tx.event.create).not.toHaveBeenCalled();
+    service.worker.mockImplementation(async (_dir, _ids, _runId, message) => {
+      prisma.athlete.findUnique.mockResolvedValue(null);
+      await message({ type: 'fit', id: '456', ready: true, cached: true });
+      return { reason: 'COMPLETE' };
+    });
+    expect((await complete()).status).toBe('FAILED');
     expect(tx.eventActivity.update).not.toHaveBeenCalled();
   });
-  it('retains failed queue submissions for the next manual sync', async () => {
+
+  it('allows linked coaches but refuses unrelated users for start and stop', async () => {
     readyFit();
-    queue.addActivityProcessingJob.mockRejectedValue(
-      new Error('queue offline'),
+    const outsider = { ...user, userId: 99 };
+    await expect(service.backfill(outsider)).rejects.toThrow();
+    await expect(service.stopBackfill(outsider)).rejects.toThrow();
+    expect(service.worker).not.toHaveBeenCalled();
+    prisma.coachAthlete.findFirst.mockResolvedValue({
+      athleteId: 2,
+      userId: 9,
+    });
+    await service.backfill({ ...user, userId: 9, roles: ['COACH'] }, 2);
+    await service.completion;
+    expect((await readBackfill(directory))?.status).toBe('COMPLETED');
+  });
+
+  it('start, sync and credential changes cannot overlap an active backfill', async () => {
+    readyFit();
+    let release!: (result: BackfillWorkerResult) => void;
+    service.worker.mockImplementation(
+      () =>
+        new Promise<BackfillWorkerResult>((resolve) => {
+          release = resolve;
+        }),
     );
-    const result = await service.sync(user);
-    expect(result.processingPending).toEqual([
-      { eventActivityId: 7, eventId: 8, bulkImport: true },
-    ]);
-    expect(result.result?.warnings).toContain('FitProcessingPending');
-    await writeFile(
-      join(directory, '.private/sync-state.json'),
-      JSON.stringify({ ...result, lastAttempt: '2020-01-01T00:00:00Z' }),
+    await service.backfill(user);
+    await expect(service.backfill(user)).rejects.toThrow();
+    await expect(service.sync(user)).rejects.toThrow();
+    await expect(
+      service.connect(user, { timezone: 'Europe/Madrid' }),
+    ).rejects.toThrow();
+    expect(service.fetch).not.toHaveBeenCalled();
+    release({ reason: 'COMPLETE' });
+    await service.completion;
+  });
+
+  it('stops across workers using a private marker and requires an explicit new start', async () => {
+    readyFit();
+    let release!: (result: BackfillWorkerResult) => void;
+    service.worker.mockImplementation(
+      () =>
+        new Promise<BackfillWorkerResult>((resolve) => {
+          release = resolve;
+        }),
     );
-    queue.addActivityProcessingJob.mockResolvedValue(undefined);
-    service.fetch.mockResolvedValue(payload);
-    const next = await service.sync(user);
-    expect(next.processingPending).toEqual([]);
+    const initial = await service.backfill(user);
+    expect((await service.stopBackfill(user))?.status).toBe('STOPPING');
+    expect(await readFile(cancelPath(directory, initial.runId), 'utf8')).toBe(
+      '',
+    );
+    release({ reason: 'CANCELLED' });
+    await service.completion;
+    expect(await readBackfill(directory)).toMatchObject({
+      status: 'PAUSED',
+      reason: 'CANCELLED',
+      remaining: 1,
+    });
+    await service.status(user);
+    expect(service.worker).toHaveBeenCalledTimes(1);
+  });
+
+  it('status is local and reports interrupted work after heartbeat expiry', async () => {
+    readyFit();
+    const initial = await complete();
+    await saveBackfill(directory, {
+      ...initial,
+      status: 'RUNNING',
+      updatedAt: '2020-01-01T00:00:00Z',
+    });
+    service.fetch.mockClear();
+    service.worker.mockClear();
+    expect(await service.status(user)).toMatchObject({
+      backfill: { status: 'PAUSED', reason: 'INTERRUPTED' },
+    });
+    expect(service.fetch).not.toHaveBeenCalled();
+    expect(service.worker).not.toHaveBeenCalled();
+  });
+
+  it('bounds each snapshot to 100 IDs without losing the total pending count', async () => {
+    readyFit();
+    tx.eventActivity.findMany.mockResolvedValue(
+      Array.from({ length: 105 }, (_, i) => ({
+        ...detailed,
+        eventActivityId: i + 1,
+        externalId: String(i + 1),
+      })),
+    );
+    service.worker.mockResolvedValue({ reason: 'BUDGET' });
+    expect(await complete()).toMatchObject({
+      total: 105,
+      remaining: 105,
+      reason: 'BUDGET',
+    });
+    expect(service.worker.mock.calls[0][1]).toHaveLength(100);
   });
 
   it('validates dates and numeric values before persistence', () => {

@@ -84,16 +84,6 @@ export const manualGarminPayload = z.object({
       }),
     )
     .max(350),
-  fits: z
-    .array(
-      z.object({
-        id: z.string().regex(/^\d+$/),
-        ready: z.boolean(),
-      }),
-    )
-    .max(3)
-    .default([]),
-  fitsPending: z.number().int().min(0).max(100).default(0),
   warnings: z.array(z.string().max(100)).max(101),
 });
 

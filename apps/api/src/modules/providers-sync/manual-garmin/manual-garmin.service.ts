@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { isAbsolute, join } from 'node:path';
 import { promisify } from 'node:util';
@@ -7,6 +8,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  OnModuleDestroy,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -17,6 +19,19 @@ import { AuthUser } from '../../auth/decorators/user.decorator';
 import { mapGarminActivityType } from '../../core/helpers/garmin';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { QueueService } from '../../queue/queue.service';
+import {
+  BackfillProgress,
+  backfillActive,
+  cancelPath,
+  readBackfill,
+  remoteBlockedUntil,
+  saveBackfill,
+} from './manual-garmin-backfill-state';
+import {
+  BackfillWorkerMessage,
+  BackfillWorkerResult,
+  runManualGarminBackfill,
+} from './manual-garmin-backfill-worker';
 import { mergeManualGarminStreams } from './manual-garmin-enrichment';
 import { hasActivityStream, readManualFit } from './manual-garmin-fit';
 import { loginGarmin } from './manual-garmin-login';
@@ -79,21 +94,48 @@ type SyncState = {
     eventId: number;
     bulkImport?: boolean;
   }[];
+  fitPending?: number;
+  fitAttempts?: Record<string, string>;
   fitReviews?: Record<string, { version: number; eventActivityId: number }>;
 };
 
 @Injectable()
-export class ManualGarminService {
+export class ManualGarminService implements OnModuleDestroy {
+  private readonly backfillControllers = new Map<string, AbortController>();
+
+  onModuleDestroy() {
+    for (const controller of this.backfillControllers.values())
+      controller.abort();
+  }
+
+  protected launchBackfill(task: () => Promise<void>) {
+    // Completion/errors are persisted by processBackfill; no scheduled restart.
+    void task().catch(() => undefined);
+  }
+
+  protected runBackfillWorker(
+    directory: string,
+    ids: string[],
+    runId: string,
+    onMessage: (message: BackfillWorkerMessage) => Promise<boolean>,
+    signal: AbortSignal,
+  ): Promise<BackfillWorkerResult> {
+    return runManualGarminBackfill(
+      this.config.getOrThrow<string>('GARMIN_UNOFFICIAL_DIRECTORY'),
+      directory,
+      ids,
+      runId,
+      onMessage,
+      signal,
+    );
+  }
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly queue: QueueService,
   ) {}
 
-  protected async fetchPayload(
-    directory: string,
-    completedFits: string[],
-  ): Promise<unknown> {
+  protected async fetchPayload(directory: string): Promise<unknown> {
     const { stdout } = await execute(
       join(
         this.config.getOrThrow<string>('GARMIN_UNOFFICIAL_DIRECTORY'),
@@ -112,13 +154,22 @@ export class ManualGarminService {
           ...process.env,
           PYTHONUNBUFFERED: '1',
           OA_GARMIN_PRIVATE_DIR: join(directory, '.private'),
-          OA_GARMIN_COMPLETED_FITS: JSON.stringify(completedFits),
+          OA_GARMIN_LOCK_DIRECTORY: join(
+            this.config.getOrThrow<string>('GARMIN_UNOFFICIAL_DIRECTORY'),
+            '.private',
+          ),
         },
       },
     );
     const result = JSON.parse(stdout);
     if (result?.ok === false) {
       const messages: Record<string, string> = {
+        Busy: 'Hay otra operación Garmin en curso.',
+        Cooldown: 'Espera antes de volver a consultar Garmin.',
+        RateLimited:
+          'Garmin ha limitado las consultas. La operación se ha detenido.',
+        AuthenticationFailed:
+          'Revisa la conexión Garmin del atleta antes de continuar.',
         AccountMismatch:
           'La sesión Garmin pertenece a otra cuenta. Revisa la vinculación local.',
         GarminConnectAuthenticationError:
@@ -128,10 +179,23 @@ export class ManualGarminService {
         ModuleNotFoundError:
           'Falta instalar la dependencia Python del conector Garmin.',
       };
-      throw new ServiceUnavailableException(
-        messages[result.code] ??
+      throw new ServiceUnavailableException({
+        code:
+          result.code === 'Busy'
+            ? 'GARMIN_BACKFILL_BUSY'
+            : ['Cooldown', 'RateLimited'].includes(result.code)
+              ? 'GARMIN_REMOTE_COOLDOWN'
+              : [
+                    'AuthenticationFailed',
+                    'AccountMismatch',
+                    'GarminConnectAuthenticationError',
+                  ].includes(result.code)
+                ? 'GARMIN_LOGIN_REQUIRED'
+                : 'GARMIN_BACKFILL_FAILED',
+        message:
+          messages[result.code] ??
           'Garmin no respondió correctamente. Inténtalo más tarde.',
-      );
+      });
     }
     return result;
   }
@@ -210,6 +274,20 @@ export class ManualGarminService {
       throw new ForbiddenException();
     const connection = await this.connection(user, user.athlete.athleteId);
     if (!connection?.canConfigure) throw new ForbiddenException();
+    if (backfillActive(await readBackfill(connection.directory)))
+      throw new ConflictException({
+        code: 'GARMIN_BACKFILL_BUSY',
+        message: 'Detén la descarga de FIT antes de cambiar la conexión.',
+      });
+    const syncState = await this.state(connection.directory);
+    if (
+      syncState.running &&
+      Date.now() - Date.parse(syncState.lastAttempt ?? '') < 240_000
+    )
+      throw new ConflictException({
+        code: 'GARMIN_BACKFILL_BUSY',
+        message: 'Espera a que termine la actualización Garmin.',
+      });
     const root = this.config.getOrThrow<string>('GARMIN_UNOFFICIAL_DIRECTORY');
     // Keep existing legacy tokens untouched; new connections belong to the authenticated athlete.
     return loginGarmin(
@@ -252,6 +330,11 @@ export class ManualGarminService {
       canConfigure: connection.canConfigure,
       athleteId: connection.athleteId,
       ...state,
+      backfill: await readBackfill(connection.directory),
+      backfillPending: state.fitPending ?? state.result?.fitsPending,
+      remoteBlockedUntil: await remoteBlockedUntil(
+        this.config.getOrThrow<string>('GARMIN_UNOFFICIAL_DIRECTORY'),
+      ),
       running:
         !!state.running &&
         Date.now() - Date.parse(state.lastAttempt ?? '') < 240_000,
@@ -273,14 +356,20 @@ export class ManualGarminService {
             throw new ConflictException(
               'Ya hay una actualización Garmin en curso.',
             );
+          if (backfillActive(await readBackfill(directory)))
+            throw new ConflictException({
+              code: 'GARMIN_BACKFILL_BUSY',
+              message: 'Ya se están completando actividades Garmin.',
+            });
           const previous = await this.state(directory);
           if (
             Date.now() - Date.parse(previous.lastAttempt ?? '') <
             COOLDOWN_MS
           ) {
-            throw new ConflictException(
-              'Espera dos minutos entre actualizaciones de Garmin.',
-            );
+            throw new ConflictException({
+              code: 'GARMIN_SYNC_COOLDOWN',
+              message: 'Espera dos minutos entre actualizaciones de Garmin.',
+            });
           }
           const state: SyncState = {
             ...previous,
@@ -290,44 +379,13 @@ export class ManualGarminService {
           };
           await this.save(directory, state);
           try {
-            const known = await tx.eventActivity.findMany({
-              where: {
-                provider: ConnectorProvider.GARMIN,
-                event: { athleteId },
-              },
-              select: { eventActivityId: true, externalId: true, stream: true },
-            });
-            const prefix = `garmin-manual:${connection.garminUserProfileId}:`;
-            // Failed transactions must not mark FITs reviewed. Bind each check
-            // to both the Garmin profile and OA row (including after reimport).
-            const fitReviews = { ...previous.fitReviews };
-            const completedFits = known
-              .filter((a) => {
-                const id = a.externalId?.startsWith(prefix)
-                  ? a.externalId.slice(prefix.length)
-                  : a.externalId;
-                const review = fitReviews[prefix + id];
-                return (
-                  hasActivityStream(a.stream) &&
-                  review?.version === FIT_REVIEW_VERSION &&
-                  review.eventActivityId === a.eventActivityId
-                );
-              })
-              .map((a) =>
-                a.externalId?.startsWith(prefix)
-                  ? a.externalId.slice(prefix.length)
-                  : a.externalId,
-              )
-              .filter((id): id is string => !!id && /^\d+$/.test(id));
             const payload = manualGarminPayload.parse(
-              await this.fetchPayload(directory, completedFits),
+              await this.fetchPayload(directory),
             );
             const processingPending = [...(previous.processingPending ?? [])];
             let imported = 0;
             let skipped = 0;
             const updated = new Set<number>();
-            const created = new Set<string>();
-            const unchanged = new Set<number>();
             const warnings = [...payload.warnings];
             for (const item of payload.activities) {
               const externalId = `garmin-manual:${connection.garminUserProfileId}:${item.id}`;
@@ -379,7 +437,6 @@ export class ManualGarminService {
                     });
                 } else {
                   skipped++;
-                  unchanged.add(existing.eventActivityId);
                 }
                 continue;
               }
@@ -416,7 +473,6 @@ export class ManualGarminService {
                 },
               });
               imported++;
-              created.add(item.id);
             }
             for (const metric of payload.metrics) {
               const date = new Date(`${metric.date}T00:00:00Z`);
@@ -433,113 +489,19 @@ export class ManualGarminService {
                 update: { value: metric.value },
               });
             }
-            let fitsImported = 0;
-            let fitsChecked = 0;
-            const fitsFailed: string[] = [];
-            const fitsIncompatible: string[] = [];
-            for (const fit of payload.fits) {
-              if (!payload.activities.some((item) => item.id === fit.id))
-                throw new Error('FIT is not part of this sync');
-              if (!fit.ready) {
-                fitsFailed.push(fit.id);
-                continue;
-              }
-              const activity = await tx.eventActivity.findFirst({
-                where: {
-                  event: { athleteId },
-                  provider: ConnectorProvider.GARMIN,
-                  externalId: { in: [prefix + fit.id, fit.id] },
-                },
-                include: { segments: { select: { activitySegmentId: true } } },
-              });
-              // Exact owned Garmin IDs only. Revisit legacy streams too: a
-              // nonempty time axis does not mean GPS or sensors were imported.
-              if (!activity) continue;
-              let parsed: Awaited<ReturnType<typeof readManualFit>>;
-              try {
-                parsed = await this.parseFit(
-                  directory,
-                  connection.garminUserProfileId,
-                  fit.id,
-                );
-              } catch {
-                // A corrupt cached download may be fetched again on a later click.
-                await unlink(
-                  join(
-                    directory,
-                    '.private',
-                    'fits',
-                    connection.garminUserProfileId,
-                    fit.id + '.fit',
-                  ),
-                ).catch(() => undefined);
-                fitsFailed.push(fit.id);
-                continue;
-              }
-              const merged = mergeManualGarminStreams(
-                activity.stream,
-                parsed.stream,
-              );
-              const data: Prisma.EventActivityUpdateInput = missingSummary(
-                activity,
-                parsed.summary ?? {},
-              );
-              if (merged.changed)
-                data.stream = merged.stream as Prisma.InputJsonObject;
-              if (Object.keys(data).length) {
-                await tx.eventActivity.update({
-                  where: { eventActivityId: activity.eventActivityId },
-                  data,
-                });
-              }
-              // Preserve manual segments and workout associations.
-              const addSegments =
-                !merged.conflict &&
-                !activity.segments.length &&
-                parsed.segments.length > 0;
-              if (addSegments) {
-                await tx.activitySegment.createMany({
-                  data: parsed.segments.map((segment) => ({
-                    ...segment,
-                    eventActivityId: activity.eventActivityId,
-                  })),
-                });
-              }
-              if (parsed.incomplete) warnings.push('FitIncompleteChannels');
-              if (merged.conflict) {
-                warnings.push('FitTimelineMismatch');
-                fitsIncompatible.push(fit.id);
-              }
-              // Indoor FITs can be fully reviewed without GPS. Remember the
-              // check so absence of a route does not cause endless downloads.
-              fitReviews[prefix + fit.id] = {
-                version: FIT_REVIEW_VERSION,
-                eventActivityId: activity.eventActivityId,
-              };
-              fitsChecked++;
-              if (Object.keys(data).length || addSegments) {
-                if (
-                  !processingPending.some(
-                    (job) => job.eventActivityId === activity.eventActivityId,
-                  )
-                )
-                  processingPending.push({
-                    eventActivityId: activity.eventActivityId,
-                    eventId: activity.eventId,
-                    bulkImport: !created.has(fit.id),
-                  });
-                fitsImported++;
-                if (!created.has(fit.id)) updated.add(activity.eventActivityId);
-                if (unchanged.delete(activity.eventActivityId)) skipped--;
-              }
-            }
+            const pending = await this.pendingFits(
+              tx,
+              athleteId,
+              connection.garminUserProfileId,
+              previous,
+            );
             const result = {
               imported,
-              fitsImported,
-              fitsFailed,
-              fitsPending: payload.fitsPending + fitsFailed.length,
-              fitsChecked,
-              fitsIncompatible,
+              fitsImported: 0,
+              fitsFailed: [],
+              fitsPending: pending.length,
+              fitsChecked: 0,
+              fitsIncompatible: [],
               updated: updated.size,
               skipped,
               metrics: payload.metrics.length,
@@ -553,7 +515,7 @@ export class ManualGarminService {
                 lastSuccess: new Date().toISOString(),
                 result,
                 processingPending,
-                fitReviews,
+                fitPending: pending.length,
               },
             };
           } catch (error) {
@@ -566,6 +528,7 @@ export class ManualGarminService {
               running: false,
               error: message,
             });
+            if (error instanceof ServiceUnavailableException) throw error;
             throw new ServiceUnavailableException(message);
           }
         },
@@ -573,7 +536,7 @@ export class ManualGarminService {
       )
       .then(async ({ directory, state }) => {
         // Queue work only after commit; retain failed submissions for the next manual sync.
-        await this.save(directory, state);
+        await this.save(directory, { ...state, running: true });
         const pending = [];
         for (const job of state.processingPending) {
           try {
@@ -591,5 +554,347 @@ export class ManualGarminService {
         await this.save(directory, state);
         return state;
       });
+  }
+
+  private async pendingFits(
+    tx: Prisma.TransactionClient,
+    athleteId: number,
+    profile: string,
+    state: SyncState,
+  ) {
+    const known = await tx.eventActivity.findMany({
+      where: { provider: ConnectorProvider.GARMIN, event: { athleteId } },
+      select: { eventActivityId: true, externalId: true, stream: true },
+      orderBy: { eventActivityId: 'asc' },
+    });
+    const prefix = `garmin-manual:${profile}:`;
+    const seen = new Set<string>();
+    const pending = known.flatMap((activity) => {
+      const id = activity.externalId.startsWith(prefix)
+        ? activity.externalId.slice(prefix.length)
+        : activity.externalId;
+      if (!/^\d+$/.test(id) || seen.has(id)) return [];
+      seen.add(id);
+      const review = state.fitReviews?.[prefix + id];
+      return hasActivityStream(activity.stream) &&
+        review?.version === FIT_REVIEW_VERSION &&
+        review.eventActivityId === activity.eventActivityId
+        ? []
+        : [id];
+    });
+    // A failed original must not starve the rest or be downloaded again before
+    // files that have never been attempted. Retries still require a new click.
+    return pending.sort(
+      (a, b) =>
+        (Date.parse(state.fitAttempts?.[prefix + a] ?? '') || 0) -
+        (Date.parse(state.fitAttempts?.[prefix + b] ?? '') || 0),
+    );
+  }
+
+  async backfill(user: AuthUser, requestedAthleteId?: number) {
+    const connection = await this.connection(user, requestedAthleteId);
+    if (!connection?.garminUserProfileId) throw new ForbiddenException();
+    const { directory, athleteId, garminUserProfileId: profile } = connection;
+    const prepared = await this.prisma.$transaction(
+      async (tx) => {
+        const [lock] = await tx.$queryRaw<
+          { locked: boolean }[]
+        >`SELECT pg_try_advisory_xact_lock(714203, ${athleteId}::int) AS locked`;
+        if (!lock.locked || backfillActive(await readBackfill(directory)))
+          throw new ConflictException({
+            code: 'GARMIN_BACKFILL_BUSY',
+            message: 'Ya hay una operación Garmin en curso.',
+          });
+        const state = await this.state(directory);
+        if (
+          state.running &&
+          Date.now() - Date.parse(state.lastAttempt ?? '') < 240_000
+        )
+          throw new ConflictException({
+            code: 'GARMIN_BACKFILL_BUSY',
+            message: 'Ya hay una actualización Garmin en curso.',
+          });
+        const ids = await this.pendingFits(tx, athleteId, profile, state);
+        const now = new Date().toISOString();
+        const progress: BackfillProgress = {
+          runId: randomUUID(),
+          status: ids.length ? 'RUNNING' : 'COMPLETED',
+          ...(ids.length ? {} : { reason: 'COMPLETE' as const }),
+          total: ids.length,
+          checked: 0,
+          updated: 0,
+          cached: 0,
+          downloaded: 0,
+          failed: [],
+          incompatible: [],
+          remaining: ids.length,
+          startedAt: now,
+          updatedAt: now,
+        };
+        await saveBackfill(directory, progress);
+        await this.save(directory, { ...state, fitPending: ids.length });
+        return { ids: ids.slice(0, 100), progress };
+      },
+      { timeout: 15000, maxWait: 5000 },
+    );
+    if (prepared.ids.length)
+      this.launchBackfill(() =>
+        this.processBackfill(user, connection, prepared.ids, prepared.progress),
+      );
+    return prepared.progress;
+  }
+
+  async stopBackfill(user: AuthUser, requestedAthleteId?: number) {
+    const connection = await this.connection(user, requestedAthleteId);
+    if (!connection?.garminUserProfileId) throw new ForbiddenException();
+    const progress = await readBackfill(connection.directory);
+    if (!progress || !backfillActive(progress)) return progress ?? null;
+    // Cross-worker cancellation: the downloader checks this marker before any
+    // new request and during pauses. An in-flight request may finish first.
+    await writeFile(cancelPath(connection.directory, progress.runId), '', {
+      mode: 0o600,
+    });
+    const stopping: BackfillProgress = {
+      ...progress,
+      status: 'STOPPING',
+      updatedAt: new Date().toISOString(),
+    };
+    // The marker is the cross-process source of truth. Do not overwrite a
+    // completion/progress write that may have raced this request.
+    return stopping;
+  }
+
+  private async enrichBackfillFit(
+    connection: {
+      directory: string;
+      athleteId: number;
+      garminUserProfileId: string;
+    },
+    id: string,
+  ) {
+    const { directory, athleteId, garminUserProfileId: profile } = connection;
+    let parsed: Awaited<ReturnType<typeof readManualFit>>;
+    try {
+      parsed = await this.parseFit(directory, profile, id);
+    } catch {
+      await unlink(
+        join(directory, '.private/fits', profile, id + '.fit'),
+      ).catch(() => undefined);
+      throw new Error('FIT_PARSE_FAILED');
+    }
+    const applied = await this.prisma.$transaction(
+      async (tx) => {
+        const [lock] = await tx.$queryRaw<
+          { locked: boolean }[]
+        >`SELECT pg_try_advisory_xact_lock(714203, ${athleteId}::int) AS locked`;
+        if (!lock.locked) throw new Error('FIT_BUSY');
+        const activity = await tx.eventActivity.findFirst({
+          where: {
+            event: { athleteId },
+            provider: ConnectorProvider.GARMIN,
+            externalId: { in: [`garmin-manual:${profile}:${id}`, id] },
+          },
+          include: { segments: { select: { activitySegmentId: true } } },
+          orderBy: { eventActivityId: 'asc' },
+        });
+        if (!activity) throw new Error('FIT_ACTIVITY_UNAVAILABLE');
+        const merged = mergeManualGarminStreams(activity.stream, parsed.stream);
+        const data: Prisma.EventActivityUpdateInput = missingSummary(
+          activity,
+          parsed.summary ?? {},
+        );
+        if (merged.changed)
+          data.stream = merged.stream as Prisma.InputJsonObject;
+        if (Object.keys(data).length)
+          await tx.eventActivity.update({
+            where: { eventActivityId: activity.eventActivityId },
+            data,
+          });
+        const addSegments =
+          !merged.conflict &&
+          !activity.segments.length &&
+          parsed.segments.length > 0;
+        if (addSegments)
+          await tx.activitySegment.createMany({
+            data: parsed.segments.map((segment) => ({
+              ...segment,
+              eventActivityId: activity.eventActivityId,
+            })),
+          });
+        return {
+          eventActivityId: activity.eventActivityId,
+          eventId: activity.eventId,
+          changed: Object.keys(data).length > 0 || addSegments,
+          incompatible: merged.conflict,
+        };
+      },
+      { timeout: 15000, maxWait: 5000 },
+    );
+    // Record review only after commit. All enrichment uses historical processing:
+    // no fresh-activity push, AI feedback or external weather lookups.
+    const state = await this.state(directory);
+    state.fitReviews = {
+      ...state.fitReviews,
+      [`garmin-manual:${profile}:${id}`]: {
+        version: FIT_REVIEW_VERSION,
+        eventActivityId: applied.eventActivityId,
+      },
+    };
+    if (
+      applied.changed &&
+      !state.processingPending?.some(
+        (job) => job.eventActivityId === applied.eventActivityId,
+      )
+    )
+      state.processingPending = [
+        ...(state.processingPending ?? []),
+        {
+          eventActivityId: applied.eventActivityId,
+          eventId: applied.eventId,
+          bulkImport: true,
+        },
+      ];
+    state.fitPending = Math.max(0, (state.fitPending ?? 1) - 1);
+    await this.save(directory, state);
+    if (applied.changed) {
+      try {
+        await this.queue.addActivityProcessingJob(
+          applied.eventActivityId,
+          applied.eventId,
+          true,
+        );
+        state.processingPending = state.processingPending?.filter(
+          (job) => job.eventActivityId !== applied.eventActivityId,
+        );
+        await this.save(directory, state);
+      } catch {
+        /* Retain the pending submission for the next manual operation. */
+      }
+    }
+    return applied;
+  }
+
+  private async processBackfill(
+    user: AuthUser,
+    connection: {
+      directory: string;
+      athleteId: number;
+      garminUserProfileId: string;
+    },
+    ids: string[],
+    progress: BackfillProgress,
+  ) {
+    const { directory } = connection;
+    const controller = new AbortController();
+    this.backfillControllers.set(progress.runId, controller);
+    // Serialize progress writes, including heartbeat/cancellation, so a late
+    // heartbeat cannot overwrite a terminal result or race its temporary file.
+    let writes = Promise.resolve();
+    const publish = (terminal = false) => {
+      const snapshot = {
+        ...progress,
+        failed: [...progress.failed],
+        incompatible: [...progress.incompatible],
+      };
+      writes = writes.then(async () => {
+        const current = await readBackfill(directory);
+        if (current?.runId !== snapshot.runId)
+          throw new Error('BACKFILL_REPLACED');
+        if (!terminal && current.status === 'STOPPING') {
+          snapshot.status = 'STOPPING';
+          if (backfillActive(progress)) progress.status = 'STOPPING';
+        }
+        snapshot.updatedAt = new Date().toISOString();
+        await saveBackfill(directory, snapshot);
+      });
+      return writes;
+    };
+    const heartbeat = setInterval(() => {
+      void publish().catch(() => controller.abort());
+    }, 15000);
+    heartbeat.unref();
+    const seen = new Set<string>();
+    let localFailure = false;
+    try {
+      const result = await this.runBackfillWorker(
+        directory,
+        ids,
+        progress.runId,
+        async (message) => {
+          if (message.type === 'waiting') {
+            progress.nextRequestAt = message.nextRequestAt;
+            await publish();
+            return true;
+          }
+          if (!ids.includes(message.id) || seen.has(message.id))
+            throw new Error('UNEXPECTED_FIT');
+          seen.add(message.id);
+          const state = await this.state(directory);
+          state.fitAttempts = {
+            ...state.fitAttempts,
+            [`garmin-manual:${connection.garminUserProfileId}:${message.id}`]:
+              new Date().toISOString(),
+          };
+          await this.save(directory, state);
+          progress.checked++;
+          progress.nextRequestAt = undefined;
+          if (message.cached) progress.cached++;
+          else if (message.ready) progress.downloaded++;
+          if (!message.ready) {
+            progress.failed.push(message.id);
+            await publish();
+            return true; // The worker emits its stop reason next; it never retries.
+          }
+          try {
+            const currentConnection = await this.connection(
+              user,
+              connection.athleteId,
+            );
+            if (
+              currentConnection?.garminUserProfileId !==
+              connection.garminUserProfileId
+            )
+              throw new ForbiddenException();
+            const applied = await this.enrichBackfillFit(
+              connection,
+              message.id,
+            );
+            if (applied.changed) progress.updated++;
+            if (applied.incompatible) progress.incompatible.push(message.id);
+            progress.remaining--;
+          } catch {
+            progress.failed.push(message.id);
+            localFailure = true;
+          }
+          await publish();
+          return !localFailure && progress.status !== 'STOPPING';
+        },
+        controller.signal,
+      );
+      progress.reason = controller.signal.aborted
+        ? 'INTERRUPTED'
+        : localFailure
+          ? 'ERROR'
+          : result.reason;
+      if (progress.reason === 'COMPLETE' && progress.remaining > 0)
+        progress.reason = 'BUDGET';
+      progress.status =
+        progress.reason === 'COMPLETE'
+          ? 'COMPLETED'
+          : ['ERROR', 'AUTH'].includes(progress.reason)
+            ? 'FAILED'
+            : 'PAUSED';
+    } catch {
+      progress.reason = controller.signal.aborted ? 'INTERRUPTED' : 'ERROR';
+      progress.status = controller.signal.aborted ? 'PAUSED' : 'FAILED';
+    } finally {
+      clearInterval(heartbeat);
+      this.backfillControllers.delete(progress.runId);
+      progress.nextRequestAt = undefined;
+      await publish(true).catch(() => undefined);
+      await unlink(cancelPath(directory, progress.runId)).catch(
+        () => undefined,
+      );
+    }
   }
 }
