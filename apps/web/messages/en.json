@@ -983,7 +983,7 @@
   "login_invalid_credentials": "Email or password is incorrect. If you have not registered on this server, create an account first.",
   "login_request_failed": "Unable to sign in. Check that the server is running and try again.",
   "garmin_manual_title": "Garmin · manual sync",
-  "garmin_manual_description": "Activities and recovery for athlete {athleteId}. Only a manual action starts requests to Garmin.",
+  "garmin_manual_description": "Activities from the last 42 full days plus today and recovery from the last 7 days for athlete {athleteId}. Only a manual action starts requests to Garmin.",
   "garmin_manual_button": "Update Garmin",
   "garmin_manual_running": "Updating…",
   "garmin_manual_last_success": "Last successful update: {date}",
@@ -1383,5 +1383,6 @@
   "coach_load_coverage": "Only activities with calculated TRIMP are included. Missing loads are not a measure of rest.",
   "coach_load_empty": "Insufficient data",
   "coach_load_requirements": "No calculated TRIMP loads in this period. Calculation requires heart-rate recordings, maximum heart rate and resting heart rate.",
-  "dashboard_header_competitions_error": "Could not load upcoming competitions."
+  "dashboard_header_competitions_error": "Could not load upcoming competitions.",
+  "garmin_manual_history_incomplete": "The full 42-day history could not be covered: the query limit was reached or Garmin repeated a page. Training loads may be incomplete."
 }

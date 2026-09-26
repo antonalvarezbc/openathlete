@@ -105,13 +105,24 @@ synchronization still requires an explicit click.
 
 ## Separate update and FIT completion actions
 
-**Update Garmin** imports the latest activity summaries (up to 100 results,
-restricted to the last 30 days) and seven days of recovery metrics. It no longer
-downloads FIT files. Its baseline is 27 data reads plus necessary authentication
-or token renewal, with at least one second between HTTP responses and new requests.
+**Update Garmin** imports activity summaries from 42 complete days before today,
+including the boundary day and today, plus seven days of recovery metrics.
+It requests 100 summaries per page, stopping at the history boundary or the end
+of the list. At most five pages (500 summaries) are read per manual action.
+Reaching this limit or receiving a repeated page reports `ActivityHistoryIncomplete`
+in the UI; this is not a guarantee that every account's history is complete.
+The baseline remains 27 data reads, with at most four additional activity-list
+reads, plus necessary authentication or token renewal. There is at least one
+second between HTTP responses and new requests. Errors stop without retries.
+
+FIT files remain a separate **Complete pending activities** action. A 42-day
+summary history alone does not enable TRIMP: activities also need heart-rate
+streams, and the athlete needs `HR_MAX` and `HR_REST` metrics. Daily/activity
+peak heart rates are not substituted for physiological maximum heart rate.
+No additional historical wellness requests or automatic FIT downloads are added.
 
 **Complete pending activities** uses the Garmin IDs already stored for that OA
-athlete, including activities older than 30 days. It does not fetch the activity
+athlete, including activities older than 42 days. It does not fetch the activity
 list or recovery history again. Cached files require no login or remote calls;
 when a download is necessary, the worker authenticates and verifies the linked
 Garmin profile before requesting originals. Each explicit run reviews at most

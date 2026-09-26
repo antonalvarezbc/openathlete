@@ -983,7 +983,7 @@
   "login_invalid_credentials": "El correo o la contraseña no son correctos. Si aún no te has registrado en este servidor, crea primero una cuenta.",
   "login_request_failed": "No se ha podido iniciar sesión. Comprueba que el servidor esté funcionando e inténtalo de nuevo.",
   "garmin_manual_title": "Garmin · sincronización manual",
-  "garmin_manual_description": "Actividades y recuperación del atleta {athleteId}. Solo una acción manual inicia consultas a Garmin.",
+  "garmin_manual_description": "Actividades de los últimos 42 días completos más hoy y recuperación de los últimos 7 días del atleta {athleteId}. Solo una acción manual inicia consultas a Garmin.",
   "garmin_manual_button": "Actualizar Garmin",
   "garmin_manual_running": "Actualizando…",
   "garmin_manual_last_success": "Última actualización correcta: {date}",
@@ -1383,5 +1383,6 @@
   "coach_load_coverage": "Solo se incluyen actividades con TRIMP calculado. La ausencia de cargas no indica descanso.",
   "coach_load_empty": "Sin datos suficientes",
   "coach_load_requirements": "No hay cargas TRIMP calculadas en este periodo. El cálculo requiere registros de frecuencia cardíaca, FC máxima y FC en reposo.",
-  "dashboard_header_competitions_error": "No se han podido cargar las próximas competiciones."
+  "dashboard_header_competitions_error": "No se han podido cargar las próximas competiciones.",
+  "garmin_manual_history_incomplete": "No se ha podido cubrir todo el historial de 42 días: se alcanzó el límite de consulta o Garmin repitió una página. Las cargas pueden estar incompletas."
 }
