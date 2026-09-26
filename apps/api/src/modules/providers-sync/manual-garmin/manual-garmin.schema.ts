@@ -19,6 +19,11 @@ export const manualGarminPayload = z.object({
           maxSpeed: nonnegative,
           averageHeartrate: nonnegative.nullable(),
           maxHeartrate: nonnegative.nullable(),
+          averageCadence: nonnegative.nullable().optional(),
+          averageWatts: nonnegative.nullable().optional(),
+          maxWatts: nonnegative.nullable().optional(),
+          weightedAverageWatts: nonnegative.nullable().optional(),
+          description: z.string().max(10000).nullable().optional(),
         })
         .refine((a) => new Date(a.endDate) >= new Date(a.startDate)),
     )

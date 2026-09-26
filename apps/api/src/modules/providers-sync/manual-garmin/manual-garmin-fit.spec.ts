@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { uncompressActivityStream } from '../../core/helpers/activity-stream';
+import { FitParserStrategy } from '../../core/helpers/strategies/fit-parser.strategy';
 import { hasActivityStream, readManualFit } from './manual-garmin-fit';
 
 // Native loading uses the actual installed ESM FIT SDK under Node 22.
@@ -46,6 +47,7 @@ describe('Manual Garmin FIT reader', () => {
     await mkdir(join(directory, '.private/fits/123'), { recursive: true });
   });
   afterEach(async () => {
+    jest.restoreAllMocks();
     await rm(directory, { recursive: true, force: true });
   });
   async function put(data: Buffer) {
@@ -114,6 +116,145 @@ describe('Manual Garmin FIT reader', () => {
     expect(stream.time).toEqual([0, 1, 2, 3]);
     expect(stream.latlng?.map((p) => p.length)).toEqual([0, 2, 0, 2]);
     expect(stream.heartrate).toEqual([100, 101, 102, 103]);
+  });
+  function encode(
+    records: Array<Record<string, unknown>>,
+    sessions: Array<Record<string, unknown>> = [{}],
+  ) {
+    const sdk = process.getBuiltinModule('module').createRequire(__filename)(
+      '@garmin/fitsdk',
+    );
+    const encoder = new sdk.Encoder();
+    const start = 1000000000;
+    encoder.onMesg(0, {
+      type: 'activity',
+      manufacturer: 'development',
+      product: 1,
+      timeCreated: start,
+    });
+    records.forEach((record, i) => {
+      encoder.onMesg(20, { timestamp: start + i, ...record });
+    });
+    sessions.forEach((session) => {
+      encoder.onMesg(18, {
+        startTime: start,
+        timestamp: start + records.length - 1,
+        totalTimerTime: records.length - 1,
+        totalElapsedTime: records.length - 1,
+        sport: 'running',
+        ...session,
+      });
+    });
+    return Buffer.from(encoder.close());
+  }
+  it('retains FIT session summaries and recorded temperature', async () => {
+    await put(
+      encode(
+        [
+          { heartRate: 100, cadence: 80, power: 100, temperature: -2 },
+          { heartRate: 120, cadence: 82, power: 200, temperature: 0 },
+          { heartRate: 140, cadence: 84, power: 300, temperature: 5 },
+        ],
+        [
+          {
+            avgHeartRate: 123,
+            maxHeartRate: 155,
+            avgCadence: 83,
+            avgPower: 210,
+            maxPower: 330,
+            normalizedPower: 230,
+            totalWork: 420000,
+          },
+        ],
+      ),
+    );
+    const result = await readManualFit(directory, '123', '456');
+    expect(result.summary).toEqual({
+      averageHeartrate: 123,
+      maxHeartrate: 155,
+      averageCadence: 83,
+      averageWatts: 210,
+      maxWatts: 330,
+      weightedAverageWatts: 230,
+      kilojoules: 420,
+    });
+    expect(uncompressActivityStream(result.stream).temp).toEqual([-2, 0, 5]);
+  });
+  it('uses aligned sensor records for missing averages without inventing normalized power or work', async () => {
+    await put(
+      encode([
+        { heartRate: 100, cadence: 80, power: 100, temperature: 10 },
+        { heartRate: 120, cadence: 82, power: 200 },
+        { heartRate: 140, cadence: 84, power: 300, temperature: 12 },
+      ]),
+    );
+    const result = await readManualFit(directory, '123', '456');
+    expect(result.summary).toEqual({
+      averageHeartrate: 120,
+      maxHeartrate: 140,
+      averageCadence: 82,
+      averageWatts: 200,
+      maxWatts: 300,
+      weightedAverageWatts: null,
+      kilojoules: null,
+    });
+    expect(result.incomplete).toBe(true);
+    expect(uncompressActivityStream(result.stream).temp).toBeUndefined();
+  });
+  it('leaves missing sensors unknown and preserves explicit zero values', async () => {
+    await put(encode([{}, {}], [{ avgPower: 0, maxPower: 0, totalWork: 0 }]));
+    const result = await readManualFit(directory, '123', '456');
+    expect(result.summary).toEqual({
+      averageHeartrate: null,
+      maxHeartrate: null,
+      averageCadence: null,
+      averageWatts: 0,
+      maxWatts: 0,
+      weightedAverageWatts: null,
+      kilojoules: 0,
+    });
+    expect(uncompressActivityStream(result.stream).temp).toBeUndefined();
+  });
+  it.each([
+    [[{ avgPower: 100 }, { avgPower: 200 }]],
+    [[]],
+    [[{ sport: 'multisport', avgPower: 100 }]],
+  ])(
+    'does not attribute an ambiguous session summary to the activity (%j)',
+    async (sessions) => {
+      await put(encode([{ power: 100 }, { power: 200 }], sessions));
+      const result = await readManualFit(directory, '123', '456');
+      expect(
+        Object.values(result.summary).every((value) => value === null),
+      ).toBe(true);
+    },
+  );
+  it('rejects non-finite, negative and nonnumeric summary values without using incomplete sensors', async () => {
+    await put(Buffer.from(fixtures.complete, 'base64'));
+    jest.spyOn(FitParserStrategy.prototype, 'parse').mockResolvedValueOnce({
+      stream: { time: [0, 1, 2], heartrate: [120], watts: [-3, -2, -1] },
+      fit: {
+        fileType: 4,
+        sessions: [
+          {
+            sport: 1,
+            avgPower: Infinity,
+            maxPower: -1,
+            normalizedPower: NaN,
+            avgHeartRate: '120',
+            maxHeartRate: -1,
+            avgCadence: null,
+            totalWork: Infinity,
+          },
+        ],
+        decodeErrors: false,
+      },
+    });
+    const result = await readManualFit(directory, '123', '456');
+    expect(result.incomplete).toBe(true);
+    expect(Object.values(result.summary).every((value) => value === null)).toBe(
+      true,
+    );
   });
   it('rejects invalid CRC and invalid identifiers', async () => {
     const bytes = Buffer.from(fixtures.complete, 'base64');

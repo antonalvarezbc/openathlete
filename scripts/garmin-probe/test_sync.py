@@ -38,6 +38,80 @@ class SyncTests(unittest.TestCase):
             collect_sync(client, {'garminUserProfileId': '999'}, date(2026, 9, 15))
         client.get_activities.assert_not_called()
 
+
+    def test_activity_summary_preserves_supported_measurements_without_extra_requests(self):
+        client = self.client()
+        client.get_activities.return_value[0].update({
+            'description': '  Easy trail run\nSteady effort.  ',
+            'averageRunningCadenceInStepsPerMinute': 168.5,
+            'avgPower': 205.5,
+            'maxPower': 410,
+            'normPower': 230,
+            'calories': 300,
+            'bmrCalories': 20,
+        })
+        result = collect_sync(client, {'garminUserProfileId': '123'}, date(2026, 9, 15))
+        activity = result['activities'][0]
+        self.assertEqual(activity['description'], 'Easy trail run\nSteady effort.')
+        self.assertEqual(activity['averageCadence'], 168.5)
+        self.assertEqual(activity['averageWatts'], 205.5)
+        self.assertEqual(activity['maxWatts'], 410)
+        self.assertEqual(activity['weightedAverageWatts'], 230)
+        self.assertNotIn('kilojoules', activity)
+        self.assertEqual(len(client.mock_calls), 27)
+        client.get_activities.assert_called_once_with(0, 100)
+
+    def test_optional_activity_measurements_do_not_invent_missing_values(self):
+        fields = {
+            'averageRunningCadenceInStepsPerMinute': 'averageCadence',
+            'avgPower': 'averageWatts',
+            'maxPower': 'maxWatts',
+            'normPower': 'weightedAverageWatts',
+        }
+        for value in [None, True, '120', -1, float('nan'), float('inf')]:
+            with self.subTest(value=value):
+                client = self.client()
+                client.get_activities.return_value[0].update({key: value for key in fields})
+                result = collect_sync(client, {'garminUserProfileId': '123'}, date(2026, 9, 15))
+                for destination in fields.values():
+                    self.assertIsNone(result['activities'][0][destination])
+        client = self.client()
+        result = collect_sync(client, {'garminUserProfileId': '123'}, date(2026, 9, 15))
+        for destination in fields.values():
+            self.assertIsNone(result['activities'][0][destination])
+        self.assertIsNone(result['activities'][0]['description'])
+
+    def test_zero_activity_measurements_are_preserved_and_description_requires_text(self):
+        for description in [None, 123, {}, ' \n ']:
+            with self.subTest(description=description):
+                client = self.client()
+                client.get_activities.return_value[0].update({
+                    'description': description,
+                    'averageRunningCadenceInStepsPerMinute': 0,
+                    'avgPower': 0,
+                    'maxPower': 0,
+                    'normPower': 0,
+                })
+                result = collect_sync(client, {'garminUserProfileId': '123'}, date(2026, 9, 15))
+                activity = result['activities'][0]
+                self.assertIsNone(activity['description'])
+                for field in ['averageCadence', 'averageWatts', 'maxWatts', 'weightedAverageWatts']:
+                    self.assertEqual(activity[field], 0)
+
+    def test_activity_enrichment_keeps_thirty_day_window_and_hundred_activity_request(self):
+        client = self.client()
+        template = client.get_activities.return_value[0]
+        client.get_activities.return_value = [
+            {**template, 'activityId': index, 'startTimeGMT': '2026-08-15 08:00:00', 'avgPower': 200}
+            for index in range(99)
+        ] + [{**template, 'activityId': 100, 'startTimeGMT': '2026-08-16 08:00:00', 'avgPower': 201}]
+        result = collect_sync(client, {'garminUserProfileId': '123'}, date(2026, 9, 15))
+        self.assertEqual(len(result['activities']), 1)
+        self.assertEqual(result['activities'][0]['id'], '100')
+        self.assertEqual(result['activities'][0]['averageWatts'], 201)
+        self.assertIn('ActivityLimit100', result['warnings'])
+        client.get_activities.assert_called_once_with(0, 100)
+
     def test_error_stops_without_retry(self):
         client = self.client()
         client.get_hrv_data.side_effect = RuntimeError('rate limited')

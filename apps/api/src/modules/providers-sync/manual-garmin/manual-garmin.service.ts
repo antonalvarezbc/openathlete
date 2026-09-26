@@ -11,12 +11,13 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import { ConnectorProvider, EventType } from '@openathlete/database';
+import { ConnectorProvider, EventType, Prisma } from '@openathlete/database';
 
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { mapGarminActivityType } from '../../core/helpers/garmin';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { QueueService } from '../../queue/queue.service';
+import { mergeManualGarminStreams } from './manual-garmin-enrichment';
 import { hasActivityStream, readManualFit } from './manual-garmin-fit';
 import { loginGarmin } from './manual-garmin-login';
 import {
@@ -26,6 +27,36 @@ import {
 
 const execute = promisify(execFile);
 const COOLDOWN_MS = 120_000;
+// A time series alone does not prove that its FIT was fully inspected. Bump
+// this version when newly supported FIT fields need a one-off local recheck.
+const FIT_REVIEW_VERSION = 1;
+const SUMMARY_FIELDS = [
+  'averageCadence',
+  'averageWatts',
+  'maxWatts',
+  'weightedAverageWatts',
+  'averageHeartrate',
+  'maxHeartrate',
+  'kilojoules',
+] as const;
+
+function missingSummary(
+  existing: Partial<Record<(typeof SUMMARY_FIELDS)[number], number | null>>,
+  incoming: Partial<Record<(typeof SUMMARY_FIELDS)[number], number | null>>,
+) {
+  const update: Partial<Record<(typeof SUMMARY_FIELDS)[number], number>> = {};
+  for (const field of SUMMARY_FIELDS) {
+    const value = incoming[field];
+    if (
+      existing[field] == null &&
+      typeof value === 'number' &&
+      Number.isFinite(value) &&
+      value >= 0
+    )
+      update[field] = value;
+  }
+  return update;
+}
 type SyncState = {
   lastAttempt?: string;
   lastSuccess?: string;
@@ -38,9 +69,17 @@ type SyncState = {
     fitsFailed: string[];
     fitsPending: number;
     warnings: string[];
+    updated?: number;
+    fitsChecked?: number;
+    fitsIncompatible?: string[];
   };
   error?: string;
-  processingPending?: { eventActivityId: number; eventId: number }[];
+  processingPending?: {
+    eventActivityId: number;
+    eventId: number;
+    bulkImport?: boolean;
+  }[];
+  fitReviews?: Record<string, { version: number; eventActivityId: number }>;
 };
 
 @Injectable()
@@ -256,11 +295,24 @@ export class ManualGarminService {
                 provider: ConnectorProvider.GARMIN,
                 event: { athleteId },
               },
-              select: { externalId: true, stream: true },
+              select: { eventActivityId: true, externalId: true, stream: true },
             });
             const prefix = `garmin-manual:${connection.garminUserProfileId}:`;
+            // Failed transactions must not mark FITs reviewed. Bind each check
+            // to both the Garmin profile and OA row (including after reimport).
+            const fitReviews = { ...previous.fitReviews };
             const completedFits = known
-              .filter((a) => hasActivityStream(a.stream))
+              .filter((a) => {
+                const id = a.externalId?.startsWith(prefix)
+                  ? a.externalId.slice(prefix.length)
+                  : a.externalId;
+                const review = fitReviews[prefix + id];
+                return (
+                  hasActivityStream(a.stream) &&
+                  review?.version === FIT_REVIEW_VERSION &&
+                  review.eventActivityId === a.eventActivityId
+                );
+              })
               .map((a) =>
                 a.externalId?.startsWith(prefix)
                   ? a.externalId.slice(prefix.length)
@@ -273,6 +325,9 @@ export class ManualGarminService {
             const processingPending = [...(previous.processingPending ?? [])];
             let imported = 0;
             let skipped = 0;
+            const updated = new Set<number>();
+            const created = new Set<string>();
+            const unchanged = new Set<number>();
             const warnings = [...payload.warnings];
             for (const item of payload.activities) {
               const externalId = `garmin-manual:${connection.garminUserProfileId}:${item.id}`;
@@ -298,9 +353,39 @@ export class ManualGarminService {
                   startDate: new Date(item.startDate),
                 },
               });
-              if (existing || sameTime) {
+              if (existing) {
+                const data: Prisma.EventActivityUpdateInput = missingSummary(
+                  existing,
+                  item,
+                );
+                if (!existing.description?.trim() && item.description?.trim())
+                  data.description = item.description;
+                if (Object.keys(data).length) {
+                  await tx.eventActivity.update({
+                    where: { eventActivityId: existing.eventActivityId },
+                    data,
+                  });
+                  updated.add(existing.eventActivityId);
+                  if (
+                    SUMMARY_FIELDS.some((field) => field in data) &&
+                    !processingPending.some(
+                      (job) => job.eventActivityId === existing.eventActivityId,
+                    )
+                  )
+                    processingPending.push({
+                      eventActivityId: existing.eventActivityId,
+                      eventId: existing.eventId,
+                      bulkImport: true,
+                    });
+                } else {
+                  skipped++;
+                  unchanged.add(existing.eventActivityId);
+                }
+                continue;
+              }
+              if (sameTime) {
                 skipped++;
-                if (!existing) warnings.push('ExistingActivityAtSameTime');
+                warnings.push('ExistingActivityAtSameTime');
                 continue;
               }
               const {
@@ -309,6 +394,7 @@ export class ManualGarminService {
                 startDate,
                 endDate,
                 sport,
+                description,
                 ...activity
               } = item;
               await tx.event.create({
@@ -321,6 +407,7 @@ export class ManualGarminService {
                   activity: {
                     create: {
                       ...activity,
+                      description: description ?? '',
                       externalId,
                       provider: ConnectorProvider.GARMIN,
                       sport: mapGarminActivityType(sport),
@@ -329,6 +416,7 @@ export class ManualGarminService {
                 },
               });
               imported++;
+              created.add(item.id);
             }
             for (const metric of payload.metrics) {
               const date = new Date(`${metric.date}T00:00:00Z`);
@@ -346,7 +434,9 @@ export class ManualGarminService {
               });
             }
             let fitsImported = 0;
+            let fitsChecked = 0;
             const fitsFailed: string[] = [];
+            const fitsIncompatible: string[] = [];
             for (const fit of payload.fits) {
               if (!payload.activities.some((item) => item.id === fit.id))
                 throw new Error('FIT is not part of this sync');
@@ -362,8 +452,9 @@ export class ManualGarminService {
                 },
                 include: { segments: { select: { activitySegmentId: true } } },
               });
-              // Never guess based on start time or overwrite existing detailed data.
-              if (!activity || hasActivityStream(activity.stream)) continue;
+              // Exact owned Garmin IDs only. Revisit legacy streams too: a
+              // nonempty time axis does not mean GPS or sensors were imported.
+              if (!activity) continue;
               let parsed: Awaited<ReturnType<typeof readManualFit>>;
               try {
                 parsed = await this.parseFit(
@@ -385,12 +476,28 @@ export class ManualGarminService {
                 fitsFailed.push(fit.id);
                 continue;
               }
-              await tx.eventActivity.update({
-                where: { eventActivityId: activity.eventActivityId },
-                data: { stream: parsed.stream as unknown as object },
-              });
+              const merged = mergeManualGarminStreams(
+                activity.stream,
+                parsed.stream,
+              );
+              const data: Prisma.EventActivityUpdateInput = missingSummary(
+                activity,
+                parsed.summary ?? {},
+              );
+              if (merged.changed)
+                data.stream = merged.stream as Prisma.InputJsonObject;
+              if (Object.keys(data).length) {
+                await tx.eventActivity.update({
+                  where: { eventActivityId: activity.eventActivityId },
+                  data,
+                });
+              }
               // Preserve manual segments and workout associations.
-              if (!activity.segments.length && parsed.segments.length) {
+              const addSegments =
+                !merged.conflict &&
+                !activity.segments.length &&
+                parsed.segments.length > 0;
+              if (addSegments) {
                 await tx.activitySegment.createMany({
                   data: parsed.segments.map((segment) => ({
                     ...segment,
@@ -399,17 +506,41 @@ export class ManualGarminService {
                 });
               }
               if (parsed.incomplete) warnings.push('FitIncompleteChannels');
-              processingPending.push({
+              if (merged.conflict) {
+                warnings.push('FitTimelineMismatch');
+                fitsIncompatible.push(fit.id);
+              }
+              // Indoor FITs can be fully reviewed without GPS. Remember the
+              // check so absence of a route does not cause endless downloads.
+              fitReviews[prefix + fit.id] = {
+                version: FIT_REVIEW_VERSION,
                 eventActivityId: activity.eventActivityId,
-                eventId: activity.eventId,
-              });
-              fitsImported++;
+              };
+              fitsChecked++;
+              if (Object.keys(data).length || addSegments) {
+                if (
+                  !processingPending.some(
+                    (job) => job.eventActivityId === activity.eventActivityId,
+                  )
+                )
+                  processingPending.push({
+                    eventActivityId: activity.eventActivityId,
+                    eventId: activity.eventId,
+                    bulkImport: !created.has(fit.id),
+                  });
+                fitsImported++;
+                if (!created.has(fit.id)) updated.add(activity.eventActivityId);
+                if (unchanged.delete(activity.eventActivityId)) skipped--;
+              }
             }
             const result = {
               imported,
               fitsImported,
               fitsFailed,
               fitsPending: payload.fitsPending + fitsFailed.length,
+              fitsChecked,
+              fitsIncompatible,
+              updated: updated.size,
               skipped,
               metrics: payload.metrics.length,
               warnings: [...new Set(warnings)],
@@ -422,6 +553,7 @@ export class ManualGarminService {
                 lastSuccess: new Date().toISOString(),
                 result,
                 processingPending,
+                fitReviews,
               },
             };
           } catch (error) {
@@ -448,7 +580,7 @@ export class ManualGarminService {
             await this.queue.addActivityProcessingJob(
               job.eventActivityId,
               job.eventId,
-              false,
+              job.bulkImport ?? true,
             );
           } catch {
             pending.push(job);

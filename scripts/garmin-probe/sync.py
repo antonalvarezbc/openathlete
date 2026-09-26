@@ -40,8 +40,12 @@ def collect_sync(client, connection, today):
         if duration is None:
             result['warnings'].append('ActivityMissingDuration')
             continue
+        description = item.get('description')
+        # Garmin's activity list uses the aliases documented by garminconnect.typed.Activity.
+        # Preserve missing measurements as null; do not derive work from calories.
         result['activities'].append({
             'id': str(item['activityId']), 'name': item.get('activityName') or 'Garmin activity',
+            'description': description.strip() or None if isinstance(description, str) else None,
             'startDate': start_dt.isoformat(),
             'endDate': (start_dt + timedelta(seconds=number(item.get('elapsedDuration')) or duration)).isoformat(),
             'sport': item.get('activityType', {}).get('typeKey', 'other').upper(),
@@ -52,6 +56,10 @@ def collect_sync(client, connection, today):
             'maxSpeed': number(item.get('maxSpeed')) or 0,
             'averageHeartrate': number(item.get('averageHR')),
             'maxHeartrate': number(item.get('maxHR')),
+            'averageCadence': number(item.get('averageRunningCadenceInStepsPerMinute')),
+            'averageWatts': number(item.get('avgPower')),
+            'maxWatts': number(item.get('maxPower')),
+            'weightedAverageWatts': number(item.get('normPower')),
         })
     for offset in range(6, -1, -1):
         day = (today - timedelta(days=offset)).isoformat()

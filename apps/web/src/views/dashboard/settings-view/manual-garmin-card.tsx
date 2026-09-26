@@ -24,6 +24,9 @@ interface Status {
   error?: string;
   result?: {
     imported: number;
+    updated?: number;
+    fitsChecked?: number;
+    fitsIncompatible?: string[];
     skipped: number;
     metrics: number;
     fitsImported?: number;
@@ -219,6 +222,7 @@ export function ManualGarminCard({
           <p className="text-sm">
             {m.garmin_manual_result({
               imported: data.result.imported,
+              updated: data.result.updated ?? 0,
               skipped: data.result.skipped,
               metrics: data.result.metrics,
             })}
@@ -230,6 +234,18 @@ export function ManualGarminCard({
               imported: data.result.fitsImported,
               failed: data.result.fitsFailed?.length ?? 0,
               pending: data.result.fitsPending ?? 0,
+            })}
+          </p>
+        )}
+        {data.result?.fitsChecked !== undefined && (
+          <p className="text-sm">
+            {m.garmin_manual_fit_checked({ count: data.result.fitsChecked })}
+          </p>
+        )}
+        {!!data.result?.fitsIncompatible?.length && (
+          <p className="text-sm" role="status">
+            {m.garmin_manual_fit_incompatible({
+              ids: data.result.fitsIncompatible.join(', '),
             })}
           </p>
         )}

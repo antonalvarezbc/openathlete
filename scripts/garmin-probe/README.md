@@ -117,22 +117,46 @@ instancias del backend. Véase [modos y Garmin manual](../../docs/account-modes-
 - Se actualiza el valor existente por atleta/tipo/fecha, conservando las notas.
   La tabla de métricas actual no distingue el origen: también puede actualizar
   un valor introducido manualmente para esa misma fecha y tipo.
-- Los resúmenes existentes se conservan y pueden completarse con FIT. Se reconocen los IDs de esta
+- Los resúmenes existentes se completan solo donde faltan datos: descripción vacía,
+  FC, cadencia de carrera y potencia media/máxima/normalizada si Garmin las devuelve.
+  Se conservan los valores existentes (incluidos ceros), nombres, fechas, RPE,
+  comentarios y vínculos con entrenamientos. Se reconocen los IDs de esta
   integración y del conector Garmin oficial. Coincidencias exactas de hora con
   otras actividades se omiten y avisan; no hay deduplicación aproximada entre
   plataformas si sus horas difieren.
-- Hasta tres FIT originales por pulsación, para actividades nuevas o resúmenes
-  existentes sin series de datos. Se guardan GPS, FC, altitud, distancia, cadencia,
-  potencia y vueltas si el archivo las contiene. Los originales quedan en
-  almacenamiento privado; no se descargan otra vez los ya incorporados.
-- Tras guardar el FIT se ejecuta el procesamiento habitual de OA (incluidos GAP,
-  normalización y búsqueda de entrenamientos coincidentes). Se conservan los
-  vínculos que ya existían. No se añade generación de planes con IA.
+- Hasta tres FIT revisados por pulsación, tanto de actividades nuevas como de
+  actividades ya importadas. Tener una serie de tiempo no equivale a estar completo.
+  Se reutiliza el archivo privado local; solo se descarga si no está en caché.
+  La primera actualización tras esta corrección revisará también los FIT antiguos,
+  por lo que el número de pendientes puede aumentar una vez.
+- Se incorporan GPS, FC, altitud, distancia, cadencia, potencia, temperatura y
+  vueltas cuando el archivo las contiene. El resumen de una sesión FIT inequívoca
+  puede completar FC, cadencia, potencia y trabajo mecánico (kJ); los kJ no se
+  estiman a partir de calorías. Los canales de sensores ya guardados se conservan.
+- El GPS nuevo solo se incorpora en tiempos coincidentes; los puntos válidos
+  existentes se conservan y solo se rellenan huecos. No se interpolan posiciones.
+  Si los tiempos no permiten alinear algún canal, se muestra el ID que necesita
+  revisión manual. En ese caso tampoco se añaden vueltas nuevas.
+- La revisión queda registrada por perfil Garmin, fila OA y versión del lector
+  en el estado privado, después del commit de base de datos. Un FIT revisado
+  puede no tener GPS (por ejemplo una actividad de interior); no se descarga
+  indefinidamente por esa ausencia. Borrar/reimportar una actividad obliga a
+  revisarla de nuevo. Los conflictos revisados se notifican sin reintentos remotos
+  repetitivos; una actualización futura del lector puede volver a revisarlos.
+- Al añadir datos de sensores o resumen se ejecuta el procesamiento habitual de
+  OA (incluidos GAP, normalización y búsqueda de entrenamientos coincidentes).
+  Se conservan los vínculos que ya existían. El enriquecimiento de actividades
+  anteriores utiliza el modo de importación histórica: no vuelve a generar
+  feedback IA, notificaciones de nueva actividad ni consultas meteorológicas.
+  Las actividades nuevas conservan su procesamiento habitual.
 - Los FIT fallidos no impiden guardar los otros resúmenes y métricas. La interfaz
-  indica sus IDs y los pendientes: otra pulsación continúa el lote o reintenta.
+  indica actividades completadas, FIT revisados, IDs fallidos y pendientes:
+  otra pulsación después de dos minutos continúa el lote o reintenta.
   Los FIT con varios originales, corruptos o mayores de 20 MiB se rechazan.
   Las series con muestras ausentes que el lector no pueda alinear se omiten con
-  aviso; no se importan todos los campos posibles del formato FIT.
+  aviso; no se importan todos los campos posibles del formato FIT. Tampoco se
+  añaden en esta corrección modelos para dinámica de carrera, equipamiento del
+  reloj, D− u otros campos que OA no representa actualmente.
 
 El backend protege `GET /provider/garmin-manual/status` y
 `POST /provider/garmin-manual/sync` con JWT y verifica propietario/entrenador.

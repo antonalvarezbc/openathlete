@@ -1,10 +1,14 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { ConfigService } from '@nestjs/config';
 
 import { AuthUser } from '../../auth/decorators/user.decorator';
+import {
+  compressActivityStream,
+  uncompressActivityStream,
+} from '../../core/helpers/activity-stream';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { QueueService } from '../../queue/queue.service';
 import { loginGarmin } from './manual-garmin-login';
@@ -176,6 +180,9 @@ describe('manual Garmin import', () => {
       fitsImported: 0,
       fitsFailed: [],
       fitsPending: 0,
+      fitsChecked: 0,
+      fitsIncompatible: [],
+      updated: 0,
       skipped: 0,
       metrics: 1,
       warnings: [],
@@ -191,7 +198,11 @@ describe('manual Garmin import', () => {
     expect(service.fetch).toHaveBeenCalledTimes(1);
   });
   it('skips existing imports and still upserts metrics', async () => {
-    tx.eventActivity.findFirst.mockResolvedValue({ eventActivityId: 1 });
+    tx.eventActivity.findFirst.mockResolvedValue({
+      eventActivityId: 1,
+      averageHeartrate: 130,
+      maxHeartrate: 155,
+    });
     const result = await service.sync(user);
     expect(result.result?.skipped).toBe(1);
     expect(tx.event.create).not.toHaveBeenCalled();
@@ -214,6 +225,8 @@ describe('manual Garmin import', () => {
     eventActivityId: 7,
     eventId: 8,
     stream: null,
+    averageHeartrate: 130,
+    maxHeartrate: 155,
     segments: [],
   };
   function readyFit() {
@@ -251,7 +264,7 @@ describe('manual Garmin import', () => {
       data: { stream: { time: [0, 1], heartrate: [120, 121] } },
     });
     expect(tx.activitySegment.createMany).toHaveBeenCalledTimes(1);
-    expect(queue.addActivityProcessingJob).toHaveBeenCalledWith(7, 8, false);
+    expect(queue.addActivityProcessingJob).toHaveBeenCalledWith(7, 8, true);
     expect(tx.eventActivity.findFirst).toHaveBeenLastCalledWith(
       expect.objectContaining({
         where: {
@@ -268,7 +281,12 @@ describe('manual Garmin import', () => {
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(detailed);
     const result = await service.sync(user);
-    expect(result.result).toMatchObject({ imported: 1, fitsImported: 1 });
+    expect(result.result).toMatchObject({
+      imported: 1,
+      fitsImported: 1,
+      updated: 0,
+    });
+    expect(queue.addActivityProcessingJob).toHaveBeenCalledWith(7, 8, false);
     expect(tx.event.create).toHaveBeenCalledTimes(1);
   });
   it('preserves existing segments and workout links', async () => {
@@ -280,19 +298,238 @@ describe('manual Garmin import', () => {
     await service.sync(user);
     expect(tx.activitySegment.createMany).not.toHaveBeenCalled();
   });
-  it('does not download completed streams or overwrite them', async () => {
+  it('reviews legacy streams and restores missing GPS without replacing recorded sensors', async () => {
     readyFit();
+    const stored = compressActivityStream({
+      time: [0, 1],
+      heartrate: [110, 111],
+    });
     tx.eventActivity.findMany.mockResolvedValue([
-      { externalId: 'garmin-manual:123:456', stream: { time: [0] } },
+      {
+        eventActivityId: 7,
+        externalId: 'garmin-manual:123:456',
+        stream: stored,
+      },
     ]);
     tx.eventActivity.findFirst.mockResolvedValue({
       ...detailed,
-      stream: { time: [0] },
+      stream: stored,
+    });
+    service.parse.mockResolvedValue({
+      stream: compressActivityStream({
+        time: [0, 1],
+        heartrate: [120, 121],
+        latlng: [
+          [40, -3],
+          [40.001, -3.001],
+        ],
+      }),
+      segments: [],
+      incomplete: false,
+    });
+    const result = await service.sync(user);
+    expect(service.fetch).toHaveBeenCalledWith(directory, []);
+    const data = tx.eventActivity.update.mock.calls[0][0].data;
+    expect(Object.keys(data)).toEqual(['stream']);
+    expect(uncompressActivityStream(data.stream)).toEqual({
+      time: [0, 1],
+      heartrate: [110, 111],
+      latlng: [
+        [40, -3],
+        [40.001, -3.001],
+      ],
+    });
+    expect(result.result).toMatchObject({
+      imported: 0,
+      updated: 1,
+      skipped: 0,
+      fitsChecked: 1,
+    });
+    expect(result.fitReviews).toEqual({
+      'garmin-manual:123:456': { version: 1, eventActivityId: 7 },
+    });
+  });
+
+  it('remembers a reviewed indoor FIT even when no GPS was recorded', async () => {
+    readyFit();
+    const stored = { time: [0, 1], heartrate: [120, 121] };
+    tx.eventActivity.findMany.mockResolvedValue([
+      {
+        eventActivityId: 7,
+        externalId: 'garmin-manual:123:456',
+        stream: stored,
+      },
+    ]);
+    tx.eventActivity.findFirst.mockResolvedValue({
+      ...detailed,
+      stream: stored,
+      segments: [{ activitySegmentId: 55 }],
+    });
+    const first = await service.sync(user);
+    expect(first.result).toMatchObject({
+      fitsChecked: 1,
+      fitsImported: 0,
+      updated: 0,
+    });
+    expect(tx.eventActivity.update).not.toHaveBeenCalled();
+    expect(queue.addActivityProcessingJob).not.toHaveBeenCalled();
+    await writeFile(
+      join(directory, '.private/sync-state.json'),
+      JSON.stringify({ ...first, lastAttempt: '2020-01-01T00:00:00Z' }),
+    );
+    service.fetch.mockResolvedValue(payload);
+    await service.sync(user);
+    expect(service.fetch).toHaveBeenLastCalledWith(directory, ['456']);
+    expect(service.parse).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    { version: 0, eventActivityId: 7 },
+    { version: 1, eventActivityId: 99 },
+  ])('reviews stale checks and reimported rows again: %j', async (review) => {
+    tx.eventActivity.findMany.mockResolvedValue([
+      { eventActivityId: 7, externalId: '456', stream: { time: [0, 1] } },
+    ]);
+    await writeFile(
+      join(directory, '.private/sync-state.json'),
+      JSON.stringify({ fitReviews: { 'garmin-manual:123:456': review } }),
+    );
+    await service.sync(user);
+    expect(service.fetch).toHaveBeenCalledWith(directory, []);
+  });
+
+  it('fills nullable summary fields and empty descriptions while retaining coach feedback', async () => {
+    service.fetch.mockResolvedValue({
+      ...payload,
+      activities: [
+        {
+          ...payload.activities[0],
+          description: 'From Garmin',
+          averageCadence: 174,
+          averageWatts: 200,
+          maxWatts: 300,
+          weightedAverageWatts: 220,
+        },
+      ],
+    });
+    tx.eventActivity.findFirst.mockResolvedValue({
+      ...detailed,
+      averageCadence: null,
+      averageWatts: 0,
+      maxWatts: 280,
+      weightedAverageWatts: null,
+      description: '',
+      rpe: 0.7,
+    });
+    const result = await service.sync(user);
+    expect(tx.eventActivity.update).toHaveBeenCalledWith({
+      where: { eventActivityId: 7 },
+      data: {
+        description: 'From Garmin',
+        averageCadence: 174,
+        weightedAverageWatts: 220,
+      },
+    });
+    expect(result.result).toMatchObject({ updated: 1, skipped: 0 });
+    expect(queue.addActivityProcessingJob).toHaveBeenCalledWith(7, 8, true);
+  });
+
+  it('preserves existing descriptions and ignores absent summary data', async () => {
+    service.fetch.mockResolvedValue({
+      ...payload,
+      activities: [
+        {
+          ...payload.activities[0],
+          description: 'From Garmin',
+          averageCadence: null,
+          averageWatts: null,
+        },
+      ],
+    });
+    tx.eventActivity.findFirst.mockResolvedValue({
+      ...detailed,
+      description: 'Coach notes',
+      averageCadence: 174,
+      averageWatts: null,
     });
     await service.sync(user);
-    expect(service.fetch).toHaveBeenCalledWith(directory, ['456']);
-    expect(service.parse).not.toHaveBeenCalled();
     expect(tx.eventActivity.update).not.toHaveBeenCalled();
+    expect(queue.addActivityProcessingJob).not.toHaveBeenCalled();
+  });
+
+  it('fills missing FIT summaries without overwriting existing measurements', async () => {
+    readyFit();
+    service.parse.mockResolvedValue({
+      stream: { time: [0, 1], heartrate: [120, 121] },
+      segments: [],
+      incomplete: false,
+      summary: {
+        averageCadence: 170,
+        averageWatts: 200,
+        maxWatts: 350,
+        kilojoules: 100,
+        averageHeartrate: 120,
+      },
+    });
+    tx.eventActivity.findFirst.mockResolvedValue({
+      ...detailed,
+      averageWatts: 0,
+      maxWatts: 400,
+      averageCadence: null,
+      kilojoules: null,
+    });
+    await service.sync(user);
+    expect(tx.eventActivity.update).toHaveBeenCalledWith({
+      where: { eventActivityId: 7 },
+      data: {
+        stream: { time: [0, 1], heartrate: [120, 121] },
+        averageCadence: 170,
+        kilojoules: 100,
+      },
+    });
+  });
+
+  it('reports incompatible time axes and does not attach new laps or shift GPS', async () => {
+    readyFit();
+    const stored = { time: [10, 20], heartrate: [120, 121] };
+    tx.eventActivity.findFirst.mockResolvedValue({
+      ...detailed,
+      stream: stored,
+    });
+    const parsed = await service.parse();
+    service.parse.mockResolvedValue({
+      ...parsed,
+      stream: {
+        time: [0, 1],
+        latlng: [
+          [40, -3],
+          [40.001, -3.001],
+        ],
+      },
+    });
+    const result = await service.sync(user);
+    expect(result.result).toMatchObject({
+      fitsChecked: 1,
+      fitsImported: 0,
+      fitsIncompatible: ['456'],
+    });
+    expect(result.result.warnings).toContain('FitTimelineMismatch');
+    expect(tx.eventActivity.update).not.toHaveBeenCalled();
+    expect(tx.activitySegment.createMany).not.toHaveBeenCalled();
+    expect(result.fitReviews['garmin-manual:123:456'].version).toBe(1);
+  });
+
+  it('does not mark a FIT reviewed when database persistence fails', async () => {
+    readyFit();
+    tx.eventActivity.update.mockRejectedValueOnce(
+      new Error('database unavailable'),
+    );
+    await expect(service.sync(user)).rejects.toThrow();
+    const state = JSON.parse(
+      await readFile(join(directory, '.private/sync-state.json'), 'utf8'),
+    );
+    expect(state.fitReviews).toBeUndefined();
+    expect(queue.addActivityProcessingJob).not.toHaveBeenCalled();
   });
   it('keeps summary and metrics when a FIT cannot be parsed', async () => {
     readyFit();
@@ -336,7 +573,7 @@ describe('manual Garmin import', () => {
     );
     const result = await service.sync(user);
     expect(result.processingPending).toEqual([
-      { eventActivityId: 7, eventId: 8 },
+      { eventActivityId: 7, eventId: 8, bulkImport: true },
     ]);
     expect(result.result?.warnings).toContain('FitProcessingPending');
     await writeFile(

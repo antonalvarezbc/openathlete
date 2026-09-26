@@ -988,7 +988,7 @@
   "garmin_manual_running": "Actualisation…",
   "garmin_manual_last_success": "Dernière actualisation réussie : {date}",
   "garmin_manual_never": "Aucune",
-  "garmin_manual_result": "Dernier résultat : {imported} nouvelles activités, {skipped} ignorées, {metrics} mesures enregistrées.",
+  "garmin_manual_result": "Dernier résultat : {imported} nouvelles activités, {updated} enrichies, {skipped} inchangées et {metrics} mesures enregistrées.",
   "garmin_manual_warnings": "Certaines données sont indisponibles ou ignorées. Consultez la documentation du connecteur pour les limites d’import.",
   "garmin_manual_failed": "L’actualisation a échoué. Vérifiez l’état avant de réessayer.",
   "garmin_manual_status_failed": "Impossible de vérifier la connexion Garmin manuelle.",
@@ -1208,7 +1208,7 @@
   "admin_mode_saved": "Mode du compte mis à jour.",
   "admin_mode_failed": "Impossible de modifier ou charger le compte. Vérifiez vos droits et que la configuration initiale est terminée.",
   "training_zones_load_failed": "Impossible de charger les zones d’entraînement.",
-  "garmin_manual_fit_result": "FIT : {imported} importés, {failed} en échec et {pending} en attente (échecs inclus). Jusqu’à 3 fichiers par synchronisation ; cliquez à nouveau pour continuer.",
+  "garmin_manual_fit_result": "FIT : {imported} activités enrichies, {failed} échecs et {pending} en attente (échecs inclus). Jusqu’à 3 fichiers sont vérifiés par mise à jour ; attendez deux minutes puis cliquez à nouveau pour continuer.",
   "garmin_manual_fit_failed_ids": "Activités Garmin dont le FIT est à réessayer : {ids}.",
   "calendar_day_events_label": "Événements du {date}",
   "calendar_day_scroll_hint": "Faites défiler la liste pour voir tous les événements de la journée.",
@@ -1292,5 +1292,7 @@
   "assistant_clear": "Effacer la conversation",
   "assistant_review_help": "Les réponses sont des suggestions et ne sont pas enregistrées comme entraînements. Pour modifier le calendrier, ouvrez Réviser et adapter avec l’IA, saisissez les décisions de l’entraîneur et vérifiez la proposition avant de l’accepter. La conversation n’est pas transférée automatiquement.",
   "assistant_choose_plan": "Sélectionnez un athlète et un plan ci-dessus pour ouvrir l’assistant.",
-  "assistant_provider_error": "L’IA n’a pas pu répondre. Vérifiez sa configuration ou réessayez. Le calendrier n’a pas été modifié."
+  "assistant_provider_error": "L’IA n’a pas pu répondre. Vérifiez sa configuration ou réessayez. Le calendrier n’a pas été modifié.",
+  "garmin_manual_fit_checked": "{count} fichiers FIT vérifiés. Les activités déjà importées sont aussi vérifiées. Les fichiers locaux sont réutilisés et les données compatibles manquantes sont ajoutées ; un FIT vérifié peut ne pas contenir de GPS.",
+  "garmin_manual_fit_incompatible": "Certaines données des FIT {ids} ne correspondent pas aux horodatages enregistrés. Les données existantes sont conservées ; ces activités nécessitent une vérification manuelle."
 }

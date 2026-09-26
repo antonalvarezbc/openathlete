@@ -988,7 +988,7 @@
   "garmin_manual_running": "Updating…",
   "garmin_manual_last_success": "Last successful update: {date}",
   "garmin_manual_never": "None yet",
-  "garmin_manual_result": "Last result: {imported} new activities, {skipped} skipped, {metrics} metrics saved.",
+  "garmin_manual_result": "Last result: {imported} new activities, {updated} enriched with additional data, {skipped} unchanged and {metrics} metrics saved.",
   "garmin_manual_warnings": "Some data was unavailable or skipped. See the connector documentation for import limits.",
   "garmin_manual_failed": "The update could not be completed. Check the status before trying again.",
   "garmin_manual_status_failed": "Could not check the manual Garmin connection.",
@@ -1208,7 +1208,7 @@
   "admin_mode_saved": "Account mode updated.",
   "admin_mode_failed": "Could not update or load the account. Check your access and that onboarding is complete.",
   "training_zones_load_failed": "Could not load training zones.",
-  "garmin_manual_fit_result": "FIT: {imported} imported, {failed} failed and {pending} pending (including failures). Up to 3 are processed per sync; press the button again to continue.",
+  "garmin_manual_fit_result": "FIT: {imported} activities enriched with details, {failed} failed and {pending} pending (including failures). Up to 3 files are reviewed per update; wait two minutes and click again to continue.",
   "garmin_manual_fit_failed_ids": "Garmin activities with FIT files awaiting retry: {ids}.",
   "calendar_day_events_label": "Events on {date}",
   "calendar_day_scroll_hint": "Scroll within the list to see all events for this day.",
@@ -1292,5 +1292,7 @@
   "assistant_clear": "Clear conversation",
   "assistant_review_help": "Replies are suggestions and are not saved as workouts. To change the calendar, open Review and adapt with AI, enter the coach’s decisions and review the proposal before accepting it. The conversation is not transferred automatically.",
   "assistant_choose_plan": "Select an athlete and a plan above to open the assistant.",
-  "assistant_provider_error": "AI could not respond. Check its configuration or try again. The calendar has not changed."
+  "assistant_provider_error": "AI could not respond. Check its configuration or try again. The calendar has not changed.",
+  "garmin_manual_fit_checked": "{count} FIT files reviewed. Previously imported activities are checked too. Cached files are reused and missing supported data is added; a reviewed FIT may contain no GPS.",
+  "garmin_manual_fit_incompatible": "Some data from FIT files {ids} could not be aligned with the stored timestamps. Existing data is preserved; these activities need manual review."
 }
