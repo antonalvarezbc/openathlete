@@ -16,6 +16,8 @@ import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
 import { accessibleBy } from 'src/modules/auth/services/casl-prisma';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
+import { CoachActivityNoticeEvent } from '../../../events/coach-activity-notice.event';
+
 @Injectable()
 export class ActivityFeedbackService {
   private readonly openai: OpenAI;
@@ -163,6 +165,16 @@ export class ActivityFeedbackService {
       },
     });
 
+    if (question.answerText !== answerText)
+      this.eventEmitter.emit(
+        CoachActivityNoticeEvent.SLUG,
+        new CoachActivityNoticeEvent({
+          eventId: activity.event.eventId,
+          actorUserId: user.userId,
+          kind: 'COMMENT',
+          deliveryKey: `answer:${questionId}:${updated.updatedAt.toISOString()}`,
+        }),
+      );
     const allQuestions = await this.prisma.activityFeedbackQuestion.findMany({
       where: {
         eventActivityId: eventActivityId,

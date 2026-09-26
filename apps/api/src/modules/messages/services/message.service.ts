@@ -2,7 +2,9 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { Message, Prisma } from '@openathlete/database';
 import type {
@@ -14,9 +16,13 @@ import type {
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
+import { CoachActivityNoticeEvent } from '../../../events/coach-activity-notice.event';
 import { MessageThreadService } from './message-thread.service';
 
 const MESSAGE_INCLUDES = {
+  activityNotice: {
+    select: { kind: true, eventId: true, eventName: true, rpe: true },
+  },
   sender: {
     select: {
       userId: true,
@@ -48,11 +54,13 @@ export class MessageService {
   constructor(
     private readonly prisma: PrismaService,
     private threadService: MessageThreadService,
+    @Optional() private readonly emitter?: EventEmitter2,
   ) {}
 
   async createMessage(
     user: AuthUser,
     dto: CreateMessageThreadMessageDto,
+    notifyCoach = true,
   ): Promise<MessageWithIncludes> {
     // Get thread to check if it's linked to a training session
     const thread = await this.prisma.messageThread.findUnique({
@@ -83,7 +91,26 @@ export class MessageService {
       data: { updatedAt: new Date() },
     });
 
+    if (notifyCoach) await this.notifyComment(user, message);
     return message;
+  }
+
+  private async notifyComment(user: AuthUser, message: MessageWithIncludes) {
+    if (!this.emitter) return;
+    const thread = await this.prisma.messageThread.findUnique({
+      where: { messageThreadId: message.messageThreadId },
+      select: { eventActivity: { select: { eventId: true } } },
+    });
+    if (thread?.eventActivity)
+      this.emitter.emit(
+        CoachActivityNoticeEvent.SLUG,
+        new CoachActivityNoticeEvent({
+          eventId: thread.eventActivity.eventId,
+          kind: 'COMMENT',
+          actorUserId: user.userId,
+          deliveryKey: `message:${message.messageId}:${message.updatedAt.toISOString()}`,
+        }),
+      );
   }
 
   async getMessageById(
@@ -140,9 +167,12 @@ export class MessageService {
     user: AuthUser,
     messageId: number,
     dto: UpdateMessageThreadMessageDto,
+    notifyCoach = true,
   ): Promise<MessageWithIncludes> {
     const message = await this.getMessageById(user, messageId);
 
+    if (message.activityNotice)
+      throw new ForbiddenException('Automatic notices cannot be edited');
     // Only sender can edit
     if (message.senderId !== user.userId) {
       throw new ForbiddenException('You can only edit your own messages');
@@ -157,12 +187,18 @@ export class MessageService {
       include: MESSAGE_INCLUDES,
     });
 
+    if (notifyCoach && message.content !== updated.content)
+      await this.notifyComment(user, updated);
     return updated;
   }
 
   async deleteMessage(user: AuthUser, messageId: number): Promise<void> {
     const message = await this.getMessageById(user, messageId);
 
+    if (message.activityNotice)
+      throw new ForbiddenException(
+        'Automatic notices cannot be deleted individually',
+      );
     // Only sender can delete
     if (message.senderId !== user.userId) {
       throw new ForbiddenException('You can only delete your own messages');

@@ -8,6 +8,7 @@ import {
 import { useInstallationFeatures } from '@/api/installation/installation.hooks';
 import { ConfirmAction } from '@/components/confirm-action';
 import { InviteAthleteDialog } from '@/components/invite-athlete-dialog/invite-athlete.dialog';
+import { ActivityAlertSettings } from '@/components/messages/activity-alert-settings';
 import { PaywallDialog } from '@/components/paywall';
 import { TrainingZoneEditor } from '@/components/training-zone-editor';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,7 @@ export function AthletesTab() {
   const { data: athletes, isPending: isLoadingAthletes } =
     useGetMyCoachedAthletesQuery();
   const nav = useNavigate();
+  const [alertsAthleteId, setAlertsAthleteId] = useState<number | null>(null);
   const [zonesAthleteId, setZonesAthleteId] = useState<number | null>(null);
   const { data: sentInvitations, isLoading: sentInvitationsLoading } =
     useGetSentAthleteInvitationsQuery({ enabled: true });
@@ -80,6 +82,22 @@ export function AthletesTab() {
 
   return (
     <div className="space-y-6">
+      <Dialog
+        open={alertsAthleteId !== null}
+        onOpenChange={(open) => !open && setAlertsAthleteId(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{m.activity_alert_settings_title()}</DialogTitle>
+          </DialogHeader>
+          {alertsAthleteId !== null && (
+            <ActivityAlertSettings
+              key={alertsAthleteId}
+              athleteId={alertsAthleteId}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
       <SettingsSection
         title={m.athletes()}
         description={m.athletes_tab_description()}
@@ -133,6 +151,13 @@ export function AthletesTab() {
                     )}
                     <TableCell className="text-right">
                       <div className="flex flex-wrap justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAlertsAthleteId(athlete.athleteId)}
+                        >
+                          {m.activity_alert_settings_title()}
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"

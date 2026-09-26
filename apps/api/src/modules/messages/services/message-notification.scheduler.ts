@@ -62,6 +62,7 @@ export class MessageNotificationScheduler {
             include: {
               messages: {
                 where: {
+                  activityNotice: null,
                   createdAt: {
                     gte: since,
                   },

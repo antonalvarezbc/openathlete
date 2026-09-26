@@ -9,12 +9,15 @@ import {
   ForbiddenException,
   Injectable,
   OnModuleDestroy,
+  Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { ConnectorProvider, EventType, Prisma } from '@openathlete/database';
 
+import { CoachActivityNoticeEvent } from '../../../events/coach-activity-notice.event';
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { mapGarminActivityType } from '../../core/helpers/garmin';
 import { getInstallationFeatures } from '../../core/helpers/installation-features';
@@ -134,6 +137,7 @@ export class ManualGarminService implements OnModuleDestroy {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly queue: QueueService,
+    @Optional() private readonly emitter?: EventEmitter2,
   ) {}
 
   protected async fetchPayload(directory: string): Promise<unknown> {
@@ -383,6 +387,7 @@ export class ManualGarminService implements OnModuleDestroy {
               await this.fetchPayload(directory),
             );
             const processingPending = [...(previous.processingPending ?? [])];
+            const createdEventIds: number[] = [];
             let imported = 0;
             let skipped = 0;
             const updated = new Set<number>();
@@ -454,7 +459,7 @@ export class ManualGarminService implements OnModuleDestroy {
                 description,
                 ...activity
               } = item;
-              await tx.event.create({
+              const created = await tx.event.create({
                 data: {
                   athleteId,
                   name,
@@ -472,6 +477,7 @@ export class ManualGarminService implements OnModuleDestroy {
                   },
                 },
               });
+              createdEventIds.push(created.eventId);
               imported++;
             }
             for (const metric of payload.metrics) {
@@ -509,6 +515,7 @@ export class ManualGarminService implements OnModuleDestroy {
             };
             return {
               directory,
+              createdEventIds,
               state: {
                 ...state,
                 running: false,
@@ -534,7 +541,16 @@ export class ManualGarminService implements OnModuleDestroy {
         },
         { timeout: 210_000, maxWait: 5000 },
       )
-      .then(async ({ directory, state }) => {
+      .then(async ({ directory, state, createdEventIds }) => {
+        for (const eventId of createdEventIds)
+          this.emitter?.emit(
+            CoachActivityNoticeEvent.SLUG,
+            new CoachActivityNoticeEvent({
+              eventId,
+              kind: 'ACTIVITY',
+              deliveryKey: `import:${eventId}`,
+            }),
+          );
         // Queue work only after commit; retain failed submissions for the next manual sync.
         await this.save(directory, { ...state, running: true });
         const pending = [];

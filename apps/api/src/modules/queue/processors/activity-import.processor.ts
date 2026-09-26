@@ -1,11 +1,13 @@
 import { Job } from 'bullmq';
 
 import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
-import { Inject, Logger, forwardRef } from '@nestjs/common';
+import { Inject, Logger, Optional, forwardRef } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { ConnectorProvider, EventActivity } from '@openathlete/database';
 import { CompressedActivityStream } from '@openathlete/shared';
 
+import { CoachActivityNoticeEvent } from '../../../events/coach-activity-notice.event';
 import { uncompressActivityStream } from '../../core/helpers/activity-stream';
 import { computeRecords } from '../../core/helpers/record';
 import { PrismaService } from '../../prisma/services/prisma.service';
@@ -34,6 +36,7 @@ export class ActivityImportProcessor extends WorkerHost {
     @Inject(forwardRef(() => SuuntoProviderService))
     private readonly suuntoProviderService: SuuntoProviderService,
     private readonly queueService: QueueService,
+    @Optional() private readonly emitter?: EventEmitter2,
   ) {
     super();
   }
@@ -104,6 +107,21 @@ export class ActivityImportProcessor extends WorkerHost {
         );
       }
 
+      if (!bulkImport && this.emitter) {
+        const importedEvent = await this.prisma.event.findUnique({
+          where: { eventId: savedActivity.eventId },
+          select: { createdAt: true },
+        });
+        if (importedEvent && importedEvent.createdAt.getTime() >= job.timestamp)
+          this.emitter.emit(
+            CoachActivityNoticeEvent.SLUG,
+            new CoachActivityNoticeEvent({
+              eventId: savedActivity.eventId,
+              kind: 'ACTIVITY',
+              deliveryKey: `import:${savedActivity.eventId}`,
+            }),
+          );
+      }
       await job.updateProgress(60);
 
       const activityWithStream = await this.prisma.eventActivity.findUnique({

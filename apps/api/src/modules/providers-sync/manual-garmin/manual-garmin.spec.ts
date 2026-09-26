@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import {
@@ -97,7 +98,10 @@ describe('manual Garmin import', () => {
       update: jest.fn(),
     },
     activitySegment: { createMany: jest.fn() },
-    event: { findFirst: jest.fn(), create: jest.fn() },
+    event: {
+      findFirst: jest.fn(),
+      create: jest.fn().mockResolvedValue({ eventId: 88 }),
+    },
     athleteMetric: { upsert: jest.fn() },
   };
   const prisma = {
@@ -106,8 +110,10 @@ describe('manual Garmin import', () => {
     $transaction: jest.fn(),
   };
   const queue = { addActivityProcessingJob: jest.fn() };
+  const emitter = { emit: jest.fn() };
   beforeEach(async () => {
     jest.resetAllMocks();
+    tx.event.create.mockResolvedValue({ eventId: 88 });
     directory = await mkdtemp(join(tmpdir(), 'oa-garmin-test-'));
     await mkdir(join(directory, '.private'));
     await writeFile(
@@ -134,6 +140,7 @@ describe('manual Garmin import', () => {
       prisma as unknown as PrismaService,
       config,
       queue as unknown as QueueService,
+      emitter as unknown as EventEmitter2,
     );
   });
   afterEach(async () => {
@@ -239,6 +246,12 @@ describe('manual Garmin import', () => {
       metrics: 1,
       warnings: [],
     });
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'coach.activity.notice',
+      expect.objectContaining({
+        payload: { eventId: 88, kind: 'ACTIVITY', deliveryKey: 'import:88' },
+      }),
+    );
     expect(tx.event.create.mock.calls[0][0].data.athleteId).toBe(2);
     expect(
       tx.event.create.mock.calls[0][0].data.activity.create.externalId,

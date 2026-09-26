@@ -2,6 +2,7 @@ import { Server, Socket } from 'socket.io';
 import { z } from 'zod';
 
 import { Logger, OnModuleInit, UseGuards } from '@nestjs/common';
+import { OnEvent } from '@nestjs/event-emitter';
 import {
   ConnectedSocket,
   MessageBody,
@@ -71,6 +72,25 @@ export class MessagesGateway
         mainServer.adapter(adapter);
       }
     }
+  }
+
+  @OnEvent('activity.chat.delivered')
+  activityNoticeDelivered(payload: {
+    message: { messageThreadId: number };
+    userIds: number[];
+  }) {
+    if (!this.server) return;
+    for (const userId of payload.userIds)
+      this.server.to(`user:${userId}`).emit('activity_notice', payload);
+  }
+
+  @UseGuards(WsJwtAuthGuard)
+  @SubscribeMessage('subscribe_inbox')
+  handleSubscribeInbox(@ConnectedSocket() client: Socket) {
+    const user = client.data.user as AuthUser;
+    if (!user) return;
+    this.authenticateAndSetupUser(client, user);
+    client.emit('inbox_subscribed');
   }
 
   handleConnection(_: Socket) {

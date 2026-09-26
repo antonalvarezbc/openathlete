@@ -1358,5 +1358,20 @@
   "activity_analysis_save_feedback": "Save feedback draft",
   "activity_analysis_discard_draft": "Discard edits",
   "activity_analysis_unsaved_feedback": "You have unsaved edits. Save or discard them before selecting another analysis or generating a new one.",
-  "activity_analysis_saved_context": "Data used for this saved analysis"
+  "activity_analysis_saved_context": "Data used for this saved analysis",
+  "activity_alert_settings_title": "Chat notifications",
+  "activity_alert_settings_help": "Choose which automatic notifications to receive from this athlete in your conversation. Your preferences do not affect other coaches. They apply to future changes; existing notices are kept.",
+  "activity_alert_comments": "Athlete comments and responses",
+  "activity_alert_rpe": "Athlete RPE changes",
+  "activity_alert_new": "New activities",
+  "activity_alert_settings_error": "Unable to load or save your preferences. Try again.",
+  "activity_alert_settings_saved": "Preferences saved.",
+  "activity_alert_retry": "Retry",
+  "activity_alert_automatic": "Automatic notification",
+  "activity_alert_uploaded": "New activity available",
+  "activity_alert_comment_updated": "The athlete added or updated a comment",
+  "activity_alert_rpe_updated": "The athlete updated the RPE",
+  "activity_alert_rpe_removed": "RPE removed",
+  "activity_alert_open": "Open activity",
+  "activity_alert_unavailable": "The activity is no longer available or you do not have access."
 }
