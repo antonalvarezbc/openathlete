@@ -1,17 +1,11 @@
-import { useGetUpcomingCompetitionsQuery } from '@/api/event';
 import { AthleteMetric, useGetMetricsQuery } from '@/api/metric';
-import { useTrainingLoadMetrics } from '@/api/training-load';
-import { TrainingLoadCalculationType } from '@/api/training-load/training-load.api';
+import { UpcomingCompetitions } from '@/components/dashboard/upcoming-competitions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { m } from '@/paraglide/messages';
-import { getLocale } from '@/paraglide/runtime';
 import { isCapacitor } from '@/utils/capacitor';
 import { metricTypeLabelMap } from '@/utils/label-map/core/metric-type.label-map';
-import { getDateFnsLocale } from '@/utils/locales';
 import { getMetricUnit } from '@/utils/metric-unit';
-import { format } from 'date-fns';
-import { Calendar } from 'lucide-react';
 import { useMemo } from 'react';
 
 import { METRIC_TYPE } from '@openathlete/shared';
@@ -24,23 +18,6 @@ export function AthleteDashboardHeader({
   athleteId,
 }: AthleteDashboardHeaderProps) {
   const isMobile = isCapacitor();
-  const {
-    data: upcomingCompetitionsData = [],
-    isLoading: isLoadingCompetitions,
-  } = useGetUpcomingCompetitionsQuery(false, athleteId);
-
-  const upcomingCompetitions = useMemo(() => {
-    return upcomingCompetitionsData.slice(0, 2);
-  }, [upcomingCompetitionsData]);
-
-  const today = useMemo(() => {
-    const now = new Date();
-    return now;
-  }, []);
-  // Get training load metrics
-  const { data: trainingLoadMetrics, isLoading: isLoadingTrainingLoad } =
-    useTrainingLoadMetrics(TrainingLoadCalculationType.TRIMP, today, athleteId);
-
   // Get all metrics to find recent updates
   const { data: allMetrics = [], isLoading: isLoadingMetrics } =
     useGetMetricsQuery(undefined, athleteId);
@@ -70,149 +47,15 @@ export function AthleteDashboardHeader({
     return result;
   }, [allMetrics]);
 
-  const getDaysUntil = (date: Date): string => {
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const target = new Date(date);
-    target.setHours(0, 0, 0, 0);
-    const diffTime = target.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) return m.dashboard_header_today();
-    if (diffDays === 1) return m.dashboard_header_tomorrow();
-    return m.dashboard_header_days_until({ days: diffDays });
-  };
-
-  const getTSBColor = (tsb?: number) => {
-    if (tsb === undefined) return 'text-muted-foreground';
-    if (tsb > 5) return 'text-green-600 dark:text-green-400';
-    if (tsb < -5) return 'text-red-600 dark:text-red-400';
-    return 'text-blue-600 dark:text-blue-400';
-  };
-
-  const getTSBStatus = (tsb?: number) => {
-    if (tsb === undefined) return null;
-    if (tsb > 5) return 'optimal';
-    if (tsb < -5) return 'overreaching';
-    return 'balanced';
-  };
-
   if (isMobile) {
     return null;
   }
   return (
     <Card className="mb-6">
       <CardContent>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {/* Upcoming Competitions */}
-          <div className="space-y-1.5">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              {m.dashboard_header_upcoming_competitions()}
-            </h3>
-            {isLoadingCompetitions ? (
-              <div className="space-y-1.5">
-                {Array.from({ length: 2 }).map((_, i) => (
-                  <Skeleton key={i} className="h-12 rounded-md" />
-                ))}
-              </div>
-            ) : upcomingCompetitions.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                {m.dashboard_header_no_upcoming_competitions()}
-              </p>
-            ) : (
-              <div className="space-y-1.5">
-                {upcomingCompetitions.map((competition) => (
-                  <div
-                    key={competition.eventId}
-                    className="flex items-start gap-1.5 rounded-md bg-blue-50 p-2 dark:bg-blue-950/30"
-                  >
-                    <Calendar className="mt-0.5 h-3.5 w-3.5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-blue-900 dark:text-blue-100 truncate">
-                        {competition.name}
-                      </p>
-                      <p className="text-[10px] text-blue-700 dark:text-blue-300">
-                        {getDaysUntil(competition.startDate)} •{' '}
-                        {format(competition.startDate, 'MMM d', {
-                          locale: getDateFnsLocale(getLocale()),
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Fitness Status (CTL/ATL/TSB) */}
-          <div className="space-y-1.5">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              {m.training_load()}
-            </h3>
-            {isLoadingTrainingLoad ? (
-              <div className="grid grid-cols-3 gap-2">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-16 rounded-md" />
-                ))}
-              </div>
-            ) : trainingLoadMetrics ? (
-              <div className="grid grid-cols-3 gap-2">
-                <div className="rounded-md bg-gradient-to-br from-purple-50 to-blue-50 p-2 dark:from-purple-950/30 dark:to-blue-950/30">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-medium text-muted-foreground mb-0.5">
-                      CTL
-                    </span>
-                    <span className="text-lg font-bold text-purple-700 dark:text-purple-300">
-                      {Math.round(trainingLoadMetrics.ctl)}
-                    </span>
-                  </div>
-                </div>
-                <div className="rounded-md bg-gradient-to-br from-orange-50 to-red-50 p-2 dark:from-orange-950/30 dark:to-red-950/30">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-medium text-muted-foreground mb-0.5">
-                      ATL
-                    </span>
-                    <span className="text-lg font-bold text-orange-700 dark:text-orange-300">
-                      {Math.round(trainingLoadMetrics.atl)}
-                    </span>
-                  </div>
-                </div>
-                <div
-                  className={`rounded-md bg-gradient-to-br p-2 ${
-                    getTSBStatus(trainingLoadMetrics.tsb) === 'optimal'
-                      ? 'from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30'
-                      : getTSBStatus(trainingLoadMetrics.tsb) === 'overreaching'
-                        ? 'from-red-50 to-rose-50 dark:from-red-950/30 dark:to-rose-950/30'
-                        : 'from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30'
-                  }`}
-                >
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-medium text-muted-foreground mb-0.5">
-                      TSB
-                    </span>
-                    <span
-                      className={`text-lg font-bold ${getTSBColor(trainingLoadMetrics.tsb)}`}
-                    >
-                      {trainingLoadMetrics.tsb > 0 ? '+' : ''}
-                      {Math.round(trainingLoadMetrics.tsb)}
-                    </span>
-                    <span className="text-[9px] text-muted-foreground mt-0.5 truncate">
-                      {getTSBStatus(trainingLoadMetrics.tsb) === 'optimal'
-                        ? m.optimal_zone()
-                        : getTSBStatus(trainingLoadMetrics.tsb) ===
-                            'overreaching'
-                          ? m.overtraining()
-                          : m.detraining()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                {m.no_data_for_metric()}
-              </p>
-            )}
-          </div>
+          <UpcomingCompetitions athleteId={athleteId} />
 
           {/* Recent Metrics */}
           <div className="space-y-1.5">

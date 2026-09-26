@@ -1,9 +1,12 @@
 import { useGetMyEventsQuery } from '@/api/event';
 import { Calendar } from '@/components/calendar/calendar';
+import { CoachTrainingLoadSummary } from '@/components/dashboard/coach-training-load-summary';
+import { UpcomingCompetitions } from '@/components/dashboard/upcoming-competitions';
 import {
   CalendarPlanBanner,
   useCalendarPlan,
 } from '@/components/plan-workspace/use-calendar-plan';
+import { Card, CardContent } from '@/components/ui/card';
 import { m } from '@/paraglide/messages';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
@@ -61,6 +64,12 @@ export function AthleteCalendarView({ athleteId }: P) {
   }
   return (
     <div className="w-full p-4 md:p-8">
+      <Card className="mb-6">
+        <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <UpcomingCompetitions key={athleteId} athleteId={athleteId} isCoach />
+          <CoachTrainingLoadSummary athleteId={athleteId} />
+        </CardContent>
+      </Card>
       {calendarPlan.plan && <CalendarPlanBanner plan={calendarPlan.plan} />}
       <Calendar
         key={`${athleteId}-${calendarPlan.planId ?? 0}`}

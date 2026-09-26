@@ -1373,5 +1373,15 @@
   "activity_alert_rpe_updated": "The athlete updated the RPE",
   "activity_alert_rpe_removed": "RPE removed",
   "activity_alert_open": "Open activity",
-  "activity_alert_unavailable": "The activity is no longer available or you do not have access."
+  "activity_alert_unavailable": "The activity is no longer available or you do not have access.",
+  "coach_load_ctl": "Chronic load",
+  "coach_load_atl": "Acute load",
+  "coach_load_tsb": "Stress balance (CTL − ATL)",
+  "coach_load_period": "Current summary as of {date}, using the last 42 days.",
+  "coach_load_error": "Could not load training load.",
+  "coach_load_retry": "Retry",
+  "coach_load_coverage": "Only activities with calculated TRIMP are included. Missing loads are not a measure of rest.",
+  "coach_load_empty": "Insufficient data",
+  "coach_load_requirements": "No calculated TRIMP loads in this period. Calculation requires heart-rate recordings, maximum heart rate and resting heart rate.",
+  "dashboard_header_competitions_error": "Could not load upcoming competitions."
 }

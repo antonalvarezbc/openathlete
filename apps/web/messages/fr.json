@@ -1373,5 +1373,15 @@
   "activity_alert_rpe_updated": "L’athlète a modifié le RPE",
   "activity_alert_rpe_removed": "RPE supprimé",
   "activity_alert_open": "Ouvrir l’activité",
-  "activity_alert_unavailable": "L’activité n’est plus disponible ou vous n’y avez pas accès."
+  "activity_alert_unavailable": "L’activité n’est plus disponible ou vous n’y avez pas accès.",
+  "coach_load_ctl": "Charge chronique",
+  "coach_load_atl": "Charge aiguë",
+  "coach_load_tsb": "Équilibre des charges (CTL − ATL)",
+  "coach_load_period": "Résumé actuel au {date}, sur les 42 derniers jours.",
+  "coach_load_error": "Impossible de charger la charge d’entraînement.",
+  "coach_load_retry": "Réessayer",
+  "coach_load_coverage": "Seules les activités avec un TRIMP calculé sont incluses. L’absence de charges ne signifie pas du repos.",
+  "coach_load_empty": "Données insuffisantes",
+  "coach_load_requirements": "Aucune charge TRIMP calculée sur cette période. Le calcul nécessite des enregistrements de fréquence cardiaque, la FC maximale et la FC au repos.",
+  "dashboard_header_competitions_error": "Impossible de charger les prochaines compétitions."
 }
