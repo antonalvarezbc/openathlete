@@ -473,3 +473,26 @@ Supply your own `OPENAI_API_KEY` (and `GOOGLE_GENERATIVE_AI_API_KEY` when using
 the default feedback agent). Provider usage is billed separately. This setting
 does not change prompts, models, workout validation, or the review-before-save
 flow for generated sessions. It is a server setting, not a `VITE_` variable.
+
+### Optional manual activity tools
+
+Manual FIT uploads and the unofficial Garmin connector are disabled by default.
+For a clean installation, leave both server flags unset or set them to `false`
+in `apps/api/.env`:
+
+```dotenv
+ENABLE_MANUAL_FIT_IMPORT=false
+ENABLE_MANUAL_GARMIN_SYNC=false
+```
+
+Enable either tool independently with `true`, restart the API and reload the
+application. These are installation-wide server settings, not `VITE_` variables.
+Garmin manual additionally requires `SELF_HOSTED=true`, an absolute
+`GARMIN_UNOFFICIAL_DIRECTORY` and the existing Python/session setup. Setting only
+`SELF_HOSTED` or the Garmin directory no longer enables the unofficial connector.
+
+When disabled, the FIT upload action and the Garmin manual card/table column are
+hidden and their manual write endpoints reject requests. Official Garmin/Strava
+connections and previously imported activities, metrics and maps remain available.
+See [manual FIT import](docs/manual-fit-import.md) and
+[manual Garmin setup](scripts/garmin-probe/README.md) for enabling each tool.

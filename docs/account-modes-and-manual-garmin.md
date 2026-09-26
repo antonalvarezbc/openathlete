@@ -49,6 +49,20 @@ shows the current mode and explains that subsequent changes require an administr
 
 ## Manual Garmin
 
+The unofficial connector is disabled by default. Set
+`ENABLE_MANUAL_GARMIN_SYNC=true` in `apps/api/.env`, restart the API and reload the
+application to enable it. It also requires `SELF_HOSTED=true` and an absolute
+`GARMIN_UNOFFICIAL_DIRECTORY` with the existing Python and session setup. A stored
+session or a configured directory alone does not enable it.
+
+With the flag unset or `false`, the athlete's manual connection card and the
+coach's manual Garmin table column disappear, and manual login/sync/backfill
+requests are rejected. No manual status polling is mounted by the interface.
+Previously stored activities, recovery metrics and private session files are
+preserved. Official connectors remain available. FIT uploads have their own
+independent setting, `ENABLE_MANUAL_FIT_IMPORT`, also disabled by default.
+
+
 - The manual connector appears after the official connectors in the athlete space.
 - Only the authenticated owner with ATHLETE role can submit Garmin credentials.
 - The owner and linked users with COACH role can trigger sync.
@@ -62,7 +76,7 @@ shows the current mode and explains that subsequent changes require an administr
 - New sessions are isolated under `GARMIN_UNOFFICIAL_DIRECTORY/accounts/<athleteId>/.private`.
   This directory is ignored by Git.
 - Sync retains the existing manual trigger, two-minute cooldown and database lock.
-- Only SELF_HOSTED with an absolute GARMIN_UNOFFICIAL_DIRECTORY enables this connector.
+- Enabling requires ENABLE_MANUAL_GARMIN_SYNC=true, SELF_HOSTED=true and an absolute GARMIN_UNOFFICIAL_DIRECTORY.
 
 The login worker uses the Python environment and pinned dependency already used by
 the manual connector. Pending MFA state lives in the API process: restart requires a

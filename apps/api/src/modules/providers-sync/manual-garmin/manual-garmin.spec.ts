@@ -82,6 +82,7 @@ class TestService extends ManualGarminService {
 describe('manual Garmin import', () => {
   let directory: string;
   let service: TestService;
+  let config: ConfigService;
   const user = {
     roles: ['ATHLETE' as const],
     userId: 1,
@@ -124,18 +125,46 @@ describe('manual Garmin import', () => {
     );
     tx.$queryRaw.mockResolvedValue([{ locked: true }]);
     tx.eventActivity.findMany.mockResolvedValue([]);
+    config = new ConfigService({
+      SELF_HOSTED: true,
+      ENABLE_MANUAL_GARMIN_SYNC: true,
+      GARMIN_UNOFFICIAL_DIRECTORY: directory,
+    });
     service = new TestService(
       prisma as unknown as PrismaService,
-      new ConfigService({
-        SELF_HOSTED: true,
-        GARMIN_UNOFFICIAL_DIRECTORY: directory,
-      }),
+      config,
       queue as unknown as QueueService,
     );
   });
   afterEach(async () => {
     await rm(directory, { recursive: true, force: true });
   });
+
+  it.each([false, undefined])(
+    'blocks every manual operation when the installation flag is %s',
+    async (enabled) => {
+      config.set('ENABLE_MANUAL_GARMIN_SYNC', enabled);
+      expect(await service.status(user)).toEqual({ enabled: false });
+      await expect(service.sync(user)).rejects.toThrow();
+      await expect(service.backfill(user)).rejects.toThrow();
+      await expect(service.stopBackfill(user)).rejects.toThrow();
+      await expect(
+        service.connect(user, {
+          email: 'athlete@example.test',
+          password: 'synthetic-password',
+          timezone: 'Europe/Madrid',
+        }),
+      ).rejects.toThrow();
+      expect(prisma.athlete.findUnique).not.toHaveBeenCalled();
+      expect(prisma.coachAthlete.findFirst).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(service.fetch).not.toHaveBeenCalled();
+      expect(service.worker).not.toHaveBeenCalled();
+      expect(service.parse).not.toHaveBeenCalled();
+      expect(loginGarmin).not.toHaveBeenCalled();
+      expect(queue.addActivityProcessingJob).not.toHaveBeenCalled();
+    },
+  );
 
   it('status does not contact Garmin; unrelated users cannot sync', async () => {
     expect((await service.status(user)).enabled).toBe(true);

@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   PayloadTooLargeException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PrismaService } from '../../prisma/services/prisma.service';
@@ -115,7 +116,7 @@ const athlete = {
   roles: ['ATHLETE'],
   athlete: { athleteId: 999 },
 } as AuthUser;
-function setup() {
+function setup(enabled = true) {
   const db = {
     athlete: { findUnique: jest.fn().mockResolvedValue({ athleteId: 4 }) },
     eventActivity: {
@@ -142,6 +143,7 @@ function setup() {
     service: new ManualFitImportService(
       db as unknown as PrismaService,
       queue as unknown as QueueService,
+      new ConfigService({ ENABLE_MANUAL_FIT_IMPORT: enabled }),
     ),
   };
 }
@@ -240,6 +242,15 @@ describe('Manual FIT parsing', () => {
 });
 
 describe('Manual FIT ownership and persistence', () => {
+  test('blocks direct service calls before parsing or database access when disabled', async () => {
+    const { service, db, queue } = setup(false);
+    await expect(
+      service.import(athlete, fixture(), 'My activity'),
+    ).rejects.toThrow('MANUAL_FIT_IMPORT_DISABLED');
+    expect(db.athlete.findUnique).not.toHaveBeenCalled();
+    expect(db.$transaction).not.toHaveBeenCalled();
+    expect(queue.addActivityProcessingJob).not.toHaveBeenCalled();
+  });
   test('binds import to authenticated user, writes atomically and queues without AI feedback', async () => {
     const { db, queue, service } = setup();
     const result = await service.import(athlete, fixture(), 'Test trail');

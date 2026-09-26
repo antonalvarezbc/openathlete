@@ -1,5 +1,6 @@
 import { useGetMyAthleteQuery } from '@/api/athlete';
 import { useGetMyEventsQuery } from '@/api/event';
+import { useInstallationFeatures } from '@/api/installation/installation.hooks';
 import { ActivityFeedbackDialog } from '@/components/activity-feedback/activity-feedback-dialog';
 import { Calendar } from '@/components/calendar/calendar';
 import { AthleteDashboardHeader } from '@/components/dashboard/athlete-dashboard-header';
@@ -24,6 +25,7 @@ import {
 export function CalendarView() {
   const isMobile = useIsMobile();
   const roles = useUserRoles();
+  const { manualFitImport } = useInstallationFeatures();
   const { data: athlete } = useGetMyAthleteQuery();
   const { space } = useSpaceContext();
   const calendarPlan = useCalendarPlan(athlete?.athleteId);
@@ -153,11 +155,14 @@ export function CalendarView() {
       {space === 'ATHLETE' && (
         <AthleteDashboardHeader athleteId={athlete?.athleteId} />
       )}
-      {space === 'ATHLETE' && roles?.includes('ATHLETE') && athlete && (
-        <div className="flex justify-end px-4 py-3 md:px-0">
-          <ImportFitDialog />
-        </div>
-      )}
+      {manualFitImport &&
+        space === 'ATHLETE' &&
+        roles?.includes('ATHLETE') &&
+        athlete && (
+          <div className="flex justify-end px-4 py-3 md:px-0">
+            <ImportFitDialog />
+          </div>
+        )}
       {calendarPlan.plan && <CalendarPlanBanner plan={calendarPlan.plan} />}
       <div className="flex-1 min-h-0">
         <Calendar

@@ -1,5 +1,20 @@
 # Athlete manual FIT activity import
 
+## Installation setting
+
+Manual FIT uploads are disabled by default. Set `ENABLE_MANUAL_FIT_IMPORT=true`
+in `apps/api/.env`, restart the API and reload the application to enable them.
+Leave it unset or set it to `false` for a clean interface without the upload
+button. The setting applies to every user and is independent of the manual Garmin
+connector and `SELF_HOSTED`.
+
+The authenticated `GET /installation/features` endpoint provides only effective
+feature booleans to the interface. When the upload feature is disabled, the API
+rejects manual upload requests before multipart parsing. Existing activities,
+recordings and maps remain available, and official provider imports are unaffected.
+For Compose installations, set the variable in the environment file passed to
+Compose; `apps/api/.env` is used by the local Node development server.
+
 ## Usage
 
 In the **Athlete** space, open your calendar and choose **Import FIT activity**.
