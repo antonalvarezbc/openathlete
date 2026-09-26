@@ -12,6 +12,40 @@ from health_metrics import (number, metric, map_fields, DAILY_FIELDS, map_body, 
                             map_blood_pressure, optional_read)
 
 ROOT = Path(__file__).resolve().parent
+ACTIVITY_HISTORY_DAYS = 42
+ACTIVITY_PAGE_SIZE = 100
+MAX_ACTIVITY_PAGES = 5
+
+
+def collect_activities(client, connection, cutoff, result):
+    # Garmin returns newest first. Fetch another page only when the window may
+    # still be incomplete. Existing transport pacing/error stops apply per call.
+    activities = []
+    seen = set()
+    for page in range(MAX_ACTIVITY_PAGES):
+        batch = client.get_activities(page * ACTIVITY_PAGE_SIZE, ACTIVITY_PAGE_SIZE)
+        if not isinstance(batch, list) or len(batch) > ACTIVITY_PAGE_SIZE:
+            raise ValueError('InvalidActivities')
+        reached_cutoff = False
+        added = 0
+        for item in batch:
+            if str(item.get('ownerId')) != str(connection['garminUserProfileId']):
+                raise ValueError('AccountMismatch')
+            start = item.get('startTimeGMT')
+            if isinstance(start, str) and start[:10] < cutoff:
+                reached_cutoff = True
+                continue
+            activity_id = str(item['activityId'])
+            if activity_id not in seen:
+                seen.add(activity_id)
+                activities.append(item)
+                added += 1
+        if reached_cutoff or len(batch) < ACTIVITY_PAGE_SIZE:
+            break
+        if added == 0 or page == MAX_ACTIVITY_PAGES - 1:
+            result['warnings'].append('ActivityHistoryIncomplete')
+            break
+    return activities
 
 
 def collect_sync(client, connection, today):
@@ -19,13 +53,10 @@ def collect_sync(client, connection, today):
     rhr_today = client.get_rhr_day(today.isoformat())
     if str(rhr_today.get('userProfileId')) != str(connection['garminUserProfileId']):
         raise ValueError('AccountMismatch')
-    activities = client.get_activities(0, 100)
-    if not isinstance(activities, list):
-        raise ValueError('InvalidActivities')
     result = {'activities': [], 'metrics': [], 'warnings': []}
-    if len(activities) == 100:
-        result['warnings'].append('ActivityLimit100')
-    cutoff = (today - timedelta(days=30)).isoformat()
+    # Include the full boundary day used by OA's 42-day lookback, plus today.
+    cutoff = (today - timedelta(days=ACTIVITY_HISTORY_DAYS)).isoformat()
+    activities = collect_activities(client, connection, cutoff, result)
     for item in activities:
         if str(item.get('ownerId')) != str(connection['garminUserProfileId']):
             raise ValueError('AccountMismatch')

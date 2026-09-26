@@ -400,6 +400,14 @@ export function ManualGarminCard({
               })}
             </p>
           )}
+          {data.result?.warnings.includes('ActivityHistoryIncomplete') && (
+            <p
+              role="alert"
+              className="text-sm text-amber-700 dark:text-amber-300"
+            >
+              {m.garmin_manual_history_incomplete()}
+            </p>
+          )}
           {!!data.result?.warnings.length && (
             <p role="status" className="text-sm">
               {m.garmin_manual_warnings()}

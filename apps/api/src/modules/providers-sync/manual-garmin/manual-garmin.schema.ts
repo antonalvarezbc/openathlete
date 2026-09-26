@@ -27,7 +27,7 @@ export const manualGarminPayload = z.object({
         })
         .refine((a) => new Date(a.endDate) >= new Date(a.startDate)),
     )
-    .max(100),
+    .max(500),
   metrics: z
     .array(
       z.object({
@@ -84,7 +84,8 @@ export const manualGarminPayload = z.object({
       }),
     )
     .max(350),
-  warnings: z.array(z.string().max(100)).max(101),
+  // One warning per activity, four optional endpoints and history coverage.
+  warnings: z.array(z.string().max(100)).max(505),
 });
 
 export const manualGarminConnection = z.object({

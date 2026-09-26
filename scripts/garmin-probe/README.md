@@ -110,9 +110,15 @@ instancias del backend. Véase [modos y Garmin manual](../../docs/account-modes-
 
 ### Actualizar Garmin: actividades recientes y recuperación
 
-- Una consulta de hasta 100 resúmenes de actividades; se importan las que empiezan
-  en los últimos 30 días. Si se alcanza 100, se muestra una advertencia: no hay
-  paginación automática ni importación completa del histórico.
+- Actividades desde hace 42 días completos hasta hoy, incluido el día inicial.
+  Se consultan páginas de 100 resúmenes solo hasta cubrir ese periodo o agotar
+  el listado, con un máximo de cinco páginas por acción manual. Si se alcanza
+  el límite o Garmin repite una página, se muestra que el historial puede estar
+  incompleto. Se conservan las pausas y la parada ante errores, sin reintentos.
+- Para TRIMP también hacen falta los FIT con registros de pulso y las métricas
+  FC máxima (`HR_MAX`) y FC en reposo (`HR_REST`). Los FIT se siguen descargando
+  mediante «Completar actividades pendientes». No se infiere FC máxima de los
+  picos diarios ni se amplían las consultas de wellness a 42 días.
 - Siete días de FC en reposo, mínima/máxima diaria, VFC nocturna y máxima de cinco
   minutos, sueño (duración/fases en horas), siestas y respiración media del sueño.
 - Resumen diario: estrés y sus duraciones (minutos), Body Battery cargada/drenada,
@@ -147,7 +153,7 @@ no se completa si falla el worker o la transacción.
 ### Completar actividades pendientes: detalles FIT
 
 - Parte de los IDs Garmin ya almacenados para ese atleta en OA, incluidos los
-  anteriores a 30 días. No vuelve a pedir el listado de actividades ni el
+  anteriores a 42 días. No vuelve a pedir el listado de actividades ni el
   histórico de recuperación. Por tanto, no descubre actividades antiguas que
   todavía no están importadas en OA.
 - Revisa hasta 100 FIT por acción manual, con un máximo de 20 descargas nuevas.

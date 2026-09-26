@@ -55,6 +55,24 @@ const payload = {
   ],
   metrics: [{ date: '2026-09-15', type: 'HR_REST', value: 55 }],
 };
+describe('manual Garmin history payload limits', () => {
+  it('accepts up to five pages of activity summaries', () => {
+    const activities = Array.from({ length: 500 }, (_, id) => ({
+      ...payload.activities[0],
+      id: String(id),
+    }));
+    expect(
+      manualGarminPayload.parse({ ...payload, activities }).activities,
+    ).toHaveLength(500);
+    expect(
+      manualGarminPayload.safeParse({
+        ...payload,
+        activities: [...activities, activities[0]],
+      }).success,
+    ).toBe(false);
+  });
+});
+
 class TestService extends ManualGarminService {
   fetch = jest.fn().mockResolvedValue(payload);
   parse = jest.fn();

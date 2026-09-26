@@ -1,6 +1,6 @@
 import unittest
-from datetime import date
-from unittest.mock import Mock
+from datetime import date, timedelta
+from unittest.mock import Mock, call
 from sync import collect_sync
 
 
@@ -98,19 +98,78 @@ class SyncTests(unittest.TestCase):
                 for field in ['averageCadence', 'averageWatts', 'maxWatts', 'weightedAverageWatts']:
                     self.assertEqual(activity[field], 0)
 
-    def test_activity_enrichment_keeps_thirty_day_window_and_hundred_activity_request(self):
+    def test_includes_full_42_day_boundary_and_today_but_not_older_activities(self):
+        client = self.client()
+        template = client.get_activities.return_value[0]
+        today = date(2026, 9, 15)
+        client.get_activities.return_value = [
+            {**template, 'activityId': offset, 'startTimeGMT': (today - timedelta(days=offset)).isoformat() + ' 00:00:00'}
+            for offset in [0, 31, 41, 42, 43]
+        ]
+        result = collect_sync(client, {'garminUserProfileId': '123'}, today)
+        self.assertEqual([a['id'] for a in result['activities']], ['0', '31', '41', '42'])
+        client.get_activities.assert_called_once_with(0, 100)
+        self.assertEqual(client.get_stats.call_count, 7)
+
+    def test_paginates_only_until_history_is_covered(self):
+        client = self.client()
+        template = client.get_activities.return_value[0]
+        client.get_activities.side_effect = [
+            [{**template, 'activityId': i} for i in range(100)],
+            [{**template, 'activityId': 100, 'startTimeGMT': '2026-08-04 08:00:00'},
+             {**template, 'activityId': 101, 'startTimeGMT': '2026-08-03 08:00:00'}],
+        ]
+        result = collect_sync(client, {'garminUserProfileId': '123'}, date(2026, 9, 15))
+        self.assertEqual(len(result['activities']), 101)
+        self.assertEqual(client.get_activities.call_args_list, [call(0, 100), call(100, 100)])
+        self.assertNotIn('ActivityHistoryIncomplete', result['warnings'])
+
+    def test_full_page_with_older_activity_does_not_request_next_page(self):
         client = self.client()
         template = client.get_activities.return_value[0]
         client.get_activities.return_value = [
-            {**template, 'activityId': index, 'startTimeGMT': '2026-08-15 08:00:00', 'avgPower': 200}
-            for index in range(99)
-        ] + [{**template, 'activityId': 100, 'startTimeGMT': '2026-08-16 08:00:00', 'avgPower': 201}]
+            {**template, 'activityId': i, 'startTimeGMT': '2026-08-03 08:00:00'} for i in range(100)]
         result = collect_sync(client, {'garminUserProfileId': '123'}, date(2026, 9, 15))
-        self.assertEqual(len(result['activities']), 1)
-        self.assertEqual(result['activities'][0]['id'], '100')
-        self.assertEqual(result['activities'][0]['averageWatts'], 201)
-        self.assertIn('ActivityLimit100', result['warnings'])
+        self.assertEqual(result['activities'], [])
         client.get_activities.assert_called_once_with(0, 100)
+
+    def test_page_limit_reports_incomplete_history(self):
+        client = self.client()
+        template = client.get_activities.return_value[0]
+        client.get_activities.side_effect = lambda start, limit: [
+            {**template, 'activityId': i} for i in range(start, start + limit)]
+        result = collect_sync(client, {'garminUserProfileId': '123'}, date(2026, 9, 15))
+        self.assertEqual(len(result['activities']), 500)
+        self.assertEqual(client.get_activities.call_count, 5)
+        self.assertIn('ActivityHistoryIncomplete', result['warnings'])
+
+    def test_repeated_page_stops_and_deduplicates(self):
+        client = self.client()
+        template = client.get_activities.return_value[0]
+        client.get_activities.return_value = [{**template, 'activityId': i} for i in range(100)]
+        result = collect_sync(client, {'garminUserProfileId': '123'}, date(2026, 9, 15))
+        self.assertEqual(len(result['activities']), 100)
+        self.assertEqual(client.get_activities.call_count, 2)
+        self.assertIn('ActivityHistoryIncomplete', result['warnings'])
+
+    def test_next_page_failure_stops_without_retry_or_wellness_requests(self):
+        client = self.client()
+        template = client.get_activities.return_value[0]
+        client.get_activities.side_effect = [
+            [{**template, 'activityId': i} for i in range(100)], RuntimeError('429')]
+        with self.assertRaises(RuntimeError):
+            collect_sync(client, {'garminUserProfileId': '123'}, date(2026, 9, 15))
+        self.assertEqual(client.get_activities.call_count, 2)
+        client.get_stats.assert_not_called()
+
+    def test_next_page_identity_mismatch_rejects_entire_result(self):
+        client = self.client()
+        template = client.get_activities.return_value[0]
+        client.get_activities.side_effect = [
+            [{**template, 'activityId': i} for i in range(100)], [{**template, 'ownerId': 999}]]
+        with self.assertRaisesRegex(ValueError, 'AccountMismatch'):
+            collect_sync(client, {'garminUserProfileId': '123'}, date(2026, 9, 15))
+        client.get_stats.assert_not_called()
 
     def test_error_stops_without_retry(self):
         client = self.client()
