@@ -45,7 +45,7 @@ model AthleteInjury {
   // fields
   /// Injury location/body part
   location  String
-  /// Pain score (0.0-10.0 scale)
+  /// Pain score (0.0-1.0 normalized scale; displayed as 0-10)
   painScore Float        @map("pain_score")
   /// Injury context/description
   context   String

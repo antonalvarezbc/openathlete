@@ -5,6 +5,7 @@ import ical, {
   ICalEvent,
   ICalEventData,
 } from 'ical-generator';
+import { randomUUID } from 'node:crypto';
 
 import {
   BadRequestException,
@@ -65,6 +66,11 @@ import {
   reductActivityStreamToResolution,
   uncompressActivityStream,
 } from '../helpers/activity-stream';
+import {
+  authorizePlanAthlete,
+  findPlanWeek,
+  validateLinkedRaceDates,
+} from '../helpers/plan-access';
 import { EVENT_INCLUDES } from './event-includes';
 import { WorkoutService } from './workout.service';
 
@@ -264,7 +270,15 @@ export class EventService {
 
     const workout = data.type === 'TRAINING' ? data.workout : undefined;
 
-    const { type, endDate, startDate, name, athleteId, ...rest } = data;
+    const {
+      type,
+      endDate,
+      startDate,
+      name,
+      athleteId,
+      trainingPlanId,
+      ...rest
+    } = data;
 
     // Remove workout from rest if it exists (it shouldn't be passed to Prisma create)
     if ('workout' in rest) {
@@ -280,21 +294,38 @@ export class EventService {
     if (
       !ability.can(
         'create',
-        subject('Event', { athleteId: finalAthleteId } as Event),
+        subject('Event', { athleteId: finalAthleteId, type } as Event),
       )
     ) {
       throw new ForbiddenException('You are not allowed to create this event');
     }
 
+    let trainingWeekId: number | undefined;
+    if (trainingPlanId) {
+      await authorizePlanAthlete(this.prisma, user, finalAthleteId);
+      if (type === EVENT_TYPE.ACTIVITY)
+        throw new BadRequestException('Activities cannot be planned');
+      trainingWeekId = await findPlanWeek(
+        this.prisma,
+        trainingPlanId,
+        finalAthleteId,
+        startDate,
+        endDate,
+      );
+    }
     const created = await this.prisma.event.create({
       data: {
         athleteId: finalAthleteId,
+        trainingWeekId,
         startDate,
         endDate,
         name,
         type,
         [type.toLocaleLowerCase()]: {
-          create: rest,
+          create:
+            type === EVENT_TYPE.ACTIVITY
+              ? { ...rest, externalId: `manual:${randomUUID()}` }
+              : rest,
         },
       },
       include: EVENT_INCLUDES,
@@ -412,6 +443,12 @@ export class EventService {
       }),
     );
 
+    if (
+      !user.roles?.includes('COACH') &&
+      data.type &&
+      data.type !== EVENT_TYPE.ACTIVITY
+    )
+      throw new ForbiddenException();
     const workout =
       data.type === EVENT_TYPE.TRAINING ? data.workout : undefined;
 
@@ -428,9 +465,33 @@ export class EventService {
       rest.rpe !== undefined &&
       rest.rpe !== null;
 
+    let trainingWeekId: number | undefined;
+    if (event.trainingWeekId && (startDate || endDate) && event.athleteId) {
+      const week = await this.prisma.trainingWeek.findUnique({
+        where: { trainingWeekId: event.trainingWeekId },
+        include: { cycle: true },
+      });
+      if (week?.cycle.trainingPlanId)
+        trainingWeekId = await findPlanWeek(
+          this.prisma,
+          week.cycle.trainingPlanId,
+          event.athleteId,
+          startDate ?? event.startDate,
+          endDate ?? event.endDate,
+        );
+    }
+    if (event.type === EVENT_TYPE.COMPETITION && (startDate || endDate)) {
+      await validateLinkedRaceDates(
+        this.prisma,
+        eventId,
+        startDate ?? event.startDate,
+        endDate ?? event.endDate,
+      );
+    }
     const updatedEvent = await this.prisma.event.update({
       where: { eventId: eventId },
       data: {
+        trainingWeekId,
         startDate,
         endDate,
         name,
@@ -909,7 +970,7 @@ export class EventService {
 
     const event = await this.prisma.event.findFirst({
       where: {
-        AND: [{ eventId: eventId }, accessibleBy(ability, 'update').Event],
+        AND: [{ eventId: eventId }, accessibleBy(ability, 'read').Event],
       },
     });
     const activity = await this.prisma.event.findFirst({
@@ -974,7 +1035,7 @@ export class EventService {
 
     const event = await this.prisma.event.findFirst({
       where: {
-        AND: [{ eventId: eventId }, accessibleBy(ability, 'update').Event],
+        AND: [{ eventId: eventId }, accessibleBy(ability, 'read').Event],
       },
     });
 
@@ -1081,6 +1142,8 @@ export class EventService {
       throw new NotFoundException('Event not found');
     }
 
+    if (!ability.can('create', subject('Event', event)))
+      throw new ForbiddenException();
     const { startDate, endDate, name, type, athleteId } = event;
 
     const subEntityData: Record<string, unknown> = {

@@ -121,7 +121,9 @@ export function StatisticsView({ athleteId }: P) {
                   <SportDistributionChart
                     sports={statistics.sports}
                     keyToUse="elevationGain"
-                    formatter={(value: number) => `${value} d+`}
+                    formatter={(value: number) =>
+                      `${Number(value.toFixed(2))} d+`
+                    }
                   />
                 </CardContent>
               </Card>

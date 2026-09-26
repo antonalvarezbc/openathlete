@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { useSpaceContext } from '@/contexts/space';
 import { m } from '@/paraglide/messages';
 import { getPath } from '@/routes/paths';
 import { cn } from '@/utils/shadcn';
@@ -11,25 +12,26 @@ interface NavItem {
   path: string;
 }
 
-const navItems: NavItem[] = [
-  {
-    label: m.calendar(),
-    icon: Calendar,
-    path: getPath(['dashboard', 'calendar']),
-  },
-  {
-    label: m.profile(),
-    icon: User,
-    path: getPath(['dashboard', 'profile']),
-  },
-  {
-    label: m.messages(),
-    icon: MessageCircle,
-    path: getPath(['dashboard', 'messages']),
-  },
-];
-
 export function MobileNavbar() {
+  const { space } = useSpaceContext();
+  const navItems: NavItem[] = [
+    {
+      label: space === 'COACH' ? m.coach_planning() : m.calendar(),
+      icon: Calendar,
+      path: getPath(['dashboard', space === 'COACH' ? 'planning' : 'calendar']),
+    },
+    {
+      label: m.profile(),
+      icon: User,
+      path: getPath(['dashboard', 'profile']),
+    },
+    {
+      label: m.messages(),
+      icon: MessageCircle,
+      path: getPath(['dashboard', 'messages']),
+    },
+  ];
+
   const navigate = useNavigate();
   const location = useLocation();
 

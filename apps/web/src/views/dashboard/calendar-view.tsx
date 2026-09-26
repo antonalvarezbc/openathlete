@@ -3,8 +3,15 @@ import { useGetMyEventsQuery } from '@/api/event';
 import { ActivityFeedbackDialog } from '@/components/activity-feedback/activity-feedback-dialog';
 import { Calendar } from '@/components/calendar/calendar';
 import { AthleteDashboardHeader } from '@/components/dashboard/athlete-dashboard-header';
+import { ImportFitDialog } from '@/components/import-fit-dialog/import-fit-dialog';
+import {
+  CalendarPlanBanner,
+  useCalendarPlan,
+} from '@/components/plan-workspace/use-calendar-plan';
+import { useUserRoles } from '@/contexts/auth';
 import { useSpaceContext } from '@/contexts/space';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { m } from '@/paraglide/messages';
 import { cn } from '@/utils/shadcn';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -16,8 +23,10 @@ import {
 
 export function CalendarView() {
   const isMobile = useIsMobile();
+  const roles = useUserRoles();
   const { data: athlete } = useGetMyAthleteQuery();
   const { space } = useSpaceContext();
+  const calendarPlan = useCalendarPlan(athlete?.athleteId);
   const [displayedMonth, setDisplayedMonth] = useState(new Date());
   const [pendingFeedbackEvent, setPendingFeedbackEvent] =
     useState<ActivityEvent | null>(null);
@@ -127,6 +136,13 @@ export function CalendarView() {
     setPendingFeedbackEvent(null);
   };
 
+  if (calendarPlan.isLoading) return <p className="p-6">{m.loading()}</p>;
+  if (calendarPlan.isError)
+    return (
+      <p role="alert" className="p-6 text-destructive">
+        {m.workspace_failed()}
+      </p>
+    );
   return (
     <div
       className={cn(
@@ -137,11 +153,26 @@ export function CalendarView() {
       {space === 'ATHLETE' && (
         <AthleteDashboardHeader athleteId={athlete?.athleteId} />
       )}
+      {space === 'ATHLETE' && roles?.includes('ATHLETE') && athlete && (
+        <div className="flex justify-end px-4 py-3 md:px-0">
+          <ImportFitDialog />
+        </div>
+      )}
+      {calendarPlan.plan && <CalendarPlanBanner plan={calendarPlan.plan} />}
       <div className="flex-1 min-h-0">
         <Calendar
+          key={calendarPlan.planId ?? 0}
+          trainingPlanId={calendarPlan.planId}
+          initialDate={
+            calendarPlan.planId ? calendarPlan.initialDate : undefined
+          }
           events={data}
           athleteId={space === 'ATHLETE' ? athlete?.athleteId : undefined}
-          allowCreate={space === 'ATHLETE'}
+          allowCreate={
+            space === 'ATHLETE' &&
+            (!calendarPlan.plan ||
+              ['ACTIVE', 'DRAFT'].includes(calendarPlan.plan.status))
+          }
           onMonthChange={handleMonthChange}
           isLoading={isPending}
         />

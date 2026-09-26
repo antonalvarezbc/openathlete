@@ -1,4 +1,3 @@
-import { useGetMyCoachedAthletesQuery } from '@/api/athlete';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,7 +24,6 @@ export function SpaceSwitcher() {
   const roles = useUserRoles();
   const { isMobile } = useSidebar();
   const { space, setSpace } = useSpaceContext();
-  const { data: coachedAthletes } = useGetMyCoachedAthletesQuery();
 
   const isMac = React.useMemo(
     () =>
@@ -59,14 +57,8 @@ export function SpaceSwitcher() {
 
   const activeSpace = spaces.find((s) => s.role === space);
 
-  const hasNoAthletes = coachedAthletes?.length === 0;
-
   React.useEffect(() => {
-    if (activeSpace?.role === 'COACH' && hasNoAthletes) {
-      setSpace('ATHLETE');
-    }
-
-    if (!activeSpace || spaces.length <= 1 || hasNoAthletes) {
+    if (!activeSpace || spaces.length <= 1) {
       return;
     }
 
@@ -90,8 +82,8 @@ export function SpaceSwitcher() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown, true);
     };
-  }, [spaces, setSpace, activeSpace, hasNoAthletes]);
-  if (!activeSpace || spaces.length <= 1 || hasNoAthletes) {
+  }, [spaces, setSpace, activeSpace]);
+  if (!activeSpace || spaces.length <= 1) {
     return null;
   }
   return (

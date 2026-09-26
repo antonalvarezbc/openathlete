@@ -7,6 +7,7 @@ import { SessionValidationSettingsCard } from '@/components/session-validation-s
 import { Button } from '@/components/ui/button';
 import { SelectItem } from '@/components/ui/select';
 import { useAuthContext } from '@/contexts/auth';
+import { useSpaceContext } from '@/contexts/space';
 import { m } from '@/paraglide/messages';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
@@ -19,6 +20,7 @@ import { updateAccountDtoSchema } from '@openathlete/shared';
 import { SettingsSection } from './settings-section';
 
 export function ProfileTab() {
+  const { space } = useSpaceContext();
   const { user, logout } = useAuthContext();
   const { data: athlete } = useGetMyAthleteQuery();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -52,6 +54,18 @@ export function ProfileTab() {
   );
   return (
     <div className="space-y-6">
+      <SettingsSection
+        title={m.account_mode()}
+        description={m.account_mode_locked()}
+      >
+        <p>
+          {user?.roles.length === 2
+            ? m.account_mode_both()
+            : user?.roles.includes('COACH')
+              ? m.account_mode_coach()
+              : m.account_mode_athlete()}
+        </p>
+      </SettingsSection>
       <SettingsSection
         title={m.profile()}
         description={m.update_profile_information()}
@@ -91,9 +105,11 @@ export function ProfileTab() {
           </div>
         </FormProvider>
       </SettingsSection>
-      {athlete?.athleteId && (
-        <SessionValidationSettingsCard athleteId={athlete.athleteId} />
-      )}
+      {space === 'ATHLETE' &&
+        user?.roles.includes('ATHLETE') &&
+        athlete?.athleteId && (
+          <SessionValidationSettingsCard athleteId={athlete.athleteId} />
+        )}
       <SettingsSection
         title={m.delete_account()}
         description={m.delete_account_description()}

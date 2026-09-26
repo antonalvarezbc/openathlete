@@ -1,4 +1,3 @@
-import { useGetMyCoachedAthletesQuery } from '@/api/athlete';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -17,7 +16,6 @@ import { UserRole } from '@openathlete/shared';
 export function MobileSpaceSwitcher() {
   const roles = useUserRoles();
   const { space, setSpace } = useSpaceContext();
-  const { data: coachedAthletes } = useGetMyCoachedAthletesQuery();
 
   const spaces =
     roles?.map((role) => {
@@ -38,9 +36,8 @@ export function MobileSpaceSwitcher() {
     }) || [];
 
   const activeSpace = spaces.find((s) => s?.role === space);
-  const hasNoAthletes = !coachedAthletes || coachedAthletes.length === 0;
 
-  if (!activeSpace || spaces.length <= 1 || hasNoAthletes) {
+  if (!activeSpace || spaces.length <= 1) {
     return null;
   }
 

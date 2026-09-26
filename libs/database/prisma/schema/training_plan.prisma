@@ -30,8 +30,9 @@ model TrainingPlan {
   status      PlanStatus @default(DRAFT)
 
   // relationships
-  athlete   Athlete @relation(fields: [athleteId], references: [athleteId], onDelete: Cascade)
-  athleteId Int     @map("athlete_id")
+  athlete   Athlete            @relation(fields: [athleteId], references: [athleteId], onDelete: Cascade)
+  athleteId Int                @map("athlete_id")
+  races     TrainingPlanRace[]
   cycles    Cycle[]
 
   // timestamps
@@ -103,4 +104,24 @@ model AthleteAvailability {
 
   @@index([athleteId, dayOfWeek])
   @@map("athlete_availability")
+}
+
+/// Role of an existing calendar competition within a plan.
+model TrainingPlanRace {
+  trainingPlanId     Int              @map("training_plan_id")
+  eventCompetitionId Int              @map("event_competition_id")
+  priority           PlanRacePriority
+  plan               TrainingPlan     @relation(fields: [trainingPlanId], references: [trainingPlanId], onDelete: Cascade)
+  competition        EventCompetition @relation(fields: [eventCompetitionId], references: [eventCompetitionId], onDelete: Cascade)
+
+  @@id([trainingPlanId, eventCompetitionId])
+  @@index([eventCompetitionId])
+  @@map("training_plan_race")
+}
+
+enum PlanRacePriority {
+  TARGET
+  PREPARATORY
+
+  @@map("plan_race_priority")
 }

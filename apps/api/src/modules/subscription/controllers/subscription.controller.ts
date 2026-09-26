@@ -121,6 +121,7 @@ export class SubscriptionController {
     );
 
     return {
+      selfHosted: this.configService.get('SELF_HOSTED') === true,
       subscriptionId: subscription.subscriptionId,
       plan: subscription.plan as CurrentSubscriptionDto['plan'],
       status: subscription.status as CurrentSubscriptionDto['status'],

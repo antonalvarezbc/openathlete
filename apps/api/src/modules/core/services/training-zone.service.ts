@@ -11,8 +11,8 @@ import {
   UpdateTrainingZoneDto,
 } from '@openathlete/shared';
 
-import { CaslAbilityFactory } from 'src/modules/auth';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
+import { CaslAbilityFactory } from 'src/modules/auth/services/casl-ability.factory';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
 @Injectable()
@@ -21,6 +21,12 @@ export class TrainingZoneService {
     private readonly prisma: PrismaService,
     private readonly abilities: CaslAbilityFactory,
   ) {}
+
+  private requireCoach(user: AuthUser) {
+    if (!user.roles?.includes('COACH')) {
+      throw new ForbiddenException('Only coaches can edit training zones');
+    }
+  }
 
   async getAllForAthlete(user: AuthUser, athleteId: number) {
     const ability = await this.abilities.getFor({ user });
@@ -41,6 +47,7 @@ export class TrainingZoneService {
   }
 
   async create(user: AuthUser, dto: CreateTrainingZoneDto) {
+    this.requireCoach(user);
     const ability = await this.abilities.getFor({ user });
     // Check access to athlete
     const athlete = await this.prisma.athlete.findUnique({
@@ -75,6 +82,7 @@ export class TrainingZoneService {
     trainingZoneId: number,
     dto: UpdateTrainingZoneDto,
   ) {
+    this.requireCoach(user);
     const ability = await this.abilities.getFor({ user });
     const zone = await this.prisma.trainingZone.findUnique({
       where: { trainingZoneId: trainingZoneId },
@@ -115,6 +123,7 @@ export class TrainingZoneService {
   }
 
   async delete(user: AuthUser, trainingZoneId: number) {
+    this.requireCoach(user);
     const ability = await this.abilities.getFor({ user });
     const zone = await this.prisma.trainingZone.findUnique({
       where: { trainingZoneId: trainingZoneId },

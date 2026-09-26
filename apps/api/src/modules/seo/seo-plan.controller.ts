@@ -1,6 +1,14 @@
 import { ZodValidationPipe } from 'nestjs-zod';
 
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import {
   ApiBearerAuth,
@@ -13,9 +21,11 @@ import {
 
 import {
   CreateTemporaryPlanDto,
+  ImportJsonPlanDto,
   ImportPlanBodyDto,
   SEOPlanData,
   createTemporaryPlanDtoSchema,
+  importJsonPlanDtoSchema,
   importPlanBodyDtoSchema,
 } from '@openathlete/shared';
 
@@ -109,7 +119,7 @@ export class SeoPlanController {
   @ApiOperation({
     summary: 'Import a temporary training plan',
     description:
-      "Imports a temporary training plan into the authenticated user's account. Creates a TrainingPlan with all cycles, weeks, and events. Marks the temporary plan as imported.",
+      'Publishes a plan to an authorized athlete calendar. Plan creation and token consumption are atomic.',
   })
   @ApiParam({
     name: 'token',
@@ -126,7 +136,20 @@ export class SeoPlanController {
         startDate: {
           type: 'string',
           format: 'date-time',
-          description: 'Start date for the training plan',
+          description: 'Calendar date (YYYY-MM-DD) or ISO timestamp',
+        },
+        athleteId: {
+          type: 'integer',
+          description: 'Own athlete or linked coached athlete',
+        },
+        timeZone: {
+          type: 'string',
+          default: 'UTC',
+          description: 'IANA time zone',
+        },
+        replacePlanId: {
+          type: 'integer',
+          description: 'Explicitly replace an eligible future plan',
         },
       },
       required: ['startDate'],
@@ -154,19 +177,39 @@ export class SeoPlanController {
     @Body(new ZodValidationPipe(importPlanBodyDtoSchema))
     body: ImportPlanBodyDto,
   ) {
-    // Get the plan data
     const planData = await this.seoPlanService.getTemporaryPlan(token);
-
-    // Import the plan
-    const trainingPlan = await this.trainingPlanService.importSeoPlan(
+    return this.trainingPlanService.importSeoPlan(
       user,
       planData,
       body.startDate,
+      body,
+      token,
     );
+  }
 
-    // Mark as imported
-    await this.seoPlanService.markAsImported(token);
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @Post('import-json')
+  async importJson(
+    @JwtUser() user: AuthUser,
+    @Body(new ZodValidationPipe(importJsonPlanDtoSchema))
+    body: ImportJsonPlanDto,
+  ) {
+    return this.trainingPlanService.importSeoPlan(
+      user,
+      body.planData,
+      body.startDate,
+      body,
+    );
+  }
 
-    return trainingPlan;
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @Get('athletes/:athleteId/plans')
+  async listPlans(
+    @JwtUser() user: AuthUser,
+    @Param('athleteId', ParseIntPipe) athleteId: number,
+  ) {
+    return this.trainingPlanService.listPlans(user, athleteId);
   }
 }

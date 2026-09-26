@@ -61,7 +61,7 @@ type P = {
 };
 
 export function CreateEventFromTemplateDialog({ open, onClose, ...rest }: P) {
-  const { athleteId } = useCalendarContext();
+  const { athleteId, trainingPlanId } = useCalendarContext();
   const [search, setSearch] = useState('');
   const [editingTemplate, setEditingTemplate] = useState<EventTemplate | null>(
     null,
@@ -164,6 +164,7 @@ export function CreateEventFromTemplateDialog({ open, onClose, ...rest }: P) {
         startDate,
         endDate,
         athleteId,
+        trainingPlanId,
       },
       template, // Pass template for optimistic update
     });

@@ -143,7 +143,7 @@ export class TrainingZoneController {
   @ApiOperation({
     summary: 'Create a new training zone',
     description:
-      'Creates a new training zone for an athlete. The zone index is automatically set based on the number of existing zones of the same type. A zone value is automatically created with the provided min, max, and sports. Uses CASL authorization to verify that the user has update access to the athlete.',
+      'Creates a new training zone for an athlete. Requires a coach with access to that athlete. The zone index is automatically set based on the number of existing zones of the same type. A zone value is automatically created with the provided min, max, and sports. Uses CASL authorization to verify that the user has update access to the athlete.',
   })
   @ApiBody({
     description: 'Training zone creation data',
@@ -273,7 +273,7 @@ export class TrainingZoneController {
   @ApiOperation({
     summary: 'Update a training zone',
     description:
-      'Updates an existing training zone. Only the zone owner (athlete or their coach) can update it. Currently updates only the first zone value. The type can be changed, but this should be done carefully as it affects how the zone is used. Uses CASL authorization to verify that the user has update access to the athlete.',
+      'Updates an existing training zone. Only a coach with access to the athlete can update it. Currently updates only the first zone value. The type can be changed, but this should be done carefully as it affects how the zone is used. Uses CASL authorization to verify that the user has update access to the athlete.',
   })
   @ApiParam({
     name: 'trainingZoneId',
@@ -398,7 +398,7 @@ export class TrainingZoneController {
   @ApiOperation({
     summary: 'Delete a training zone',
     description:
-      'Permanently deletes a training zone and all its associated values. Only the zone owner (athlete or their coach) can delete it. Uses CASL authorization to verify that the user has update access to the athlete. This operation cannot be undone.',
+      'Permanently deletes a training zone and all its associated values. Only a coach with access to the athlete can delete it. Uses CASL authorization to verify that the user has update access to the athlete. This operation cannot be undone.',
   })
   @ApiParam({
     name: 'trainingZoneId',

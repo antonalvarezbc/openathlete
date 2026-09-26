@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+.private/
+
+# Per-athlete authenticated sessions
+accounts/

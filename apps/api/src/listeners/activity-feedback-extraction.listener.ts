@@ -3,12 +3,15 @@ import { openai } from '@ai-sdk/openai';
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 
-import { Prisma } from '@openathlete/database';
+import { FeatureName } from '@openathlete/shared';
 
 import { ActivityFeedbackCompletedEvent } from 'src/events';
 import { extractInjuryAgent, extractRpeAgent } from 'src/mastra/agents';
 import { CalendarWebSocketService } from 'src/modules/calendar/services/calendar-websocket.service';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
+import { FeatureAccessService } from 'src/modules/subscription/services/feature-access.service';
+
+import { feedbackEmbeddingUpsert } from './activity-feedback-embedding';
 
 @Injectable()
 export class ActivityFeedbackExtractionListener {
@@ -19,6 +22,7 @@ export class ActivityFeedbackExtractionListener {
   constructor(
     private readonly prisma: PrismaService,
     private readonly calendarWebSocketService: CalendarWebSocketService,
+    private readonly featureAccessService: FeatureAccessService,
   ) {}
 
   @OnEvent(ActivityFeedbackCompletedEvent.SLUG, { async: true })
@@ -55,6 +59,20 @@ export class ActivityFeedbackExtractionListener {
 
       const athleteId = activity.event.athleteId;
       const eventId = activity.event.eventId;
+
+      // Use the same opt-out and feature entitlement as feedback questions.
+      // Check before sending any athlete content to agents or the embedder.
+      const settings = await this.prisma.athleteSettings.findUnique({
+        where: { athleteId },
+      });
+      if (!settings?.requireFeedbackQuestions) return;
+      if (
+        !(await this.featureAccessService.canAccessFeatureForAthlete(
+          athleteId,
+          FeatureName.AI_RPE_QUESTIONS,
+        ))
+      )
+        return;
 
       // Collect all answers and comment
       const questions = activity.feedbackQuestions;
@@ -149,17 +167,22 @@ export class ActivityFeedbackExtractionListener {
       }, 'injury extraction');
 
       // Extract RPE with retry
-      const rpeResult = await this.retryWithBackoff(async () => {
-        const response = await extractRpeAgent.generate(feedbackText);
-        if (!response.text) {
-          throw new Error('Empty response from RPE extraction agent');
-        }
-        const jsonMatch = response.text.match(/\{[\s\S]*\}/);
-        const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : response.text) as {
-          extractedRpe?: number | null;
-        };
-        return parsed.extractedRpe ?? null;
-      }, 'RPE extraction');
+      const rpeResult =
+        activity.rpe == null
+          ? await this.retryWithBackoff(async () => {
+              const response = await extractRpeAgent.generate(feedbackText);
+              if (!response.text) {
+                throw new Error('Empty response from RPE extraction agent');
+              }
+              const jsonMatch = response.text.match(/\{[\s\S]*\}/);
+              const parsed = JSON.parse(
+                jsonMatch ? jsonMatch[0] : response.text,
+              ) as {
+                extractedRpe?: number | null;
+              };
+              return parsed.extractedRpe ?? null;
+            }, 'RPE extraction')
+          : null;
 
       // Create embeddings with retry
       const embedding = await this.retryWithBackoff(async () => {
@@ -199,17 +222,16 @@ export class ActivityFeedbackExtractionListener {
         );
       }, 'embedding creation');
 
-      if (!embedding || !Array.isArray(embedding)) {
-        this.logger.error(
-          `Invalid embedding format: ${JSON.stringify(embedding)}`,
-        );
-        throw new Error(
-          `Invalid embedding format: expected array, got ${typeof embedding}`,
-        );
-      }
+      // Validate vector dimensions and values before any writes.
+      const embeddingQuery = feedbackEmbeddingUpsert(
+        eventActivityId,
+        feedbackText,
+        embedding,
+      );
 
-      // Store everything in a transaction
-      await this.prisma.$transaction(async (tx) => {
+      // Store everything in a transaction; notify clients only after commit.
+      const rpeUpdated = await this.prisma.$transaction(async (tx) => {
+        let updated = false;
         // Store injuries
         if (injuries.length > 0) {
           for (const injury of injuries) {
@@ -246,42 +268,23 @@ export class ActivityFeedbackExtractionListener {
 
         // Update RPE if extracted
         if (rpeResult !== null && rpeResult >= 0 && rpeResult <= 1) {
-          await tx.eventActivity.update({
-            where: { eventActivityId: eventActivityId },
+          // A manual RPE may have arrived while the model was running.
+          const result = await tx.eventActivity.updateMany({
+            where: { eventActivityId, rpe: null },
             data: { rpe: rpeResult },
           });
-          this.logger.log(
-            `✓ Updated RPE to ${rpeResult} for activity ${eventActivityId}`,
-          );
-
-          // Notify calendar via WebSocket that activity was updated
-          this.calendarWebSocketService.notifyActivityProcessed(
-            eventId,
-            athleteId,
-          );
+          updated = result.count > 0;
         }
 
-        if (embedding && Array.isArray(embedding) && embedding.length > 0) {
-          const embeddingVector = `[${embedding.join(',')}]`;
-
-          await tx.$executeRaw(
-            Prisma.sql`
-            INSERT INTO activity_feedback_embedding (event_activity_id, text_content, embedding, created_at, updated_at)
-            VALUES (${eventActivityId}, ${feedbackText}, ${Prisma.raw(`${embeddingVector}::vector`)}, NOW(), NOW())
-            ON CONFLICT (event_activity_id) 
-            DO UPDATE SET 
-              text_content = EXCLUDED.text_content,
-              embedding = EXCLUDED.embedding,
-              updated_at = NOW()
-            `,
-          );
-          this.logger.log(`✓ Stored embedding for activity ${eventActivityId}`);
-        } else {
-          this.logger.warn(
-            `Skipping embedding storage for activity ${eventActivityId}: invalid embedding format`,
-          );
-        }
+        await tx.$executeRaw(embeddingQuery);
+        return updated;
       });
+      if (rpeUpdated) {
+        this.calendarWebSocketService.notifyActivityProcessed(
+          eventId,
+          athleteId,
+        );
+      }
 
       this.logger.log(
         `✓ Completed feedback extraction for activity ${eventActivityId}`,

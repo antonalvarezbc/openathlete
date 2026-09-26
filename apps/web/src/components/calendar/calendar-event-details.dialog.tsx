@@ -1,4 +1,5 @@
 import { useGetMyAthleteQuery } from '@/api/athlete';
+import { useUserRoles } from '@/contexts/auth';
 import { m } from '@/paraglide/messages';
 import { getConnectorProviderActivityLink } from '@/utils/connector-provider';
 import {
@@ -30,6 +31,7 @@ export function CalendarEventDetailsDialog({
   event,
   onEditEvent,
 }: P) {
+  const roles = useUserRoles();
   const { athleteId } = useCalendarContext();
   const { data: athlete } = useGetMyAthleteQuery();
 
@@ -54,6 +56,11 @@ export function CalendarEventDetailsDialog({
                   {eventTypeLabelMap[event.type]}
                 </Badge>
               )}
+              {event?.type === EVENT_TYPE.ACTIVITY &&
+                !event.provider &&
+                event.externalId?.startsWith('fit-manual:') && (
+                  <Badge variant="outline">{m.fit_import_source()}</Badge>
+                )}
               {event &&
                 event.type === EVENT_TYPE.ACTIVITY &&
                 event.externalId &&
@@ -81,14 +88,16 @@ export function CalendarEventDetailsDialog({
                 )}
             </div>
             <div className="flex items-center gap-2 md:pr-4 md:-translate-y-4 w-full md:w-auto mt-2 md:mt-0">
-              <Button
-                onClick={onEditEvent}
-                variant="outline"
-                size="sm"
-                className="w-full md:w-auto text-xs md:text-sm"
-              >
-                {m.edit()}
-              </Button>
+              {(roles?.includes('COACH') || event?.type === 'ACTIVITY') && (
+                <Button
+                  onClick={onEditEvent}
+                  variant="outline"
+                  size="sm"
+                  className="w-full md:w-auto text-xs md:text-sm"
+                >
+                  {m.edit()}
+                </Button>
+              )}
             </div>
           </DialogTitle>
         </DialogHeader>

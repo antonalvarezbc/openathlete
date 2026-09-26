@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { SEOPlanData, seoPlanDataSchema } from '@openathlete/shared';
+import { SEOPlanData, trainingPlanImportSchema } from '@openathlete/shared';
 
 import { PrismaService } from '../prisma/services/prisma.service';
 
@@ -14,7 +14,7 @@ export class SeoPlanService {
 
   async createTemporaryPlan(planData: unknown): Promise<{ token: string }> {
     // Validate plan data
-    const validationResult = seoPlanDataSchema.safeParse(planData);
+    const validationResult = trainingPlanImportSchema.safeParse(planData);
     if (!validationResult.success) {
       throw new BadRequestException(
         `Invalid plan data: ${validationResult.error.message}`,
@@ -57,7 +57,7 @@ export class SeoPlanService {
     }
 
     // Validate and return plan data
-    const validationResult = seoPlanDataSchema.safeParse(
+    const validationResult = trainingPlanImportSchema.safeParse(
       temporaryPlan.planData,
     );
     if (!validationResult.success) {
@@ -65,12 +65,5 @@ export class SeoPlanService {
     }
 
     return validationResult.data;
-  }
-
-  async markAsImported(token: string): Promise<void> {
-    await this.prisma.temporaryTrainingPlan.update({
-      where: { id: token },
-      data: { importedAt: new Date() },
-    });
   }
 }

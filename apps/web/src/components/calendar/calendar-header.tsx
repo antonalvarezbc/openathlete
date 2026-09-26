@@ -1,4 +1,5 @@
 import { useSidebar } from '@/components/ui/sidebar';
+import { useUserRoles } from '@/contexts/auth';
 import { useAthleteInfo } from '@/hooks/use-athlete-info';
 import { m } from '@/paraglide/messages';
 import { getLocale } from '@/paraglide/runtime';
@@ -22,6 +23,7 @@ import { useCalendarContext } from './hooks/use-calendar-context';
 import { COLORED_BY, coloredByLabelMap } from './types/filter';
 
 export function CalendarHeader() {
+  const roles = useUserRoles();
   const {
     nextMonth,
     prevMonth,
@@ -100,14 +102,16 @@ export function CalendarHeader() {
       <div className="flex flex-col md:flex-row gap-2">
         {/* Filters row */}
         <div className="flex gap-2">
-          <Button
-            variant={open ? 'default' : 'outline'}
-            onClick={handleTemplateLibraryToggle}
-            className="hidden md:flex items-center gap-2"
-          >
-            <BookOpen className="h-4 w-4" />
-            {m.template_library()}
-          </Button>
+          {roles?.includes('COACH') && (
+            <Button
+              variant={open ? 'default' : 'outline'}
+              onClick={handleTemplateLibraryToggle}
+              className="hidden md:flex items-center gap-2"
+            >
+              <BookOpen className="h-4 w-4" />
+              {m.template_library()}
+            </Button>
+          )}
           <Select
             value={coloredBy || ''}
             onValueChange={(c) => {

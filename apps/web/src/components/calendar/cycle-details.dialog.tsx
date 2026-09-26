@@ -1,4 +1,5 @@
 import { useDeleteCycleMutation } from '@/api/cycle';
+import { useUserRoles } from '@/contexts/auth';
 import { m } from '@/paraglide/messages';
 import { format } from 'date-fns';
 import { Calendar, Trash2 } from 'lucide-react';
@@ -20,6 +21,7 @@ interface P {
 }
 
 export function CycleDetailsDialog({ open, onClose, cycle, onEditCycle }: P) {
+  const roles = useUserRoles();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const deleteCycleMutation = useDeleteCycleMutation({
@@ -55,22 +57,24 @@ export function CycleDetailsDialog({ open, onClose, cycle, onEditCycle }: P) {
               />
               <span className="text-xl font-semibold">{cycle.name}</span>
             </div>
-            <div className="flex items-center gap-2 pr-4 -translate-y-4">
-              <Button
-                onClick={() => onEditCycle(cycle.cycleId)}
-                variant="outline"
-                size="sm"
-              >
-                {m.edit()}
-              </Button>
-              <Button
-                onClick={() => setDeleteDialogOpen(true)}
-                variant="destructive"
-                size="sm"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </div>
+            {roles?.includes('COACH') && (
+              <div className="flex items-center gap-2 pr-4 -translate-y-4">
+                <Button
+                  onClick={() => onEditCycle(cycle.cycleId)}
+                  variant="outline"
+                  size="sm"
+                >
+                  {m.edit()}
+                </Button>
+                <Button
+                  onClick={() => setDeleteDialogOpen(true)}
+                  variant="destructive"
+                  size="sm"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
           </DialogTitle>
         </DialogHeader>
 

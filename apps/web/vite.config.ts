@@ -29,5 +29,7 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    // Local API CORS and OAuth callbacks expect this port.
+    strictPort: true,
   },
 });

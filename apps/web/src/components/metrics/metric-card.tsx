@@ -2,11 +2,12 @@ import { AthleteMetric } from '@/api/metric';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { m } from '@/paraglide/messages';
 import { metricTypeLabelMap } from '@/utils/label-map/core/metric-type.label-map';
+import { getMetricUnit } from '@/utils/metric-unit';
 import { cn } from '@/utils/shadcn';
 import { format } from 'date-fns';
 import { TrendingDown, TrendingUp } from 'lucide-react';
 
-import { METRIC_TYPE, metricUnitMap } from '@openathlete/shared';
+import { METRIC_TYPE } from '@openathlete/shared';
 
 interface MetricCardProps {
   metric: AthleteMetric | null;
@@ -24,7 +25,7 @@ export function MetricCard({
   className,
 }: MetricCardProps) {
   const label = metricTypeLabelMap[type];
-  const unit = metricUnitMap[type];
+  const unit = getMetricUnit(type);
 
   const trend =
     metric && previousValue !== undefined
@@ -49,7 +50,8 @@ export function MetricCard({
         {metric ? (
           <>
             <div className="text-2xl font-bold">
-              {metric.value} <span className="text-sm font-normal">{unit}</span>
+              {Number(metric.value.toFixed(2))}{' '}
+              <span className="text-sm font-normal">{unit}</span>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {format(new Date(metric.date), 'PPP')}

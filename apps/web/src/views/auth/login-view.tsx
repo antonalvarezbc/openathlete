@@ -8,8 +8,10 @@ import { getPath } from '@/routes/paths';
 import { cn } from '@/utils/shadcn';
 import { OAuthButtons } from '@/views/auth/oauth-buttons';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { isAxiosError } from 'axios';
+import { Eye, EyeOff } from 'lucide-react';
 import { usePostHog } from 'posthog-js/react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import z from 'zod';
@@ -24,6 +26,8 @@ export function LoginView({ className }: React.ComponentProps<'form'>) {
   const [searchParams] = useSearchParams();
   const planToken = searchParams.get('planToken');
   const posthog = usePostHog();
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Store planToken in sessionStorage if present
   useEffect(() => {
@@ -33,6 +37,13 @@ export function LoginView({ className }: React.ComponentProps<'form'>) {
   }, [planToken]);
 
   const loginMutation = useLoginMutation({
+    onError: (error) => {
+      setLoginError(
+        isAxiosError(error) && error.response?.status === 401
+          ? m.login_invalid_credentials()
+          : m.login_request_failed(),
+      );
+    },
     onSuccess: async () => {
       posthog?.capture('user_logged_in');
       await initialize();
@@ -46,7 +57,10 @@ export function LoginView({ className }: React.ComponentProps<'form'>) {
 
   const { handleSubmit } = methods;
 
-  const onSubmit = handleSubmit(async (data) => loginMutation.mutate(data));
+  const onSubmit = handleSubmit(async (data) => {
+    setLoginError(null);
+    loginMutation.mutate(data);
+  });
 
   return (
     <FormProvider
@@ -80,12 +94,45 @@ export function LoginView({ className }: React.ComponentProps<'form'>) {
               {m.forgot_your_password()}
             </Link>
           </div>
-          <RHFTextField name="password" type="password" required />
+          <div className="relative">
+            <RHFTextField
+              id="password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              className="h-11 pr-12"
+              required
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute right-0 top-0 size-11 text-muted-foreground"
+              aria-label={showPassword ? m.hide_password() : m.show_password()}
+              aria-controls="password"
+              aria-pressed={showPassword}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => setShowPassword((visible) => !visible)}
+            >
+              {showPassword ? (
+                <EyeOff className="size-5" aria-hidden="true" />
+              ) : (
+                <Eye className="size-5" aria-hidden="true" />
+              )}
+            </Button>
+          </div>
         </div>
+        {loginError && (
+          <p role="alert" className="text-sm text-destructive">
+            {loginError}
+          </p>
+        )}
         <Button
           type="submit"
           className="w-full"
-          onClick={onSubmit}
           isLoading={loginMutation.isPending}
         >
           {m.login()}

@@ -32,7 +32,7 @@ export function StatisticsGlobals({
           </span>
         </div>
         <div className="text-xl md:text-2xl font-bold">
-          {elevationGain}{' '}
+          {Number(elevationGain.toFixed(2))}{' '}
           <span className="text-base md:text-xl text-gray-500 dark:text-gray-400">
             {m.short_elevation_gain()}
           </span>

@@ -35,6 +35,7 @@ export type TrainingZone = PrismaTrainingZone;
 export type TrainingZoneValue = PrismaTrainingZoneValue;
 
 export interface User extends PrismaUser {
+  isAdmin?: boolean;
   roles: UserRole[];
   athlete?: Athlete;
 }

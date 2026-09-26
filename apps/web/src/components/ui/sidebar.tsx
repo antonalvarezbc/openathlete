@@ -18,6 +18,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { m } from '@/paraglide/messages';
 import { cn } from '@/utils/shadcn';
 import { Slot } from '@radix-ui/react-slot';
 import { VariantProps, cva } from 'class-variance-authority';
@@ -207,19 +208,28 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className="bg-sidebar text-sidebar-foreground w-(--sidebar-width) p-0 [&>button]:hidden border-r shadow-xl select-none"
+          className="bg-sidebar text-sidebar-foreground w-(--sidebar-width) max-w-[calc(100vw-1rem)] h-dvh p-0 [&>button]:hidden border-r shadow-xl select-none"
           style={
             {
               '--sidebar-width': SIDEBAR_WIDTH_MOBILE,
             } as React.CSSProperties
           }
           side={side}
+          onCloseAutoFocus={(event) => {
+            const trigger = document.querySelector<HTMLButtonElement>(
+              '[data-mobile-menu-trigger]',
+            );
+            if (trigger) {
+              event.preventDefault();
+              trigger.focus();
+            }
+          }}
         >
           <SheetHeader className="sr-only">
-            <SheetTitle>Sidebar</SheetTitle>
-            <SheetDescription>Displays the mobile sidebar.</SheetDescription>
+            <SheetTitle>{m.ui_sidebar()} </SheetTitle>
+            <SheetDescription>{m.ui_sidebar_description()} </SheetDescription>
           </SheetHeader>
-          <div className="flex h-full w-full flex-col overflow-hidden select-none">
+          <div className="flex h-full w-full flex-col overflow-hidden select-none pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
             {children}
           </div>
         </SheetContent>
@@ -293,7 +303,7 @@ function SidebarTrigger({
       {...props}
     >
       <PanelLeftIcon />
-      <span className="sr-only">Toggle Sidebar</span>
+      <span className="sr-only">{m.ui_toggle_sidebar()} </span>
     </Button>
   );
 }
@@ -305,10 +315,10 @@ function SidebarRail({ className, ...props }: React.ComponentProps<'button'>) {
     <button
       data-sidebar="rail"
       data-slot="sidebar-rail"
-      aria-label="Toggle Sidebar"
+      aria-label={m.ui_toggle_sidebar()}
       tabIndex={-1}
       onClick={toggleSidebar}
-      title="Toggle Sidebar"
+      title={m.ui_toggle_sidebar()}
       className={cn(
         'hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] sm:flex',
         'in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize',

@@ -8,8 +8,10 @@ import { ApiEnvSchemaType } from '@openathlete/shared';
 import { PrismaService } from '../prisma/services/prisma.service';
 import { SubscriptionModule } from '../subscription';
 import { AuthController, UserController } from './controllers';
+import { AccountAdministrationController } from './controllers/account-administration.controller';
 import { UserTypeGuard } from './guards';
 import { AuthService, CaslAbilityFactory, UserService } from './services';
+import { AccountAdministrationService } from './services/account-administration.service';
 import { AthleteInvitationService } from './services/athlete-invitation.service';
 import { CoachInvitationService } from './services/coach-invitation.service';
 import { FirebaseAuthService } from './services/firebase-auth.service';
@@ -28,8 +30,13 @@ import { JwtStrategy } from './strategies';
     }),
     forwardRef(() => SubscriptionModule),
   ],
-  controllers: [AuthController, UserController],
+  controllers: [
+    AuthController,
+    UserController,
+    AccountAdministrationController,
+  ],
   providers: [
+    AccountAdministrationService,
     AuthService,
     FirebaseAuthService,
     UserService,

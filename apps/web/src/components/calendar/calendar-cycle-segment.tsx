@@ -20,7 +20,7 @@ interface P {
 }
 
 export function CalendarCycleSegment({ segment }: P) {
-  const { cycleResize, setCycleResize, viewCycle, editCycle } =
+  const { cycleResize, setCycleResize, viewCycle, editCycle, allowCreate } =
     useCalendarContext();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
@@ -111,7 +111,7 @@ export function CalendarCycleSegment({ segment }: P) {
           }}
         >
           {/* Left resize handle */}
-          {segment.isStart && (
+          {allowCreate && segment.isStart && (
             <div
               className={cn(
                 'absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize z-10',
@@ -131,7 +131,7 @@ export function CalendarCycleSegment({ segment }: P) {
           )}
 
           {/* Right resize handle */}
-          {segment.isEnd && (
+          {allowCreate && segment.isEnd && (
             <div
               className={cn(
                 'absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize z-10',
@@ -144,26 +144,28 @@ export function CalendarCycleSegment({ segment }: P) {
           )}
         </div>
       </ContextMenuTrigger>
-      <ContextMenuContent>
-        <ContextMenuItem
-          onClick={(e) => {
-            e.stopPropagation();
-            editCycle(segment.cycle.cycleId);
-          }}
-        >
-          <Edit2 className="w-4 h-4 mr-2" />
-          {m.edit()}
-        </ContextMenuItem>
-        <ContextMenuItem
-          onClick={(e) => {
-            e.stopPropagation();
-            setDeleteDialogOpen(true);
-          }}
-        >
-          <Trash2 className="w-4 h-4 mr-2" />
-          {m.delete_()}
-        </ContextMenuItem>
-      </ContextMenuContent>
+      {allowCreate && (
+        <ContextMenuContent>
+          <ContextMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              editCycle(segment.cycle.cycleId);
+            }}
+          >
+            <Edit2 className="w-4 h-4 mr-2" />
+            {m.edit()}
+          </ContextMenuItem>
+          <ContextMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteDialogOpen(true);
+            }}
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            {m.delete_()}
+          </ContextMenuItem>
+        </ContextMenuContent>
+      )}
 
       <ConfirmAction
         open={deleteDialogOpen}

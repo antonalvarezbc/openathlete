@@ -8,7 +8,14 @@ import {
 import { ConfirmAction } from '@/components/confirm-action';
 import { InviteAthleteDialog } from '@/components/invite-athlete-dialog/invite-athlete.dialog';
 import { PaywallDialog } from '@/components/paywall';
+import { TrainingZoneEditor } from '@/components/training-zone-editor';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { SkeletonTableRow } from '@/components/ui/skeleton';
 import {
   Table,
@@ -25,12 +32,14 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { ManualGarminCard } from './manual-garmin-card';
 import { SettingsSection } from './settings-section';
 
 export function AthletesTab() {
   const { data: athletes, isPending: isLoadingAthletes } =
     useGetMyCoachedAthletesQuery();
   const nav = useNavigate();
+  const [zonesAthleteId, setZonesAthleteId] = useState<number | null>(null);
   const { data: sentInvitations, isLoading: sentInvitationsLoading } =
     useGetSentAthleteInvitationsQuery({ enabled: true });
   const [deleteAthleteDialog, setDeleteAthleteDialog] = useState<number | null>(
@@ -92,13 +101,14 @@ export function AthletesTab() {
             <TableRow>
               <TableHead>{m.name()}</TableHead>
               <TableHead>{m.email()}</TableHead>
+              <TableHead>{m.garmin_manual_title()}</TableHead>
               <TableHead className="text-right">{m.actions()}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoadingAthletes
               ? Array.from({ length: 3 }).map((_, i) => (
-                  <SkeletonTableRow key={i} colCount={3} />
+                  <SkeletonTableRow key={i} colCount={4} />
                 ))
               : athletes?.map((athlete) => (
                   <TableRow key={athlete.athleteId}>
@@ -106,8 +116,18 @@ export function AthletesTab() {
                       {athlete.user?.firstName} {athlete.user?.lastName}
                     </TableCell>
                     <TableCell>{athlete.user?.email}</TableCell>
+                    <TableCell className="min-w-64 whitespace-normal">
+                      <ManualGarminCard athleteId={athlete.athleteId} compact />
+                    </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setZonesAthleteId(athlete.athleteId)}
+                        >
+                          {m.edit_zones()}
+                        </Button>
                         <Button
                           variant="link"
                           size="sm"
@@ -195,6 +215,32 @@ export function AthletesTab() {
         </SettingsSection>
       ) : null}
 
+      <Dialog
+        open={zonesAthleteId !== null}
+        onOpenChange={(open) => {
+          if (!open) setZonesAthleteId(null);
+        }}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {m.training_zones()} ·{' '}
+              {
+                athletes?.find(
+                  (athlete) => athlete.athleteId === zonesAthleteId,
+                )?.user?.firstName
+              }
+            </DialogTitle>
+          </DialogHeader>
+          {zonesAthleteId !== null && (
+            <TrainingZoneEditor
+              key={zonesAthleteId}
+              athleteId={zonesAthleteId}
+              showHeading={false}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
       <InviteAthleteDialog
         open={inviteAthleteDialog}
         onClose={() => setInviteAthleteDialog(false)}

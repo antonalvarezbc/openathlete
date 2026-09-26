@@ -33,11 +33,13 @@ import {
 } from '@openathlete/shared';
 
 import { JwtUser, UserTypeGuard } from 'src/modules/auth';
+import { UserTypes } from 'src/modules/auth/decorators';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
 
 import { EventTemplateService } from '../services/event-template.service';
 
 @ApiTags('Event Template')
+@UserTypes(['COACH'])
 @Controller('event-template')
 export class EventTemplateController {
   constructor(private eventTemplateService: EventTemplateService) {}

@@ -45,6 +45,7 @@ import {
   getProviderSyncCapabilities,
 } from '@openathlete/shared';
 
+import { ManualGarminCard } from './manual-garmin-card';
 import { SettingsSection } from './settings-section';
 
 const SUPPORTED_PROVIDERS: ConnectorProvider[] = [
@@ -492,6 +493,8 @@ export function ConnectorsTab() {
               })}
         </div>
       </SettingsSection>
+
+      <ManualGarminCard configure />
 
       {icalSecret && (
         <SettingsSection

@@ -11,6 +11,8 @@ import { GarminAdapter } from './adapters/garmin.adapter';
 import { SuuntoAdapter } from './adapters/suunto.adapter';
 import { ProviderOAuthController } from './controllers/provider-oauth.controller';
 import { ProviderExportService } from './export.service';
+import { ManualGarminController } from './manual-garmin/manual-garmin.controller';
+import { ManualGarminService } from './manual-garmin/manual-garmin.service';
 import {
   CorosProviderService,
   GarminProviderService,
@@ -28,9 +30,10 @@ import { ProviderExportScheduler } from './scheduler.service';
     EventEmitterModule,
     forwardRef(() => QueueModule),
   ],
-  controllers: [ProviderOAuthController],
+  controllers: [ManualGarminController, ProviderOAuthController],
   providers: [
     PrismaService,
+    ManualGarminService,
     GarminAdapter,
     SuuntoAdapter,
     CorosAdapter,

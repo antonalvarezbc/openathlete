@@ -32,6 +32,7 @@ export const paths: Paths = {
     root: ROOTS.DASHBOARD,
     onboarding: `${ROOTS.DASHBOARD}/onboarding`,
     coach: `${ROOTS.DASHBOARD}/coach`,
+    planning: `${ROOTS.DASHBOARD}/planning`,
     calendar: {
       root: `${ROOTS.DASHBOARD}/calendar`,
       athleteId: `${ROOTS.DASHBOARD}/calendar/:athleteId`,

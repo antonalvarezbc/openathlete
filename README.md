@@ -457,3 +457,19 @@ Special thanks to these amazing projects which help power OpenAthlete:
 <p align="center">
   Made with ❤️ by athletes, for athletes
 </p>
+
+### Self-hosted mode without billing
+
+Set `SELF_HOSTED=true` in `apps/api/.env` for local development, or in the
+Compose environment when running containers. The default is `false`, preserving
+the subscription-based behavior. Restart the API after changing this setting.
+
+Self-hosted mode does not initialize Stripe, grants AI features to authenticated
+users, removes subscription athlete limits, and hides billing settings. JWT
+authentication and athlete/coach authorization still apply. Billing operations
+are unavailable; existing subscription records are not upgraded or deleted.
+
+Supply your own `OPENAI_API_KEY` (and `GOOGLE_GENERATIVE_AI_API_KEY` when using
+the default feedback agent). Provider usage is billed separately. This setting
+does not change prompts, models, workout validation, or the review-before-save
+flow for generated sessions. It is a server setting, not a `VITE_` variable.

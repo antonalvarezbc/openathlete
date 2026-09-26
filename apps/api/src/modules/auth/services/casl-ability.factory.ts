@@ -51,18 +51,27 @@ export class CaslAbilityFactory {
     can('manage', 'User', { userId: user.userId });
     can('manage', 'Athlete', { userId: user.userId });
 
-    can('manage', 'Event', { templates: { some: { userId: user.userId } } });
+    if (user.roles?.includes('COACH'))
+      can('manage', 'Event', { templates: { some: { userId: user.userId } } });
 
-    if (user.athlete) {
-      can('manage', 'Event', { athleteId: user.athlete.athleteId });
-      can('manage', 'Cycle', { athleteId: user.athlete.athleteId });
+    if (user.athlete && user.roles?.includes('ATHLETE')) {
+      can('read', 'Event', { athleteId: user.athlete.athleteId });
+      can('manage', 'Event', {
+        athleteId: user.athlete.athleteId,
+        type: 'ACTIVITY',
+      });
+      if (user.roles.includes('COACH'))
+        can('manage', 'Event', { athleteId: user.athlete.athleteId });
+      can(user.roles.includes('COACH') ? 'manage' : 'read', 'Cycle', {
+        athleteId: user.athlete.athleteId,
+      });
       can('manage', 'AthleteMetric', { athleteId: user.athlete.athleteId });
-      can('manage', 'Workout', {
+      can(user.roles.includes('COACH') ? 'manage' : 'read', 'Workout', {
         eventTraining: { event: { athleteId: user.athlete.athleteId } },
       });
     }
 
-    if (user.coachAthletes) {
+    if (user.roles?.includes('COACH') && user.coachAthletes) {
       user.coachAthletes.forEach((coachAthlete) => {
         can('manage', 'Athlete', { athleteId: coachAthlete.athleteId });
         can('manage', 'AthleteMetric', {

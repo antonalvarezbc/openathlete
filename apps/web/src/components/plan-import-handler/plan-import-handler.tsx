@@ -1,4 +1,3 @@
-import { useGetTemporaryPlan } from '@/api/seo-plan';
 import { ImportPlanDialog } from '@/components/import-plan-dialog';
 import { useAuthContext } from '@/contexts/auth';
 import { useEffect, useState } from 'react';
@@ -15,6 +14,15 @@ export function PlanImportHandler() {
   // Check for pending plan token when authenticated
   useEffect(() => {
     if (!authenticated) {
+      return;
+    }
+
+    if (searchParams.get('importPlan') === 'json') {
+      setPlanToken(null);
+      setDialogOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete('importPlan');
+      setSearchParams(next, { replace: true });
       return;
     }
 
@@ -40,8 +48,6 @@ export function PlanImportHandler() {
     }
   }, [authenticated, searchParams, setSearchParams]);
 
-  const { data: planData } = useGetTemporaryPlan(planToken);
-
   const handleClose = () => {
     setDialogOpen(false);
     // Clear token after a delay to allow dialog to close
@@ -50,7 +56,7 @@ export function PlanImportHandler() {
     }, 300);
   };
 
-  if (!planToken || !dialogOpen) {
+  if (!dialogOpen) {
     return null;
   }
 
@@ -58,8 +64,7 @@ export function PlanImportHandler() {
     <ImportPlanDialog
       open={dialogOpen}
       onClose={handleClose}
-      planToken={planToken}
-      planName={planData?.plan.name}
+      planToken={planToken ?? undefined}
     />
   );
 }

@@ -52,7 +52,7 @@ type P =
     };
 
 export function CreateEventDialog({ open, onClose, ...rest }: P) {
-  const { athleteId } = useCalendarContext();
+  const { athleteId, trainingPlanId } = useCalendarContext();
   const edit = 'event' in rest;
   const create = 'type' in rest && 'date' in rest;
 
@@ -113,6 +113,7 @@ export function CreateEventDialog({ open, onClose, ...rest }: P) {
     athleteId ?? 0,
     workoutSteps,
     onClose,
+    trainingPlanId,
   );
 
   // Watch form values for UI
@@ -311,7 +312,7 @@ export function CreateEventDialog({ open, onClose, ...rest }: P) {
                   <span className="hidden sm:inline">
                     {isCreateMode ? m.create_with_ai() : m.modify_with_ai()}
                   </span>
-                  <span className="sm:hidden">AI</span>
+                  <span className="sm:hidden">{m.ui_ai()} </span>
                 </Button>
               </div>
             )}
