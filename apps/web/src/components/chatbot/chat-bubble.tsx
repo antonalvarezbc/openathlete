@@ -51,7 +51,8 @@ export function ChatBubble() {
       onTouchStart={handleTouchStart}
       style={{
         position: 'fixed',
-        zIndex: 100,
+        // Above navigation (30), below the chat (41/42) and dialogs (50).
+        zIndex: 40,
         cursor: isDragging ? 'grabbing' : 'grab',
         // Always use springs for smooth transitions
         // During drag, x and y are updated directly and springs follow

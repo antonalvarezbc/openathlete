@@ -226,7 +226,8 @@ export function ChatWindow() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[101]"
+            // Keep the chat below Radix dialogs (50), which block outside clicks.
+            className="fixed inset-0 z-[41]"
             onClick={closeChat}
           />
           <motion.div
@@ -257,7 +258,7 @@ export function ChatWindow() {
               top: `${windowMargin}px`,
               width: `${chatWidth}px`,
               height: windowHeight,
-              zIndex: 102,
+              zIndex: 42,
             }}
             className="bg-background border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden"
           >
