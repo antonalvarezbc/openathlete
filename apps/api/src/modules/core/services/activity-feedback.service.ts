@@ -1,6 +1,8 @@
 import OpenAI, { Uploadable } from 'openai';
+import { z } from 'zod';
 
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -102,6 +104,10 @@ export class ActivityFeedbackService {
     questionId: number,
     answerText: string,
   ) {
+    const answer = z.string().trim().min(1).max(5000).safeParse(answerText);
+    if (!answer.success)
+      throw new BadRequestException('Invalid feedback answer');
+    answerText = answer.data;
     const ability = await this.abilities.getFor({ user });
 
     // Verify activity exists and get its event
@@ -181,7 +187,9 @@ export class ActivityFeedbackService {
       },
     });
 
-    const allAnswered = allQuestions.every((q) => q.answerText !== null);
+    const allAnswered = allQuestions.every((q) =>
+      Boolean(q.answerText?.trim()),
+    );
 
     if (allAnswered) {
       this.eventEmitter.emit(
@@ -313,11 +321,14 @@ export class ActivityFeedbackService {
     return { success: true };
   }
 
-  async transcribeAudio(file: {
-    buffer: Buffer;
-    mimetype: string;
-    originalname?: string;
-  }): Promise<{ text: string }> {
+  async transcribeAudio(
+    file: {
+      buffer: Buffer;
+      mimetype: string;
+      originalname?: string;
+    },
+    language?: 'es' | 'en' | 'fr' | 'it',
+  ): Promise<{ text: string }> {
     try {
       let fileForOpenAI: File | Buffer;
 
@@ -365,7 +376,7 @@ export class ActivityFeedbackService {
       const transcription = await this.openai.audio.transcriptions.create({
         file: fileForOpenAI as Uploadable,
         model: 'whisper-1',
-        language: 'fr',
+        ...(language ? { language } : {}),
       });
 
       return { text: transcription.text };

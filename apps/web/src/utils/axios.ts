@@ -55,6 +55,8 @@ export const routes = {
       }`,
     getActivityFeedbackQuestions: (eventId: Event['eventId']) =>
       `/event/${eventId}/activity/feedback-questions`,
+    generateFeedbackQuestions: (eventId: Event['eventId']) =>
+      `/event/${eventId}/activity/feedback-questions/generate`,
     submitQuestionAnswer: (eventId: Event['eventId'], questionId: number) =>
       `/event/${eventId}/activity/feedback-questions/${questionId}/answer`,
     skipFeedback: (eventId: Event['eventId']) =>

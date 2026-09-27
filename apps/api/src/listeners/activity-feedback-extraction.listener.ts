@@ -6,8 +6,6 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { FeatureName } from '@openathlete/shared';
 
 import { ActivityFeedbackCompletedEvent } from 'src/events';
-import { extractInjuryAgent, extractRpeAgent } from 'src/mastra/agents';
-import { CalendarWebSocketService } from 'src/modules/calendar/services/calendar-websocket.service';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 import { FeatureAccessService } from 'src/modules/subscription/services/feature-access.service';
 
@@ -21,7 +19,6 @@ export class ActivityFeedbackExtractionListener {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly calendarWebSocketService: CalendarWebSocketService,
     private readonly featureAccessService: FeatureAccessService,
   ) {}
 
@@ -58,7 +55,6 @@ export class ActivityFeedbackExtractionListener {
       }
 
       const athleteId = activity.event.athleteId;
-      const eventId = activity.event.eventId;
 
       // Use the same opt-out and feature entitlement as feedback questions.
       // Check before sending any athlete content to agents or the embedder.
@@ -76,8 +72,8 @@ export class ActivityFeedbackExtractionListener {
 
       // Collect all answers and comment
       const questions = activity.feedbackQuestions;
-      const allAnswered = questions.every(
-        (q: { answerText: string | null }) => q.answerText !== null,
+      const allAnswered = questions.every((q: { answerText: string | null }) =>
+        Boolean(q.answerText?.trim()),
       );
 
       // Only process if all questions are answered OR if RPE+comment are present
@@ -108,81 +104,6 @@ export class ActivityFeedbackExtractionListener {
         );
         return;
       }
-
-      // Fetch recent injury logs (last 2 weeks)
-      const twoWeeksAgo = new Date();
-      twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-
-      const recentInjuries = await this.prisma.athleteInjury.findMany({
-        where: {
-          athleteId: athleteId,
-          createdAt: {
-            gte: twoWeeksAgo,
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 20,
-      });
-
-      const recentInjuriesContext =
-        recentInjuries.length === 0
-          ? 'No recent injuries logged in the last 2 weeks.'
-          : recentInjuries
-              .map(
-                (inj: {
-                  location: string;
-                  painScore: number;
-                  status: string;
-                  createdAt: Date;
-                }) =>
-                  `- ${inj.location} (pain: ${inj.painScore.toFixed(2)}, status: ${inj.status}, date: ${inj.createdAt.toISOString().split('T')[0]})`,
-              )
-              .join('\n');
-
-      // Build context for injury extraction agent
-      const injuryContext = [
-        '=== ATHLETE FEEDBACK ===',
-        feedbackText,
-        '',
-        '=== RECENT INJURY LOGS (LAST 2 WEEKS) ===',
-        recentInjuriesContext,
-      ].join('\n');
-
-      // Extract injuries with retry
-      const injuries = await this.retryWithBackoff(async () => {
-        const response = await extractInjuryAgent.generate(injuryContext);
-        if (!response.text) {
-          throw new Error('Empty response from injury extraction agent');
-        }
-        const jsonMatch = response.text.match(/\{[\s\S]*\}/);
-        const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : response.text) as {
-          injuries?: Array<{
-            location: string;
-            painScore: number;
-            context: string;
-            status: string;
-          }>;
-        };
-        return parsed.injuries || [];
-      }, 'injury extraction');
-
-      // Extract RPE with retry
-      const rpeResult =
-        activity.rpe == null
-          ? await this.retryWithBackoff(async () => {
-              const response = await extractRpeAgent.generate(feedbackText);
-              if (!response.text) {
-                throw new Error('Empty response from RPE extraction agent');
-              }
-              const jsonMatch = response.text.match(/\{[\s\S]*\}/);
-              const parsed = JSON.parse(
-                jsonMatch ? jsonMatch[0] : response.text,
-              ) as {
-                extractedRpe?: number | null;
-              };
-              return parsed.extractedRpe ?? null;
-            }, 'RPE extraction')
-          : null;
 
       // Create embeddings with retry
       const embedding = await this.retryWithBackoff(async () => {
@@ -229,62 +150,15 @@ export class ActivityFeedbackExtractionListener {
         embedding,
       );
 
-      // Store everything in a transaction; notify clients only after commit.
-      const rpeUpdated = await this.prisma.$transaction(async (tx) => {
-        let updated = false;
-        // Store injuries
-        if (injuries.length > 0) {
-          for (const injury of injuries) {
-            // Validate status
-            const validStatuses = [
-              'WORSENING',
-              'IMPROVING',
-              'STABLE',
-              'RESOLVED',
-            ];
-            const status = validStatuses.includes(injury.status)
-              ? (injury.status as
-                  | 'WORSENING'
-                  | 'IMPROVING'
-                  | 'STABLE'
-                  | 'RESOLVED')
-              : 'STABLE';
-
-            await tx.athleteInjury.create({
-              data: {
-                athleteId: athleteId,
-                sourceActivityId: eventActivityId,
-                location: injury.location,
-                painScore: Math.max(0, Math.min(1, injury.painScore)),
-                context: injury.context,
-                status: status,
-              },
-            });
-          }
-          this.logger.log(
-            `✓ Stored ${injuries.length} injuries for activity ${eventActivityId}`,
-          );
-        }
-
-        // Update RPE if extracted
-        if (rpeResult !== null && rpeResult >= 0 && rpeResult <= 1) {
-          // A manual RPE may have arrived while the model was running.
-          const result = await tx.eventActivity.updateMany({
-            where: { eventActivityId, rpe: null },
-            data: { rpe: rpeResult },
-          });
-          updated = result.count > 0;
-        }
-
+      // Questionnaire answers remain the athlete's words. Do not infer or
+      // write an RPE or injury without an explicit review workflow.
+      await this.prisma.$transaction(async (tx) => {
+        const currentSettings = await tx.athleteSettings.findUnique({
+          where: { athleteId },
+        });
+        if (!currentSettings?.requireFeedbackQuestions) return;
         await tx.$executeRaw(embeddingQuery);
-        return updated;
       });
-      if (rpeUpdated) {
-        this.calendarWebSocketService.notifyActivityProcessed(
-          eventId,
-          athleteId,
-        );
-      }
 
       this.logger.log(
         `✓ Completed feedback extraction for activity ${eventActivityId}`,

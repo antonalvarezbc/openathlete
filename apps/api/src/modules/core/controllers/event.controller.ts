@@ -47,6 +47,7 @@ import { JwtUser, UserTypeGuard } from 'src/modules/auth';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
 
 import { EventService } from '../services';
+import { ActivityFeedbackGenerationService } from '../services/activity-feedback-generation.service';
 import { ActivityFeedbackService } from '../services/activity-feedback.service';
 
 @ApiTags('Event')
@@ -55,6 +56,7 @@ export class EventController {
   constructor(
     private eventService: EventService,
     private activityFeedbackService: ActivityFeedbackService,
+    private readonly feedbackGeneration: ActivityFeedbackGenerationService,
   ) {}
 
   @Get('ical')
@@ -656,6 +658,27 @@ export class EventController {
     @Param('eventId', ParseIntPipe) eventId: Event['eventId'],
   ) {
     return this.eventService.getEventNormalization(user, eventId);
+  }
+
+  @UseGuards(AuthGuard('jwt'), UserTypeGuard)
+  @ApiBearerAuth()
+  @Post(':eventId/activity/feedback-questions/generate')
+  @ApiOperation({
+    summary:
+      'Generate activity feedback questions on demand without replacing existing answers',
+  })
+  async generateActivityFeedbackQuestions(
+    @JwtUser() user: AuthUser,
+    @Param('eventId', ParseIntPipe) eventId: Event['eventId'],
+  ) {
+    const event = await this.eventService.getEventById(user, eventId);
+    if (event.type !== 'ACTIVITY' || !event.eventActivityId)
+      throw new NotFoundException('Activity not found');
+    await this.feedbackGeneration.generateForUser(user, event.eventActivityId);
+    return this.activityFeedbackService.getActivityFeedbackQuestions(
+      user,
+      event.eventActivityId,
+    );
   }
 
   @UseGuards(AuthGuard('jwt'), UserTypeGuard)

@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/ui/loader';
 import { API_BASE_URL } from '@/config';
 import { m } from '@/paraglide/messages';
+import { getLocale } from '@/paraglide/runtime';
 import { getAccessToken } from '@/utils/auth';
 import { routes } from '@/utils/axios';
 import { isAndroid, isCapacitor } from '@/utils/capacitor';
@@ -303,6 +304,7 @@ export function AudioRecorder({
 
     try {
       const formData = new FormData();
+      formData.append('language', getLocale());
       const isM4A = (
         audioBlob as Blob & { _isM4A?: boolean; _isAndroidFormat?: boolean }
       )._isM4A;

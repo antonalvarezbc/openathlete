@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { m } from '@/paraglide/messages';
 import { cn } from '@/utils/shadcn';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 interface P {
@@ -23,17 +23,14 @@ export function ActivityFeedbackFlow({
   onComplete,
   isEditMode = false,
 }: P) {
-  const initialAnswers = isEditMode
-    ? questions.reduce(
-        (acc, q) => {
-          if (q.answerText) {
-            acc[q.questionId] = q.answerText;
-          }
-          return acc;
-        },
-        {} as Record<number, string>,
-      )
-    : {};
+  const initialAnswers = Object.fromEntries(
+    questions.map((q) => [q.questionId, q.answerText ?? '']),
+  );
+  const firstStep = isEditMode
+    ? 1
+    : Math.max(1, questions.findIndex((q) => !q.answerText?.trim()) + 1);
+  const saving = useRef(false);
+  const [saveError, setSaveError] = useState(false);
 
   const [currentStep, setCurrentStep] = useState(0);
   const [answerMode, setAnswerMode] = useState<AnswerMode | null>(null);
@@ -45,7 +42,9 @@ export function ActivityFeedbackFlow({
   const submitMutation = useSubmitQuestionAnswerMutation(eventId);
 
   const handleNext = async (answerText: string) => {
-    if (!answerText.trim()) return;
+    if (!answerText.trim() || saving.current) return;
+    saving.current = true;
+    setSaveError(false);
 
     const currentQuestion = questions[currentStep - 1];
     const isLastQuestion = currentStep === questions.length;
@@ -57,6 +56,10 @@ export function ActivityFeedbackFlow({
       });
     } catch (error) {
       console.error('Failed to save answer:', error);
+      setSaveError(true);
+      return;
+    } finally {
+      saving.current = false;
     }
 
     if (isLastQuestion) {
@@ -80,7 +83,7 @@ export function ActivityFeedbackFlow({
             <Button
               onClick={() => {
                 setAnswerMode('free');
-                setCurrentStep(1);
+                setCurrentStep(firstStep);
               }}
               size="lg"
               variant="outline"
@@ -90,7 +93,7 @@ export function ActivityFeedbackFlow({
             <Button
               onClick={() => {
                 setAnswerMode('qcm');
-                setCurrentStep(1);
+                setCurrentStep(firstStep);
               }}
               size="lg"
               variant="outline"
@@ -122,11 +125,17 @@ export function ActivityFeedbackFlow({
             {currentQuestion.questionText}
           </h2>
 
+          {saveError && (
+            <p role="alert" className="text-sm text-destructive">
+              {m.feedback_answer_save_error()}
+            </p>
+          )}
           {isQcmMode && currentQuestion.qcmOptions ? (
             <div className="flex flex-col gap-3 w-full">
               {currentQuestion.qcmOptions.map((option, idx) => (
                 <Button
                   key={idx}
+                  disabled={submitMutation.isPending}
                   onClick={() => {
                     const newAnswers = {
                       ...answers,
@@ -163,6 +172,7 @@ export function ActivityFeedbackFlow({
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-center w-full">
                   <AudioRecorder
+                    disabled={submitMutation.isPending}
                     setIsRecording={setIsRecording}
                     setIsTranscribing={setIsTranscribing}
                     onTranscriptionComplete={(text) => {
@@ -189,7 +199,10 @@ export function ActivityFeedbackFlow({
                     }
                     placeholder={m.activity_feedback_free_text_recommended()}
                     className="min-h-[120px]"
-                    disabled={isRecording || isTranscribing}
+                    maxLength={5000}
+                    disabled={
+                      isRecording || isTranscribing || submitMutation.isPending
+                    }
                   />
                 </div>
               </div>
@@ -205,7 +218,12 @@ export function ActivityFeedbackFlow({
               <div className="flex gap-3 justify-end">
                 <Button
                   onClick={() => handleNext(currentAnswer)}
-                  disabled={!currentAnswer.trim()}
+                  disabled={
+                    !currentAnswer.trim() ||
+                    submitMutation.isPending ||
+                    isRecording ||
+                    isTranscribing
+                  }
                 >
                   {isLastQuestion
                     ? m.activity_feedback_submit()

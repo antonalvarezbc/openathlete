@@ -6,6 +6,7 @@ import { MessagesModule } from '../messages/messages.module';
 import { PrismaService } from '../prisma/services/prisma.service';
 import { ProvidersSyncModule } from '../providers-sync/providers-sync.module';
 import { QueueModule } from '../queue';
+import { SubscriptionModule } from '../subscription/subscription.module';
 import { EventController } from './controllers';
 import { ActivityFeedbackController } from './controllers/activity-feedback.controller';
 import { AthleteController } from './controllers/athlete.controller';
@@ -33,6 +34,7 @@ import {
   WorkoutService,
 } from './services';
 import { ActivityDetailService } from './services/activity-detail.service';
+import { ActivityFeedbackGenerationService } from './services/activity-feedback-generation.service';
 import { ActivityFeedbackService } from './services/activity-feedback.service';
 import { AthleteSettingsService } from './services/athlete-settings.service';
 import { AthleteService } from './services/athlete.service';
@@ -61,6 +63,7 @@ import { WeatherService } from './services/weather/weather.service';
 
 @Module({
   imports: [
+    SubscriptionModule,
     AuthModule,
     forwardRef(() => CalendarModule),
     forwardRef(() => MessagesModule),
@@ -88,6 +91,7 @@ import { WeatherService } from './services/weather/weather.service';
     CycleController,
   ],
   providers: [
+    ActivityFeedbackGenerationService,
     ManualFitImportGuard,
     ManualFitImportService,
     PlanWorkspaceService,
@@ -142,6 +146,7 @@ import { WeatherService } from './services/weather/weather.service';
     },
   ],
   exports: [
+    ActivityFeedbackGenerationService,
     EventService,
     ActivityPipelineService,
     ActivityDetailService,

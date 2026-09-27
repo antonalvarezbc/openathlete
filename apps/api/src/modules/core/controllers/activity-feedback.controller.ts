@@ -1,5 +1,8 @@
+import { z } from 'zod';
+
 import {
   BadRequestException,
+  Body,
   Controller,
   Post,
   UploadedFile,
@@ -53,13 +56,19 @@ export class ActivityFeedbackController {
   @ApiOperation({
     summary: 'Transcribe audio to text',
     description:
-      "Transcribes an audio file to text using OpenAI Whisper model. This endpoint is typically used to convert voice recordings of activity feedback into text format. The audio file is processed server-side using OpenAI's Whisper-1 model with French language detection. The transcription can then be used to fill in feedback answers or comments. Supports various audio formats (webm, mp4, ogg, wav, mpeg, mp3) with a maximum file size of 25MB.",
+      "Transcribes an audio file to text using OpenAI Whisper model. This endpoint is typically used to convert voice recordings of activity feedback into text format. The audio file is processed server-side using OpenAI's Whisper-1 model with the requested interface language or automatic language detection. The transcription can then be used to fill in feedback answers or comments. Supports various audio formats (webm, mp4, ogg, wav, mpeg, mp3) with a maximum file size of 25MB.",
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
+        language: {
+          type: 'string',
+          enum: ['es', 'en', 'fr', 'it'],
+          description:
+            'Optional language hint; omitted for automatic detection.',
+        },
         audio: {
           type: 'string',
           format: 'binary',
@@ -125,7 +134,16 @@ export class ActivityFeedbackController {
       },
     },
   })
-  async transcribeAudio(@UploadedFile() file: MulterFile) {
+  async transcribeAudio(
+    @UploadedFile() file: MulterFile,
+    @Body('language') language?: string,
+  ) {
+    const parsedLanguage = z
+      .enum(['es', 'en', 'fr', 'it'])
+      .optional()
+      .safeParse(language);
+    if (!parsedLanguage.success)
+      throw new BadRequestException('Invalid transcription language');
     if (!file) {
       throw new BadRequestException('No audio file provided');
     }
@@ -151,6 +169,9 @@ export class ActivityFeedbackController {
       );
     }
 
-    return this.activityFeedbackService.transcribeAudio(file);
+    return this.activityFeedbackService.transcribeAudio(
+      file,
+      parsedLanguage.data,
+    );
   }
 }

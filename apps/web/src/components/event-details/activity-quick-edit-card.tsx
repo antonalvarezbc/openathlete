@@ -19,6 +19,8 @@ import { z } from 'zod';
 
 import { ActivityEvent, FeatureName } from '@openathlete/shared';
 
+import { FeedbackQuestionnaireStatus } from '../activity-feedback/feedback-questionnaire-status';
+
 const quickEditSchema = z.object({
   description: z.string().optional(),
   rpe: z.number().min(0).max(1).optional().nullable(),
@@ -39,10 +41,12 @@ export function ActivityQuickEditCard({
   onEditFeedback,
   onReopenFeedback,
 }: P) {
-  const { data: feedbackData } = useGetActivityFeedbackQuestionsQuery(
-    event.eventId,
-    isMyActivity,
-  );
+  const {
+    data: feedbackData,
+    isPending: feedbackPending,
+    isError: feedbackError,
+    refetch: refetchFeedback,
+  } = useGetActivityFeedbackQuestionsQuery(event.eventId, isMyActivity);
   const unskipMutation = useUnskipFeedbackMutation(event.eventId);
   const { data: featureAccess } = useAthleteFeatureAccess(
     event.athleteId ?? undefined,
@@ -53,7 +57,8 @@ export function ActivityQuickEditCard({
   const questions = feedbackData?.questions ?? [];
   const feedbackSkipped = feedbackData?.feedbackSkipped ?? false;
   const allAnswered =
-    questions.length > 0 && questions.every((q) => q.answerText !== null);
+    questions.length > 0 &&
+    questions.every((q) => Boolean(q.answerText?.trim()));
   const hasQuestions = questions.length > 0;
 
   // Check if athlete or coach has access and no questions were generated
@@ -126,13 +131,31 @@ export function ActivityQuickEditCard({
               </AlertDescription>
             </Alert>
           )}
+          {isMyActivity && (
+            <div className="mb-4">
+              {feedbackPending ? (
+                <p>{m.loading_feedback_questions()}</p>
+              ) : feedbackError ? (
+                <div role="alert">
+                  <p>{m.feedback_load_error()}</p>
+                  <Button variant="outline" onClick={() => refetchFeedback()}>
+                    {m.coach_load_retry()}
+                  </Button>
+                </div>
+              ) : (
+                <FeedbackQuestionnaireStatus
+                  eventId={event.eventId}
+                  questions={questions}
+                  skipped={feedbackSkipped}
+                  canGenerate={!showPaywallAlert}
+                />
+              )}
+            </div>
+          )}
           {isMyActivity && hasQuestions && (
             <div className="mb-4 pb-4 border-b">
               {feedbackSkipped ? (
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                  <p className="text-sm text-muted-foreground">
-                    {m.activity_feedback_skipped()}
-                  </p>
                   <Button
                     onClick={handleReopenFeedback}
                     variant="outline"
@@ -145,9 +168,6 @@ export function ActivityQuickEditCard({
                 </div>
               ) : allAnswered ? (
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                  <p className="text-sm text-muted-foreground">
-                    {m.activity_feedback_completed_via_questions()}
-                  </p>
                   <Button
                     onClick={handleEditFeedback}
                     variant="outline"

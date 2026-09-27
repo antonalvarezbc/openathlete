@@ -28,6 +28,18 @@ export class ActivityFeedbackAPI {
     return res.data;
   }
 
+  static async generateQuestions(
+    eventId: Event['eventId'],
+  ): Promise<ActivityFeedbackResponse> {
+    return (
+      await client.post(
+        routes.event.generateFeedbackQuestions(eventId),
+        undefined,
+        { timeout: 150_000 },
+      )
+    ).data;
+  }
+
   static async submitAnswer(
     eventId: Event['eventId'],
     questionId: number,
