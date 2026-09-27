@@ -1,3 +1,5 @@
+import { ZodValidationPipe } from 'nestjs-zod';
+
 import {
   BadRequestException,
   Body,
@@ -21,10 +23,16 @@ import {
 } from '@nestjs/swagger';
 
 import { Athlete, TrainingLoadCalculationType } from '@openathlete/database';
-import { DailyTrainingLoad, TrainingLoadMetrics } from '@openathlete/shared';
+import {
+  DailyTrainingLoad,
+  RecalculateAllLoadsDto,
+  TrainingLoadMetrics,
+  recalculateAllLoadsDtoSchema,
+} from '@openathlete/shared';
 
-import { JwtUser, UserTypeGuard } from 'src/modules/auth';
+import { JwtUser } from 'src/modules/auth/decorators/user.decorator';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
+import { UserTypeGuard } from 'src/modules/auth/guards/user-type.guard';
 
 import { TrainingLoadService } from '../services/training-load.service';
 
@@ -692,13 +700,19 @@ export class TrainingLoadController {
   @ApiOperation({
     summary: 'Recalculate all training loads for the Athlete',
     description:
-      'Recalculates training loads for all activities of the authenticated Athlete using the specified calculation method. Useful when HR metrics (HR_MAX, HR_REST) are updated or for bulk recalculation. Processes all activities and returns the count of successfully processed entries and errors. Errors are logged but do not stop the process.',
+      'Recalculates stored activity loads for the authenticated athlete or an explicitly selected athlete linked to the requesting coach. Uses HR_MAX first, then applicable heart-rate zones when the metric is absent. No provider calls are made. Useful when HR metrics (HR_MAX, HR_REST) are updated or for bulk recalculation. Processes all activities and returns the count of successfully processed entries and errors. Errors are logged but do not stop the process.',
   })
   @ApiBody({
     description: 'Calculation type',
     schema: {
       type: 'object',
       properties: {
+        athleteId: {
+          type: 'integer',
+          minimum: 1,
+          description:
+            'Optional athlete ID; another athlete requires a linked coach.',
+        },
         calculationType: {
           type: 'string',
           enum: Object.values(TrainingLoadCalculationType),
@@ -740,8 +754,13 @@ export class TrainingLoadController {
   })
   async recalculateAllLoads(
     @JwtUser() user: AuthUser,
-    @Body('calculationType') calculationType: TrainingLoadCalculationType,
+    @Body(new ZodValidationPipe(recalculateAllLoadsDtoSchema))
+    body: RecalculateAllLoadsDto,
   ) {
-    return this.trainingLoadService.recalculateAllLoads(user, calculationType);
+    return this.trainingLoadService.recalculateAllLoads(
+      user,
+      body.calculationType,
+      body.athleteId,
+    );
   }
 }

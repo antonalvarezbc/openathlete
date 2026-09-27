@@ -117,7 +117,8 @@ second between HTTP responses and new requests. Errors stop without retries.
 
 FIT files remain a separate **Complete pending activities** action. A 42-day
 summary history alone does not enable TRIMP: activities also need heart-rate
-streams, and the athlete needs `HR_MAX` and `HR_REST` metrics. Daily/activity
+streams and `HR_REST`. Maximum HR uses `HR_MAX` first, or applicable heart-rate
+zones if absent; see [recalculation](training-load-recalculation.md). Daily/activity
 peak heart rates are not substituted for physiological maximum heart rate.
 No additional historical wellness requests or automatic FIT downloads are added.
 

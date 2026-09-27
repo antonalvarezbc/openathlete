@@ -108,51 +108,19 @@ export class TrainingLoadListener {
         }
       }
 
-      // Calculate TRIMP if heart rate data is available
-      if (activity.stream && activity.averageHeartrate) {
-        // Get athlete's HR metrics
-        const hrMax = await this.prisma.athleteMetric.findFirst({
-          where: {
-            athleteId: athleteId,
-            type: 'HR_MAX',
-          },
-          orderBy: {
-            date: 'desc',
-          },
-        });
-
-        const hrRest = await this.prisma.athleteMetric.findFirst({
-          where: {
-            athleteId: athleteId,
-            type: 'HR_REST',
-          },
-          orderBy: {
-            date: 'desc',
-          },
-        });
-
-        // Only calculate TRIMP if we have both HR metrics
-        if (hrMax && hrRest) {
-          // Try TRIMP
-          try {
-            await this.trainingLoadService.calculateActivityLoad(
-              authUser,
-              eventId,
-              'TRIMP' as TrainingLoadCalculationType,
-            );
-            this.logger.log(
-              `✓ TRIMP training load calculated for activity ${eventActivityId}`,
-            );
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : String(error);
-            this.logger.error(
-              `Failed to calculate TRIMP for activity ${eventActivityId}: ${message}`,
-            );
-          }
-        } else {
-          this.logger.debug(
-            `HR metrics (HR_MAX: ${!!hrMax}, HR_REST: ${!!hrRest}) not available for athlete ${athleteId}, skipping TRIMP calculations`,
+      // Use the same metric/zone resolution as manual recalculation.
+      if (activity.stream) {
+        try {
+          await this.trainingLoadService.calculateActivityLoad(
+            authUser,
+            eventId,
+            'TRIMP' as TrainingLoadCalculationType,
+          );
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : String(error);
+          this.logger.warn(
+            `TRIMP unavailable for activity ${eventActivityId}: ${message}`,
           );
         }
       }
