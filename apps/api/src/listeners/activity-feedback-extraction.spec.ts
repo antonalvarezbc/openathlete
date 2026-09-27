@@ -2,7 +2,6 @@ import { Logger } from '@nestjs/common';
 
 import { ActivityFeedbackCompletedEvent } from 'src/events';
 import { extractInjuryAgent, extractRpeAgent } from 'src/mastra/agents';
-import { CalendarWebSocketService } from 'src/modules/calendar/services/calendar-websocket.service';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 import { FeatureAccessService } from 'src/modules/subscription/services/feature-access.service';
 
@@ -39,6 +38,7 @@ describe('feedback extraction policy and persistence', () => {
     feedbackQuestions: [],
   };
   let tx: {
+    athleteSettings: { findUnique: jest.Mock };
     athleteInjury: { create: jest.Mock };
     eventActivity: { updateMany: jest.Mock };
     $executeRaw: jest.Mock;
@@ -57,6 +57,11 @@ describe('feedback extraction policy and persistence', () => {
     jest.clearAllMocks();
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     tx = {
+      athleteSettings: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({ requireFeedbackQuestions: true }),
+      },
       athleteInjury: { create: jest.fn() },
       eventActivity: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
       $executeRaw: jest.fn().mockResolvedValue(1),
@@ -84,7 +89,6 @@ describe('feedback extraction policy and persistence', () => {
     mockDoEmbed.mockResolvedValue({ embeddings: [Array(1536).fill(0.25)] });
     listener = new ActivityFeedbackExtractionListener(
       prisma as unknown as PrismaService,
-      calendar as unknown as CalendarWebSocketService,
       access as unknown as FeatureAccessService,
     );
   });
@@ -120,32 +124,26 @@ describe('feedback extraction policy and persistence', () => {
     expect(calendar.notifyActivityProcessed).not.toHaveBeenCalled();
   });
 
-  it('fills missing RPE conditionally and notifies after commit', async () => {
+  it('keeps missing RPE empty and never infers injuries from feedback', async () => {
     prisma.eventActivity.findUnique.mockResolvedValue({
       ...activity,
       rpe: null,
-    });
-    prisma.$transaction.mockImplementation(async (fn) => {
-      const result = await fn(tx);
-      expect(calendar.notifyActivityProcessed).not.toHaveBeenCalled();
-      return result;
+      description: 'Pain in my knee, very hard run',
     });
     await listener.handleActivityFeedbackCompleted(event);
-    expect(tx.eventActivity.updateMany).toHaveBeenCalledWith({
-      where: { eventActivityId: 32, rpe: null },
-      data: { rpe: 0.8 },
-    });
-    expect(calendar.notifyActivityProcessed).toHaveBeenCalledWith(90, 4);
+    expect(extractRpeAgent.generate).not.toHaveBeenCalled();
+    expect(extractInjuryAgent.generate).not.toHaveBeenCalled();
+    expect(tx.eventActivity.updateMany).not.toHaveBeenCalled();
+    expect(tx.athleteInjury.create).not.toHaveBeenCalled();
+    expect(tx.$executeRaw).toHaveBeenCalled();
   });
 
-  it('does not overwrite an RPE supplied while the model was running', async () => {
-    prisma.eventActivity.findUnique.mockResolvedValue({
-      ...activity,
-      rpe: null,
+  it('does not store embeddings if the setting was disabled during processing', async () => {
+    tx.athleteSettings.findUnique.mockResolvedValue({
+      requireFeedbackQuestions: false,
     });
-    tx.eventActivity.updateMany.mockResolvedValue({ count: 0 });
     await listener.handleActivityFeedbackCompleted(event);
-    expect(calendar.notifyActivityProcessed).not.toHaveBeenCalled();
+    expect(tx.$executeRaw).not.toHaveBeenCalled();
   });
 
   it('does not start writing malformed vectors', async () => {

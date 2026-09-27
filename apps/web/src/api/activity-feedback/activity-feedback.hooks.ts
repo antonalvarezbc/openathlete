@@ -14,6 +14,7 @@ export function useGetActivityFeedbackQuestionsQuery(
     queryKey: activityFeedbackKeys.getFeedbackQuestions(eventId),
     queryFn: () => ActivityFeedbackAPI.getFeedbackQuestions(eventId),
     enabled: !!eventId && enabled,
+    retry: false,
   });
 }
 
@@ -77,6 +78,26 @@ export function useUnskipFeedbackMutation(eventId: Event['eventId']) {
       queryClient.invalidateQueries({
         queryKey: [eventKeys.getMyEvents],
       });
+    },
+  });
+}
+
+export function useGenerateFeedbackQuestionsMutation(
+  eventId: Event['eventId'],
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ['generate-feedback-questions', eventId],
+    mutationFn: () => ActivityFeedbackAPI.generateQuestions(eventId),
+    onSuccess: (data) => {
+      queryClient.setQueryData(
+        activityFeedbackKeys.getFeedbackQuestions(eventId),
+        data,
+      );
+      queryClient.invalidateQueries({
+        queryKey: [eventKeys.getEvent, eventId],
+      });
+      queryClient.invalidateQueries({ queryKey: [eventKeys.getMyEvents] });
     },
   });
 }

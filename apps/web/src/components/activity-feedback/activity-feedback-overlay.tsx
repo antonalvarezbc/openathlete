@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/ui/loader';
 import { m } from '@/paraglide/messages';
 import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
 import { ActivityEvent } from '@openathlete/shared';
 
@@ -25,10 +26,18 @@ export function ActivityFeedbackOverlay({
   isEditMode = false,
   skipIntroScreen = false,
 }: P) {
-  const { data: athlete } = useGetMyAthleteQuery();
+  const athleteQuery = useGetMyAthleteQuery();
+  const { data: athlete } = athleteQuery;
   const isMyActivity = athlete?.athleteId === event.athleteId;
-  const { data: feedbackData, isLoading } =
-    useGetActivityFeedbackQuestionsQuery(event.eventId, isMyActivity);
+  const feedbackQuery = useGetActivityFeedbackQuestionsQuery(
+    event.eventId,
+    isMyActivity,
+  );
+  const { data: feedbackData } = feedbackQuery;
+  const isLoading = athleteQuery.isPending || feedbackQuery.isLoading;
+  const isError = athleteQuery.isError || feedbackQuery.isError;
+  const refetch = () =>
+    athleteQuery.isError ? athleteQuery.refetch() : feedbackQuery.refetch();
   const skipMutation = useSkipFeedbackMutation(event.eventId);
   const [showFlow, setShowFlow] = useState(isEditMode || skipIntroScreen);
 
@@ -39,7 +48,7 @@ export function ActivityFeedbackOverlay({
   const feedbackSkipped = feedbackData?.feedbackSkipped ?? false;
 
   useEffect(() => {
-    if (!isLoading && !isEditMode && !skipIntroScreen) {
+    if (!isLoading && !isError && !isEditMode && !skipIntroScreen) {
       if (!questions || questions.length === 0) {
         onSkip();
         return;
@@ -48,7 +57,7 @@ export function ActivityFeedbackOverlay({
         onSkip();
         return;
       }
-      const allAnswered = questions.every((q) => q.answerText !== null);
+      const allAnswered = questions.every((q) => Boolean(q.answerText?.trim()));
       if (allAnswered) {
         onSkip();
       }
@@ -57,6 +66,7 @@ export function ActivityFeedbackOverlay({
     questions,
     feedbackSkipped,
     isLoading,
+    isError,
     onSkip,
     isEditMode,
     skipIntroScreen,
@@ -68,10 +78,17 @@ export function ActivityFeedbackOverlay({
       onSkip();
     } catch (error) {
       console.error('Failed to skip feedback:', error);
-      // Still call onSkip to hide overlay
-      onSkip();
+      toast.error(m.feedback_skip_error());
     }
   };
+
+  if (isError)
+    return (
+      <div role="alert" className="space-y-3 p-6">
+        <p>{m.feedback_load_error()}</p>
+        <Button onClick={() => refetch()}>{m.coach_load_retry()}</Button>
+      </div>
+    );
 
   if (isLoading) {
     return (
@@ -98,13 +115,9 @@ export function ActivityFeedbackOverlay({
       );
     }
     return (
-      <div className="min-h-[calc(100vh-140px)] inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm">
-        <div className="flex flex-col items-center justify-center gap-4">
-          <Loader size="lg" />
-          <p className="text-sm text-muted-foreground">
-            {m.loading_feedback_questions()}
-          </p>
-        </div>
+      <div className="space-y-3 p-6">
+        <p>{m.feedback_not_generated()}</p>
+        <Button onClick={onSkip}>{m.activity_feedback_close()}</Button>
       </div>
     );
   }
@@ -113,7 +126,7 @@ export function ActivityFeedbackOverlay({
     return null;
   }
 
-  const allAnswered = questions.every((q) => q.answerText !== null);
+  const allAnswered = questions.every((q) => Boolean(q.answerText?.trim()));
   if (allAnswered) {
     return null;
   }
