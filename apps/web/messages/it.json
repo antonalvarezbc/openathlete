@@ -1382,7 +1382,16 @@
   "coach_load_retry": "Riprova",
   "coach_load_coverage": "Sono incluse solo le attività con TRIMP calcolato. L’assenza di carichi non indica riposo.",
   "coach_load_empty": "Dati insufficienti",
-  "coach_load_requirements": "Nessun carico TRIMP calcolato in questo periodo. Il calcolo richiede registrazioni della frequenza cardiaca, FC massima e FC a riposo.",
+  "coach_load_requirements": "Nessun carico TRIMP calcolato in questo periodo. Servono dati della FC, FC a riposo e FC massima (metrica o massimo delle zone di FC applicabili).",
   "dashboard_header_competitions_error": "Impossibile caricare le prossime competizioni.",
-  "garmin_manual_history_incomplete": "Non è stato possibile coprire tutti i 42 giorni: limite di consultazione raggiunto o pagina ripetuta da Garmin. I carichi possono essere incompleti."
+  "garmin_manual_history_incomplete": "Non è stato possibile coprire tutti i 42 giorni: limite di consultazione raggiunto o pagina ripetuta da Garmin. I carichi possono essere incompleti.",
+  "coach_load_hr_priority": "All’apertura o all’aggiornamento si calcolano i carichi mancanti o modificati e si riutilizzano quelli salvati. Si usa prima la FC massima registrata, altrimenti le zone dello sport o generali. Nessuna richiesta a Garmin.",
+  "coach_load_hr_zones": "FC massima dalle zone: {max} bpm; FC a riposo: {rest} bpm.",
+  "coach_load_hr_metric": "FC massima registrata: {max} bpm; FC a riposo: {rest} bpm.",
+  "coach_load_auto_summary": "Carichi aggiornati: {processed}. Riutilizzati: {reused}. Non calcolabili: {unavailable}.",
+  "coach_load_auto_unavailable": "Alcune attività non hanno dati del battito o riferimenti di FC validi. Gli eventuali carichi precedenti vengono conservati.",
+  "coach_load_info": "Informazioni su {metric}",
+  "coach_load_ctl_help": "Media ponderata del carico degli ultimi 42 giorni. Riassume il carico a lungo termine, dando più peso ai giorni recenti.",
+  "coach_load_atl_help": "Media ponderata del carico degli ultimi 7 giorni. Riflette il carico recente e cambia più rapidamente della CTL.",
+  "coach_load_tsb_help": "Differenza tra CTL e ATL. Un valore negativo indica un carico recente superiore a quello a lungo termine; uno positivo indica il contrario. Da solo non determina il recupero."
 }

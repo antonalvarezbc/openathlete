@@ -165,19 +165,22 @@ export const useRecalculateAllLoadsMutation = (
     Error,
     {
       calculationType: TrainingLoadCalculationType;
+      athleteId?: number;
     }
   >,
 ) => {
   const queryClient = useQueryClient();
   return useMutation({
     ...opt,
-    mutationFn: ({ calculationType }) =>
-      TrainingLoadAPI.recalculateAllLoads(calculationType),
+    mutationFn: ({ calculationType, athleteId }) =>
+      TrainingLoadAPI.recalculateAllLoads(calculationType, athleteId),
     onSuccess: (data, variables, onMutateResult, context) => {
       if (opt?.onSuccess)
         opt.onSuccess(data, variables, onMutateResult, context);
       queryClient.invalidateQueries({
-        queryKey: [trainingLoadKeys.root],
+        predicate: (query) =>
+          typeof query.queryKey[0] === 'string' &&
+          query.queryKey[0].startsWith(trainingLoadKeys.root + '.'),
       });
     },
   });

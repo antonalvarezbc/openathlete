@@ -14,6 +14,8 @@ export const trainingLoadEntrySchema = z.object({
     duration: z.number().optional(),
     avgHr: z.number().optional(),
     hrMax: z.number().optional(),
+    inputSignature: z.string().optional(),
+    hrMaxSource: z.enum(['METRIC', 'TRAINING_ZONE']).optional(),
     hrRest: z.number().optional(),
     hrReserve: z.number().optional(),
     zones: z
@@ -41,6 +43,20 @@ export const dailyTrainingLoadSchema = z.object({
 export type DailyTrainingLoad = z.infer<typeof dailyTrainingLoadSchema>;
 
 export const trainingLoadMetricsSchema = z.object({
+  trimpRefresh: z
+    .object({
+      processed: z.number(),
+      reused: z.number(),
+      unavailable: z.number(),
+      heartRateReferences: z.array(
+        z.object({
+          hrMax: z.number(),
+          hrRest: z.number(),
+          source: z.enum(['METRIC', 'TRAINING_ZONE']),
+        }),
+      ),
+    })
+    .optional(),
   atl: z.number(),
   ctl: z.number(),
   tsb: z.number(),
@@ -73,9 +89,12 @@ export type CalculateActivityLoadDto = z.infer<
   typeof calculateActivityLoadDtoSchema
 >;
 
-export const recalculateAllLoadsDtoSchema = z.object({
-  calculationType: z.nativeEnum(TRAINING_LOAD_CALCULATION_TYPE),
-});
+export const recalculateAllLoadsDtoSchema = z
+  .object({
+    calculationType: z.nativeEnum(TRAINING_LOAD_CALCULATION_TYPE),
+    athleteId: z.number().int().positive().optional(),
+  })
+  .strict();
 
 export type RecalculateAllLoadsDto = z.infer<
   typeof recalculateAllLoadsDtoSchema
@@ -84,6 +103,15 @@ export type RecalculateAllLoadsDto = z.infer<
 export const recalculateAllLoadsResponseSchema = z.object({
   processed: z.number(),
   errors: z.number(),
+  heartRateReferences: z
+    .array(
+      z.object({
+        hrMax: z.number(),
+        hrRest: z.number(),
+        source: z.enum(['METRIC', 'TRAINING_ZONE']),
+      }),
+    )
+    .optional(),
 });
 
 export type RecalculateAllLoadsResponse = z.infer<

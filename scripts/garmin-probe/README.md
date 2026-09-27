@@ -116,7 +116,8 @@ instancias del backend. Véase [modos y Garmin manual](../../docs/account-modes-
   el límite o Garmin repite una página, se muestra que el historial puede estar
   incompleto. Se conservan las pausas y la parada ante errores, sin reintentos.
 - Para TRIMP también hacen falta los FIT con registros de pulso y las métricas
-  FC máxima (`HR_MAX`) y FC en reposo (`HR_REST`). Los FIT se siguen descargando
+  FC máxima (`HR_MAX`, o el máximo de las zonas de FC aplicables si falta)
+  y FC en reposo (`HR_REST`). Los FIT se siguen descargando
   mediante «Completar actividades pendientes». No se infiere FC máxima de los
   picos diarios ni se amplían las consultas de wellness a 42 días.
 - Siete días de FC en reposo, mínima/máxima diaria, VFC nocturna y máxima de cinco

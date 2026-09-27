@@ -1,6 +1,8 @@
 import { subject } from '@casl/ability';
+import { createHash } from 'node:crypto';
 
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -10,6 +12,7 @@ import {
 import {
   Athlete,
   MetricType,
+  SportType,
   TrainingLoadCalculationType,
 } from '@openathlete/database';
 import {
@@ -37,8 +40,8 @@ import {
   TSB_DETRAINING_THRESHOLD,
   TSB_OVERREACHING_THRESHOLD,
 } from 'src/common/constants/training-formulas.constants';
-import { CaslAbilityFactory } from 'src/modules/auth';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
+import { CaslAbilityFactory } from 'src/modules/auth/services/casl-ability.factory';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
 import { uncompressActivityStream } from '../helpers/activity-stream';
@@ -52,6 +55,8 @@ interface TrainingLoadMetadata {
   duration?: number; // seconds
   avgHr?: number;
   hrMax?: number;
+  hrMaxSource?: 'METRIC' | 'TRAINING_ZONE';
+  inputSignature?: string;
   hrRest?: number;
   hrReserve?: number;
   zones?: {
@@ -64,7 +69,19 @@ interface TrainingLoadMetadata {
 /**
  * Training load metrics for a time period
  */
+interface TrimpRefreshResult {
+  processed: number;
+  reused: number;
+  unavailable: number;
+  heartRateReferences: {
+    hrMax: number;
+    hrRest: number;
+    source: 'METRIC' | 'TRAINING_ZONE';
+  }[];
+}
+
 export interface TrainingLoadMetrics {
+  trimpRefresh?: TrimpRefreshResult;
   // Acute Training Load (7-day exponentially weighted average)
   atl: number;
   // Chronic Training Load (42-day exponentially weighted average)
@@ -96,6 +113,10 @@ export interface DailyTrainingLoad {
 @Injectable()
 export class TrainingLoadService {
   private readonly logger = new Logger(TrainingLoadService.name);
+  private readonly trimpRefreshes = new Map<
+    string,
+    Promise<TrimpRefreshResult>
+  >();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -391,24 +412,11 @@ export class TrainingLoadService {
     athleteId: number,
     type: TrainingLoadCalculationType,
   ) {
-    let calculation = await this.prisma.trainingLoadCalculation.findUnique({
-      where: {
-        athleteId_type: {
-          athleteId: athleteId,
-          type,
-        },
-      },
+    const calculation = await this.prisma.trainingLoadCalculation.upsert({
+      where: { athleteId_type: { athleteId, type } },
+      create: { athleteId, type, isActive: true },
+      update: {},
     });
-
-    if (!calculation) {
-      calculation = await this.prisma.trainingLoadCalculation.create({
-        data: {
-          athleteId: athleteId,
-          type,
-          isActive: true,
-        },
-      });
-    }
 
     return calculation;
   }
@@ -431,6 +439,189 @@ export class TrainingLoadService {
     });
 
     return metric?.value ?? null;
+  }
+
+  private async resolveCalculationAthlete(user: AuthUser, athleteId?: number) {
+    const athlete = await this.prisma.athlete.findFirst({
+      where: athleteId ? { athleteId } : { userId: user.userId },
+      include: { user: { select: { gender: true } } },
+    });
+    if (!athlete) throw new NotFoundException('Athlete not found');
+    if (athlete.userId !== user.userId) {
+      const relationship =
+        user.roles?.includes('COACH') &&
+        (await this.prisma.coachAthlete.findFirst({
+          where: { userId: user.userId, athleteId: athlete.athleteId },
+        }));
+      if (!relationship)
+        throw new ForbiddenException('Not allowed to recalculate this athlete');
+    }
+    return athlete;
+  }
+
+  async resolveTrimpHeartRates(athleteId: number, sport: SportType) {
+    const metricMax = await this.getLatestMetric(athleteId, 'HR_MAX');
+    const hrRest = await this.getLatestMetric(athleteId, 'HR_REST');
+    let hrMax = metricMax;
+    let hrMaxSource: 'METRIC' | 'TRAINING_ZONE' = 'METRIC';
+    if (metricMax === null) {
+      const values = await this.prisma.trainingZoneValue.findMany({
+        where: {
+          trainingZone: { athleteId, type: 'HEARTRATE' },
+          OR: [{ sports: { has: sport } }, { sports: { isEmpty: true } }],
+        },
+        select: { min: true, max: true, sports: true },
+      });
+      const specific = values.filter((value) => value.sports.includes(sport));
+      const applicable = specific.length ? specific : values;
+      const maxima = applicable
+        .filter(
+          (value) =>
+            Number.isFinite(value.max) &&
+            value.max > 0 &&
+            value.max >= value.min,
+        )
+        .map((value) => value.max);
+      hrMax = maxima.length ? Math.max(...maxima) : null;
+      hrMaxSource = 'TRAINING_ZONE';
+    }
+    if (
+      hrMax === null ||
+      hrRest === null ||
+      !Number.isFinite(hrMax) ||
+      !Number.isFinite(hrRest) ||
+      hrRest <= 0 ||
+      hrMax <= hrRest
+    ) {
+      throw new BadRequestException(
+        'Valid HR_REST and HR_MAX (or applicable heart-rate zones) are required for TRIMP',
+      );
+    }
+    return { hrMax, hrRest, hrMaxSource };
+  }
+
+  private trimpSignature(
+    startDate: Date,
+    stream: unknown,
+    reference: { hrMax: number; hrRest: number; hrMaxSource: string },
+    gender: string | null,
+  ) {
+    return createHash('sha256')
+      .update(
+        JSON.stringify([
+          'trimp-v1',
+          startDate,
+          stream,
+          reference,
+          gender === 'FEMALE' ? 'female' : 'male',
+        ]),
+      )
+      .digest('hex');
+  }
+
+  private async refreshRecentTrimp(
+    user: AuthUser,
+    athleteId: number,
+    startDate: Date,
+    endDate: Date,
+  ) {
+    // Authorize each request before joining an in-flight refresh.
+    const athlete = await this.resolveCalculationAthlete(user, athleteId);
+    const key = `${athleteId}:${startDate.toISOString().slice(0, 10)}:${endDate.toISOString().slice(0, 10)}`;
+    const running = this.trimpRefreshes.get(key);
+    if (running) return running;
+    const refresh = async (): Promise<TrimpRefreshResult> => {
+      // Compare compressed stream signatures; decoding and integration only run for changed loads.
+      const events = await this.prisma.event.findMany({
+        where: {
+          athleteId,
+          type: 'ACTIVITY',
+          startDate: { gte: startDate, lte: endDate },
+          activity: { isNot: null },
+        },
+        select: {
+          eventId: true,
+          startDate: true,
+          activity: {
+            select: {
+              sport: true,
+              stream: true,
+              trainingLoadEntries: {
+                where: { calculation: { type: 'TRIMP' } },
+                select: { metadata: true },
+              },
+            },
+          },
+        },
+      });
+      const result: TrimpRefreshResult = {
+        processed: 0,
+        reused: 0,
+        unavailable: 0,
+        heartRateReferences: [],
+      };
+      const references = new Map<
+        SportType,
+        Awaited<ReturnType<TrainingLoadService['resolveTrimpHeartRates']>>
+      >();
+      const used = new Map<
+        string,
+        TrimpRefreshResult['heartRateReferences'][number]
+      >();
+      for (const event of events) {
+        if (!event.activity) continue;
+        try {
+          const sport = event.activity.sport;
+          let reference = references.get(sport);
+          if (!reference) {
+            reference = await this.resolveTrimpHeartRates(athleteId, sport);
+            references.set(sport, reference);
+          }
+          const signature = this.trimpSignature(
+            event.startDate,
+            event.activity.stream,
+            reference,
+            athlete.user.gender,
+          );
+          const stored = event.activity.trainingLoadEntries[0]
+            ?.metadata as unknown as TrainingLoadMetadata | undefined;
+          let metadata = stored;
+          if (stored?.inputSignature === signature) {
+            result.reused++;
+          } else {
+            const entry = await this.calculateActivityLoad(
+              user,
+              event.eventId,
+              'TRIMP',
+              athleteId,
+            );
+            metadata = entry.metadata as unknown as TrainingLoadMetadata;
+            result.processed++;
+          }
+          if (metadata?.hrMax !== undefined && metadata.hrRest !== undefined) {
+            const value = {
+              hrMax: metadata.hrMax,
+              hrRest: metadata.hrRest,
+              source: metadata.hrMaxSource ?? ('METRIC' as const),
+            };
+            used.set(JSON.stringify(value), value);
+          }
+        } catch (error) {
+          if (error instanceof ForbiddenException) throw error;
+          result.unavailable++;
+          this.logger.debug(`TRIMP unavailable for event ${event.eventId}`);
+        }
+      }
+      result.heartRateReferences = [...used.values()];
+      return result;
+    };
+    const pending = refresh();
+    this.trimpRefreshes.set(key, pending);
+    try {
+      return await pending;
+    } finally {
+      this.trimpRefreshes.delete(key);
+    }
   }
 
   /**
@@ -467,7 +658,12 @@ export class TrainingLoadService {
     hrRest: number,
     gender: 'male' | 'female' = 'male',
   ): { value: number; metadata: TrainingLoadMetadata } {
-    if (!stream.heartrate || !stream.time) {
+    if (
+      !stream.heartrate ||
+      !stream.time ||
+      stream.time.length < 2 ||
+      stream.heartrate.length !== stream.time.length
+    ) {
       throw new Error('Heart rate or time data not available');
     }
 
@@ -482,12 +678,19 @@ export class TrainingLoadService {
     let trimp = 0;
     let totalHr = 0;
     let validPoints = 0;
+    let usableIntervals = 0;
 
     for (let i = 1; i < stream.time.length; i++) {
       const hr = stream.heartrate[i];
       const timeDelta = (stream.time[i] - stream.time[i - 1]) / 60; // Convert to minutes
 
-      if (hr && timeDelta > 0) {
+      if (
+        Number.isFinite(hr) &&
+        hr > 0 &&
+        Number.isFinite(timeDelta) &&
+        timeDelta > 0
+      ) {
+        usableIntervals++;
         const hrFraction = (hr - hrRest) / hrReserve;
 
         if (hrFraction > 0) {
@@ -499,6 +702,9 @@ export class TrainingLoadService {
       }
     }
 
+    if (!usableIntervals || !Number.isFinite(trimp)) {
+      throw new BadRequestException('No usable heart-rate intervals for TRIMP');
+    }
     const avgHr = validPoints > 0 ? totalHr / validPoints : 0;
 
     return {
@@ -566,26 +772,9 @@ export class TrainingLoadService {
     user: AuthUser,
     activityId: number,
     calculationType: TrainingLoadCalculationType,
+    athleteId?: number,
   ) {
-    // Get athlete with user info
-    const athlete = await this.prisma.athlete.findFirst({
-      where: {
-        user: {
-          userId: user.userId,
-        },
-      },
-      include: {
-        user: {
-          select: {
-            gender: true,
-          },
-        },
-      },
-    });
-
-    if (!athlete) {
-      throw new NotFoundException('Athlete not found');
-    }
+    const athlete = await this.resolveCalculationAthlete(user, athleteId);
 
     // Get activity with stream
     const event = await this.prisma.event.findFirst({
@@ -622,21 +811,8 @@ export class TrainingLoadService {
         break;
 
       case 'TRIMP': {
-        // Get HR metrics
-        const hrMax = await this.getLatestMetric(
-          athlete.athleteId,
-          'HR_MAX' as MetricType,
-        );
-        const hrRest = await this.getLatestMetric(
-          athlete.athleteId,
-          'HR_REST' as MetricType,
-        );
-
-        if (!hrMax || !hrRest) {
-          throw new Error(
-            'HR_MAX and HR_REST metrics are required for TRIMP calculation',
-          );
-        }
+        const { hrMax, hrRest, hrMaxSource } =
+          await this.resolveTrimpHeartRates(athlete.athleteId, activity.sport);
 
         // Uncompress stream
         if (!activity.stream) {
@@ -651,22 +827,19 @@ export class TrainingLoadService {
         // Default to 'male' if not set or 'OTHER'
         const gender = athlete.user.gender === 'FEMALE' ? 'female' : 'male';
         result = this.calculateTRIMP(stream, hrMax, hrRest, gender);
+        result.metadata.hrMaxSource = hrMaxSource;
+        result.metadata.inputSignature = this.trimpSignature(
+          event.startDate,
+          activity.stream,
+          { hrMax, hrRest, hrMaxSource },
+          athlete.user.gender,
+        );
         break;
       }
 
       default:
         throw new Error(`Unknown calculation type: ${calculationType}`);
     }
-
-    // Save or update training load entry
-    const existingEntry = await this.prisma.trainingLoadEntry.findUnique({
-      where: {
-        calculationId_activityId: {
-          calculationId: calculation.trainingLoadCalculationId,
-          activityId: activity.eventActivityId,
-        },
-      },
-    });
 
     const startDate = new Date(event.startDate);
     const activityDate = new Date(
@@ -681,26 +854,23 @@ export class TrainingLoadService {
       ),
     );
 
-    if (existingEntry) {
-      return await this.prisma.trainingLoadEntry.update({
-        where: {
-          trainingLoadEntryId: existingEntry.trainingLoadEntryId,
+    const data = {
+      value: result.value,
+      metadata: result.metadata as object,
+      date: activityDate,
+    };
+    return this.prisma.trainingLoadEntry.upsert({
+      where: {
+        calculationId_activityId: {
+          calculationId: calculation.trainingLoadCalculationId,
+          activityId: activity.eventActivityId,
         },
-        data: {
-          value: result.value,
-          metadata: result.metadata as object,
-          date: activityDate,
-        },
-      });
-    }
-
-    return await this.prisma.trainingLoadEntry.create({
-      data: {
+      },
+      update: data,
+      create: {
+        ...data,
         calculationId: calculation.trainingLoadCalculationId,
         activityId: activity.eventActivityId,
-        date: activityDate,
-        value: result.value,
-        metadata: result.metadata as object,
       },
     });
   }
@@ -850,6 +1020,16 @@ export class TrainingLoadService {
     const startDate = new Date(targetDate);
     startDate.setDate(startDate.getDate() - 42);
 
+    const trimpRefresh =
+      calculationType === 'TRIMP'
+        ? await this.refreshRecentTrimp(
+            user,
+            targetAthleteId,
+            startDate,
+            targetDate,
+          )
+        : undefined;
+
     const dailyLoads = await this.getTrainingLoadByPeriod(
       user,
       calculationType,
@@ -937,6 +1117,7 @@ export class TrainingLoadService {
     };
 
     return {
+      ...(trimpRefresh && { trimpRefresh }),
       atl,
       ctl,
       tsb,
@@ -1387,38 +1568,43 @@ export class TrainingLoadService {
   async recalculateAllLoads(
     user: AuthUser,
     calculationType: TrainingLoadCalculationType,
-  ): Promise<{ processed: number; errors: number }> {
-    const athlete = await this.prisma.athlete.findFirst({
-      where: {
-        user: {
-          userId: user.userId,
-        },
-      },
-    });
-
-    if (!athlete) {
-      throw new NotFoundException('Athlete not found');
-    }
-
-    // Get all activities
+    athleteId?: number,
+  ) {
+    const athlete = await this.resolveCalculationAthlete(user, athleteId);
     const events = await this.prisma.event.findMany({
       where: {
         athleteId: athlete.athleteId,
         type: 'ACTIVITY',
+        activity: { isNot: null },
       },
-      include: {
-        activity: true,
-      },
+      select: { eventId: true },
+      orderBy: { eventId: 'asc' },
     });
+    const references = new Map<
+      string,
+      { hrMax: number; hrRest: number; source: string }
+    >();
 
     let processed = 0;
     let errors = 0;
 
     for (const event of events) {
-      if (!event.activity) continue;
-
       try {
-        await this.calculateActivityLoad(user, event.eventId, calculationType);
+        const entry = await this.calculateActivityLoad(
+          user,
+          event.eventId,
+          calculationType,
+          athlete.athleteId,
+        );
+        const metadata = entry.metadata as unknown as TrainingLoadMetadata;
+        if (metadata?.hrMax !== undefined && metadata.hrRest !== undefined) {
+          const reference = {
+            hrMax: metadata.hrMax,
+            hrRest: metadata.hrRest,
+            source: metadata.hrMaxSource ?? 'METRIC',
+          };
+          references.set(JSON.stringify(reference), reference);
+        }
         processed++;
       } catch (error) {
         this.logger.error(
@@ -1429,7 +1615,7 @@ export class TrainingLoadService {
       }
     }
 
-    return { processed, errors };
+    return { processed, errors, heartRateReferences: [...references.values()] };
   }
 
   private getWeekStart(date: Date): Date {

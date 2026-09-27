@@ -102,6 +102,8 @@ try {
     const React = reactModule.default ?? reactModule;
     const domModule = await import('/node_modules/.vite/deps/react-dom_client.js?v=' + version);
     const { createRoot } = domModule.default ?? domModule;
+    const syncModule = await import('/node_modules/.vite/deps/react-dom.js?v=' + version);
+    const { flushSync } = syncModule.default ?? syncModule;
     const { QueryClient, QueryClientProvider } = await import('/node_modules/.vite/deps/@tanstack_react-query.js?v=' + version);
     const { AuthContext } = await import('/src/contexts/auth/context/auth-context.tsx');
     const { SpaceContext } = await import('/src/contexts/space/context/space-context.tsx');
@@ -122,12 +124,12 @@ try {
     };
     const container = document.createElement('div');
     container.id = 'load-qa';
-    container.style.cssText = 'position:absolute;inset:0;background:white;padding:16px;z-index:9999';
+    container.style.cssText = 'position:absolute;inset:0;background:white;padding:16px;z-index:40';
     document.body.append(container);
     document.getElementById('root').style.display = 'none';
     const root = createRoot(container);
     window.qaRender = async (space = 'COACH', roles = ['COACH'], athleteId = 992, header = false) => {
-      root.render(null);
+      flushSync(() => root.render(null));
       await new Promise(r => setTimeout(r, 50));
       qaCalls = [];
       const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -189,7 +191,7 @@ try {
       0,
     );
     await evaluate(
-      "qaMode='valid';document.querySelector('#load-qa button').click()",
+      "qaMode='valid';Array.from(document.querySelectorAll('#load-qa button')).find(button=>button.textContent==='Reintentar').click()",
     );
     await until("document.querySelector('#load-qa dl') !== null");
     pass(`${width}: server errors can be retried without false zeros`);
@@ -202,6 +204,138 @@ try {
       0,
     );
     pass(`${width}: loading is not presented as absent data`);
+
+    await evaluate(
+      "qaMode='valid';qaData.trimpRefresh={processed:0,reused:12,unavailable:1,heartRateReferences:[{hrMax:180,hrRest:55,source:'TRAINING_ZONE'}]};qaRender()",
+    );
+    await until("document.querySelector('#load-qa dl') !== null");
+    assert.equal(
+      await evaluate(
+        "document.querySelector('#load-qa h3').textContent.trim()",
+      ),
+      "Carga de entrenamiento",
+    );
+    assert.equal(
+      await evaluate("document.body.innerText.includes('Reutilizadas: 12')"),
+      false,
+    );
+    await evaluate("document.querySelector('#load-qa button').click()");
+    await until(
+      "document.querySelector('[data-slot=popover-content]')?.innerText.includes('Reutilizadas: 12')",
+    );
+    assert(
+      await evaluate(
+        "document.querySelector('[data-slot=popover-content]').innerText.includes('FC máxima de zonas: 180 ppm')",
+      ),
+    );
+    assert.equal(
+      await evaluate(
+        "Array.from(document.querySelectorAll('#load-qa button')).some(b=>b.textContent.includes('Recalcular'))",
+      ),
+      false,
+    );
+    pass(
+      `${width}: automatic refresh displays cache reuse and source without a recalculate button`,
+    );
+    await call("Input.dispatchKeyEvent", {
+      type: "keyDown",
+      key: "Escape",
+      code: "Escape",
+    });
+    await call("Input.dispatchKeyEvent", {
+      type: "keyUp",
+      key: "Escape",
+      code: "Escape",
+    });
+    await until("!document.querySelector('[data-slot=popover-content]')");
+    for (const [metric, content] of [
+      ["CTL", "42 días"],
+      ["ATL", "7 días"],
+      ["TSB", "Diferencia entre CTL y ATL"],
+    ]) {
+      await evaluate(
+        `document.querySelector('[aria-label="Información sobre ${metric}"]').focus()`,
+      );
+      assert.equal(
+        await evaluate("document.activeElement?.getAttribute('aria-label')"),
+        `Información sobre ${metric}`,
+      );
+      await call("Input.dispatchKeyEvent", {
+        type: "keyDown",
+        text: "\r",
+        key: "Enter",
+        code: "Enter",
+        windowsVirtualKeyCode: 13,
+      });
+      await call("Input.dispatchKeyEvent", {
+        type: "keyUp",
+        key: "Enter",
+        code: "Enter",
+        windowsVirtualKeyCode: 13,
+      });
+      await until(
+        `document.querySelector('[data-slot=popover-content]')?.innerText.includes('${content}')`,
+      );
+      assert(
+        await evaluate(
+          "(() => {const r=document.querySelector('[data-slot=popover-content]').getBoundingClientRect();return r.left>=0 && r.right<=innerWidth})()",
+        ),
+      );
+      await call("Input.dispatchKeyEvent", {
+        type: "keyDown",
+        key: "Escape",
+        code: "Escape",
+      });
+      await call("Input.dispatchKeyEvent", {
+        type: "keyUp",
+        key: "Escape",
+        code: "Escape",
+      });
+      await until("!document.querySelector('[data-slot=popover-content]')");
+    }
+    pass(
+      `${width}: all metric explanations open with keyboard, fit viewport and close with Escape`,
+    );
+    const button = await evaluate(
+      "(() => {const r=document.querySelector('#load-qa button').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()",
+    );
+    if (width < 500) {
+      await call("Input.dispatchTouchEvent", {
+        type: "touchStart",
+        touchPoints: [{ ...button, radiusX: 2, radiusY: 2 }],
+      });
+      await call("Input.dispatchTouchEvent", {
+        type: "touchEnd",
+        touchPoints: [],
+      });
+    } else {
+      await call("Input.dispatchMouseEvent", { type: "mouseMoved", ...button });
+    }
+    await until(
+      "document.querySelector('[data-slot=popover-content]')?.innerText.includes('Reutilizadas: 12')",
+    );
+    if (width >= 500) {
+      const popup = await evaluate(
+        "(() => {const r=document.querySelector('[data-slot=popover-content]').getBoundingClientRect();return {x:r.x+20,y:r.y+20}})()",
+      );
+      await call("Input.dispatchMouseEvent", { type: "mouseMoved", ...popup });
+      await delay(300);
+      assert(
+        await evaluate(
+          "!!document.querySelector('[data-slot=popover-content]')",
+        ),
+      );
+      await call("Input.dispatchMouseEvent", {
+        type: "mouseMoved",
+        x: 1270,
+        y: 830,
+      });
+      await until("!document.querySelector('[data-slot=popover-content]')");
+    }
+    pass(
+      `${width}: header information opens with ${width < 500 ? "touch" : "hover and stays readable under pointer"}`,
+    );
+    await evaluate("delete qaData.trimpRefresh");
 
     for (const args of [
       "'ATHLETE',['ATHLETE']",

@@ -1382,7 +1382,16 @@
   "coach_load_retry": "Reintentar",
   "coach_load_coverage": "Solo se incluyen actividades con TRIMP calculado. La ausencia de cargas no indica descanso.",
   "coach_load_empty": "Sin datos suficientes",
-  "coach_load_requirements": "No hay cargas TRIMP calculadas en este periodo. El cálculo requiere registros de frecuencia cardíaca, FC máxima y FC en reposo.",
+  "coach_load_requirements": "No hay cargas TRIMP calculadas en este periodo. Se necesitan registros de pulso, FC en reposo y FC máxima (métrica o máximo de las zonas de FC aplicables).",
   "dashboard_header_competitions_error": "No se han podido cargar las próximas competiciones.",
-  "garmin_manual_history_incomplete": "No se ha podido cubrir todo el historial de 42 días: se alcanzó el límite de consulta o Garmin repitió una página. Las cargas pueden estar incompletas."
+  "garmin_manual_history_incomplete": "No se ha podido cubrir todo el historial de 42 días: se alcanzó el límite de consulta o Garmin repitió una página. Las cargas pueden estar incompletas.",
+  "coach_load_hr_priority": "Al abrir o refrescar se actualizan las cargas que faltan o han cambiado y se reutilizan las guardadas. Se usa FC máxima; si falta, el máximo de las zonas de FC del deporte o de las generales. Sin consultas a Garmin.",
+  "coach_load_hr_zones": "FC máxima de zonas: {max} ppm; FC en reposo: {rest} ppm.",
+  "coach_load_hr_metric": "FC máxima registrada: {max} ppm; FC en reposo: {rest} ppm.",
+  "coach_load_auto_summary": "Cargas actualizadas: {processed}. Reutilizadas: {reused}. No calculables: {unavailable}.",
+  "coach_load_auto_unavailable": "Faltan datos válidos de pulso o referencias de FC para algunas actividades. Si tenían una carga anterior, se conserva.",
+  "coach_load_info": "Información sobre {metric}",
+  "coach_load_ctl_help": "Media ponderada de la carga de los últimos 42 días. Resume la carga sostenida y da más peso a los días recientes.",
+  "coach_load_atl_help": "Media ponderada de la carga de los últimos 7 días. Refleja la carga reciente y cambia más rápido que la CTL.",
+  "coach_load_tsb_help": "Diferencia entre CTL y ATL. Un valor negativo indica más carga reciente que sostenida; uno positivo, menos. Por sí solo no determina la recuperación."
 }

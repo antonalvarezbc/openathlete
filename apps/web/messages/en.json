@@ -1382,7 +1382,16 @@
   "coach_load_retry": "Retry",
   "coach_load_coverage": "Only activities with calculated TRIMP are included. Missing loads are not a measure of rest.",
   "coach_load_empty": "Insufficient data",
-  "coach_load_requirements": "No calculated TRIMP loads in this period. Calculation requires heart-rate recordings, maximum heart rate and resting heart rate.",
+  "coach_load_requirements": "No calculated TRIMP loads in this period. Heart-rate streams, resting HR and maximum HR (metric or maximum of applicable HR zones) are required.",
   "dashboard_header_competitions_error": "Could not load upcoming competitions.",
-  "garmin_manual_history_incomplete": "The full 42-day history could not be covered: the query limit was reached or Garmin repeated a page. Training loads may be incomplete."
+  "garmin_manual_history_incomplete": "The full 42-day history could not be covered: the query limit was reached or Garmin repeated a page. Training loads may be incomplete.",
+  "coach_load_hr_priority": "Opening or refreshing updates missing or changed loads and reuses saved ones. Maximum HR uses the metric first, then sport-specific or general HR zones if absent. No Garmin requests.",
+  "coach_load_hr_zones": "Maximum HR from zones: {max} bpm; resting HR: {rest} bpm.",
+  "coach_load_hr_metric": "Recorded maximum HR: {max} bpm; resting HR: {rest} bpm.",
+  "coach_load_auto_summary": "Loads updated: {processed}. Reused: {reused}. Unavailable: {unavailable}.",
+  "coach_load_auto_unavailable": "Some activities lack valid pulse data or HR references. Any previous load for those activities is retained.",
+  "coach_load_info": "Information about {metric}",
+  "coach_load_ctl_help": "Weighted average load over the last 42 days. Summarizes sustained load, giving more weight to recent days.",
+  "coach_load_atl_help": "Weighted average load over the last 7 days. Reflects recent load and changes faster than CTL.",
+  "coach_load_tsb_help": "Difference between CTL and ATL. A negative value means recent load exceeds sustained load; a positive value means it is lower. It does not determine recovery on its own."
 }

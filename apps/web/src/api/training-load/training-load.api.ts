@@ -136,9 +136,11 @@ export class TrainingLoadAPI {
    */
   static async recalculateAllLoads(
     calculationType: TrainingLoadCalculationType,
+    athleteId?: number,
   ): Promise<RecalculateAllLoadsResponse> {
     const res = await client.post(routes.trainingLoad.recalculate, {
       calculationType,
+      ...(athleteId && { athleteId }),
     });
     return res.data;
   }

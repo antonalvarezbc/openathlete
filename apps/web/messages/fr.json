@@ -1382,7 +1382,16 @@
   "coach_load_retry": "Réessayer",
   "coach_load_coverage": "Seules les activités avec un TRIMP calculé sont incluses. L’absence de charges ne signifie pas du repos.",
   "coach_load_empty": "Données insuffisantes",
-  "coach_load_requirements": "Aucune charge TRIMP calculée sur cette période. Le calcul nécessite des enregistrements de fréquence cardiaque, la FC maximale et la FC au repos.",
+  "coach_load_requirements": "Aucune charge TRIMP calculée sur cette période. Des enregistrements de FC, la FC au repos et la FC maximale (mesure ou maximum des zones de FC applicables) sont nécessaires.",
   "dashboard_header_competitions_error": "Impossible de charger les prochaines compétitions.",
-  "garmin_manual_history_incomplete": "L’historique des 42 jours n’a pas pu être entièrement couvert : limite de consultation atteinte ou page répétée par Garmin. Les charges peuvent être incomplètes."
+  "garmin_manual_history_incomplete": "L’historique des 42 jours n’a pas pu être entièrement couvert : limite de consultation atteinte ou page répétée par Garmin. Les charges peuvent être incomplètes.",
+  "coach_load_hr_priority": "À l’ouverture ou à l’actualisation, les charges manquantes ou modifiées sont recalculées et les autres réutilisées. La FC maximale enregistrée est prioritaire, sinon les zones du sport ou générales sont utilisées. Aucune requête Garmin.",
+  "coach_load_hr_zones": "FC maximale issue des zones : {max} bpm ; FC au repos : {rest} bpm.",
+  "coach_load_hr_metric": "FC maximale enregistrée : {max} bpm ; FC au repos : {rest} bpm.",
+  "coach_load_auto_summary": "Charges actualisées : {processed}. Réutilisées : {reused}. Non calculables : {unavailable}.",
+  "coach_load_auto_unavailable": "Certaines activités manquent de données de pouls ou de références de FC valides. Leurs anciennes charges éventuelles sont conservées.",
+  "coach_load_info": "Informations sur {metric}",
+  "coach_load_ctl_help": "Moyenne pondérée de la charge des 42 derniers jours. Résume la charge à long terme en donnant plus de poids aux jours récents.",
+  "coach_load_atl_help": "Moyenne pondérée de la charge des 7 derniers jours. Reflète la charge récente et évolue plus vite que la CTL.",
+  "coach_load_tsb_help": "Différence entre CTL et ATL. Une valeur négative indique une charge récente supérieure à la charge à long terme ; une valeur positive indique le contraire. Elle ne suffit pas à évaluer la récupération."
 }
