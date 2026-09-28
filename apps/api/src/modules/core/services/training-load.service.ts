@@ -724,33 +724,22 @@ export class TrainingLoadService {
    * Get all training load entries for a specific activity
    */
   async getActivityTrainingLoads(user: AuthUser, activityId: number) {
-    const athlete = await this.prisma.athlete.findFirst({
-      where: {
-        user: {
-          userId: user.userId,
-        },
-      },
-    });
-
-    if (!athlete) {
-      throw new NotFoundException('Athlete not found');
-    }
-
-    // Get activity to verify ownership
+    // Resolve the target athlete from the event, not the reader's own profile.
+    // Only load the ID: viewing a saved load never needs the activity stream.
     const event = await this.prisma.event.findFirst({
-      where: {
-        eventId: activityId,
-        athleteId: athlete.athleteId,
-        type: 'ACTIVITY',
-      },
-      include: {
-        activity: true,
+      where: { eventId: activityId, type: 'ACTIVITY' },
+      select: {
+        athleteId: true,
+        activity: { select: { eventActivityId: true } },
       },
     });
 
-    if (!event || !event.activity) {
+    if (!event?.activity || event.athleteId === null) {
       throw new NotFoundException('Activity not found');
     }
+
+    // Recheck the coach relationship in the database before reading any loads.
+    await this.resolveCalculationAthlete(user, event.athleteId);
 
     // Get all training load entries for this activity
     const entries = await this.prisma.trainingLoadEntry.findMany({

@@ -1423,5 +1423,8 @@
   "hr_zones_reserve_formula": "FC cible = FC au repos + pourcentage × (FC maximale − FC au repos). Changer de méthode de pourcentage conserve les pourcentages et recalcule les plages en bpm.",
   "hr_zones_rest_required": "Saisissez une FC au repos entière, supérieure à zéro et inférieure à la FC maximale.",
   "hr_zones_manual": "Manuel",
-  "hr_zones_convert_limits": "Convertir les limites actuelles"
+  "hr_zones_convert_limits": "Convertir les limites actuelles",
+  "activity_load_reading": "Chargement de la charge enregistrée…",
+  "activity_load_failed": "Impossible de consulter la charge enregistrée.",
+  "activity_load_not_saved": "Aucune charge TRIMP n’est enregistrée pour cette activité."
 }

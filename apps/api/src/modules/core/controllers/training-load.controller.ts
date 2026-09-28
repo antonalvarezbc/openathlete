@@ -630,7 +630,7 @@ export class TrainingLoadController {
   @ApiOperation({
     summary: 'Get all training load entries for a specific activity',
     description:
-      "Retrieves all training load entries (across all calculation types) for a specific activity. An activity can have multiple training load entries if it has been calculated using different methods (e.g., both FOSTER_RPE and TRIMP). Verifies that the activity belongs to the authenticated user's Athlete.",
+      'Retrieves all training load entries (across all calculation types) for a specific activity. An activity can have multiple training load entries if it has been calculated using different methods (e.g., both FOSTER_RPE and TRIMP). Allows the activity owner or a coach currently linked to that athlete. Returns saved entries without recalculating them.',
   })
   @ApiParam({
     name: 'activityId',
@@ -683,6 +683,10 @@ export class TrainingLoadController {
   @ApiResponse({
     status: 404,
     description: 'Not found - Athlete or activity not found',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - not the activity owner or a linked coach',
   })
   async getActivityTrainingLoads(
     @JwtUser() user: AuthUser,

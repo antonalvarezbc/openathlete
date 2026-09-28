@@ -49,3 +49,14 @@ The optional athlete ID selects a linked athlete for a coach; omitting it retain
 self recalculation. Authorization is checked before reading activities and again
 before each write. IDs and calculation types are validated. The calendar uses
 the automatic summary refresh instead of this endpoint.
+
+## Reading an individual activity
+
+`GET /training-load/activity/:eventId` resolves the athlete from the activity and
+allows its owner or a coach with a current database relationship. A coach does
+not need an athlete profile. It reads saved entries only: it does not fetch the
+activity stream, calculate loads, update entries or contact Garmin/AI.
+
+The activity view distinguishes reading saved data, a failed lookup (with a
+read-only retry) and a successful lookup without a saved TRIMP entry. Foster-only
+entries do not produce a blank value, and a valid TRIMP of zero remains visible.
