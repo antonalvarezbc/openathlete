@@ -164,13 +164,14 @@ export const useUseEventTemplateMutation = (
 
       return { previousQueries, tempId };
     },
-    onError: (_error, _variables, context) => {
+    onError: (error, variables, context, mutationContext) => {
       // Rollback on error - restore all previous query states
       if (context?.previousQueries) {
         context.previousQueries.forEach((data, queryKey) => {
           queryClient.setQueryData(queryKey, data);
         });
       }
+      opt?.onError?.(error, variables, context, mutationContext);
     },
     onSuccess: (data, variables, context, _unused) => {
       // context (3rd param) is what onMutate returns

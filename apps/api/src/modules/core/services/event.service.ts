@@ -43,6 +43,7 @@ import {
   createWorkoutSchema,
   mapPrismaWorkoutToDto,
   mapWorkoutDtoToPrisma,
+  mapWorkoutTargets,
   startOfDay,
   updateWorkoutSchema,
 } from '@openathlete/shared';
@@ -72,6 +73,7 @@ import {
   findPlanWeek,
   validateLinkedRaceDates,
 } from '../helpers/plan-access';
+import { prepareWorkoutTargets } from '../helpers/workout-targets';
 import { EVENT_INCLUDES } from './event-includes';
 import { WorkoutService } from './workout.service';
 
@@ -314,6 +316,15 @@ export class EventService {
         endDate,
       );
     }
+    if (type === 'TRAINING' && workout) {
+      const parsed = createWorkoutSchema.safeParse(workout);
+      if (!parsed.success) throw new BadRequestException(parsed.error.format());
+      workout.steps = await prepareWorkoutTargets(
+        this.prisma,
+        parsed.data.steps,
+        { athleteId: finalAthleteId, sport: data.sport },
+      );
+    }
     const created = await this.prisma.event.create({
       data: {
         athleteId: finalAthleteId,
@@ -496,6 +507,33 @@ export class EventService {
         eventId,
         startDate ?? event.startDate,
         endDate ?? event.endDate,
+      );
+    }
+    if (data.type === 'TRAINING' && workout?.steps && event.training) {
+      const parsed = updateWorkoutSchema.safeParse(workout);
+      if (!parsed.success) throw new BadRequestException(parsed.error.format());
+      // A template editor may keep existing legacy references, but cannot use an
+      // arbitrary zone ID to read another athlete's zone definition.
+      const allowedLegacyZoneIds: number[] = [];
+      if (isTemplate && event.training.workout) {
+        mapWorkoutTargets(
+          mapPrismaWorkoutToDto(event.training.workout).steps,
+          (target) => {
+            if (target.targetType === 'ZONE' && target.targetValue != null)
+              allowedLegacyZoneIds.push(target.targetValue);
+            return target;
+          },
+        );
+      }
+      workout.steps = await prepareWorkoutTargets(
+        this.prisma,
+        parsed.data.steps ?? [],
+        {
+          athleteId: event.athleteId,
+          sport: data.sport ?? event.training.sport,
+          portable: isTemplate,
+          allowedLegacyZoneIds: isTemplate ? allowedLegacyZoneIds : undefined,
+        },
       );
     }
     const updatedEvent = await this.prisma.event.update({

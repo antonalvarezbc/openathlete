@@ -38,3 +38,4 @@ export {
 export { getTargetIntensity, DEFAULT_METRIC_VALUES } from './target-intensity';
 
 export { buildPlanSchedule } from './plan-schedule';
+export * from './workout-targets';

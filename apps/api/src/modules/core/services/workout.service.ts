@@ -18,6 +18,7 @@ import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
 import { accessibleBy } from 'src/modules/auth/services/casl-prisma';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
+import { prepareWorkoutTargets } from '../helpers/workout-targets';
 import { EventService } from './event.service';
 
 @Injectable()
@@ -142,11 +143,22 @@ export class WorkoutService {
 
     const sourceWorkout = sourceEvent.training.workout;
     const sourceDto = mapPrismaWorkoutToDto(sourceWorkout);
+    const portable = await prepareWorkoutTargets(this.prisma, sourceDto.steps, {
+      athleteId: sourceEvent.athleteId,
+      sport: sourceEvent.training.sport,
+      portable: true,
+    });
+    const steps = targetEvent.athleteId
+      ? await prepareWorkoutTargets(this.prisma, portable, {
+          athleteId: targetEvent.athleteId,
+          sport: targetEvent.training.sport,
+        })
+      : portable;
 
     await this.prisma.workout.create({
       data: {
         eventTrainingId: targetEvent.training.eventTrainingId,
-        ...mapWorkoutDtoToPrisma({ steps: sourceDto.steps }),
+        ...mapWorkoutDtoToPrisma({ steps }),
       },
       include: {
         steps: {

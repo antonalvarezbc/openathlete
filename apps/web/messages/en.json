@@ -1426,5 +1426,14 @@
   "hr_zones_convert_limits": "Convert current limits",
   "activity_load_reading": "Loading saved training load…",
   "activity_load_failed": "Could not retrieve the saved training load.",
-  "activity_load_not_saved": "No TRIMP load has been saved for this activity."
+  "activity_load_not_saved": "No TRIMP load has been saved for this activity.",
+  "workout_zone_number": "Zone {number}",
+  "workout_zone_reference_help": "Reusable zone: it uses the assigned athlete’s zone with the same name and type, for this sport.",
+  "workout_target_template_help": "The target will be resolved using the athlete assigned to this template.",
+  "workout_target_athlete_preview": "Target for this athlete",
+  "workout_target_missing_metric": "Missing athlete metric: {metric}. Add it before assigning or saving this workout.",
+  "workout_target_missing_zone": "The athlete has no matching zone “{zone}” for this sport. Configure it or choose another target.",
+  "workout_target_ambiguous_zone": "More than one zone matches “{zone}”. Review the athlete’s zones before saving.",
+  "workout_target_invalid": "Check the target: its reference and range must be valid. No changes have been saved.",
+  "workout_target_data_error": "Could not load the athlete’s metrics or zones. Try again."
 }

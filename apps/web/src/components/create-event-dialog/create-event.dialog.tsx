@@ -339,7 +339,13 @@ export function CreateEventDialog({ open, onClose, ...rest }: P) {
             workoutSteps={workoutSteps}
             setWorkoutSteps={setWorkoutSteps}
             sportValue={sportValue}
-            athleteId={athleteId ?? undefined}
+            athleteId={
+              edit && 'isTemplate' in rest && rest.isTemplate
+                ? null
+                : edit
+                  ? (rest.event?.athleteId ?? athleteId)
+                  : athleteId
+            }
           />
 
           <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4">

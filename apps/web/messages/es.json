@@ -1426,5 +1426,14 @@
   "hr_zones_convert_limits": "Convertir límites actuales",
   "activity_load_reading": "Consultando carga guardada…",
   "activity_load_failed": "No se ha podido consultar la carga guardada.",
-  "activity_load_not_saved": "No hay una carga TRIMP guardada para esta actividad."
+  "activity_load_not_saved": "No hay una carga TRIMP guardada para esta actividad.",
+  "workout_zone_number": "Zona {number}",
+  "workout_zone_reference_help": "Zona reutilizable: utiliza la zona del atleta destinatario con el mismo nombre y tipo, para este deporte.",
+  "workout_target_template_help": "El objetivo se calculará con los datos del atleta al que asignes esta plantilla.",
+  "workout_target_athlete_preview": "Objetivo para este atleta",
+  "workout_target_missing_metric": "Falta la métrica del atleta: {metric}. Añádela antes de asignar o guardar este entrenamiento.",
+  "workout_target_missing_zone": "El atleta no tiene una zona equivalente a «{zone}» para este deporte. Configúrala o elige otro objetivo.",
+  "workout_target_ambiguous_zone": "Hay varias zonas que coinciden con «{zone}». Revisa las zonas del atleta antes de guardar.",
+  "workout_target_invalid": "Revisa el objetivo: su referencia y su rango deben ser válidos. No se han guardado cambios.",
+  "workout_target_data_error": "No se han podido cargar las métricas o zonas del atleta. Vuelve a intentarlo."
 }

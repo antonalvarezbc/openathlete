@@ -6,6 +6,15 @@ import {
   WORKOUT_TARGET_TYPE,
 } from '../../misc';
 
+export const workoutZoneReferenceSchema = z
+  .object({
+    type: z.enum(['HEARTRATE', 'POWER', 'PACE']),
+    name: z.string().trim().min(1).max(100),
+  })
+  .strict();
+
+export type WorkoutZoneReference = z.infer<typeof workoutZoneReferenceSchema>;
+
 export const workoutStepTargetSchema = z.object({
   workoutStepTargetId: z.number().optional(),
   targetType: z.nativeEnum(WORKOUT_TARGET_TYPE),
@@ -13,6 +22,7 @@ export const workoutStepTargetSchema = z.object({
   targetMax: z.number().nullable().optional(),
   targetValue: z.number().nullable().optional(),
   metricType: z.string().nullable().optional(),
+  zoneReference: workoutZoneReferenceSchema.nullable().optional(),
   stepId: z.number().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),

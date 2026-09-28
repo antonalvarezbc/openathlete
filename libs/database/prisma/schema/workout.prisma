@@ -104,10 +104,12 @@ model WorkoutStepTarget {
   targetMin   Float?            @map("target_min")
   /// Maximum value for range targets
   targetMax   Float?            @map("target_max")
-  /// Single value target (for ZONE type, this is the zone number 1-5)
+  /// Single value target (for legacy ZONE targets, the athlete training zone ID)
   targetValue Float?            @map("target_value")
   /// Metric type for context (optional)
   metricType  MetricType?       @map("metric_type")
+  /// Portable zone identity; targetValue remains the resolved athlete zone ID.
+  zoneReference Json?           @map("zone_reference")
 
   // relationships
   step   WorkoutStep @relation(fields: [stepId], references: [workoutStepId], onDelete: Cascade)

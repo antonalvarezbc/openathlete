@@ -23,9 +23,12 @@ import {
   SPORT_TYPE,
   TRAINING_ZONE_TYPE,
   WORKOUT_TARGET_TYPE,
+  findWorkoutZone,
   formatTarget,
   getTargetIntensity,
+  getWorkoutZoneRange,
   kmhToSpeedMs,
+  mapWorkoutTargets,
 } from '@openathlete/shared';
 
 interface WorkoutGraphProps {
@@ -33,7 +36,7 @@ interface WorkoutGraphProps {
   sport?: SPORT_TYPE;
   className?: string;
   maxHeight?: number;
-  athleteId?: number;
+  athleteId?: number | null;
 }
 
 interface StepSegment {
@@ -593,12 +596,13 @@ function StepBar({
   segment,
   maxHeight,
   metrics,
+  zones,
 }: {
   segment: StepSegment;
   maxHeight: number;
   metrics?: Record<string, { value: number }>;
+  zones: TrainingZone[];
 }) {
-  const { data: athlete } = useGetMyAthleteQuery();
   const height = Math.max(
     MIN_BAR_HEIGHT,
     (segment.intensity / 5) * maxHeight || MIN_BAR_HEIGHT,
@@ -655,12 +659,7 @@ function StepBar({
                     (target: WorkoutStepTargetDto, idx: number) => (
                       <span key={idx}>
                         {idx > 0 && ', '}
-                        {formatTarget(
-                          target,
-                          undefined,
-                          metrics,
-                          athlete?.trainingZones,
-                        )}
+                        {formatTarget(target, undefined, metrics, zones)}
                       </span>
                     ),
                   )}
@@ -684,20 +683,26 @@ export function WorkoutGraph({
   maxHeight = 80,
   athleteId,
 }: WorkoutGraphProps) {
-  const { data: myAthlete } = useGetMyAthleteQuery();
+  const { data: myAthlete } = useGetMyAthleteQuery({
+    enabled: athleteId === undefined,
+  } as Parameters<typeof useGetMyAthleteQuery>[0]);
 
   // Get athlete data (use provided athleteId or fallback to current user's athlete)
-  const targetAthleteId = athleteId || myAthlete?.athleteId;
+  const targetAthleteId =
+    athleteId === undefined ? myAthlete?.athleteId : athleteId;
   const { data: athleteZones } = useGetTrainingZones(targetAthleteId || 0, {
     enabled: !!targetAthleteId,
   } as Parameters<typeof useGetTrainingZones>[1]);
-  const { data: latestMetrics } = useGetLatestMetricsQuery(targetAthleteId, {
-    enabled: !!targetAthleteId,
-  } as Parameters<typeof useGetLatestMetricsQuery>[1]);
+  const { data: latestMetrics } = useGetLatestMetricsQuery(
+    targetAthleteId ?? undefined,
+    {
+      enabled: !!targetAthleteId,
+    } as Parameters<typeof useGetLatestMetricsQuery>[1],
+  );
 
   // Organize zones by type
   const zonesByType = useMemo((): Record<TRAINING_ZONE_TYPE, ZoneInfo[]> => {
-    const zones = athleteZones || myAthlete?.trainingZones || [];
+    const zones = athleteZones ?? [];
     const result: Record<TRAINING_ZONE_TYPE, ZoneInfo[]> = {
       [TRAINING_ZONE_TYPE.HEARTRATE]: [],
       [TRAINING_ZONE_TYPE.POWER]: [],
@@ -716,21 +721,20 @@ export function WorkoutGraph({
         )
         .sort((a: TrainingZone, b: TrainingZone) => a.index - b.index)
         .map((zone: TrainingZone & { values: TrainingZoneValue[] }) => {
-          const values = zone.values.filter((value: TrainingZoneValue) => {
-            if (sport) {
-              return value.sports.includes(sport);
-            }
-            return true;
-          });
-
-          if (values.length === 0) return null;
+          let range;
+          try {
+            range = getWorkoutZoneRange(zone, sport ?? SPORT_TYPE.RUNNING);
+          } catch {
+            return null;
+          }
+          if (!range) return null;
 
           return {
             id: zone.trainingZoneId,
             name: zone.name,
             color: zone.color,
-            min: values[0].min,
-            max: values[0].max,
+            min: range.min,
+            max: range.max,
             index: zone.index,
           };
         })
@@ -740,7 +744,7 @@ export function WorkoutGraph({
     }
 
     return result;
-  }, [athleteZones, myAthlete, sport]);
+  }, [athleteZones, sport]);
 
   // Format metrics for easy lookup
   const metrics = useMemo(() => {
@@ -756,8 +760,23 @@ export function WorkoutGraph({
 
   const segments = useMemo(() => {
     if (workout.steps.length === 0) return [];
-    return flattenSteps(workout.steps, zonesByType, metrics, sport);
-  }, [workout.steps, zonesByType, metrics, sport]);
+    const steps = mapWorkoutTargets(workout.steps, (target) => {
+      if (target.targetType !== 'ZONE') return target;
+      try {
+        return {
+          ...target,
+          targetValue: findWorkoutZone(
+            target,
+            athleteZones ?? [],
+            sport ?? SPORT_TYPE.RUNNING,
+          ).zone.trainingZoneId,
+        };
+      } catch {
+        return { ...target, targetValue: null };
+      }
+    });
+    return flattenSteps(steps, zonesByType, metrics, sport);
+  }, [workout.steps, zonesByType, metrics, sport, athleteZones]);
 
   const totalDuration = useMemo(() => {
     return (
@@ -828,6 +847,7 @@ export function WorkoutGraph({
                   segment={segment}
                   maxHeight={maxHeight}
                   metrics={metrics}
+                  zones={athleteZones ?? []}
                 />
               </div>
             );

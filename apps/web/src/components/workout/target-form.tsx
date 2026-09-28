@@ -1,9 +1,6 @@
-import { useGetMyAthleteQuery } from '@/api/athlete';
-import { useGetLatestMetricsQuery } from '@/api/metric/metric.hooks';
 import { RHFNumberWithUnit } from '@/components/hook-form/rhf-number-with-unit';
 import { RHFRpe } from '@/components/hook-form/rhf-rpe';
 import { RHFVelocityPace } from '@/components/hook-form/rhf-velocity-pace';
-import { RHFZoneSelector } from '@/components/hook-form/rhf-zone-selector';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -23,18 +20,30 @@ import {
 } from '@/components/ui/select';
 import { m } from '@/paraglide/messages';
 import { metricTypeLabelMap } from '@/utils/label-map/core/metric-type.label-map';
+import { workoutTargetErrorMessage } from '@/utils/workout-target-errors';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useMemo, useState } from 'react';
 import type { ControllerRenderProps } from 'react-hook-form';
 import { FormProvider, useForm } from 'react-hook-form';
 import { z } from 'zod';
 
+import {
+  TRAINING_ZONE_TYPE,
+  WorkoutTargetError,
+  formatTarget,
+  resolveWorkoutTarget,
+  validateWorkoutTarget,
+  workoutZoneKey,
+  workoutZoneReferenceSchema,
+} from '@openathlete/shared';
 import type { WorkoutStepTargetDto } from '@openathlete/shared';
 import {
   SPORT_TYPE,
   WORKOUT_TARGET_TYPE,
   getCompatibleMetrics,
 } from '@openathlete/shared';
+
+import { useWorkoutTargetData } from './workout-athlete-context';
 
 const TARGET_TYPES: { value: WORKOUT_TARGET_TYPE; getLabelFn: () => string }[] =
   [
@@ -74,6 +83,7 @@ const targetFormSchema = z.object({
   targetMax: z.number().nullable().optional(),
   targetValue: z.number().nullable().optional(),
   metricType: z.string().nullable().optional(),
+  zoneReference: workoutZoneReferenceSchema.nullable().optional(),
 });
 
 type TargetFormValues = z.infer<typeof targetFormSchema>;
@@ -139,11 +149,14 @@ export function TargetForm({
   cancelLabel = m.target_form_cancel(),
   sport,
 }: TargetFormProps) {
-  const { data: athlete } = useGetMyAthleteQuery();
-  const { data: latestMetrics = {} } = useGetLatestMetricsQuery(
-    athlete?.athleteId,
-  );
-
+  const {
+    athleteId,
+    zones,
+    metrics,
+    sport: targetSport,
+    isLoading,
+    isError,
+  } = useWorkoutTargetData(sport);
   const [useRange, setUseRange] = useState(
     !!(initialValues?.targetMin || initialValues?.targetMax),
   );
@@ -195,6 +208,7 @@ export function TargetForm({
           )
         : initialValues?.targetValue || null,
       metricType: initialMetricType,
+      zoneReference: initialValues?.zoneReference ?? null,
     },
   });
 
@@ -206,12 +220,46 @@ export function TargetForm({
     return getCompatibleMetrics(selectedTargetType);
   }, [selectedTargetType]);
 
-  // Filter to only show metrics that the athlete has
-  const availableMetrics = useMemo(() => {
-    return compatibleMetrics.filter(
-      (metricType) => latestMetrics[metricType]?.value,
+  // A generic template can reference metrics even before it has an athlete.
+  const availableMetrics =
+    selectedTargetType === 'ZONE' ? [] : compatibleMetrics;
+  const reference = form.watch('zoneReference');
+  const selectedZone = zones.find(
+    (zone) => zone.trainingZoneId === form.watch('targetValue'),
+  );
+  const zoneOptions = useMemo(() => {
+    const options = zones
+      .filter((zone) => zone.type === TRAINING_ZONE_TYPE.HEARTRATE)
+      .map((zone) => ({ type: zone.type, name: zone.name }));
+    if (!options.length)
+      for (let number = 0; number <= 5; number++) {
+        options.push({
+          type: TRAINING_ZONE_TYPE.HEARTRATE,
+          name: m.workout_zone_number({ number: String(number) }),
+        });
+      }
+    const current = reference ?? selectedZone;
+    if (
+      current &&
+      !options.some(
+        (zone) =>
+          zone.type === current.type &&
+          workoutZoneKey(zone.name) === workoutZoneKey(current.name),
+      )
+    ) {
+      options.push({ type: current.type, name: current.name });
+    }
+    return options.filter(
+      (zone, index) =>
+        options.findIndex(
+          (item) =>
+            item.type === zone.type &&
+            workoutZoneKey(item.name) === workoutZoneKey(zone.name),
+        ) === index,
     );
-  }, [compatibleMetrics, latestMetrics]);
+  }, [zones, reference, selectedZone]);
+  const zoneKey = (zone: { type: string; name: string }) =>
+    `${zone.type}:${workoutZoneKey(zone.name)}`;
 
   // For ZONE type, use targetValue (not range)
   const isZoneType = selectedTargetType === 'ZONE';
@@ -239,10 +287,63 @@ export function TargetForm({
       targetMin: showRange ? finalMin : null,
       targetMax: showRange ? finalMax : null,
       targetValue: !showRange || isZoneType ? finalValue : null,
-      metricType: values.metricType || null,
+      metricType: isZoneType ? null : values.metricType || null,
+      zoneReference: isZoneType
+        ? (values.zoneReference ??
+          (selectedZone
+            ? { type: selectedZone.type, name: selectedZone.name }
+            : null))
+        : null,
     };
+    try {
+      validateWorkoutTarget(cleanedValues);
+    } catch (error) {
+      form.setError('root', {
+        message: workoutTargetErrorMessage(error, m.workout_target_invalid()),
+      });
+      return;
+    }
     onSubmit(cleanedValues);
   };
+
+  const watched = form.watch();
+  let preview: string | undefined;
+  let warning: string | undefined;
+  if (watched.metricType || watched.targetType === 'ZONE') {
+    if (isError) warning = m.workout_target_data_error();
+    else if (!athleteId) preview = m.workout_target_template_help();
+    else if (!isLoading) {
+      const candidate = {
+        ...watched,
+        targetMin: showRange
+          ? convertToStoredPercentage(watched.targetMin, watched.metricType)
+          : null,
+        targetMax: showRange
+          ? convertToStoredPercentage(watched.targetMax, watched.metricType)
+          : null,
+        targetValue: showRange
+          ? null
+          : convertToStoredPercentage(watched.targetValue, watched.metricType),
+      };
+      try {
+        const resolved = resolveWorkoutTarget(
+          candidate,
+          { zones, metrics, sport: targetSport },
+          true,
+        );
+        preview = `${m.workout_target_athlete_preview()}: ${formatTarget(resolved).replace(' bpm', ` ${m.bpm()}`)}`;
+      } catch (error) {
+        if (
+          error instanceof WorkoutTargetError &&
+          error.code !== 'WORKOUT_TARGET_INVALID'
+        )
+          warning = workoutTargetErrorMessage(
+            error,
+            m.workout_target_invalid(),
+          );
+      }
+    }
+  }
 
   return (
     <Form {...form}>
@@ -261,7 +362,18 @@ export function TargetForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>{m.target_form_type()}</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  form.setValue('metricType', null);
+                  form.setValue('zoneReference', null);
+                  form.setValue('targetValue', null);
+                  form.setValue('targetMin', null);
+                  form.setValue('targetMax', null);
+                  form.clearErrors();
+                }}
+                value={field.value}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue
@@ -296,6 +408,10 @@ export function TargetForm({
                 <Select
                   onValueChange={(value) => {
                     field.onChange(value === 'none' ? null : value);
+                    form.setValue('targetValue', null);
+                    form.setValue('targetMin', null);
+                    form.setValue('targetMax', null);
+                    form.clearErrors();
                   }}
                   value={field.value || 'none'}
                 >
@@ -344,10 +460,50 @@ export function TargetForm({
 
         {/* Value Inputs */}
         {isZoneType ? (
-          <RHFZoneSelector
-            name="targetValue"
-            label={m.target_form_single_value()}
-            sport={sport}
+          <FormField
+            control={form.control}
+            name="zoneReference"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{m.target_form_single_value()}</FormLabel>
+                <Select
+                  value={
+                    field.value
+                      ? zoneKey(field.value)
+                      : selectedZone
+                        ? zoneKey(selectedZone)
+                        : ''
+                  }
+                  onValueChange={(value) => {
+                    field.onChange(
+                      zoneOptions.find((zone) => zoneKey(zone) === value),
+                    );
+                    form.setValue('targetValue', null);
+                    form.setValue('metricType', null);
+                    form.clearErrors();
+                  }}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder={m.target_form_training_zone_placeholder()}
+                      />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {zoneOptions.map((zone) => (
+                      <SelectItem key={zoneKey(zone)} value={zoneKey(zone)}>
+                        {zone.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  {m.workout_zone_reference_help()}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         ) : selectedTargetType === 'PACE' ? (
           showRange ? (
@@ -502,6 +658,24 @@ export function TargetForm({
           )
         ) : null}
 
+        {preview && (
+          <p className="text-sm text-muted-foreground" role="status">
+            {preview}
+          </p>
+        )}
+        {warning && (
+          <p
+            className="text-sm text-amber-700 dark:text-amber-400"
+            role="alert"
+          >
+            {warning}
+          </p>
+        )}
+        {form.formState.errors.root?.message && (
+          <p className="text-sm text-destructive" role="alert">
+            {form.formState.errors.root.message}
+          </p>
+        )}
         <div className="flex flex-col-reverse md:flex-row justify-end gap-2">
           {onCancel && (
             <Button type="button" variant="outline" onClick={onCancel}>
