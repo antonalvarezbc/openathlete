@@ -1423,5 +1423,8 @@
   "hr_zones_reserve_formula": "FC obiettivo = FC a riposo + percentuale × (FC massima − FC a riposo). Cambiare metodo percentuale mantiene le percentuali e ricalcola gli intervalli in bpm.",
   "hr_zones_rest_required": "Inserisci una FC a riposo intera, maggiore di zero e inferiore alla FC massima.",
   "hr_zones_manual": "Manuale",
-  "hr_zones_convert_limits": "Converti i limiti attuali"
+  "hr_zones_convert_limits": "Converti i limiti attuali",
+  "activity_load_reading": "Caricamento del carico salvato…",
+  "activity_load_failed": "Impossibile recuperare il carico salvato.",
+  "activity_load_not_saved": "Non è stato salvato alcun carico TRIMP per questa attività."
 }

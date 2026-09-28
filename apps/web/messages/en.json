@@ -1423,5 +1423,8 @@
   "hr_zones_reserve_formula": "Target HR = resting HR + percentage × (maximum HR − resting HR). Switching between percentage methods keeps the percentages and recalculates the bpm ranges.",
   "hr_zones_rest_required": "Enter a whole-number resting heart rate greater than zero and below maximum heart rate.",
   "hr_zones_manual": "Manual",
-  "hr_zones_convert_limits": "Convert current limits"
+  "hr_zones_convert_limits": "Convert current limits",
+  "activity_load_reading": "Loading saved training load…",
+  "activity_load_failed": "Could not retrieve the saved training load.",
+  "activity_load_not_saved": "No TRIMP load has been saved for this activity."
 }

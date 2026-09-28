@@ -1423,5 +1423,8 @@
   "hr_zones_reserve_formula": "FC objetivo = FC en reposo + porcentaje × (FC máxima − FC en reposo). Cambiar entre métodos de porcentaje conserva los porcentajes y recalcula los rangos en ppm.",
   "hr_zones_rest_required": "Introduce una FC en reposo entera, mayor que cero y menor que la FC máxima.",
   "hr_zones_manual": "Manual",
-  "hr_zones_convert_limits": "Convertir límites actuales"
+  "hr_zones_convert_limits": "Convertir límites actuales",
+  "activity_load_reading": "Consultando carga guardada…",
+  "activity_load_failed": "No se ha podido consultar la carga guardada.",
+  "activity_load_not_saved": "No hay una carga TRIMP guardada para esta actividad."
 }
