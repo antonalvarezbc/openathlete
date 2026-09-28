@@ -161,7 +161,7 @@ export function buildTrainingZonesContext(
       })
       .join(', ');
 
-    const label = `Z${zone.index + 1} ${zone.name}`;
+    const label = zone.name;
     zoneLookup.set(zone.trainingZoneId, {
       id: zone.trainingZoneId,
       label,

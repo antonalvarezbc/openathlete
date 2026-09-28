@@ -1408,5 +1408,20 @@
   "feedback_load_error": "Impossible de charger le questionnaire. Réessaie.",
   "feedback_unanswered": "En attente de réponse",
   "feedback_model_not_configured": "Le fournisseur IA choisi pour les questions n’est pas configuré. Demande à l’administrateur de vérifier le modèle et sa clé API.",
-  "feedback_provider_error": "Impossible d’obtenir une réponse du fournisseur IA. Réessaie ; si le problème persiste, demande à l’administrateur de vérifier l’accès au modèle et les limites d’utilisation."
+  "feedback_provider_error": "Impossible d’obtenir une réponse du fournisseur IA. Réessaie ; si le problème persiste, demande à l’administrateur de vérifier l’accès au modèle et les limites d’utilisation.",
+  "hr_zone_0": "Zone 0",
+  "hr_zones_input_mode": "Mode de saisie des zones",
+  "hr_zones_percentage_help": "Les limites sont arrondies en bpm entiers. Chaque limite supérieure appartient à la zone suivante, sauf 100 %. Les zones sont enregistrées en bpm et ne changent pas automatiquement avec la FC maximale ou au repos. Ces champs ne modifient pas les mesures de l’athlète.",
+  "hr_zones_default_percentages": "Appliquer les pourcentages par défaut",
+  "hr_zones_max_required": "Saisissez une FC maximale entière entre 1 et 300 bpm.",
+  "hr_zones_conversion_error": "Vérifiez la FC maximale, la FC au repos et les limites avant de changer d’unité. Les limites existantes doivent être des bpm entiers, ne pas dépasser la FC maximale et, pour les pourcentages de réserve, ne pas être inférieures à la FC au repos.",
+  "hr_zones_invalid": "Vérifiez les noms et les limites des zones. Les pourcentages doivent être compris entre 0 et 100 et produire une plage de bpm non vide.",
+  "hr_zones_save_error": "Certaines zones n’ont pas pu être enregistrées. Vérifiez les valeurs et réessayez ; certaines modifications ont peut-être déjà été enregistrées.",
+  "hr_zones_resting_hr": "FC au repos",
+  "hr_zones_resting_help": "Utilisez la FC au repos, pas la FC minimale enregistrée dans la journée. Elle est nécessaire uniquement pour le calcul par réserve cardiaque.",
+  "hr_zones_reserve_percent": "% de la réserve cardiaque",
+  "hr_zones_reserve_formula": "FC cible = FC au repos + pourcentage × (FC maximale − FC au repos). Changer de méthode de pourcentage conserve les pourcentages et recalcule les plages en bpm.",
+  "hr_zones_rest_required": "Saisissez une FC au repos entière, supérieure à zéro et inférieure à la FC maximale.",
+  "hr_zones_manual": "Manuel",
+  "hr_zones_convert_limits": "Convertir les limites actuelles"
 }
