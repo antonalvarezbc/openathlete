@@ -1300,7 +1300,7 @@
   "garmin_manual_available_at": "You can update again after {date}. No update starts automatically.",
   "garmin_backfill_button": "Complete pending activities",
   "garmin_backfill_stop": "Stop",
-  "garmin_backfill_help": "Complete FIT details for activities already in OA, without querying recovery again. Cached files are reused. Each run downloads at most 20 new FIT files, with at least 15 seconds between requests, and stops on errors. These local precautions do not guarantee Garmin’s limits will not be reached. Continue only by pressing the button again.",
+  "garmin_backfill_help": "Complete FIT details for activities already in OpenAthlete, without querying recovery again. Cached files are reused. Each run downloads at most 20 new FIT files, with at least 15 seconds between requests, and stops on errors. These local precautions do not guarantee Garmin’s limits will not be reached. Continue only by pressing the button again.",
   "garmin_backfill_pending": "{count} activities pending completion. A FIT file may not contain GPS.",
   "garmin_backfill_running": "Completing activities…",
   "garmin_backfill_stopping": "Stopping after the current request. No further files will be requested.",

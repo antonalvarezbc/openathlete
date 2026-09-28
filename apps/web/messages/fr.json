@@ -1300,7 +1300,7 @@
   "garmin_manual_available_at": "Vous pourrez actualiser à partir de {date}. Aucune actualisation ne démarrera automatiquement.",
   "garmin_backfill_button": "Compléter les activités en attente",
   "garmin_backfill_stop": "Arrêter",
-  "garmin_backfill_help": "Complète les détails FIT des activités déjà dans OA, sans consulter à nouveau la récupération. Les fichiers locaux sont réutilisés. Chaque exécution télécharge au maximum 20 nouveaux FIT, avec au moins 15 secondes entre les requêtes, et s’arrête en cas d’erreur. Ces précautions locales ne garantissent pas d’éviter les limites de Garmin. Pour continuer, appuyez à nouveau sur le bouton.",
+  "garmin_backfill_help": "Complète les détails FIT des activités déjà dans OpenAthlete, sans consulter à nouveau la récupération. Les fichiers locaux sont réutilisés. Chaque exécution télécharge au maximum 20 nouveaux FIT, avec au moins 15 secondes entre les requêtes, et s’arrête en cas d’erreur. Ces précautions locales ne garantissent pas d’éviter les limites de Garmin. Pour continuer, appuyez à nouveau sur le bouton.",
   "garmin_backfill_pending": "{count} activités à compléter. Un FIT peut ne pas contenir de GPS.",
   "garmin_backfill_running": "Complément des activités en cours…",
   "garmin_backfill_stopping": "Arrêt après la requête en cours. Aucun autre fichier ne sera demandé.",
