@@ -1,18 +1,23 @@
-import { useGetMyAthleteQuery } from '@/api/athlete';
-import { useGetLatestMetricsQuery } from '@/api/metric/metric.hooks';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { m } from '@/paraglide/messages';
 import { metricTypeLabelMap } from '@/utils/label-map/core/metric-type.label-map';
 import { cn } from '@/utils/shadcn';
 import { getTargetTypeLabel } from '@/utils/workout';
-import { useMemo } from 'react';
+import { workoutTargetErrorMessage } from '@/utils/workout-target-errors';
 
 import type { WorkoutStepTargetDto } from '@openathlete/shared';
-import { SPORT_TYPE, formatTarget } from '@openathlete/shared';
+import {
+  SPORT_TYPE,
+  formatTarget,
+  resolveWorkoutTarget,
+} from '@openathlete/shared';
+
+import { useWorkoutTargetData } from './workout-athlete-context';
 
 interface TargetBadgeProps {
   target: WorkoutStepTargetDto;
@@ -26,62 +31,43 @@ export function TargetBadge({
   target,
   className,
   showTooltip = true,
-  showAbsoluteValues = false,
+  showAbsoluteValues = true,
+  sport,
 }: TargetBadgeProps) {
-  const { data: athlete } = useGetMyAthleteQuery();
-  const { data: latestMetrics = {} } = useGetLatestMetricsQuery(
-    showAbsoluteValues ? athlete?.athleteId : undefined,
-  );
-
-  // Get zone name if target is a ZONE type
-  // Since zone IDs are unique, we can search across all zone types
-  const zoneName = useMemo(() => {
-    if (
-      target.targetType === 'ZONE' &&
-      target.targetValue &&
-      athlete?.trainingZones
-    ) {
-      const zone = athlete.trainingZones.find(
-        (z) => z.trainingZoneId === target.targetValue,
-      );
-      return zone?.name;
-    }
-    return null;
-  }, [target, athlete]);
-
-  // Convert metrics format from Record<string, AthleteMetric> to Record<string, { value: number }>
-  const metricsForFormat = useMemo(() => {
-    const converted: Record<string, { value: number }> = {};
-    Object.entries(latestMetrics).forEach(([key, metric]) => {
-      if (metric && typeof metric === 'object' && 'value' in metric) {
-        converted[key] = { value: metric.value };
-      }
-    });
-    return converted;
-  }, [latestMetrics]);
-
-  const formatted = useMemo(() => {
-    if (target.targetType === 'ZONE' && zoneName) {
-      return zoneName;
-    }
-    return formatTarget(
-      target,
-      (metricType) => {
-        return (
-          metricTypeLabelMap[metricType as keyof typeof metricTypeLabelMap] ||
-          metricType
-        );
-      },
-      showAbsoluteValues ? metricsForFormat : undefined,
-      athlete?.trainingZones || [],
-    );
-  }, [
+  const {
+    athleteId,
+    zones,
+    metrics,
+    isLoading,
+    isError,
+    sport: targetSport,
+  } = useWorkoutTargetData(sport);
+  let formatted = formatTarget(
     target,
-    zoneName,
-    metricsForFormat,
-    showAbsoluteValues,
-    athlete?.trainingZones,
-  ]);
+    (metric) =>
+      metricTypeLabelMap[metric as keyof typeof metricTypeLabelMap] ?? metric,
+    undefined,
+    zones,
+  );
+  let warning: string | undefined;
+  if (isError) warning = m.workout_target_data_error();
+  else if (
+    athleteId &&
+    !isLoading &&
+    (target.metricType || target.targetType === 'ZONE')
+  ) {
+    try {
+      const absolute = resolveWorkoutTarget(
+        target,
+        { zones, metrics, sport: targetSport },
+        true,
+      );
+      if (showAbsoluteValues)
+        formatted += ` · ${formatTarget(absolute).replace(' bpm', ` ${m.bpm()}`)}`;
+    } catch (error) {
+      warning = workoutTargetErrorMessage(error, m.workout_target_invalid());
+    }
+  }
 
   const label = getTargetTypeLabel(target.targetType);
 
@@ -90,6 +76,8 @@ export function TargetBadge({
       className={cn(
         'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
         'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+        warning &&
+          'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200',
         className,
       )}
     >
@@ -106,6 +94,7 @@ export function TargetBadge({
       <Tooltip>
         <TooltipTrigger asChild>{badge}</TooltipTrigger>
         <TooltipContent>
+          {warning && <p>{warning}</p>}
           <p className="text-sm">
             <span className="font-medium">{label}:</span> {formatted}
           </p>

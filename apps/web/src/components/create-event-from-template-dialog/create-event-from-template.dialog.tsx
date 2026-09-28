@@ -9,6 +9,7 @@ import {
   useUpdateFolderMutation,
 } from '@/api/event-template-folder';
 import { m } from '@/paraglide/messages';
+import { workoutTargetErrorMessage } from '@/utils/workout-target-errors';
 import {
   CollisionDetection,
   DndContext,
@@ -129,8 +130,8 @@ export function CreateEventFromTemplateDialog({ open, onClose, ...rest }: P) {
       onClose();
       toast.success(m.event_created_successfully());
     },
-    onError: () => {
-      toast.error(m.failed_to_create_event());
+    onError: (error) => {
+      toast.error(workoutTargetErrorMessage(error, m.failed_to_create_event()));
     },
   });
 

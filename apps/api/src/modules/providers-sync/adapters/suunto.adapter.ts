@@ -5,6 +5,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConnectorProvider, ProviderAccount } from '@openathlete/database';
 import { mapPrismaWorkoutToDto } from '@openathlete/shared';
 
+import { prepareWorkoutTargets } from '../../core/helpers/workout-targets';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { createSuuntoGuideZip } from '../mapping/suunto-guide-zip';
 import { mapWorkoutDtoToSuuntoGuide } from '../mapping/suunto-guide.mapper';
@@ -101,6 +102,15 @@ export class SuuntoAdapter implements ProviderAdapter {
 
     // Convert to DTO format
     const workoutDto = mapPrismaWorkoutToDto(workoutRecord);
+    workoutDto.steps = await prepareWorkoutTargets(
+      this.prisma,
+      workoutDto.steps,
+      {
+        athleteId: input.athleteId,
+        sport: input.normalized.sport,
+        absolute: true,
+      },
+    );
 
     // Map workout to Suunto Guide format (preserving repeat structure)
     const guide = mapWorkoutDtoToSuuntoGuide(

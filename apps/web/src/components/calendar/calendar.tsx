@@ -23,6 +23,7 @@ import { type PageAction, useSetPageActions } from '@/hooks/use-page-actions';
 import { m } from '@/paraglide/messages';
 import { AnalyticsEvent } from '@/utils/analytics-events';
 import { CALENDAR_COLORED_BY, getItem, setItem } from '@/utils/local-storage';
+import { workoutTargetErrorMessage } from '@/utils/workout-target-errors';
 import { DragEndEvent } from '@dnd-kit/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { addDays, format, isValid, parseISO, startOfMonth } from 'date-fns';
@@ -362,8 +363,8 @@ export function Calendar({
     onSuccess: () => {
       toast.success(m.event_created_successfully());
     },
-    onError: () => {
-      toast.error(m.failed_to_create_event());
+    onError: (error) => {
+      toast.error(workoutTargetErrorMessage(error, m.failed_to_create_event()));
     },
   });
   const { registerCalendarHandler } = useSharedDnd() || {};

@@ -5,6 +5,7 @@ import {
   WorkoutStepTarget,
 } from '@openathlete/database';
 
+import { workoutZoneReferenceSchema } from '../types/dtos/core/workout.dto';
 import {
   type CreateWorkoutDto,
   type CreateWorkoutStepDto,
@@ -33,15 +34,12 @@ function normalizeTarget(
   target: Partial<WorkoutStepTargetDto>,
 ): WorkoutStepTargetDto {
   return {
-    workoutStepTargetId: target.workoutStepTargetId,
     targetType: target.targetType!,
     targetMin: target.targetMin ?? null,
     targetMax: target.targetMax ?? null,
     targetValue: target.targetValue ?? null,
     metricType: target.metricType ?? null,
-    stepId: target.stepId,
-    createdAt: target.createdAt,
-    updatedAt: target.updatedAt,
+    zoneReference: target.zoneReference ?? null,
   };
 }
 
@@ -125,6 +123,7 @@ function mapTargetToPrismaCreate(target: WorkoutStepTargetDto) {
     targetMax: toNum(target.targetMax),
     targetValue: toNum(target.targetValue),
     metricType: target.metricType || null,
+    ...(target.zoneReference ? { zoneReference: target.zoneReference } : {}),
   };
 }
 
@@ -183,6 +182,9 @@ function mapPrismaTargetToDto(target: WorkoutStepTarget): WorkoutStepTargetDto {
     targetMax: target.targetMax ?? null,
     targetValue: target.targetValue ?? null,
     metricType: target.metricType ?? null,
+    zoneReference: target.zoneReference
+      ? workoutZoneReferenceSchema.parse(target.zoneReference)
+      : null,
     stepId: target.stepId,
     createdAt: target.createdAt ? new Date(target.createdAt) : undefined,
     updatedAt: target.updatedAt ? new Date(target.updatedAt) : undefined,
@@ -275,6 +277,7 @@ function flattenStep(
       targetMax: t.targetMax ?? null,
       targetValue: t.targetValue ?? null,
       metricType: t.metricType ?? null,
+      zoneReference: t.zoneReference ?? null,
     }),
   );
 

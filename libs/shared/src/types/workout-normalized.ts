@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { workoutZoneReferenceSchema } from './dtos/core/workout.dto';
 import {
   WORKOUT_DURATION_TYPE,
   WORKOUT_STEP_TYPE,
@@ -15,6 +16,7 @@ export const normalizedWorkoutStepTargetSchema = z.object({
   targetMax: z.number().nullable().optional(),
   targetValue: z.number().nullable().optional(),
   metricType: z.string().nullable().optional(),
+  zoneReference: workoutZoneReferenceSchema.nullable().optional(),
 });
 
 export type NormalizedWorkoutStepTarget = z.infer<

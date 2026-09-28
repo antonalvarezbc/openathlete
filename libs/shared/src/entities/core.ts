@@ -24,6 +24,7 @@ import {
   type WorkoutStepTarget as PrismaWorkoutStepTarget,
 } from '@openathlete/database';
 
+import type { WorkoutZoneReference } from '../types/dtos/core/workout.dto';
 import { EQUIPMENT_TYPE, EVENT_TYPE, SPORT_TYPE } from '../types/misc';
 
 export type UserRole = PrismaUserRole;
@@ -66,7 +67,9 @@ export interface WorkoutRepeat extends PrismaWorkoutRepeat {
   childSteps: WorkoutStep[];
 }
 
-export interface WorkoutStepTarget extends PrismaWorkoutStepTarget {
+export interface WorkoutStepTarget
+  extends Omit<PrismaWorkoutStepTarget, 'zoneReference'> {
+  zoneReference?: WorkoutZoneReference | null;
   step: WorkoutStep;
 }
 

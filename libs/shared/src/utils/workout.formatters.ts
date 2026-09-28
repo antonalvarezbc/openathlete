@@ -34,6 +34,9 @@ export function formatTarget(
     return 'Open';
   }
 
+  if (targetType === 'ZONE' && target.zoneReference)
+    return target.zoneReference.name;
+
   if (
     targetType === 'ZONE' &&
     targetValue !== null &&
@@ -100,7 +103,7 @@ export function formatTarget(
       }
 
       case 'HEARTRATE':
-        return `${targetMin} - ${targetMax} bpm`;
+        return `${Math.round(targetMin)} - ${Math.round(targetMax)} bpm`;
 
       case 'POWER':
         return `${targetMin} - ${targetMax} W`;
@@ -163,7 +166,7 @@ export function formatTarget(
       }
 
       case 'HEARTRATE':
-        return `${targetValue} bpm`;
+        return `${Math.round(targetValue)} bpm`;
 
       case 'POWER':
         return `${targetValue} W`;

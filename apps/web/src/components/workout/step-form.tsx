@@ -79,6 +79,7 @@ type TargetWithId = {
   targetMax: WorkoutStepTargetDto['targetMax'];
   targetValue: WorkoutStepTargetDto['targetValue'];
   metricType: WorkoutStepTargetDto['metricType'];
+  zoneReference: WorkoutStepTargetDto['zoneReference'];
 };
 
 interface StepFormProps {
@@ -96,7 +97,7 @@ export function StepForm({
   onCancel,
   submitLabel = m.step_form_save(),
   cancelLabel = m.step_form_cancel(),
-  sport = 'RUNNING',
+  sport,
 }: StepFormProps) {
   const [targets, setTargets] = useState<TargetWithId[]>(
     initialValues?.targets?.map((t: WorkoutStepTargetDto, idx: number) => ({
@@ -106,6 +107,7 @@ export function StepForm({
       targetMax: t.targetMax,
       targetValue: t.targetValue,
       metricType: t.metricType ?? null,
+      zoneReference: t.zoneReference ?? null,
     })) || [],
   );
   const [isTargetDialogOpen, setIsTargetDialogOpen] = useState(false);
@@ -141,6 +143,7 @@ export function StepForm({
                 targetMax: targetValues.targetMax ?? null,
                 targetValue: targetValues.targetValue ?? null,
                 metricType: targetValues.metricType ?? null,
+                zoneReference: targetValues.zoneReference ?? null,
               }
             : t,
         ),
@@ -157,6 +160,7 @@ export function StepForm({
           targetMax: targetValues.targetMax ?? null,
           targetValue: targetValues.targetValue ?? null,
           metricType: targetValues.metricType ?? null,
+          zoneReference: targetValues.zoneReference ?? null,
         },
       ]);
     }
@@ -339,7 +343,7 @@ export function StepForm({
                       ? m.step_form_save_target()
                       : m.step_form_add_target()
                   }
-                  sport={SPORT_TYPE[sport]}
+                  sport={sport ? SPORT_TYPE[sport] : undefined}
                 />
               </DialogContent>
             </Dialog>
@@ -362,9 +366,10 @@ export function StepForm({
                           targetMax: target.targetMax,
                           targetValue: target.targetValue,
                           metricType: target.metricType,
+                          zoneReference: target.zoneReference,
                         } as unknown as WorkoutStepTargetDto
                       }
-                      sport={SPORT_TYPE[sport]}
+                      sport={sport ? SPORT_TYPE[sport] : undefined}
                     />
                   </button>
                   <button

@@ -2,6 +2,7 @@ import { useCreateEventMutation, useUpdateEventMutation } from '@/api/event';
 import { useCreateEventTemplateMutation } from '@/api/event-template';
 import { m } from '@/paraglide/messages';
 import { AnalyticsEvent } from '@/utils/analytics-events';
+import { workoutTargetErrorMessage } from '@/utils/workout-target-errors';
 import { usePostHog } from 'posthog-js/react';
 import { useCallback } from 'react';
 import { UseFormHandleSubmit } from 'react-hook-form';
@@ -47,8 +48,10 @@ export function useEventFormSubmission(
       });
       toast.success(m.template_saved_successfully());
     },
-    onError: () => {
-      toast.error(m.failed_to_save_template());
+    onError: (error) => {
+      toast.error(
+        workoutTargetErrorMessage(error, m.failed_to_save_template()),
+      );
     },
   });
 
@@ -58,8 +61,8 @@ export function useEventFormSubmission(
       toast.success(m.event_created_successfully());
       onClose();
     },
-    onError: () => {
-      toast.error(m.failed_to_create_event());
+    onError: (error) => {
+      toast.error(workoutTargetErrorMessage(error, m.failed_to_create_event()));
     },
   });
 
@@ -69,8 +72,8 @@ export function useEventFormSubmission(
       toast.success(m.event_updated_successfully());
       onClose();
     },
-    onError: () => {
-      toast.error(m.failed_to_update_event());
+    onError: (error) => {
+      toast.error(workoutTargetErrorMessage(error, m.failed_to_update_event()));
     },
   });
 

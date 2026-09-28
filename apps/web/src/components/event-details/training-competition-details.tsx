@@ -22,6 +22,7 @@ import { SelectEvent } from '../select-event';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { WorkoutGraph, WorkoutSummary } from '../workout';
+import { WorkoutAthleteContext } from '../workout/workout-athlete-context';
 
 interface P {
   event: CompetitionEvent | TrainingEvent;
@@ -173,7 +174,11 @@ export function TrainingCompetitionDetails({ event }: P) {
                 maxHeight={80}
                 athleteId={event.athleteId ?? undefined}
               />
-              <WorkoutSummary workout={event.workout} />
+              <WorkoutAthleteContext.Provider
+                value={{ athleteId: event.athleteId, sport: event.sport }}
+              >
+                <WorkoutSummary workout={event.workout} />
+              </WorkoutAthleteContext.Provider>
             </CardContent>
           </Card>
         )}

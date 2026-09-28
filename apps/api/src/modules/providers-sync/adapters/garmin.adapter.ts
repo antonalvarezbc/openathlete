@@ -7,6 +7,7 @@ import { mapPrismaWorkoutToDto } from '@openathlete/shared';
 
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
+import { prepareWorkoutTargets } from '../../core/helpers/workout-targets';
 import { mapWorkoutDtoToGarmin } from '../mapping/garmin.mapper';
 import type { GarminStep, GarminWorkout } from '../mapping/garmin.types';
 import type {
@@ -102,6 +103,15 @@ export class GarminAdapter implements ProviderAdapter {
 
     const metrics = await this.getLatestMetricsMap(input.athleteId);
     const workoutDto = mapPrismaWorkoutToDto(workoutRecord);
+    workoutDto.steps = await prepareWorkoutTargets(
+      this.prisma,
+      workoutDto.steps,
+      {
+        athleteId: input.athleteId,
+        sport: input.normalized.sport,
+        absolute: true,
+      },
+    );
     const garminWorkout = mapWorkoutDtoToGarmin(
       ownerId,
       workoutDto,
