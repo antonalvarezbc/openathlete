@@ -4,11 +4,11 @@
 
 The existing `User.roles` values define three modes. No new database tables are required.
 
-| Roles           | Personal training                                               | Planning                                                          |
-| --------------- | --------------------------------------------------------------- | ----------------------------------------------------------------- |
-| ATHLETE         | Read planned sessions; record completed activities and feedback | Cannot create, edit, delete, duplicate or import planned sessions |
-| COACH           | No personal athlete settings                                    | Plan for linked athletes                                          |
-| ATHLETE + COACH | Own athlete space and coaching space                            | Plan for self and linked athletes                                 |
+| Roles           | Personal training                                                         | Planning                                                          |
+| --------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| ATHLETE         | Read planned sessions; import activities when enabled and submit feedback | Cannot create, edit, delete, duplicate or import planned sessions |
+| COACH           | No personal athlete settings                                              | Plan for linked athletes                                          |
+| ATHLETE + COACH | Own athlete space and coaching space                                      | Plan for self and linked athletes                                 |
 
 JWT authentication reads current roles from the database on each request.
 Planning restrictions apply to API permissions as well as calendar controls.
@@ -30,7 +30,7 @@ immediately removes its permissions on subsequent authenticated API requests.
 Other open browser sessions may need a reload to update their visible menus.
 
 Administrators are configured only on the server using `ADMIN_USER_IDS` in
-`apps/api/.env`: a comma-separated list of existing OA user IDs. The empty value
+`apps/api/.env`: a comma-separated list of existing OpenAthlete user IDs. The empty value
 disables administration. Restart the API after editing this configuration.
 IDs are used so changing an email address cannot transfer administrator rights.
 The authenticated `/user/me` response contains `isAdmin`; no admin setting is
@@ -61,7 +61,6 @@ requests are rejected. No manual status polling is mounted by the interface.
 Previously stored activities, recovery metrics and private session files are
 preserved. Official connectors remain available. FIT uploads have their own
 independent setting, `ENABLE_MANUAL_FIT_IMPORT`, also disabled by default.
-
 
 - The manual connector appears after the official connectors in the athlete space.
 - Only the authenticated owner with ATHLETE role can submit Garmin credentials.
@@ -122,7 +121,7 @@ zones if absent; see [recalculation](training-load-recalculation.md). Daily/acti
 peak heart rates are not substituted for physiological maximum heart rate.
 No additional historical wellness requests or automatic FIT downloads are added.
 
-**Complete pending activities** uses the Garmin IDs already stored for that OA
+**Complete pending activities** uses the Garmin IDs already stored for that OpenAthlete
 athlete, including activities older than 42 days. It does not fetch the activity
 list or recovery history again. Cached files require no login or remote calls;
 when a download is necessary, the worker authenticates and verifies the linked
@@ -170,7 +169,7 @@ in backups; it contains GPS and health data. Files are not served as public URLs
 Cached files survive transaction failures. Parse failures discard the cache entry
 so a later explicit action can download it again.
 
-The API matches by Garmin ID and OA athlete, including summaries imported by the
+The API matches by Garmin ID and OpenAthlete athlete, including summaries imported by the
 official Garmin connector. It preserves feedback, descriptions, planned-session
 links and existing supported measurements. GPS fills only missing samples with
 matching timestamps; it never interpolates positions or overwrites valid points.
@@ -182,7 +181,7 @@ heart rate, cadence, power and temperature when available. Laps use existing
 ActivitySegment rows. Supported session summaries fill missing measurements.
 This does not implement all FIT developer fields, strength sets or every Garmin
 metric. A reviewed FIT may contain no GPS. The review ledger records Garmin
-profile, OA row and parser version only after the activity transaction commits;
+profile, OpenAthlete row and parser version only after the activity transaction commits;
 it prevents repeatedly downloading a reviewed file solely because GPS is absent.
 
 Each FIT has its own transaction: later failures preserve earlier completed imports.
@@ -201,3 +200,9 @@ Validation uses mock Garmin downloads, synthetic SDK-encoded FIT files and
 permission/import regression tests. Automated tests never query Garmin and do
 not establish live-provider compatibility. See the [connector guide](../scripts/garmin-probe/README.md)
 for test commands and a controlled manual verification procedure.
+
+## Source references
+
+- [Account-mode tests](../apps/api/src/modules/auth/services/account-modes.spec.ts)
+- [Manual Garmin service](../apps/api/src/modules/providers-sync/manual-garmin/manual-garmin.service.ts)
+- [Garmin summary worker](../scripts/garmin-probe/sync.py)

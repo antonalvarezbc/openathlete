@@ -60,3 +60,8 @@ activity stream, calculate loads, update entries or contact Garmin/AI.
 The activity view distinguishes reading saved data, a failed lookup (with a
 read-only retry) and a successful lookup without a saved TRIMP entry. Foster-only
 entries do not produce a blank value, and a valid TRIMP of zero remains visible.
+
+## Source references
+
+- [Load service](../apps/api/src/modules/core/services/training-load.service.ts)
+- [Saved-load access tests](../apps/api/src/modules/core/services/activity-training-load-access.spec.ts)

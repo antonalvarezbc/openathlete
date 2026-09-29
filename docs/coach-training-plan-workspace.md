@@ -53,19 +53,19 @@ All workspace routes require JWT authentication, the coach role and access to th
 selected athlete. A coach-only account cannot use its otherwise unused personal
 athlete profile. Write DTOs validate their shape with Zod.
 
-| Route | Purpose |
-| --- | --- |
-| `GET /training-plan?athleteId=…` | Athlete plans, races and week counts |
-| `GET /training-plan/:id` | Plan detail |
-| `POST /training-plan` | Create empty plan and weeks |
-| `PATCH /training-plan/:id` | Update metadata/status |
-| `GET /training-plan/:id/competitions` | Existing competitions within plan dates |
-| `POST /training-plan/:id/races` | Create and link a calendar competition |
-| `POST /training-plan/:id/races/link` | Link an existing competition |
-| `PATCH /training-plan/:id/races/:raceId` | Edit linked competition and priority |
-| `DELETE /training-plan/:id/races/:raceId` | Unlink, keeping calendar competition |
-| `POST /injury` | Create an athlete injury |
-| `PATCH /injury/:id` | Update an athlete injury |
+| Route                                     | Purpose                                 |
+| ----------------------------------------- | --------------------------------------- |
+| `GET /training-plan?athleteId=…`          | Athlete plans, races and week counts    |
+| `GET /training-plan/:id`                  | Plan detail                             |
+| `POST /training-plan`                     | Create empty plan and weeks             |
+| `PATCH /training-plan/:id`                | Update metadata/status                  |
+| `GET /training-plan/:id/competitions`     | Existing competitions within plan dates |
+| `POST /training-plan/:id/races`           | Create and link a calendar competition  |
+| `POST /training-plan/:id/races/link`      | Link an existing competition            |
+| `PATCH /training-plan/:id/races/:raceId`  | Edit linked competition and priority    |
+| `DELETE /training-plan/:id/races/:raceId` | Unlink, keeping calendar competition    |
+| `POST /injury`                            | Create an athlete injury                |
+| `PATCH /injury/:id`                       | Update an athlete injury                |
 
 `raceId` denotes `eventCompetitionId`. Existing event/template creation DTOs
 accept optional `trainingPlanId`; the server resolves the appropriate week and
@@ -99,7 +99,7 @@ pnpm database run db:generate
 pnpm shared build
 ```
 
-Verification performed:
+Implementation-time verification (not rerun by documentation edits):
 
 - 94 passing Jest tests across workspace contracts/services, JSON plan import,
   plan adaptation validation and account roles.
@@ -119,3 +119,8 @@ Verification performed:
 No external AI or Garmin requests are needed to create plans, races or injuries.
 Creating future training sessions retains the calendar's existing background
 processing behavior.
+
+## Source references
+
+- [Planning route](../apps/web/src/pages/dashboard/planning.tsx)
+- [Planning workspace](../apps/web/src/views/dashboard/settings-view/training-plan-tab.tsx)

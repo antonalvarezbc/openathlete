@@ -17,7 +17,12 @@ Compose; `apps/api/.env` is used by the local Node development server.
 
 ## Usage
 
-In the **Athlete** space, open your calendar and choose **Import FIT activity**.
+In the **Athlete** space, open **Settings → Connectors** and choose
+**Import FIT activity**. Its own card appears below **Garmin · manual sync** when
+that connector is enabled, or directly after the official connectors otherwise.
+FIT import does not require a Garmin connection. The calendar no longer contains
+the upload button.
+
 Select one `.fit` file, review/edit the activity name and import it. The result
 shows the activity's original date and a **View activity** action, including for
 files outside the currently displayed calendar period.
@@ -51,7 +56,7 @@ Garmin Connect link.
   duration. Invalid/zero durations and activity end times more than five minutes
   in the future are rejected.
 - Start time, elapsed/timer duration, sport and available summary metrics come
-  from the session. Known sports/subsports are mapped to existing OA sports;
+  from the session. Known sports/subsports are mapped to existing OpenAthlete sports;
   unknown sports become `OTHER` with a notice.
 - Available GPS, heart rate, distance, altitude, cadence and power series use the
   existing parser. Shortened sensor channels are omitted rather than shifted
@@ -113,9 +118,9 @@ Browser QA verifies athlete upload, opening details, repeated import, rejected
 owner spoofing, malformed input and coach-only denial. The browser fixture has
 no GPS, avoiding weather requests, and imports without AI feedback generation.
 
-Initial upload verification: all 34 tests passed, along with API/web typechecks, lint, locale
-parity and diff checks. Persisted time and heart-rate series were verified through
-the activity API. The synthetic QA activity was deleted after verification.
+Implementation-time upload checks covered API/web typechecks, lint, locale parity,
+persisted time/heart-rate series and cleanup of synthetic QA activities. These are
+historical results, not a record of tests rerun during documentation maintenance.
 
 ## GPS regression coverage and provider scope
 
@@ -127,10 +132,18 @@ Strava request is needed for these changes or synthetic regression tests.
 
 Historical activities are not automatically re-downloaded. To restore an uploaded
 FIT that lost GPS, import the exact same file again in the same athlete account.
-Garmin manual sync currently skips activities that already have streams, so it
-does not automatically repair previously stored routes. Official Garmin/Strava
-activities also need their source data to be reprocessed; this change does not
-add a historical resync control.
+For Garmin activities, **Complete pending activities** can enrich existing
+summaries or incomplete streams with available FIT data, including matching
+activities originally imported through official Garmin. It fills missing GPS only
+when timestamps align and preserves existing valid data. A reviewed activity is
+not repeatedly downloaded just because the source has no GPS. See the
+[manual Garmin completion flow](account-modes-and-manual-garmin.md#separate-update-and-fit-completion-actions).
+
+**Update Garmin** refreshes summaries and recovery; it does not download those FIT
+files. Historical Strava routes are not repaired by the manual Garmin connector:
+cross-provider matches remain skipped. The official connectors still need their
+source data reprocessed through their own supported paths; this feature adds no
+general Strava historical-resync control.
 
 Additional regression commands:
 
@@ -141,8 +154,12 @@ pnpm api exec jest --runInBand --runTestsByPath \
 node --experimental-strip-types --test scripts/tests/map-hover.test.mjs
 ```
 
-GPS fix verification: 51 API tests and two hover tests passed; API/web/shared
-lint and typechecks passed. Chromium mobile QA confirmed split map paths, safe
-empty GPS handling and a speed chart with gaps and no invalid values. The user's
-FIT was checked locally without writing activity data: all 2,796 valid positions,
-four missing samples and eight laps survived parsing and compression.
+GPS regression coverage includes split map paths, empty GPS samples and speed
+charts with gaps. Use synthetic FIT fixtures for repeatable checks; public
+documentation must not include a real athlete's recording, sample counts or
+account-specific results.
+
+## Source references
+
+- [FIT import service](../apps/api/src/modules/core/services/manual-fit-import.service.ts)
+- [Garmin enrichment](../apps/api/src/modules/providers-sync/manual-garmin/manual-garmin-enrichment.ts)

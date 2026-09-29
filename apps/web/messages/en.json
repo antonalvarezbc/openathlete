@@ -1300,7 +1300,7 @@
   "garmin_manual_available_at": "You can update again after {date}. No update starts automatically.",
   "garmin_backfill_button": "Complete pending activities",
   "garmin_backfill_stop": "Stop",
-  "garmin_backfill_help": "Complete FIT details for activities already in OA, without querying recovery again. Cached files are reused. Each run downloads at most 20 new FIT files, with at least 15 seconds between requests, and stops on errors. These local precautions do not guarantee Garmin’s limits will not be reached. Continue only by pressing the button again.",
+  "garmin_backfill_help": "Complete FIT details for activities already in OpenAthlete, without querying recovery again. Cached files are reused. Each run downloads at most 20 new FIT files, with at least 15 seconds between requests, and stops on errors. These local precautions do not guarantee Garmin’s limits will not be reached. Continue only by pressing the button again.",
   "garmin_backfill_pending": "{count} activities pending completion. A FIT file may not contain GPS.",
   "garmin_backfill_running": "Completing activities…",
   "garmin_backfill_stopping": "Stopping after the current request. No further files will be requested.",
@@ -1435,5 +1435,17 @@
   "workout_target_missing_zone": "The athlete has no matching zone “{zone}” for this sport. Configure it or choose another target.",
   "workout_target_ambiguous_zone": "More than one zone matches “{zone}”. Review the athlete’s zones before saving.",
   "workout_target_invalid": "Check the target: its reference and range must be valid. No changes have been saved.",
-  "workout_target_data_error": "Could not load the athlete’s metrics or zones. Try again."
+  "workout_target_data_error": "Could not load the athlete’s metrics or zones. Try again.",
+  "messages_search_title": "Search messages",
+  "messages_search_description": "Search by text, sender or chat name. Select a result to jump to the message.",
+  "messages_search_placeholder": "Text, sender or chat…",
+  "messages_search_scope": "Search scope",
+  "messages_search_current": "This chat",
+  "messages_search_all": "All my chats",
+  "messages_search_error": "Messages could not be loaded.",
+  "messages_search_retry": "Retry",
+  "messages_search_hint": "Type to search the message history.",
+  "messages_search_count": "Results: {count}",
+  "messages_search_empty": "No messages found.",
+  "messages_search_more": "Show more"
 }

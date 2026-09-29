@@ -1,128 +1,196 @@
-# Adaptar la siguiente sesión o el resto de la semana
+# Adapting the next session or the rest of the week
 
-En el espacio **Entrenador → Plan de entrenamiento → Revisar y adaptar con IA**
-(`/dashboard/planning`):
+Open **Coach → Planning → Review and adapt with AI** (`/dashboard/planning`).
 
-1. Elige el atleta y un plan que tenga sesiones pendientes.
-2. Selecciona **Siguiente sesión** o **Resto de la semana**. En el segundo caso,
-   elige el primer día del periodo de siete días que quieras revisar.
-3. Valora el estado actual y escribe las sensaciones, circunstancias y restricciones
-   del entrenador. Estos datos complementan los registros almacenados.
-4. Pulsa **Revisar contexto del atleta**. Puedes inspeccionar los datos que recibirá
-   la IA antes de enviarlos al proveedor configurado.
-5. Pulsa **Generar propuesta**. Revisa original, propuesta, explicación y bloques de
-   cada sesión. Puedes editar duración/RPE o abrir la propuesta JSON completa.
-6. Rechaza la propuesta o confirma la revisión y pulsa **Aceptar y aplicar cambios**.
+1. Select an athlete and an existing plan. Normally it needs future, uncompleted
+   sessions. A future week already belonging to the plan can also receive new
+   sessions when adding sessions is explicitly enabled, even if it is empty.
+2. Choose **Next session** or **Rest of the week**. For the latter, choose the
+   first day of the seven-day period to review.
+3. Set the current state and describe feelings, circumstances and coach
+   restrictions. These inputs supplement stored records.
+4. Choose **Review athlete context** to inspect the data before sending it to
+   the configured AI provider.
+5. Generate a proposal and review each original session, proposed changes,
+   explanation and structured workout. Edit duration/RPE or the complete JSON
+   proposal as needed.
+6. Reject the proposal, or confirm the review and choose **Accept and apply changes**.
 
-La consulta del contexto y la generación no escriben en el calendario. Solo la
-aceptación guarda cambios. No se modifican actividades realizadas, sesiones pasadas,
-competiciones ni sesiones ajenas al plan seleccionado. Las fechas permanecen fijas por defecto. Activa **Permitir redistribuir sesiones entre días**
-para que la IA proponga movimientos. Revisa la fecha original y la propuesta antes de aceptar.
-Solo se permite mover dentro del periodo seleccionado y de la semana original del plan,
-sin pasar al pasado ni solaparse con otras entradas del calendario. En Siguiente sesión,
-el periodo empieza el día de esa sesión y abarca siete días, limitado también por su semana.
-Sin permiso de añadir sesiones, no crea sesiones nuevas. No acumula automáticamente entrenamientos perdidos.
+Context preview and generation do not write to the calendar. Only acceptance
+saves changes. Completed activities, past sessions, competitions and sessions
+outside the selected plan cannot be modified. At most 28 existing sessions can
+be adapted in one request.
 
-La propuesta usa el idioma de la interfaz del entrenador, aunque el atleta tenga otro idioma.
-Las sesiones KEEP conservan sus textos originales. Las propuestas anteriores deben regenerarse.
+Dates stay fixed by default. **Allow redistributing sessions between days**
+permits proposed moves within both the selected period and the session's original
+plan week, without moving into the past or overlapping other calendar entries.
+For Next session, the period begins on that session's day and spans seven days,
+also constrained by its plan week. Adding sessions requires a separate permission;
+missed workouts are not accumulated automatically.
 
-## Permisos independientes
+Proposals use the coach's interface language. KEEP sessions retain their original
+text. Regenerate an old proposal if a changed language or output format is needed.
 
-Las sesiones elegibles ya se pueden mantener, reducir o editar dentro de sus límites sin
-activar ninguna casilla. «Aumentar carga» autoriza superar los objetivos de las existentes
-hasta el porcentaje elegido. «Añadir sesiones» autoriza crear otras, dentro del máximo
-adicional de sesiones, minutos y RPE. Al marcar ambas se permiten las dos operaciones.
-No habilitan una modificación del plan completo: sigue vigente el periodo seleccionado.
-El máximo de minutos adicionales es un techo, no una cantidad que la IA deba completar.
+## Independent permissions
 
-## Aumentar carga
+Eligible sessions can already be kept, reduced or edited within their limits
+without enabling extra permissions:
 
-Es una opción, no el objetivo por defecto. Marca **Permitir aumentar la carga de las sesiones existentes**
-solo tras seleccionar **Recuperado, buenas sensaciones**, y establece un máximo de
-0–25 %. La interfaz propone inicialmente 10 % como ajuste técnico configurable,
-no como recomendación de progresión deportiva. El modelo puede mantener o reducir
-la sesión aunque hayas habilitado un aumento.
+- **Increase existing sessions** permits exceeding their original targets up to
+  the selected percentage.
+- **Add sessions** permits new workouts within additional session-count, total
+  minutes and RPE limits.
+- **Redistribute sessions** permits date changes within the allowed boundaries.
 
-Ejemplo de uso de la interfaz con datos ficticios: una sesión de 60 minutos podría
-proponerse en 63 minutos (+5 %), conservando la intensidad, si el entrenador permite
-ese cambio y revisa la justificación. No constituye una prescripción para un atleta.
+Enabling multiple options combines those permissions. None enables editing the
+whole plan outside the selected scope. Additional minutes are a ceiling, not a
+quantity the model must fill.
 
-El servidor comprueba:
+## Increasing load
 
-- Autorización explícita de aumento, estado READY y ausencia de lesiones registradas
-  sin resolver. Fatiga, enfermedad, dolor o estado desconocido bloquean los aumentos.
-- Límite por sesión sobre duración, distancia, D+ y RPE, y sobre los totales de las sesiones seleccionadas.
-- Duraciones de los bloques, máximos de sus objetivos y exposición calculada como
-  objetivo × duración × repeticiones, comparando unidades iguales.
-- Ausencia de aumentos desde bases desconocidas o cero. Si falta `goalDuration`, el
-  contexto identifica la duración como inferida del calendario y no permite aumentarla.
-- Coherencia básica de los bloques, zonas pertenecientes al atleta y solapamientos
-  causados por alargar una sesión.
+This is optional, not the default goal. Choose the recovered/ready state and
+explicitly allow increased load for existing sessions, with a maximum of 0–25%.
+The interface initially suggests 10% as an editable technical limit, not as a
+training recommendation. The model may still maintain or reduce sessions.
 
-Estos controles no son un modelo fisiológico ni una garantía médica. Tampoco
-interpretan exhaustivamente intensidad, cambios de deporte o instrucciones en texto
-libre. El entrenador debe revisar todas las propuestas. No se usa una lectura aislada
-de VFC como autorización automática para aumentar carga.
+For example, with fictional data, a 60-minute session could become 63 minutes
+(+5%) at the same intensity if the coach authorizes and reviews the change. This
+illustrates the interface, not a prescription for an individual athlete.
 
-## Contexto que se envía
+Server validation checks:
 
-- Nombre, descripción, objetivo y fechas del plan seleccionado.
-- Sesiones pendientes elegibles, objetivos, bloques y calendario alrededor de ellas,
-  incluidas competiciones y entrenamientos ya vinculados a actividades. Las descripciones
-  y bloques de las elegibles están en `sessions.original`; el calendario circundante
-  también incluye descripciones, bloques, semana/plan y una marca `editable`.
-  Una entrada de contexto no elegible nunca queda autorizada para modificar por incluirla aquí.
-- Hasta 100 actividades de los últimos 28 días: duración, distancia, D+, FC media,
-  RPE convertido a 0–10, descripción y entradas de carga almacenadas, separadas por método.
-- Hasta 10 comentarios por actividad, limitados a hilos de los que el usuario sea
-  participante; fecha y texto limitado a 1500 caracteres. Descripciones: 3000 caracteres.
-- Métricas fechadas de esos 28 días: VFC nocturna media y máxima de cinco minutos,
-  FC en reposo, duración y puntuación de sueño, estrés medio, Body Battery cargada/
-  consumida, RMSSD, FC máxima y VO₂máx, con las unidades existentes.
-- Zonas de entrenamiento y lesiones registradas sin resolver.
-- Estado actual, valoración e instrucciones introducidos para esta propuesta.
+- Explicit increase permission, READY state and no unresolved recorded injuries.
+  Fatigue, illness, pain and unknown state block increases.
+- Per-session duration, distance, elevation gain and RPE limits, plus totals
+  across selected sessions.
+- Step durations, target maxima and exposure computed as target × duration ×
+  repetitions, comparing compatible units.
+- No increases from unknown or zero baselines. If `goalDuration` is missing, the
+  calendar-derived duration is marked as inferred and cannot be increased.
+- Basic workout consistency, athlete ownership of zones and overlaps caused by
+  lengthening a session.
 
-Las métricas se leen de `AthleteMetric`, donde pueden existir datos sincronizados de
-Garmin o introducidos por otras vías. Esta lectura no consulta Garmin. Los datos
-faltantes se identifican; no se inventan mediciones ni se interpretan como cero.
-No se calcula un ATL/CTL/TSB nuevo ni se consulta un historial completo de 42 días.
+These checks are not a physiological model or medical guarantee. They do not
+fully interpret intensity, sport changes or free-text instructions. The coach
+must review each proposal. A single HRV reading never automatically authorizes
+an increase.
 
-Se excluyen campos de nombre/correo del perfil, credenciales, claves, streams GPS/FC
-crudos y conversaciones generales. Los textos libres del propio plan y comentarios
-pueden contener información personal: aparecen en la revisión previa al envío.
+## Context sent to the model
 
-## Modelo y persistencia
+- Selected plan name, description, goal and dates.
+- Eligible sessions, goals, structured workouts and surrounding calendar,
+  including competitions and training already linked to completed activities.
+  Eligible descriptions/workouts are in `sessions.original`; surrounding entries
+  also include descriptions, workouts, plan/week and an `editable` flag.
+  Inclusion in context does not authorize editing an ineligible entry.
+- Up to 100 activities from the last 28 days: duration, distance, elevation gain,
+  average HR, RPE converted to 0–10, descriptions and stored load entries kept
+  separate by calculation method.
+- Up to 10 comments per activity, only from threads the requester participates
+  in; date and text limited to 1,500 characters. Descriptions are limited to 3,000.
+- Dated metrics from those 28 days: average overnight HRV, highest overnight
+  five-minute HRV, resting HR, sleep duration/score, average stress, Body Battery
+  charged/drained, RMSSD, maximum HR and VO₂ max, using their existing units.
+- Training zones, unresolved recorded injuries, current state, feedback and coach
+  instructions for this proposal.
 
-Agente nuevo sin herramientas de escritura, con el modelo de modificación ya
-configurado por `AI_MODEL_EVENT_MODIFICATION`. Reutiliza las claves existentes y
-la comprobación de acceso `AI_GENERATION` para generar. No añade dependencias ni
-migraciones. La respuesta estructurada se valida antes de presentarla y otra vez
-antes de guardarla, incluidas las ediciones del entrenador. Si el formato es legible
-pero incumple una regla, se devuelve el borrador junto con `validationIssue` (código
-y sesión cuando corresponde). La interfaz muestra el motivo traducido y bloquea su
-aceptación. Puede corregirse mediante edición o conversación; la siguiente revisión
-recibe también la infracción detectada. El servidor conserva todas las validaciones
-al guardar. Si no cumple el esquema de salida, se muestra una revisión previa con el contenido
-recuperable del modelo y el chat. No se habilita la aceptación. Cada revisión puede
-volver a fallar sin perder el acceso al chat; al obtener una estructura válida,
-aparecen las tarjetas de sesiones y la confirmación habitual. Si el SDK no conserva
-el texto, se indica explícitamente y se permite regenerar usando el mismo contexto.
-No se muestran mensajes internos, credenciales ni cabeceras del proveedor.
-El borrador sin validar tiene un máximo de 100 000 caracteres y las últimas diez
-revisiones se mantienen solo en la interfaz; recargar la página pierde la conversación.
+Metrics are read from `AthleteMetric`, which may contain Garmin imports or values
+entered through other paths. This does not contact Garmin. Missing values stay
+explicitly missing, rather than being invented or treated as zero. The service
+does not calculate fresh ATL/CTL/TSB or fetch the complete 42-day load window.
 
-La aceptación vuelve a leer el contexto y compara su huella con la revisada. Si han
-cambiado las sesiones, actividades, métricas u otros datos relevantes, exige una
-propuesta nueva. Las escrituras de toda la selección son atómicas: si falla una,
-se revierte todo. Las propuestas no aceptadas solo permanecen en la interfaz.
+Profile name/email fields, credentials, API keys, raw GPS/HR streams and general
+conversations are excluded. Plan text and activity comments may contain personal
+information; inspect the preview before sending. Explicit target/preparation race
+priority is not added to this adaptation context, even though the separate
+[activity analysis](coach-activity-ai-analysis.md) context includes plan races.
 
-REST conserva la entrada planificada con objetivos a cero, deporte OTHER y sin
-workout; no elimina actividades ni comentarios. Los workouts ya exportados están
-protegidos: este flujo no puede cambiarlos ni actualiza dispositivos externos.
-La estimación de carga de una sesión modificada queda invalidada (`estimatedLoad`
-a null); no se llama automáticamente a otro modelo para recalcularla.
+## Model, review and persistence
 
-## Pruebas locales
+The adaptation agent has no write tools and uses `AI_MODEL_EVENT_MODIFICATION`,
+the existing provider keys and the `AI_GENERATION` feature entitlement. This flow
+introduced no separate model setting, dependency or database migration.
+
+Structured output is validated before presentation and again before saving,
+including coach edits. A parseable proposal that violates a rule is returned as
+a draft with `validationIssue` (code and session where applicable). The interface
+shows the translated reason and disables acceptance. Manual edits or a follow-up
+AI request can correct it; refinement also receives the detected violation.
+
+If output does not satisfy the schema, the interface shows recoverable model
+content and the refinement chat, without allowing acceptance. Further failures
+retain access to that chat. Once a valid structure is returned, session cards and
+review confirmation become available. If the SDK supplies no recoverable text,
+the interface says so and allows another request using the same context. Internal
+messages, credentials and provider headers are not displayed.
+
+Unvalidated text is limited to 100,000 characters. The most recent ten refinement
+turns live only in the interface; reloading or leaving loses the conversation.
+Unaccepted proposals are not saved to the calendar or persisted as drafts.
+
+Acceptance rereads context and compares its fingerprint with the reviewed version.
+Changed sessions, activities, metrics or other relevant data require a new
+proposal. All selected writes are atomic: failure rolls back the complete batch.
+
+REST retains the planned event with zero goals, sport OTHER and no workout. It
+does not delete activities or comments. Exported workouts are protected; this
+flow cannot update them or external devices. Changed sessions have `estimatedLoad`
+cleared to null, without automatically asking another model to recalculate it.
+
+## Adding sessions to a recovered week
+
+Choose a weekly scope, its start date and READY state, then enable adding sessions
+in addition to adapting existing ones. Review the maximum number of sessions,
+**maximum total additional minutes**, and maximum RPE. These limits are independent
+of the percentage for increasing existing sessions. The model may propose fewer
+minutes/sessions or none.
+
+New sessions are displayed separately with dates and explanations. Discard them
+individually or edit the JSON before acceptance. Accepted sessions belong to the
+same athlete and an existing plan week. Access, recovery, injuries, future dates,
+limits and overlaps are validated. Additions and updates share one transaction;
+an already applied proposal becomes stale.
+
+Each new session includes sport, duration, RPE, description and a mandatory
+structured workout. Steps use time and optional absolute RPE targets bounded by
+the approved maximum. Simple repeats are allowed and total workout duration must
+match the session. They are stored as `Workout`/`WorkoutStep`/targets and appear in
+the structured-workout editor. New sessions do not yet include distance or
+elevation-gain goals. UPDATE can also add structure to an existing unstructured
+session within its duration/RPE limits; older saved sessions are not backfilled.
+
+An empty future week can receive sessions if it already belongs to the plan.
+Adaptation does not create weeks or extend plan dates. Selecting a future plan
+initially selects its start day.
+
+The no-sessions error means the selected plan has no uncompleted training whose
+start time is still future within the selected period. A standalone calendar
+session or one from another week does not satisfy that filter. Stable server
+codes are translated; unexpected errors do not expose raw provider messages.
+
+## Refinement conversation
+
+After generation, enter a request under **Refine with AI**. Each turn sends the
+whole draft (including manual edits), the comment and up to ten previous
+comment/summary turns. The model returns a complete revised proposal and explains
+its response in the summary. A failed request preserves the draft; each revision
+clears the acceptance confirmation.
+
+The refine endpoint validates input/output, authentication, AI access, athlete/plan
+access and context version. It writes no calendar data. Limits always compare
+against the original calendar, never the previous draft, so increases cannot be
+accumulated over turns. Calendar changes require regeneration. Changing request
+parameters or permissions resets the draft. Proposals from before mandatory
+structured workouts for new sessions must be regenerated.
+
+## API and verification
+
+All endpoints use the base `/agent/ai/plan-adaptation`:
+
+- `POST /context`
+- `POST /propose`
+- `POST /refine`
+- `POST /apply`
 
 ```sh
 pnpm shared build
@@ -130,86 +198,27 @@ pnpm api exec jest --runInBand
 node scripts/test-plan-adaptation.cjs lab/local-qa/accounts.json
 ```
 
-El script de integración requiere API/PostgreSQL y las cuentas ficticias vinculadas
-`@openathlete.test`. Verifica permisos, contexto, rechazo de aumentos no autorizados,
-aumento explícito, protección contra propuestas desactualizadas, descanso y rollback
-ante fallo intermedio. No llama a un LLM ni a Garmin; elimina sus propios datos.
+The integration script needs a local API/PostgreSQL instance and linked fictional
+accounts under `openathlete.test`. The ignored accounts file is described in the
+[JSON import guide](training-plan-json.md#verification). Tests cover permissions,
+context, unauthorized increases, explicit increases, stale proposals, rest and
+rollback on intermediate failures. They make no LLM/Garmin calls and remove their
+own fixtures.
 
-Los endpoints son `POST /agent/ai/plan-adaptation/context`, `/propose`, `/refine` y `/apply`.
+Service and browser regression coverage also checks language, redistribution,
+new structured sessions, refinement against the original calendar, invalid
+provider output and preserved drafts. PostgreSQL checks cover atomic writes,
+duplicates and RPE-target persistence. Mocked responses do not establish that
+all real-provider outputs are valid; previously reported provider-format failures
+must not be treated as resolved solely because those tests pass.
 
-## Añadir sesiones a una semana recuperada
+Simple model steps may omit `repeatBlock`, normalized to null. A REPEAT container
+can use duration 0 or null because its duration comes from children; work steps
+still require positive durations. SDK format errors are translated and save no
+changes. An empty proposal can explain its reasoning but cannot be applied.
 
-Selecciona **Resto de la semana**, la fecha de inicio correcta y el estado **Recuperado**.
-Activa **Permitir añadir sesiones además de adaptar las existentes** y revisa los límites de número, minutos
-adicionales **totales máximos** y RPE máximo. El presupuesto es un techo, no un objetivo: la IA puede proponer menos minutos, menos sesiones o ninguna. Estos límites son independientes del porcentaje
-para aumentar sesiones existentes; autorizan una ampliación explícita de la semana.
-El modelo puede proponer menos sesiones o ninguna según la evidencia disponible.
+## Source references
 
-Las nuevas sesiones aparecen separadas, con fecha y justificación. Puedes descartar
-cada una o editar el JSON antes de confirmar. Solo la aceptación crea eventos del mismo
-atleta, vinculados a una semana existente del plan. Se comprueban permisos, recuperación,
-lesiones, fechas futuras, límites y solapamientos. Se guardan en la misma transacción
-que las modificaciones: un fallo revierte todo y una propuesta ya aplicada queda obsoleta.
-
-Las sesiones nuevas incluyen deporte, duración, RPE, descripción y un workout estructurado
-obligatorio. Los bloques usan tiempo y objetivos RPE absolutos opcionales, acotados por
-el máximo autorizado. Admiten repeticiones simples y su duración total debe coincidir con
-la sesión. Se guardan como Workout/WorkoutStep/targets de OpenAthlete, visibles en el
-entrenamiento estructurado. Las nuevas altas aún no incluyen objetivos de distancia o D+.
-También se puede estructurar una sesión existente sin bloques mediante UPDATE, respetando
-sus objetivos de duración y RPE. No se rellenan automáticamente sesiones ya guardadas.
-
-Una semana puede estar vacía y recibir nuevas sesiones si pertenece al plan y sigue
-siendo futura. No crea semanas ni amplía las fechas del plan. Al seleccionar un plan
-que empieza más adelante, la interfaz selecciona inicialmente su primer día.
-
-El mensaje de ausencia de sesiones significa que no hay entrenamientos del **plan
-seleccionado** sin actividad vinculada cuya **hora de inicio** sea futura dentro del
-periodo elegido. Una sesión suelta del calendario o una sesión de otra semana no entra
-en ese filtro. Los errores se muestran traducidos mediante códigos estables del servidor;
-los errores inesperados no muestran mensajes del proveedor en otro idioma.
-
-
-## Afinar la propuesta con la IA
-
-Tras generar un borrador, escribe en **Afinar con la IA** y pulsa **Enviar y revisar propuesta**.
-Puedes pedir cambios o una explicación. Cada turno envía el borrador completo (incluidas
-las ediciones manuales), el comentario y las últimas diez revisiones (comentario/resumen).
-La IA devuelve la propuesta completa y explica su respuesta en el resumen. La interfaz
-conserva el borrador si falla la petición y desmarca la confirmación después de cada revisión.
-
-El endpoint `POST /agent/ai/plan-adaptation/refine` usa autenticación, permiso AI_GENERATION,
-validación de entrada y de salida, autorización sobre atleta/plan y comprobación del contexto.
-No escribe en la base de datos. Todos los límites se comparan con el calendario original,
-no con el último borrador, evitando acumular aumentos entre turnos. Si el calendario cambia,
-hay que generar una propuesta nueva. Cambiar parámetros/permisos reinicia el borrador.
-La conversación solo vive en la página: al cerrarla o recargarla se pierde. Las propuestas
-previas sin bloques en sesiones nuevas deben regenerarse para cumplir el nuevo formato.
-
-
-## Verificación
-
-- 120 pruebas API: permisos, idioma, límites de aumento, redistribución, nuevas sesiones,
-  bloques y refinamiento con el calendario original como referencia.
-- Comprobaciones de tipos y lint en API, web y shared; paridad de los cuatro idiomas.
-- PostgreSQL: modificaciones y altas atómicas, reversión ante fallos intermedios,
-  protección de actividades, rechazo de duplicados y persistencia de bloques/objetivos RPE.
-- Endpoint de revisión: rechaza contexto obsoleto, comentario vacío y atleta sin autorización
-  antes de llamar al modelo.
-- Chromium, con respuestas de IA simuladas: error en español, bloques visibles, fallo sin
-  pérdida del borrador, dos revisiones con historial y guardado real solo tras confirmar.
-  Comprobado en escritorio y móvil; datos ficticios eliminados al terminar.
-
-Las comprobaciones actuales de refinamiento usan respuestas de IA simuladas. No demuestran
-que cada salida del proveedor sea válida; toda respuesta real pasa por la misma validación.
-
-
-Compatibilidad del formato del modelo: los bloques simples pueden omitir `repeatBlock`
-(se normaliza a null). Un contenedor REPEAT puede declarar duración 0 o null, porque su
-duración se calcula a partir de sus hijos; sus bloques de trabajo mantienen la validación
-positiva. Los fallos de formato del SDK se convierten en un error traducible y no guardan cambios.
-Una propuesta sin sesiones puede mostrar una explicación, pero no se puede aplicar vacía.
-
-Prueba real adicional de generación con datos ficticios: HTTP 201, dos sesiones conservadas
-y una nueva de 20 minutos con tres bloques, por debajo del máximo de 300 minutos. No se
-aplicó esa propuesta. La cabecera de adaptación y sus acciones usan el icono de IA compartido.
+- [Adaptation service](../apps/api/src/modules/agent/services/plan-adaptation.service.ts)
+- [Proposal validation](../apps/api/src/modules/agent/services/plan-adaptation.validation.ts)
+- [Request and response schemas](../libs/shared/src/types/dtos/agent/plan-adaptation.dto.ts)

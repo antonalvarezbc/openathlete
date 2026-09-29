@@ -85,12 +85,12 @@ timestamps are stored separately from calendar events and athlete-visible commen
 All routes require authentication and server-side coach/athlete authorization.
 Base path: `/agent/ai/activity-analysis/:eventId`.
 
-| Method | Suffix | Behavior |
-| --- | --- | --- |
-| GET | — | Latest 20 analyses owned by the requesting coach |
-| POST | `/context` | Preview stored athlete data; no LLM call or write |
-| POST | `/generate` | Generate, validate and persist a new private analysis |
-| PATCH | `/:analysisId` | Update only the owning coach's feedback draft |
+| Method | Suffix         | Behavior                                              |
+| ------ | -------------- | ----------------------------------------------------- |
+| GET    | —              | Latest 20 analyses owned by the requesting coach      |
+| POST   | `/context`     | Preview stored athlete data; no LLM call or write     |
+| POST   | `/generate`    | Generate, validate and persist a new private analysis |
+| PATCH  | `/:analysisId` | Update only the owning coach's feedback draft         |
 
 Context/generate bodies: `{ "coachContext": "...", "language": "es" }`.
 Feedback body: `{ "feedbackDraft": "..." }`.
@@ -101,3 +101,8 @@ return `ACTIVITY_ANALYSIS_PROVIDER`, without raw provider error details. Neither
 saves an analysis. A second in-flight generation for the same coach/activity in
 the same API process returns `ACTIVITY_ANALYSIS_BUSY`. This is not a distributed
 rate limit. Model calls have a two-minute cancellation signal.
+
+## Source references
+
+- [Analysis service](../apps/api/src/modules/agent/services/activity-analysis.service.ts)
+- [Activity context](../apps/api/src/modules/agent/services/activity-analysis-context.ts)

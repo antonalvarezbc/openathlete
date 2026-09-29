@@ -1300,7 +1300,7 @@
   "garmin_manual_available_at": "Puoi aggiornare di nuovo a partire da {date}. Nessun aggiornamento partirà automaticamente.",
   "garmin_backfill_button": "Completa le attività in attesa",
   "garmin_backfill_stop": "Interrompi",
-  "garmin_backfill_help": "Completa i dettagli FIT delle attività già presenti in OA, senza consultare nuovamente il recupero. I file locali vengono riutilizzati. Ogni esecuzione scarica al massimo 20 nuovi FIT, con almeno 15 secondi tra le richieste, e si interrompe in caso di errore. Queste precauzioni locali non garantiscono di evitare i limiti di Garmin. Per continuare devi premere di nuovo il pulsante.",
+  "garmin_backfill_help": "Completa i dettagli FIT delle attività già presenti in OpenAthlete, senza consultare nuovamente il recupero. I file locali vengono riutilizzati. Ogni esecuzione scarica al massimo 20 nuovi FIT, con almeno 15 secondi tra le richieste, e si interrompe in caso di errore. Queste precauzioni locali non garantiscono di evitare i limiti di Garmin. Per continuare devi premere di nuovo il pulsante.",
   "garmin_backfill_pending": "{count} attività da completare. Un FIT potrebbe non contenere GPS.",
   "garmin_backfill_running": "Completamento delle attività…",
   "garmin_backfill_stopping": "Interruzione dopo la richiesta in corso. Non verranno richiesti altri file.",
@@ -1435,5 +1435,17 @@
   "workout_target_missing_zone": "L’atleta non ha una zona equivalente a «{zone}» per questo sport. Configurala o scegli un altro obiettivo.",
   "workout_target_ambiguous_zone": "Più zone corrispondono a «{zone}». Controlla le zone dell’atleta prima di salvare.",
   "workout_target_invalid": "Controlla l’obiettivo: il riferimento e l’intervallo devono essere validi. Nessuna modifica salvata.",
-  "workout_target_data_error": "Impossibile caricare le metriche o le zone dell’atleta. Riprova."
+  "workout_target_data_error": "Impossibile caricare le metriche o le zone dell’atleta. Riprova.",
+  "messages_search_title": "Cerca messaggi",
+  "messages_search_description": "Cerca per testo, mittente o nome della chat. Seleziona un risultato per aprire il messaggio.",
+  "messages_search_placeholder": "Testo, mittente o chat…",
+  "messages_search_scope": "Ambito della ricerca",
+  "messages_search_current": "Questa chat",
+  "messages_search_all": "Tutte le mie chat",
+  "messages_search_error": "Impossibile caricare i messaggi.",
+  "messages_search_retry": "Riprova",
+  "messages_search_hint": "Scrivi per cercare nella cronologia dei messaggi.",
+  "messages_search_count": "Risultati: {count}",
+  "messages_search_empty": "Nessun messaggio trovato.",
+  "messages_search_more": "Mostra altro"
 }

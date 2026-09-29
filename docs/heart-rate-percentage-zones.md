@@ -13,13 +13,13 @@ Athlete-only accounts remain read-only.
 New heart-rate configurations start with six editable zones:
 
 | Zone | Percentage of HRmax |
-| --- | --- |
-| 0 | Below 50% |
-| 1 | 50–60% |
-| 2 | 60–70% |
-| 3 | 70–80% |
-| 4 | 80–90% |
-| 5 | 90–100% |
+| ---- | ------------------- |
+| 0    | Below 50%           |
+| 1    | 50–60%              |
+| 2    | 60–70%              |
+| 3    | 70–80%              |
+| 4    | 80–90%              |
+| 5    | 90–100%             |
 
 Existing configurations open in bpm without changing their values. Switching to
 percentages requires a valid HRmax that covers their current ranges. The default
@@ -76,3 +76,8 @@ IDs and allows retry without intentionally creating those zones again.
   (see the test file header). The browser tests mock API calls and use no real data.
 - Existing API training-zone permission tests, web/API type checks, targeted lint
   and locale parity checks.
+
+## Source references
+
+- [Zone editor](../apps/web/src/components/training-zone-editor/training-zone-bulk-editor.tsx)
+- [Percentage conversion](../apps/web/src/components/training-zone-editor/heart-rate-percentages.ts)
