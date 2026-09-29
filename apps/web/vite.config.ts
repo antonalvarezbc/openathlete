@@ -18,6 +18,10 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+    // Packages without their own React dependency (e.g. posthog-js/react)
+    // otherwise resolve pnpm's hoisted copy, which can be a different
+    // version than the app's and breaks hooks ("Invalid hook call").
+    dedupe: ['react', 'react-dom'],
   },
   define: {
     // Define global for socket.io-client
