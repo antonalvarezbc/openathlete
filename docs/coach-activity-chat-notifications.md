@@ -68,3 +68,8 @@ pnpm shared build
 ```
 
 Restart the API after generating Prisma. No new environment variables are needed.
+
+## Source references
+
+- [Notification regression tests](../apps/api/src/modules/messages/services/message-activity-notice.spec.ts)
+- [Activity-notice UI](../apps/web/src/components/messages/activity-chat-notice.tsx)

@@ -22,6 +22,18 @@ direct settings link.
   tabs remain in use. The separate Capacitor layout remains in place.
 - This change does not redesign every chart or form, or change API permissions.
 
+## Collapsed desktop coach sidebar
+
+When a coach collapses the desktop sidebar, a single **Athletes** button opens a
+menu of linked athlete names. Each athlete has Calendar, Statistics, Progression,
+Records, Metrics and Settings links. The current athlete/page is highlighted.
+The menu supports keyboard navigation, Escape and scrolling through long lists;
+it is disabled when there are no athletes. The expanded sidebar and mobile drawer
+retain their existing athlete navigation.
+
+Regression checks: `node scripts/tests/coach-sidebar.browser.mjs`, with an
+isolated Vite server on 5188 and Chromium CDP on 9331. API data is mocked.
+
 ## Calendar actions
 
 - Athlete-only accounts no longer show the ambiguous `activity` creation button.
@@ -84,8 +96,13 @@ language or logging out.
    the last activity opens on tap, rows do not overlap, and the short list has no
    scroll hint. Resize to desktop and confirm the inner mobile regions disappear.
 
-Development verification used Chromium touch emulation and a real QA login.
+Implementation-time verification used Chromium touch emulation and a real QA login.
 Role-specific UI responses were simulated; no account roles were changed.
 This does not replace a final check on an actual phone browser.
 
 Run `pnpm web tsc:check`, `pnpm web lint` and `git diff --check` after changes.
+
+## Source references
+
+- [Application sidebar](../apps/web/src/components/sidebar/app-sidebar.tsx)
+- [Collapsed athlete selector](../apps/web/src/components/sidebar/collapsed-athlete-menu.tsx)

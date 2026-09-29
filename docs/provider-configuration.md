@@ -45,3 +45,8 @@ No probe request is made to a provider to calculate the state.
 
 The EN/ES/FR/IT texts cover these states. Manual Garmin synchronization and manual
 FIT imports keep their separate installation flags and credential flows.
+
+## Source references
+
+- [Provider configuration checks](../apps/api/src/modules/providers-sync/helpers/provider-configuration.ts)
+- [API environment example](../apps/api/.env.example)

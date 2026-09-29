@@ -44,3 +44,8 @@ sessions on the linked QA athlete: cancellation, real deletion, an intercepted
 selected on mobile, and absence of controls for the athlete account. All four
 synthetic sessions were removed by the end of the test. No AI or Garmin requests
 were needed for those fixtures.
+
+## Source references
+
+- [Bulk-deletion UI](../apps/web/src/components/calendar/calendar-bulk-delete.tsx)
+- [Deletion sequencing](../apps/web/src/components/calendar/utils/bulk-delete.ts)

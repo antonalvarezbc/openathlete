@@ -88,9 +88,14 @@ they do not call the configured LLM. They cover role/ownership restrictions, emp
 weeks, fresh context on follow-up turns, input validation, feature access, provider
 failures and the existing adaptation regressions.
 
-Verification result: 72 backend tests passed, with API/web/shared typechecks,
+Implementation-time result: 72 backend tests passed, with API/web/shared typechecks,
 lint and locale parity. Chromium QA at mobile and desktop widths used synthetic
 athletes and model replies to verify preview without generation, follow-up
 history, context selection, clearing on athlete changes, retry behavior, Markdown
 rendering, the adaptation shortcut and the athlete-only route redirect. No live
 LLM provider, Garmin/Strava connection or real athlete account was used.
+
+## Source references
+
+- [Assistant service](../apps/api/src/modules/agent/services/coach-assistant.service.ts)
+- [Assistant request schema](../libs/shared/src/types/dtos/agent/coach-assistant.dto.ts)

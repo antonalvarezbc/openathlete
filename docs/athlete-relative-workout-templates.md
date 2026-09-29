@@ -67,3 +67,16 @@ ambiguous/missing references, HR reserve, authorization, and Garmin payloads.
 with mocked API data at mobile and desktop widths. It needs an isolated Vite
 server on port 5188 and Chromium CDP on 9331 (override with `QA_WEB_URL` and
 `QA_CDP_URL`). These tests do not contact Garmin or write athlete data.
+
+`scripts/tests/workout-targets.database.mjs` checks target persistence against a
+local PostgreSQL instance in a transaction that is deliberately rolled back. It
+reads the local database environment; use a disposable development database.
+The portable-zone migration is `20260928160000_portable_workout_zone_targets`.
+Apply pending migrations, regenerate Prisma and build the shared package before
+running an updated API. Tests with mocked export payloads do not certify live
+Garmin/Suunto compatibility.
+
+## Source references
+
+- [Shared target resolution](../libs/shared/src/utils/workout-targets.ts)
+- [Template service](../apps/api/src/modules/core/services/event-template.service.ts)

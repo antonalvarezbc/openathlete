@@ -1,11 +1,17 @@
-# Fork consolidation into main
+# Historical record: initial fork consolidation
 
-The first integration brings the 19 commits after `272948d8` through `08d20401`
-into the fork's `main`. Each feature branch was created from the preceding work;
-the latest Garmin branch already contains all earlier features and fixes.
-Preserve those commits and their hashes when merging this integration.
+This document records the initial integration of the 19 commits after `272948d8`
+through `08d20401` into the fork's `main`. At that point, feature branches formed a
+chain and the latest Garmin branch contained the preceding work. It is not a
+current inventory of branches or a command to merge those branches again.
+Published commit hashes are retained rather than rewriting history.
 
-## Included capabilities
+For current capabilities and setup, use the [documentation index](README.md).
+Later work includes private activity analysis, chat notifications/search,
+training-load caching, feedback questionnaires and athlete-relative templates.
+Their individual guides describe current behavior and migrations.
+
+## Capabilities in the initial integration
 
 - Self-hosted operation without Stripe billing and clearer login errors.
 - Spanish localization, mobile navigation and login password visibility.
@@ -56,7 +62,8 @@ Forks skip its deployment job unless the repository Actions variable
 for local use or a different hosting setup. Lint, typecheck and build workflows
 remain enabled. Opting in requires configuring the workflow's Scaleway secrets.
 
-For a deployment that has not already applied them, the integration includes:
+The initial integration included these migrations (this is not a complete list
+of migrations in the current branch):
 
 - `20260915190000_add_spanish_language`: add the Spanish language enum value.
 - `20260925180000_add_training_plan_races`: add the plan/race relation and the
@@ -72,12 +79,14 @@ The inherited API Docker image does not include that environment; follow the
 [manual Garmin setup](../scripts/garmin-probe/README.md) for the local installation.
 This consolidation does not add container packaging for the unofficial connector.
 
-## Known limitations
+## Limitations recorded at integration
 
 - AI plan adaptation has reported failures with real provider output. Existing
   tests and successful examples do not establish that those failures are resolved.
   Changes still require explicit coach review and acceptance.
-- Target/preparation race priority is not explicitly added to the AI context yet.
+- Target/preparation race priority was not explicitly included in adaptation
+  context. That limitation still applies to adaptation; the later activity-analysis
+  feature has a separate context that includes plan races.
 - The read-only coach assistant cannot write plans or trigger synchronization.
 - Garmin request pacing is a local precaution, not a provider-guaranteed quota.
   Validation uses synthetic responses; it does not certify live Garmin behavior.
@@ -114,3 +123,8 @@ small, describe the behavior and validation in English, and integrate completed
 work through a pull request that preserves useful commits. Remove old branches only
 after confirming their commits are reachable from `main`. Track upstream changes
 separately and review their integration into this fork.
+
+## Source references
+
+- [Migration history](../libs/database/prisma/schema/migrations)
+- [GitHub workflows](../.github/workflows)

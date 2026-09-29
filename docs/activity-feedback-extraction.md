@@ -1,54 +1,110 @@
-# Valoración de actividades y preguntas con IA
+# Activity feedback and AI questionnaires
 
-## Configuración y permisos
+## Configuration and access
 
-En el espacio Atleta: **Ajustes → Perfil → Validación de sesiones → Preguntas y análisis de valoración con IA**.
+In the Athlete space, open **Settings → Profile → Session validation** and enable
+AI feedback questions and analysis.
 
-- Deben existir ajustes del atleta con `requireFeedbackQuestions: true`.
-- El atleta o un entrenador vinculado debe tener acceso a `AI_RPE_QUESTIONS`.
-- El modo `SELF_HOSTED=true` mantiene el acceso sin suscripción. Los proveedores de IA siguen necesitando sus credenciales.
-- El modelo de preguntas se configura mediante `AI_MODEL_POST_ACTIVITY_FEEDBACK`; su valor predeterminado es `google/gemini-3-pro-preview`.
-- Para usar OpenAI en lugar del valor predeterminado, define `AI_MODEL_POST_ACTIVITY_FEEDBACK=openai/gpt-5.1` y `OPENAI_API_KEY` en `apps/api/.env`, y reinicia la API. La clave de OpenAI no configura Gemini.
-- Los avisos distinguen proveedor sin configurar, fallo al contactar con el proveedor y formato de preguntas inválido. Si las preguntas están desactivadas, se indica al atleta que consulte con su entrenador.
-- El idioma de las preguntas es el del atleta. La transcripción usa el idioma de la interfaz enviado por el cliente (`es`, `en`, `fr`, `it`); sin ese parámetro, Whisper detecta el idioma.
+- Athlete settings must exist with `requireFeedbackQuestions: true`.
+- The athlete or a linked coach must have access to `AI_RPE_QUESTIONS`.
+- `SELF_HOSTED=true` enables feature access without a platform subscription;
+  the selected AI provider still needs its credentials.
+- `AI_MODEL_POST_ACTIVITY_FEEDBACK` selects the question model. Its code default
+  is `google/gemini-3-pro-preview`.
+- The repository's OpenAI configuration example is
+  `AI_MODEL_POST_ACTIVITY_FEEDBACK=openai/gpt-5.1`, together with
+  `OPENAI_API_KEY` in `apps/api/.env`. Restart the API after editing it. An OpenAI
+  key does not configure the default Google model; that provider uses
+  `GOOGLE_GENERATIVE_AI_API_KEY`.
+- Errors distinguish missing provider configuration, provider failure and invalid
+  question output. When questions are disabled, the athlete is asked to contact
+  their coach. This message does not itself change the settings permissions.
+- Questions use the athlete's language. Transcription uses the interface language
+  supplied by the client (`es`, `en`, `fr`, `it`); without it, Whisper detects the
+  language.
 
-## Generación bajo demanda
+These model names describe repository configuration, not a guarantee of current
+availability from an external provider.
 
-En el detalle de la actividad, el botón **Generar preguntas con IA** aparece cuando no hay preguntas. Lo pueden utilizar el atleta propietario y un entrenador vinculado. Permite generar preguntas para actividades antiguas o importadas mediante Garmin manual, sin volver a sincronizar con Garmin.
+## On-demand generation
+
+**Generate questions with AI** appears in activity details when no questions
+exist. The activity owner and a linked coach can request questions for older
+activities, including manual Garmin imports, without synchronizing Garmin again.
 
 `POST /event/:eventId/activity/feedback-questions/generate`
 
-El endpoint comprueba acceso de lectura al evento y la identidad del propietario o la relación del entrenador, además del ajuste y permiso de IA. Se comprueban de nuevo los permisos antes del guardado. Devuelve el mismo formato que `GET /event/:eventId/activity/feedback-questions`.
+The endpoint checks event read access, ownership or the coach relationship,
+athlete settings and AI entitlement. Authorization is checked again before saving.
+The response has the same shape as
+`GET /event/:eventId/activity/feedback-questions`.
 
-Las preguntas o respuestas existentes no se reemplazan. No hay regeneración destructiva ni editor de plantillas. Las peticiones simultáneas comparten una generación dentro del proceso. Un bloqueo breve de la fila de actividad, seguido de una nueva comprobación de preguntas existentes, evita duplicados entre procesos. La llamada al modelo queda fuera de la transacción; dos procesos distintos aún pueden hacer llamadas al proveedor, aunque solo uno guardará las preguntas.
+Existing questions and answers are preserved. There is no destructive regeneration
+or questionnaire-template editor. Concurrent requests share one generation within
+an API process. A brief activity-row lock and a second existing-question check
+prevent duplicate writes across processes. The model call runs outside that
+transaction: separate processes may still make multiple provider calls, although
+only one will save questions.
 
-La generación automática después de importar utiliza el mismo servicio. Las importaciones masivas, incluido Garmin manual, siguen sin activar llamadas automáticas a IA.
+Automatic post-import generation uses the same service. Bulk imports, including
+manual Garmin and manual FIT uploads, do not trigger automatic AI questions.
 
-## Contexto y validación
+## Context and validation
 
-Se envían resumen de la actividad, objetivos del entrenamiento o competición vinculados, último valor de las métricas almacenadas, zonas y lesiones registradas activas. No se inventan valores de FC ausentes. No se incluyen histórico de carga ni CTL/ATL/TSB; el prompt indica esa limitación.
+The model receives the activity summary, linked training/competition goals,
+latest stored metric values, training zones and recorded active injuries. Injury
+selection considers the latest 20 records, keeps the newest record per location,
+and excludes resolved or zero-pain entries. Missing heart-rate values are not
+invented. Load history and CTL/ATL/TSB are not included; the prompt states this limit.
 
-La salida debe contener 3–4 preguntas diferentes, con texto no vacío de hasta 500 caracteres. Las opciones son opcionales; si se incluyen, deben ser de 2 a 8, con etiquetas no vacías de hasta 200 caracteres. Se rechazan claves inesperadas y respuestas que no cumplan el esquema antes de escribir. La llamada al modelo tiene un plazo de 120 segundos. Los fallos permiten reintentar y no reemplazan respuestas existentes.
+Output must contain 3–4 distinct questions with nonempty text of up to 500
+characters. Optional choices must contain 2–8 nonempty labels of up to 200
+characters. Unexpected fields and invalid output are rejected before writing.
+Model generation has a 120-second deadline. Failed requests can be retried without
+replacing existing answers.
 
-## Responder y consultar
+## Answering and reviewing
 
-El encabezado del entrenador es **Valoración de la actividad**. Se distinguen cuestionario no generado, pendiente, omitido y completado. El entrenador puede leer también las preguntas pendientes de respuesta.
+The coach sees **Activity feedback**, with distinct states for not generated,
+unanswered, skipped and completed questionnaires. Coaches can also read questions
+that have not yet been answered.
 
-Solo el atleta propietario puede responder, editar, omitir o reabrir el cuestionario. Las respuestas se guardan individualmente como texto. El servidor acepta entre 1 y 5000 caracteres después de eliminar espacios exteriores. Un fallo de guardado conserva el texto y la pregunta actual; no muestra éxito ni avanza. Se bloquean envíos repetidos mientras se guarda. La reanudación empieza en la primera pregunta sin responder.
+Only the owner can answer, edit, skip or reopen the questionnaire. Answers are
+saved individually as text, with 1–5,000 characters after trimming. A failed save
+preserves the text and current question, without advancing or showing success.
+Repeated submissions are blocked during saving. Resuming starts at the first
+unanswered question.
 
-## Procesamiento posterior: sin inferencias escritas automáticamente
+## Subsequent processing
 
-Completar las preguntas o guardar RPE y comentario puede actualizar la indexación semántica existente, si el ajuste y el acceso lo permiten. **No se crean lesiones ni se rellena un RPE ausente mediante IA.** Se mantienen las respuestas y el RPE introducidos por el atleta. Los registros anteriores no se modifican.
+Completing the questionnaire or saving RPE/comments can update the existing
+semantic index when settings and feature access allow it. **AI does not create
+injuries or fill in missing RPE automatically.** Answers and athlete-entered RPE
+remain unchanged, including older records.
 
-Todavía no se implementa una pantalla Accept/Edit/Reject para inferencias. Los agentes de extracción existentes quedan disponibles en el código para un futuro flujo revisado, pero este listener ya no los invoca.
+There is no Accept/Edit/Reject screen for extracted inferences. Extraction agents
+remain in the code for a possible future review workflow, but the feedback listener
+no longer invokes them.
 
-## Embeddings y persistencia
+## Embeddings and storage
 
-La indexación usa `text-embedding-3-small`. Texto y vector se pasan como parámetros de Prisma y se valida que el vector contenga 1536 números finitos. Se comprueba de nuevo el ajuste antes del guardado. El UPSERT mantiene un embedding por actividad; no requiere migración ni reprocesa actividades antiguas por sí mismo.
+Indexing uses `text-embedding-3-small`. Text and vector are passed as Prisma
+parameters; the vector must contain 1,536 finite numbers. Settings are rechecked
+before saving. An UPSERT maintains one embedding per activity. This path does not
+require a new migration or automatically reprocess old activities.
 
-## Validación
+## Verification coverage
 
-- Pruebas de permisos, ajuste desactivado, JSON inválido, concurrencia, conservación de respuestas y errores de proveedor.
-- Pruebas de respuesta vacía, fallo de guardado, idioma de transcripción y ausencia de escrituras de lesiones/RPE.
-- Regresiones de navegador para generación manual, estados, texto conservado, reintento y respuestas parciales.
-- Comprobación en PostgreSQL con dos instancias del servicio, respuestas IA simuladas y datos ficticios eliminados al terminar.
+- Permission and disabled-setting checks, invalid JSON, concurrent generation,
+  provider errors and preservation of existing answers.
+- Empty answers, save failures, transcription language and absence of automatic
+  injury/RPE writes.
+- Browser checks for on-demand generation, retry, partial answers and retained text.
+- PostgreSQL integration checks with two service instances and simulated model
+  output. Use disposable fixtures and remove only the data created by the test.
+
+## Source references
+
+- [Question generation](../apps/api/src/modules/core/services/activity-feedback-generation.service.ts)
+- [Feedback processing listener](../apps/api/src/listeners/activity-feedback-extraction.listener.ts)
+- [Model defaults](../apps/api/src/common/constants/ai-models.constant.ts)
