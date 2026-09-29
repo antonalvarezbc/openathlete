@@ -1435,5 +1435,17 @@
   "workout_target_missing_zone": "El atleta no tiene una zona equivalente a «{zone}» para este deporte. Configúrala o elige otro objetivo.",
   "workout_target_ambiguous_zone": "Hay varias zonas que coinciden con «{zone}». Revisa las zonas del atleta antes de guardar.",
   "workout_target_invalid": "Revisa el objetivo: su referencia y su rango deben ser válidos. No se han guardado cambios.",
-  "workout_target_data_error": "No se han podido cargar las métricas o zonas del atleta. Vuelve a intentarlo."
+  "workout_target_data_error": "No se han podido cargar las métricas o zonas del atleta. Vuelve a intentarlo.",
+  "messages_search_title": "Buscar mensajes",
+  "messages_search_description": "Busca por texto, remitente o nombre del chat. Pulsa un resultado para ir al mensaje.",
+  "messages_search_placeholder": "Texto, remitente o chat…",
+  "messages_search_scope": "Dónde buscar",
+  "messages_search_current": "Este chat",
+  "messages_search_all": "Todos mis chats",
+  "messages_search_error": "No se han podido cargar los mensajes.",
+  "messages_search_retry": "Reintentar",
+  "messages_search_hint": "Escribe para buscar en el historial de mensajes.",
+  "messages_search_count": "Resultados: {count}",
+  "messages_search_empty": "No se han encontrado mensajes.",
+  "messages_search_more": "Mostrar más"
 }

@@ -1435,5 +1435,17 @@
   "workout_target_missing_zone": "Aucune zone équivalente à « {zone} » pour ce sport chez cet athlète. Configurez-la ou choisissez une autre cible.",
   "workout_target_ambiguous_zone": "Plusieurs zones correspondent à « {zone} ». Vérifiez les zones de l’athlète avant d’enregistrer.",
   "workout_target_invalid": "Vérifiez la cible : sa référence et ses limites doivent être valides. Aucune modification enregistrée.",
-  "workout_target_data_error": "Impossible de charger les mesures ou les zones de l’athlète. Réessayez."
+  "workout_target_data_error": "Impossible de charger les mesures ou les zones de l’athlète. Réessayez.",
+  "messages_search_title": "Rechercher des messages",
+  "messages_search_description": "Recherchez par texte, expéditeur ou nom de conversation. Sélectionnez un résultat pour accéder au message.",
+  "messages_search_placeholder": "Texte, expéditeur ou conversation…",
+  "messages_search_scope": "Périmètre de recherche",
+  "messages_search_current": "Cette conversation",
+  "messages_search_all": "Toutes mes conversations",
+  "messages_search_error": "Impossible de charger les messages.",
+  "messages_search_retry": "Réessayer",
+  "messages_search_hint": "Saisissez du texte pour rechercher dans l’historique.",
+  "messages_search_count": "Résultats : {count}",
+  "messages_search_empty": "Aucun message trouvé.",
+  "messages_search_more": "Afficher plus"
 }
