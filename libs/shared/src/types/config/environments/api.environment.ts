@@ -271,6 +271,13 @@ export const ApiEnvSchema = z
       .optional()
       .describe('Provider for voice note transcription (default: openai)'),
 
+    AI_MODEL_MEMORY: z
+      .string()
+      .optional()
+      .describe(
+        'Model that consolidates coach AI memory notes (default: openai/gpt-4o-mini, or Claude with AI_PROVIDER=anthropic)',
+      ),
+
     AI_MODEL_TRANSCRIPTION: z
       .string()
       .optional()

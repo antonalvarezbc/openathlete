@@ -56,6 +56,14 @@ model CoachAthlete {
   athlete   Athlete @relation(fields: [athleteId], references: [athleteId])
   athleteId Int     @map("athlete_id")
 
+  /// AI memory mode for this coach–athlete pair; only the coach chooses it.
+  aiMemoryMode             AiMemoryMode   @default(OFF) @map("ai_memory_mode")
+  /// Consolidated AI memory, private to this coach and athlete. It is
+  /// deleted with the link, so a new link starts without memory.
+  aiMemorySummary          String         @default("") @map("ai_memory_summary")
+  aiMemorySummaryUpdatedAt DateTime?      @map("ai_memory_summary_updated_at")
+  aiMemoryNotes            AiMemoryNote[]
+
   // timestamps
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

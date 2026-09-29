@@ -29,7 +29,7 @@ export class PlanAdaptationController {
     @Body(new ZodValidationPipe(planAdaptationRequestSchema))
     request: PlanAdaptationRequest,
   ) {
-    return this.service.context(user, request);
+    return this.service.previewContext(user, request);
   }
 
   @Post('propose')

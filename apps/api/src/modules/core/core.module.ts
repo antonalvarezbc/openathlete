@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 
+import { AiMemoryModule } from '../ai-memory/ai-memory.module';
 import { AuthModule } from '../auth';
 import { CalendarModule } from '../calendar/calendar.module';
 import { MessagesModule } from '../messages/messages.module';
@@ -65,6 +66,7 @@ import { WeatherService } from './services/weather/weather.service';
   imports: [
     SubscriptionModule,
     AuthModule,
+    AiMemoryModule,
     forwardRef(() => CalendarModule),
     forwardRef(() => MessagesModule),
     forwardRef(() => QueueModule),

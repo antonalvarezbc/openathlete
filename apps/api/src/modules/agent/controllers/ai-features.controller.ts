@@ -32,6 +32,8 @@ import { UserTypes } from 'src/modules/auth/decorators';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
 import { FeatureAccessGuard, RequireFeature } from 'src/modules/subscription';
 
+import { PrismaService } from '../../prisma/services/prisma.service';
+import { resolveAiEventAthleteId } from '../services/event-ai-helpers';
 import { EventGenerationService } from '../services/event-generation.service';
 import { EventModificationService } from '../services/event-modification.service';
 
@@ -42,6 +44,7 @@ export class AIFeaturesController {
   constructor(
     private readonly eventGenerationService: EventGenerationService,
     private readonly eventModificationService: EventModificationService,
+    private readonly prisma: PrismaService,
   ) {}
 
   @UseGuards(AuthGuard('jwt'), UserTypeGuard, FeatureAccessGuard)
@@ -72,6 +75,12 @@ export class AIFeaturesController {
           format: 'date',
           description: 'ISO date string for the event date',
           example: '2024-01-15',
+        },
+        athleteId: {
+          type: 'number',
+          description:
+            "Athlete the session is for. Required for coaches; must be a linked athlete. Defaults to the caller's own athlete profile.",
+          example: 7,
         },
       },
       required: ['prompt', 'date'],
@@ -231,7 +240,11 @@ export class AIFeaturesController {
     @JwtUser() user: AuthUser,
     @Body(new ZodValidationPipe(generateEventDtoSchema)) dto: GenerateEventDto,
   ): Promise<GenerateEventResponseDto> {
-    const athleteId = user.athlete?.athleteId || user.userId;
+    const athleteId = await resolveAiEventAthleteId(
+      this.prisma,
+      user,
+      dto.athleteId,
+    );
 
     const parsedDate = new Date(dto.date);
     const year = parsedDate.getFullYear();
@@ -242,6 +255,7 @@ export class AIFeaturesController {
       await this.eventGenerationService.generateTrainingEvent(
         dto.prompt,
         athleteId,
+        user.userId,
       );
 
     const startDate = new Date(year, month, day, 8, 0, 0, 0);
@@ -337,6 +351,12 @@ export class AIFeaturesController {
           example: 'Make the intervals longer and add a 10-minute warmup',
           minLength: 1,
           maxLength: 500,
+        },
+        athleteId: {
+          type: 'number',
+          description:
+            "Athlete the session is for. Required for coaches; must be a linked athlete. Defaults to the caller's own athlete profile.",
+          example: 7,
         },
         eventData: {
           type: 'object',
@@ -562,13 +582,18 @@ export class AIFeaturesController {
     @JwtUser() user: AuthUser,
     @Body(new ZodValidationPipe(modifyEventDtoSchema)) dto: ModifyEventDto,
   ): Promise<ModifyEventResponseDto> {
-    const athleteId = user.athlete?.athleteId || user.userId;
+    const athleteId = await resolveAiEventAthleteId(
+      this.prisma,
+      user,
+      dto.athleteId,
+    );
 
     const modifiedEvent =
       await this.eventModificationService.modifyTrainingEvent(
         dto.prompt,
         athleteId,
         dto.eventData,
+        user.userId,
       );
 
     const startDate = new Date(modifiedEvent.startDate);

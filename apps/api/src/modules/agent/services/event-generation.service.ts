@@ -3,6 +3,10 @@ import { Injectable } from '@nestjs/common';
 import { trainingEventSchema } from '@openathlete/shared';
 
 import { eventGenerationAgent } from 'src/mastra/agents';
+import {
+  AiMemoryService,
+  aiMemoryPromptSection,
+} from 'src/modules/ai-memory/ai-memory.service';
 import { TrainingLoadService } from 'src/modules/core/services/training-load.service';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
@@ -28,12 +32,15 @@ export class EventGenerationService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly trainingLoadService: TrainingLoadService,
+    private readonly memory: AiMemoryService,
   ) {}
 
   async generateTrainingEvent(
     prompt: string,
     athleteId: number,
+    userId: number,
   ): Promise<TrainingEventSchema> {
+    const memory = await this.memory.getCoachMemory(userId, athleteId);
     const zones = await fetchAthleteZones(this.prismaService, athleteId);
     const metrics = await fetchAthleteMetrics(this.prismaService, athleteId);
     const latestMetrics = getLatestMetrics(metrics);
@@ -48,7 +55,7 @@ Generate a training event based on this request: ${prompt}
 ATHLETE CONTEXT:
 ${zonesContext ? `TRAINING ZONES:\n${zonesContext}` : 'No training zones configured'}
 ${metricsContext ? `\nLATEST METRICS:\n${metricsContext}` : '\nNo metrics available'}
-
+${aiMemoryPromptSection(memory)}
 CRITICAL REQUIREMENTS:
 - Return a complete training event with workout structure
 - For intervals (e.g., "10x 30s/30s"), create ONE REPEAT step with repeatBlock
@@ -94,6 +101,13 @@ ${buildWorkoutTargetsInstructions()}`;
         'Failed to generate event: no structured output received',
       );
     }
+
+    await this.memory.addNote(
+      userId,
+      athleteId,
+      'EVENT_GENERATION',
+      `Generated ${response.object.sport} session "${response.object.name}" from request: ${prompt}`,
+    );
 
     return response.object;
   }

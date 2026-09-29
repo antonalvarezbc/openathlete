@@ -1,6 +1,7 @@
 import { PlanAdaptationRequest, SPORT_TYPE } from '@openathlete/shared';
 
 import { planAdaptationAgent } from '../../../mastra/agents/plan-adaptation.agent';
+import { disabledAiMemory } from '../../ai-memory/ai-memory.testing';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { PlanAdaptationService } from './plan-adaptation.service';
 
@@ -46,6 +47,7 @@ describe('Proposal generation is read-only', () => {
     const prisma = { $transaction: jest.fn() };
     const service = new PlanAdaptationService(
       prisma as unknown as PrismaService,
+      disabledAiMemory(),
     );
     const context = {
       contextVersion: 'a'.repeat(64),
@@ -94,6 +96,7 @@ describe('Proposal generation is read-only', () => {
     };
     const service = new PlanAdaptationService(
       prisma as unknown as PrismaService,
+      disabledAiMemory(),
     );
     (planAdaptationAgent.generate as jest.Mock).mockClear();
     await expect(service.propose(user, request)).rejects.toThrow(
@@ -176,6 +179,7 @@ describe('Interface language takes precedence over athlete language', () => {
       };
       const service = new PlanAdaptationService(
         prisma as unknown as PrismaService,
+        disabledAiMemory(),
       );
       const result = await service.context(
         user,
@@ -217,6 +221,7 @@ describe('Applying reviewed dates', () => {
     const prisma = { $transaction: jest.fn(async (callback) => callback(tx)) };
     const service = new PlanAdaptationService(
       prisma as unknown as PrismaService,
+      disabledAiMemory(),
     );
     jest.spyOn(service, 'context').mockResolvedValue({
       contextVersion: 'a'.repeat(64),
@@ -271,6 +276,7 @@ describe('Refining proposals without calendar writes', () => {
     const prisma = { $transaction: jest.fn() };
     const service = new PlanAdaptationService(
       prisma as unknown as PrismaService,
+      disabledAiMemory(),
     );
     const context = {
       contextVersion: 'a'.repeat(64),

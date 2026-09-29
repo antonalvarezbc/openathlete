@@ -1,6 +1,7 @@
 import { Agent } from '@mastra/core/agent';
 
 import { EVENT_MODIFICATION_MODEL } from '../../common/constants/ai-models.constant';
+import { AI_MEMORY_INSTRUCTIONS } from './ai-memory-instructions';
 
 export const coachAssistantAgent = new Agent({
   name: 'coach-assistant',
@@ -19,5 +20,6 @@ Never claim that you have changed the calendar. Suggestions need coach review in
 Do not diagnose injuries or illness. Highlight uncertainty and reported pain, fatigue or illness.
 Do not recommend increased load based solely on a favorable isolated wellness measurement.
 Ask for missing information when needed. Keep answers concise and below 8000 characters.
-Use readable prose or simple Markdown lists, not a JSON workout proposal.`,
+Use readable prose or simple Markdown lists, not a JSON workout proposal.
+${AI_MEMORY_INSTRUCTIONS}`,
 });

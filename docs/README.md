@@ -27,6 +27,7 @@ explicitly; they are not evidence that a live provider currently works.
 - [Account modes, administrators and manual Garmin](account-modes-and-manual-garmin.md)
 - [Official provider configuration](provider-configuration.md)
 - [AI providers: OpenAI, Google and Claude](ai-providers.md)
+- [Coach AI memory per athlete](ai-memory.md)
 - [Manual FIT import and GPS handling](manual-fit-import.md)
 - [Spanish localization and four-locale maintenance](spanish-localization.md)
 

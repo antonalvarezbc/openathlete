@@ -6,6 +6,7 @@ import {
   useRemoveAthleteMutation,
 } from '@/api/athlete';
 import { useInstallationFeatures } from '@/api/installation/installation.hooks';
+import { AiMemorySettings } from '@/components/ai-memory-settings';
 import { ConfirmAction } from '@/components/confirm-action';
 import { InviteAthleteDialog } from '@/components/invite-athlete-dialog/invite-athlete.dialog';
 import { ActivityAlertSettings } from '@/components/messages/activity-alert-settings';
@@ -18,7 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { SkeletonTableRow } from '@/components/ui/skeleton';
+import { Skeleton, SkeletonTableRow } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -44,6 +45,7 @@ export function AthletesTab() {
   const nav = useNavigate();
   const [alertsAthleteId, setAlertsAthleteId] = useState<number | null>(null);
   const [zonesAthleteId, setZonesAthleteId] = useState<number | null>(null);
+  const [memoryAthleteId, setMemoryAthleteId] = useState<number | null>(null);
   const { data: sentInvitations, isLoading: sentInvitationsLoading } =
     useGetSentAthleteInvitationsQuery({ enabled: true });
   const [deleteAthleteDialog, setDeleteAthleteDialog] = useState<number | null>(
@@ -116,41 +118,33 @@ export function AthletesTab() {
           </Button>
         }
       >
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{m.name()}</TableHead>
-              <TableHead>{m.email()}</TableHead>
-              {manualGarminSync && (
-                <TableHead>{m.garmin_manual_title()}</TableHead>
-              )}
-              <TableHead className="text-right">{m.actions()}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        {/* One block per athlete instead of table columns, so the manual
+            Garmin controls get the full width on every screen size. */}
+        {!isLoadingAthletes && !athletes?.length ? (
+          <p className="text-sm text-muted-foreground">
+            {m.no_coached_athletes()}
+          </p>
+        ) : (
+          <ul className="divide-y rounded-md border">
             {isLoadingAthletes
               ? Array.from({ length: 3 }).map((_, i) => (
-                  <SkeletonTableRow
-                    key={i}
-                    colCount={manualGarminSync ? 4 : 3}
-                  />
+                  <li key={i} className="space-y-2 p-4">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-4 w-56" />
+                  </li>
                 ))
               : athletes?.map((athlete) => (
-                  <TableRow key={athlete.athleteId}>
-                    <TableCell>
-                      {athlete.user?.firstName} {athlete.user?.lastName}
-                    </TableCell>
-                    <TableCell>{athlete.user?.email}</TableCell>
-                    {manualGarminSync && (
-                      <TableCell className="min-w-64 whitespace-normal">
-                        <ManualGarminCard
-                          athleteId={athlete.athleteId}
-                          compact
-                        />
-                      </TableCell>
-                    )}
-                    <TableCell className="text-right">
-                      <div className="flex flex-wrap justify-end gap-2">
+                  <li key={athlete.athleteId} className="space-y-4 p-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div className="min-w-0">
+                        <p className="font-medium">
+                          {athlete.user?.firstName} {athlete.user?.lastName}
+                        </p>
+                        <p className="break-all text-sm text-muted-foreground">
+                          {athlete.user?.email}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2 md:justify-end">
                         <Button
                           variant="outline"
                           size="sm"
@@ -164,6 +158,13 @@ export function AthletesTab() {
                           onClick={() => setZonesAthleteId(athlete.athleteId)}
                         >
                           {m.edit_zones()}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setMemoryAthleteId(athlete.athleteId)}
+                        >
+                          {m.ai_memory_settings()}
                         </Button>
                         <Button
                           variant="link"
@@ -187,11 +188,14 @@ export function AthletesTab() {
                           {m.delete_()}
                         </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                    {manualGarminSync && (
+                      <ManualGarminCard athleteId={athlete.athleteId} compact />
+                    )}
+                  </li>
                 ))}
-          </TableBody>
-        </Table>
+          </ul>
+        )}
       </SettingsSection>
       {sentInvitationsLoading ? (
         <SettingsSection
@@ -274,6 +278,29 @@ export function AthletesTab() {
               key={zonesAthleteId}
               athleteId={zonesAthleteId}
               showHeading={false}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={memoryAthleteId !== null}
+        onOpenChange={(open) => !open && setMemoryAthleteId(null)}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {m.ai_memory_settings()} ·{' '}
+              {
+                athletes?.find(
+                  (athlete) => athlete.athleteId === memoryAthleteId,
+                )?.user?.firstName
+              }
+            </DialogTitle>
+          </DialogHeader>
+          {memoryAthleteId !== null && (
+            <AiMemorySettings
+              key={memoryAthleteId}
+              athleteId={memoryAthleteId}
             />
           )}
         </DialogContent>

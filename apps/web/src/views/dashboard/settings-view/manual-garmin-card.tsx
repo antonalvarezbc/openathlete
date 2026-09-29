@@ -275,10 +275,16 @@ export function ManualGarminCard({
     activeBackfill ||
     backfill.isPending ||
     login.isPending;
-  const Container = compact ? 'div' : Card;
+  const Container = compact ? 'section' : Card;
   const Content = compact ? 'div' : CardContent;
   return (
-    <Container>
+    <Container
+      className={compact ? 'rounded-md border bg-muted/30 p-3' : undefined}
+      aria-label={compact ? m.garmin_manual_title() : undefined}
+    >
+      {compact && (
+        <h3 className="mb-3 text-sm font-medium">{m.garmin_manual_title()}</h3>
+      )}
       {!compact && (
         <CardHeader>
           <CardTitle>{m.garmin_manual_title()}</CardTitle>

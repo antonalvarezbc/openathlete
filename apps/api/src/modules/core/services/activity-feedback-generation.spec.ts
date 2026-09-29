@@ -2,6 +2,7 @@ import { ForbiddenException } from '@nestjs/common';
 
 import * as models from 'src/common/constants/ai-models.constant';
 import { postActivityFeedbackAgent } from 'src/mastra/agents/post-activity-feedback.agent';
+import { disabledAiMemory } from 'src/modules/ai-memory/ai-memory.testing';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 import { FeatureAccessService } from 'src/modules/subscription/services/feature-access.service';
@@ -81,6 +82,7 @@ function setup() {
   const service = new ActivityFeedbackGenerationService(
     db as unknown as PrismaService,
     access as unknown as FeatureAccessService,
+    disabledAiMemory(),
   );
   return { activity, tx, db, access, service };
 }

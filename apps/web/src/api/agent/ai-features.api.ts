@@ -13,6 +13,7 @@ export class AIFeaturesAPI {
   static async generateEvent(
     prompt: string,
     date: Date,
+    athleteId?: number,
   ): Promise<GenerateEventResponseDto> {
     const normalizedDate = new Date(date);
     normalizedDate.setHours(0, 0, 0, 0);
@@ -22,6 +23,7 @@ export class AIFeaturesAPI {
       {
         prompt,
         date: normalizedDate.toISOString(),
+        athleteId,
       } as GenerateEventDto,
     );
     const event = res.data;
@@ -42,9 +44,11 @@ export class AIFeaturesAPI {
   static async modifyEvent(
     prompt: string,
     eventData: CreateEventDto,
+    athleteId?: number,
   ): Promise<ModifyEventResponseDto> {
     const payload = {
       prompt,
+      athleteId,
       eventData: {
         ...eventData,
         startDate:

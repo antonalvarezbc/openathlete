@@ -368,6 +368,10 @@ export function CreateEventDialog({ open, onClose, ...rest }: P) {
           onClose={() => setAiDialogOpen(false)}
           eventData={currentEventData}
           date={create ? rest.date : undefined}
+          athleteId={
+            (edit ? (rest.event?.athleteId ?? athleteId) : athleteId) ??
+            undefined
+          }
           isCreateMode={isCreateMode}
           analyticsSource="event_dialog"
           onEventGenerated={handleEventGenerated}

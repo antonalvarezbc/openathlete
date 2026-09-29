@@ -129,6 +129,14 @@ export const QNA_MODEL =
   process.env.AI_MODEL_QNA || defaultModel('openai/gpt-4o');
 
 /**
+ * Model that consolidates AI memory notes into the coach–athlete summary.
+ * It only runs every few notes; a small model is enough here.
+ * Fallback: 'openai/gpt-4o-mini'
+ */
+export const AI_MEMORY_MODEL =
+  process.env.AI_MODEL_MEMORY || defaultModel('openai/gpt-4o-mini');
+
+/**
  * Model for TRIMP estimation agent
  * Fallback: 'openai/gpt-5.1'
  */

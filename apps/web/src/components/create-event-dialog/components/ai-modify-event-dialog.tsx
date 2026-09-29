@@ -29,6 +29,8 @@ type Props = {
   onClose: () => void;
   eventData: CreateEventDto;
   date?: Date;
+  /** Athlete the session is for (the calendar's athlete). */
+  athleteId?: number;
   isCreateMode: boolean;
   /** PostHog funnel attribution (no PII). */
   analyticsSource?: string;
@@ -46,6 +48,7 @@ export function AIModifyEventDialog({
   open,
   onClose,
   eventData,
+  athleteId,
   date,
   isCreateMode,
   analyticsSource = 'event_dialog',
@@ -91,6 +94,7 @@ export function AIModifyEventDialog({
         const generatedEvent = await generateEventMutation.mutateAsync({
           prompt: data.prompt,
           date,
+          athleteId,
         });
 
         toast.success(m.event_generated_successfully());
@@ -102,6 +106,7 @@ export function AIModifyEventDialog({
         const modifiedEvent = await modifyEventMutation.mutateAsync({
           prompt: data.prompt,
           eventData,
+          athleteId,
         });
 
         toast.success(m.event_modified_successfully());

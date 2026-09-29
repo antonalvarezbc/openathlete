@@ -2,6 +2,8 @@ import { Agent } from '@mastra/core/agent';
 
 import { EVENT_GENERATION_MODEL } from 'src/common/constants/ai-models.constant';
 
+import { AI_MEMORY_INSTRUCTIONS } from './ai-memory-instructions';
+
 export const eventGenerationAgent = new Agent({
   name: 'event-generation',
   description:
@@ -199,6 +201,7 @@ CONTEXT:
 - Generate contextually appropriate workouts based on athlete data
 - Pay attention to the training zones and metrics provided in the prompt
 
-Remember: Generate appropriate workouts with proper targets!`,
+Remember: Generate appropriate workouts with proper targets!
+${AI_MEMORY_INSTRUCTIONS}`,
   model: EVENT_GENERATION_MODEL,
 });

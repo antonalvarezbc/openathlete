@@ -17,6 +17,7 @@ import {
   ACTIVITY_ANALYSIS_PROMPT_VERSION,
   activityAnalysisAgent,
 } from '../../../mastra/agents/activity-analysis.agent';
+import { disabledAiMemory } from '../../ai-memory/ai-memory.testing';
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { buildActivityAnalysisContext } from './activity-analysis-context';
@@ -72,7 +73,7 @@ const row = {
 };
 
 function setup() {
-  const linkedActivity = { activity: { eventActivityId: 17 } };
+  const linkedActivity = { athleteId: 7, activity: { eventActivityId: 17 } };
   const tx = {
     event: {
       findFirst: jest.fn().mockResolvedValue(linkedActivity),
@@ -101,10 +102,15 @@ function setup() {
       .fn()
       .mockImplementation(async (callback) => callback(tx)),
   };
+  const memory = disabledAiMemory();
   return {
     db,
     tx,
-    service: new ActivityAnalysisService(db as unknown as PrismaService),
+    memory,
+    service: new ActivityAnalysisService(
+      db as unknown as PrismaService,
+      memory,
+    ),
   };
 }
 
@@ -148,7 +154,10 @@ describe('activity analysis authorization and private history', () => {
         type: 'ACTIVITY',
         athlete: { OR: [{ coachAthletes: { some: { userId: 3 } } }] },
       },
-      select: { activity: { select: { eventActivityId: true } } },
+      select: {
+        athleteId: true,
+        activity: { select: { eventActivityId: true } },
+      },
     });
     expect(buildActivityAnalysisContext).toHaveBeenCalledWith(
       db,
@@ -242,6 +251,44 @@ describe('validated generation and failure isolation', () => {
     expect(db.event.create).not.toHaveBeenCalled();
     expect(tx.event.update).not.toHaveBeenCalled();
     expect(tx.event.create).not.toHaveBeenCalled();
+  });
+
+  test('adds coach memory to the prompt and snapshot, then records a note', async () => {
+    const { service, memory, tx } = setup();
+    const aiMemory = {
+      mode: 'COMPACT',
+      summary: '- Knee sensitive on descents',
+      recentNotes: [],
+      recentAthleteFeedback: [],
+    };
+    memory.getCoachMemory.mockResolvedValue(aiMemory);
+    await service.generate(coach, 42, input);
+    expect(memory.getCoachMemory).toHaveBeenCalledWith(3, 7, {
+      excludeEventActivityId: 17,
+    });
+    const prompt = JSON.parse(
+      (activityAnalysisAgent.generate as jest.Mock).mock.calls[0][0],
+    );
+    expect(prompt.aiMemory).toEqual(aiMemory);
+    expect(
+      tx.coachActivityAnalysis.create.mock.calls[0][0].data.contextSnapshot
+        .aiMemory,
+    ).toEqual(aiMemory);
+    expect(memory.addNote).toHaveBeenCalledWith(
+      3,
+      7,
+      'ACTIVITY_ANALYSIS',
+      expect.stringContaining(analysis.summary),
+    );
+  });
+
+  test('records no memory note when generation fails', async () => {
+    const { service, memory } = setup();
+    (activityAnalysisAgent.generate as jest.Mock).mockRejectedValueOnce(
+      new Error('provider down'),
+    );
+    await expect(service.generate(coach, 42, input)).rejects.toThrow();
+    expect(memory.addNote).not.toHaveBeenCalled();
   });
 
   test.each([
