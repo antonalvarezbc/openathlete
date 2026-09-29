@@ -17,7 +17,12 @@ Compose; `apps/api/.env` is used by the local Node development server.
 
 ## Usage
 
-In the **Athlete** space, open your calendar and choose **Import FIT activity**.
+In the **Athlete** space, open **Settings → Connectors** and choose
+**Import FIT activity**. Its own card appears below **Garmin · manual sync** when
+that connector is enabled, or directly after the official connectors otherwise.
+FIT import does not require a Garmin connection. The calendar no longer contains
+the upload button.
+
 Select one `.fit` file, review/edit the activity name and import it. The result
 shows the activity's original date and a **View activity** action, including for
 files outside the currently displayed calendar period.

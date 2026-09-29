@@ -1,3 +1,4 @@
+import { useGetMyAthleteQuery } from '@/api/athlete';
 import { useGetMyIcalCalendarSecretQuery } from '@/api/event';
 import {
   useInstallationFeatures,
@@ -13,6 +14,7 @@ import {
 import { GarminLogo, StravaIcon } from '@/assets/icons';
 import { PolarLogo, SuuntoLogo } from '@/assets/icons/providers';
 import { ConfirmAction } from '@/components/confirm-action';
+import { ImportFitDialog } from '@/components/import-fit-dialog/import-fit-dialog';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -30,6 +32,8 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { API_BASE_URL } from '@/config';
+import { useUserRoles } from '@/contexts/auth';
+import { useSpaceContext } from '@/contexts/space';
 import { m } from '@/paraglide/messages';
 import {
   AnalyticsEvent,
@@ -62,7 +66,10 @@ const SUPPORTED_PROVIDERS: ConnectorProvider[] = [
 ];
 
 export function ConnectorsTab() {
-  const { manualGarminSync } = useInstallationFeatures();
+  const { manualGarminSync, manualFitImport } = useInstallationFeatures();
+  const roles = useUserRoles();
+  const { space } = useSpaceContext();
+  const { data: athlete } = useGetMyAthleteQuery();
   const providerConfiguration = useProviderConfiguration();
   const isConfigured = (provider: ConnectorProvider) =>
     providerConfiguration.isSuccess &&
@@ -526,6 +533,18 @@ export function ConnectorsTab() {
       </SettingsSection>
 
       {manualGarminSync && <ManualGarminCard configure />}
+
+      {manualFitImport &&
+        space === 'ATHLETE' &&
+        roles?.includes('ATHLETE') &&
+        athlete && (
+          <SettingsSection
+            title={m.fit_import_title()}
+            description={m.fit_import_help()}
+          >
+            <ImportFitDialog />
+          </SettingsSection>
+        )}
 
       {icalSecret && (
         <SettingsSection
