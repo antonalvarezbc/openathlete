@@ -20,6 +20,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
+import { assertVoiceTranscriptionAvailable } from 'src/common/utils/ai-transcription.util';
 import { UserTypeGuard } from 'src/modules/auth';
 
 import { ActivityFeedbackService } from '../services/activity-feedback.service';
@@ -120,9 +121,14 @@ export class ActivityFeedbackController {
     description: 'Unauthorized - invalid or missing authentication token',
   })
   @ApiResponse({
+    status: 503,
+    description:
+      'Transcription unavailable: TRANSCRIPTION_UNSUPPORTED_BY_AI_PROVIDER (Claude selected without an OpenAI or Google transcription key) or TRANSCRIPTION_NOT_CONFIGURED',
+  })
+  @ApiResponse({
     status: 500,
     description:
-      'Internal server error - transcription failed (e.g., OpenAI API error)',
+      'Internal server error - transcription failed (e.g., provider API error)',
     schema: {
       type: 'object',
       properties: {
@@ -169,6 +175,7 @@ export class ActivityFeedbackController {
       );
     }
 
+    assertVoiceTranscriptionAvailable();
     return this.activityFeedbackService.transcribeAudio(
       file,
       parsedLanguage.data,

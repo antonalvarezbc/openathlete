@@ -857,6 +857,8 @@
   "transcribing_audio": "Transcribing audio...",
   "transcription_completed": "Transcription completed",
   "failed_to_transcribe_audio": "Failed to transcribe audio",
+  "voice_transcription_unsupported_by_ai_provider": "Voice transcription is not available with the selected AI provider. Type your answer instead.",
+  "voice_transcription_not_configured": "Voice transcription is not configured on this server. Type your answer instead.",
   "paywall_title": "Unlock Premium Features",
   "paywall_subtitle": "Upgrade your plan to access AI-powered features and coach more athletes",
   "paywall_ai_feature_title": "AI-Powered Training",

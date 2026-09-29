@@ -8,6 +8,7 @@ import {
   ProviderConfigurationDto,
 } from '@openathlete/shared';
 
+import { getVoiceTranscriptionStatus } from '../../../common/utils/ai-transcription.util';
 import { getProviderConfiguration } from '../../providers-sync/helpers/provider-configuration';
 import { getInstallationFeatures } from '../helpers/installation-features';
 
@@ -25,6 +26,9 @@ export class InstallationFeaturesController {
 
   @Get('features')
   features(): InstallationFeaturesDto {
-    return getInstallationFeatures(this.config);
+    return {
+      ...getInstallationFeatures(this.config),
+      voiceTranscription: getVoiceTranscriptionStatus(),
+    };
   }
 }

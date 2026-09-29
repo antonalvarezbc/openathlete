@@ -1,6 +1,6 @@
-import { openai } from '@ai-sdk/openai';
 import { Agent } from '@mastra/core/agent';
 
+import { QNA_MODEL } from '../common/constants/ai-models.constant';
 import { qnaAgent } from './agents';
 import { createMastraMemory } from './config/memory.config';
 import { MastraToolContext } from './config/tool-context';
@@ -39,7 +39,7 @@ RESPONSE FORMAT:
 - Let the specialized agent handle the details
 
 Keep it simple. Your job is routing, not coaching.`,
-    model: openai('gpt-4o'),
+    model: QNA_MODEL,
     agents: {
       qnaAgent,
     },

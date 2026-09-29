@@ -8,7 +8,7 @@ import { InstallationFeaturesDto } from '@openathlete/shared';
 /** Read the validated API configuration; raw truthy strings must not enable a tool. */
 export function getInstallationFeatures(
   config: ConfigService,
-): InstallationFeaturesDto {
+): Omit<InstallationFeaturesDto, 'voiceTranscription'> {
   const directory = config.get<string>('GARMIN_UNOFFICIAL_DIRECTORY');
   return {
     manualFitImport: config.get<boolean>('ENABLE_MANUAL_FIT_IMPORT') === true,

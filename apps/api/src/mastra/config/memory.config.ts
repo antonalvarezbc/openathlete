@@ -1,6 +1,7 @@
-import { openai } from '@ai-sdk/openai';
 import { Memory } from '@mastra/memory';
 import { PgVector, PostgresStore } from '@mastra/pg';
+
+import { createEmbeddingModel } from '../../common/utils/ai-embedding.util';
 
 const getDatabaseUrlForMastra = (): string => {
   const url = process.env.DATABASE_URL || '';
@@ -19,7 +20,8 @@ const vector = new PgVector({
   schemaName: 'mastra',
 });
 
-const embedder = openai.embedding('text-embedding-3-small');
+// Only used if semanticRecall is enabled.
+const embedder = createEmbeddingModel();
 
 export function createMastraMemory(): Memory {
   return new Memory({

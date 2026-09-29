@@ -1,10 +1,9 @@
-import { openai } from '@ai-sdk/openai';
-
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 
 import { FeatureName } from '@openathlete/shared';
 
+import { createTextEmbedder } from 'src/common/utils/ai-embedding.util';
 import { ActivityFeedbackCompletedEvent } from 'src/events';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 import { FeatureAccessService } from 'src/modules/subscription/services/feature-access.service';
@@ -14,7 +13,7 @@ import { feedbackEmbeddingUpsert } from './activity-feedback-embedding';
 @Injectable()
 export class ActivityFeedbackExtractionListener {
   private readonly logger = new Logger(ActivityFeedbackExtractionListener.name);
-  private readonly embedder = openai.embedding('text-embedding-3-small');
+  private readonly embedder = createTextEmbedder();
   private readonly MAX_RETRIES = 3;
 
   constructor(

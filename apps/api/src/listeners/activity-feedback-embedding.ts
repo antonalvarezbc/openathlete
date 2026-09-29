@@ -1,6 +1,6 @@
 import { Prisma } from '@openathlete/database';
 
-/** text-embedding-3-small and the database column both use 1536 dimensions. */
+/** The database column uses 1536 dimensions (see createTextEmbedder). */
 export function feedbackEmbeddingUpsert(
   eventActivityId: number,
   text: string,

@@ -857,6 +857,8 @@
   "transcribing_audio": "Transcribiendo audio…",
   "transcription_completed": "Transcripción completada",
   "failed_to_transcribe_audio": "No se ha podido transcribir el audio",
+  "voice_transcription_unsupported_by_ai_provider": "La transcripción de voz no está disponible con el proveedor de IA seleccionado. Escribe tu respuesta.",
+  "voice_transcription_not_configured": "La transcripción de voz no está configurada en este servidor. Escribe tu respuesta.",
   "paywall_title": "Desbloquea las funciones prémium",
   "paywall_subtitle": "Mejora tu plan para acceder a las funciones de IA y entrenar a más atletas",
   "paywall_ai_feature_title": "Entrenamiento asistido por IA",

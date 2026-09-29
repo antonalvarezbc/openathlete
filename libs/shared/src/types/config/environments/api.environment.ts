@@ -249,6 +249,35 @@ export const ApiEnvSchema = z
       .optional()
       .describe('Google Generative AI API key (optional)'),
 
+    ANTHROPIC_API_KEY: z
+      .string()
+      .optional()
+      .describe('Anthropic API key to use Claude models (optional)'),
+
+    AI_PROVIDER: z
+      .enum(['openai', 'anthropic'])
+      .optional()
+      .describe(
+        'Default provider for AI agents; anthropic uses Claude for every agent (default: openai)',
+      ),
+
+    AI_EMBEDDING_PROVIDER: z
+      .enum(['openai', 'google'])
+      .optional()
+      .describe('Provider for text embeddings (default: openai)'),
+
+    AI_TRANSCRIPTION_PROVIDER: z
+      .enum(['openai', 'google'])
+      .optional()
+      .describe('Provider for voice note transcription (default: openai)'),
+
+    AI_MODEL_TRANSCRIPTION: z
+      .string()
+      .optional()
+      .describe(
+        'Gemini model for transcription when AI_TRANSCRIPTION_PROVIDER=google (default: gemini-2.5-flash)',
+      ),
+
     // AI Model Configuration (optional, uses defaults if not provided)
     AI_MODEL_EVENT_GENERATION: z
       .string()

@@ -355,6 +355,16 @@ export function AudioRecorder({
         } catch {
           errorMessage = errorText || errorMessage;
         }
+        if (errorMessage === 'TRANSCRIPTION_UNSUPPORTED_BY_AI_PROVIDER') {
+          setIsTranscribingProp(false);
+          toast.error(m.voice_transcription_unsupported_by_ai_provider());
+          return;
+        }
+        if (errorMessage === 'TRANSCRIPTION_NOT_CONFIGURED') {
+          setIsTranscribingProp(false);
+          toast.error(m.voice_transcription_not_configured());
+          return;
+        }
         throw new Error(`${response.status}: ${errorMessage}`);
       }
 

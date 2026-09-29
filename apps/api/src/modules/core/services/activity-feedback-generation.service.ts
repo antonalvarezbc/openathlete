@@ -11,7 +11,11 @@ import {
 import { Prisma } from '@openathlete/database';
 import { FeatureName } from '@openathlete/shared';
 
-import { POST_ACTIVITY_FEEDBACK_MODEL } from 'src/common/constants/ai-models.constant';
+import {
+  POST_ACTIVITY_FEEDBACK_MODEL,
+  getAiModelApiKeyEnvVar,
+  hasAiApiKey,
+} from 'src/common/constants/ai-models.constant';
 import { Language } from 'src/common/constants/languages.constant';
 import { postActivityFeedbackAgent } from 'src/mastra/agents/post-activity-feedback.agent';
 import {
@@ -131,13 +135,8 @@ export class ActivityFeedbackGenerationService {
     )
       throw new ForbiddenException('FEEDBACK_AI_UNAVAILABLE');
     const userLanguage = activity.event.athlete.user?.language ?? Language.EN;
-    const keyName = POST_ACTIVITY_FEEDBACK_MODEL.startsWith('openai/')
-      ? 'OPENAI_API_KEY'
-      : POST_ACTIVITY_FEEDBACK_MODEL.startsWith('google/')
-        ? 'GOOGLE_GENERATIVE_AI_API_KEY'
-        : undefined;
-    const key = keyName ? process.env[keyName]?.trim() : undefined;
-    if (keyName && (!key || /your[-_]|example|placeholder/i.test(key))) {
+    const keyName = getAiModelApiKeyEnvVar(POST_ACTIVITY_FEEDBACK_MODEL);
+    if (keyName && !hasAiApiKey(keyName)) {
       throw new ServiceUnavailableException('FEEDBACK_MODEL_NOT_CONFIGURED');
     }
 

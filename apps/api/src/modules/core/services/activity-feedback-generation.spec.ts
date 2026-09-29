@@ -243,6 +243,7 @@ it('respects opt-out changed while AI was running', async () => {
 it.each([
   ['openai/gpt-5.1', 'OPENAI_API_KEY'],
   ['google/gemini-3-pro-preview', 'GOOGLE_GENERATIVE_AI_API_KEY'],
+  ['anthropic/claude-opus-5', 'ANTHROPIC_API_KEY'],
 ])('requires the key for the selected provider %s', async (model, key) => {
   jest.replaceProperty(models, 'POST_ACTIVITY_FEEDBACK_MODEL', model);
   const { service, tx } = setup();

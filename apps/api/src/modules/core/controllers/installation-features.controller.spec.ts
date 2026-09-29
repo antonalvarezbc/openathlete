@@ -100,6 +100,7 @@ describe('installation features HTTP boundary', () => {
       expect(await response.json()).toEqual({
         manualFitImport,
         manualGarminSync,
+        voiceTranscription: expect.any(String),
       });
       expect(prisma.athlete.findUnique).not.toHaveBeenCalled();
     },
