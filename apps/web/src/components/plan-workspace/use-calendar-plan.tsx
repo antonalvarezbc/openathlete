@@ -24,6 +24,8 @@ export function useCalendarPlan(athleteId?: number) {
   return {
     plan: query.data,
     planId,
+    /** Links from plan weeks open the calendar in week view. */
+    view: params.get('view') === 'week' ? ('week' as const) : undefined,
     initialDate: isNaN(initial.getTime()) ? new Date() : initial,
     isLoading: !!rawId && (!athleteId || (valid && query.isPending)),
     isError:

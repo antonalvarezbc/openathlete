@@ -397,7 +397,6 @@ OpenAthlete is actively developed. Here's what's coming next:
 - 🧩 **Modular Training Logic** - Custom goals, coach import, and flexible training methodologies
 - 📈 **Enhanced Dashboards** - Intuitive data visualizations and performance analytics
 - 🔗 **More Integrations** - Wahoo, Coros, Zwift, Oura, and more
-- 📅 **Weekly Training View** - Better calendar and planning interface
 - 🏃 **Advanced AI Features** - More intelligent training suggestions and injury prevention
 - 📱 **Mobile App Enhancements** - Improved mobile experience and offline support
 

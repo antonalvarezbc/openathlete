@@ -15,6 +15,7 @@ import {
 } from '@/components/plan-workspace/helpers';
 import { PlanEditor } from '@/components/plan-workspace/plan-editor';
 import { PlanRaces } from '@/components/plan-workspace/plan-races';
+import { PlanWeeks } from '@/components/plan-workspace/plan-weeks';
 import { Button } from '@/components/ui/button';
 import { SparklesIcon } from '@/components/ui/sparkles-icon';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -194,33 +195,11 @@ export function TrainingPlanTab() {
                     </Link>
                   </Button>
                 )}
-                <details>
-                  <summary className="cursor-pointer py-2 font-medium">
-                    {m.workspace_weeks()}
-                  </summary>
-                  <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                    {plan.cycles.flatMap((cycle) =>
-                      cycle.weeks.map((week) => (
-                        <Link
-                          key={week.trainingWeekId}
-                          className="rounded-lg border p-3 text-sm hover:bg-muted"
-                          to={`${calendarPath}?trainingPlanId=${plan.trainingPlanId}&date=${encodeURIComponent(week.startDate)}`}
-                        >
-                          <p className="font-medium">
-                            {cycle.name} · {m.week()} {week.weekNumber}
-                          </p>
-                          <p>
-                            {displayDate(week.startDate)} –{' '}
-                            {displayDate(week.endDate)}
-                          </p>
-                          <p className="text-muted-foreground">
-                            {week._count.sessions} {m.events()}
-                          </p>
-                        </Link>
-                      )),
-                    )}
-                  </div>
-                </details>
+                <PlanWeeks
+                  plan={plan}
+                  editable={!!editable}
+                  calendarPath={calendarPath}
+                />
               </section>
               <PlanRaces
                 key={plan.trainingPlanId}

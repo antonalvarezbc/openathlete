@@ -40,11 +40,16 @@ export interface ManagedPlan {
   cycles: Array<{
     cycleId: number;
     name: string;
+    phase: string | null;
+    color: string | null;
     weeks: Array<{
       trainingWeekId: number;
       weekNumber: number;
       startDate: string;
       endDate: string;
+      theme: string | null;
+      targetVolume: number | null;
+      targetLoad: number | null;
       _count: { sessions: number };
     }>;
   }>;

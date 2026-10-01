@@ -36,6 +36,7 @@ explicitly; they are not evidence that a live provider currently works.
 - [Coach planning workspace, races and injuries](coach-training-plan-workspace.md)
 - [JSON plan import](training-plan-json.md)
 - [Bulk deletion of planned workouts](calendar-bulk-delete.md)
+- [Weekly training view and week planning](weekly-training-view.md)
 - [Heart-rate zones and percentage methods](heart-rate-percentage-zones.md)
 - [Reusable workouts with athlete-relative targets](athlete-relative-workout-templates.md)
 - [Saved training loads and automatic recalculation](training-load-recalculation.md)

@@ -6,7 +6,11 @@ import { useUseEventTemplateMutation } from '@/api/event-template';
 import { eventKeys } from '@/api/event/event.keys';
 import { useWeeklyLoadSummaryQuery } from '@/api/training-load';
 import { trainingLoadKeys } from '@/api/training-load/training-load.keys';
-import { useCalendarData } from '@/components/calendar/hooks/use-calendar-data';
+import { useWeekOverviewQuery } from '@/api/week-planning/week-planning.hooks';
+import {
+  CalendarView,
+  useCalendarData,
+} from '@/components/calendar/hooks/use-calendar-data';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -22,7 +26,12 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { type PageAction, useSetPageActions } from '@/hooks/use-page-actions';
 import { m } from '@/paraglide/messages';
 import { AnalyticsEvent } from '@/utils/analytics-events';
-import { CALENDAR_COLORED_BY, getItem, setItem } from '@/utils/local-storage';
+import {
+  CALENDAR_COLORED_BY,
+  CALENDAR_VIEW,
+  getItem,
+  setItem,
+} from '@/utils/local-storage';
 import { workoutTargetErrorMessage } from '@/utils/workout-target-errors';
 import { DragEndEvent } from '@dnd-kit/core';
 import { useQueryClient } from '@tanstack/react-query';
@@ -59,6 +68,8 @@ import { CalendarBulkDelete } from './calendar-bulk-delete';
 import { CalendarEventDetailsDialog } from './calendar-event-details.dialog';
 import { CalendarHeader } from './calendar-header';
 import { CalendarMobileList } from './calendar-mobile-list';
+import { CalendarViewToggle } from './calendar-view-toggle';
+import { CalendarWeekView } from './calendar-week-view';
 import { CalendarWeeklyLoadChart } from './calendar-weekly-load-chart';
 import { CalendarContext } from './contexts/calendar-context';
 import { EventClipboardProvider } from './contexts/event-clipboard-context';
@@ -74,6 +85,10 @@ interface P {
   athleteId?: number;
   trainingPlanId?: number;
   initialDate?: Date;
+  /** Overrides the view remembered in this browser. */
+  initialView?: CalendarView;
+  /** Keeps the calendar in initialView and hides the month/week switch. */
+  lockView?: boolean;
   allowCreate?: boolean;
   onMonthChange?: (month: Date) => void;
   isLoading?: boolean;
@@ -84,6 +99,8 @@ export function Calendar({
   athleteId,
   trainingPlanId,
   initialDate,
+  initialView,
+  lockView = false,
   allowCreate: requestedAllowCreate = true,
   onMonthChange,
   isLoading = false,
@@ -95,7 +112,50 @@ export function Calendar({
   const [planningDate, setPlanningDate] = useState(
     () => initialDate ?? new Date(),
   );
-  const calendarData = useCalendarData({ events, defaultMonth: initialDate });
+  const [view, setViewState] = useState<CalendarView>(
+    () => initialView ?? (getItem(CALENDAR_VIEW) === 'week' ? 'week' : 'month'),
+  );
+  const calendarData = useCalendarData({
+    events,
+    defaultMonth: initialDate,
+    view,
+  });
+  const { goToWeek, displayedMonth } = calendarData;
+  const setView = useCallback(
+    (next: CalendarView) => {
+      if (lockView) return;
+      if (next === 'week') {
+        // Open the current week when looking at this month, otherwise the
+        // first week of the displayed month.
+        const today = new Date();
+        const sameMonth =
+          displayedMonth.getMonth() === today.getMonth() &&
+          displayedMonth.getFullYear() === today.getFullYear();
+        goToWeek(
+          sameMonth
+            ? today
+            : new Date(
+                displayedMonth.getFullYear(),
+                displayedMonth.getMonth(),
+                1,
+              ),
+        );
+      }
+      setViewState(next);
+      setItem(CALENDAR_VIEW, next);
+    },
+    [lockView, displayedMonth, goToWeek],
+  );
+  const [weekClipboard, setWeekClipboard] = useState<{
+    weekStart: Date;
+    events: Event[];
+  } | null>(null);
+  const { data: weekOverview, isPending: weekOverviewLoading } =
+    useWeekOverviewQuery(
+      view === 'week' ? calendarData.weekStart : undefined,
+      athleteId,
+      trainingPlanId,
+    );
   const { data: cycles } = useGetMyCyclesQuery(undefined, athleteId);
   const { hasAccess: hasAIAccess } = useFeatureAccess(
     FeatureName.AI_GENERATION,
@@ -419,6 +479,13 @@ export function Calendar({
   const memoizedValue = useMemo<CalendarContextType>(
     () => ({
       ...calendarData,
+      view,
+      setView,
+      viewLocked: lockView,
+      weekOverview,
+      weekOverviewLoading: view === 'week' && weekOverviewLoading,
+      weekClipboard,
+      setWeekClipboard,
       events: calendarData.events.filter(filter),
       cycles: cycles || [],
       createEvent: (date, type) => {
@@ -464,7 +531,14 @@ export function Calendar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       calendarData.displayedMonth,
+      calendarData.weekStart,
       calendarData.events,
+      view,
+      setView,
+      lockView,
+      weekOverview,
+      weekOverviewLoading,
+      weekClipboard,
       cycles,
       dragSelection,
       cycleResize,
@@ -712,8 +786,20 @@ export function Calendar({
           <CalendarContext.Provider value={memoizedValue}>
             <CalendarBulkDelete>
               {!isMobile && <CalendarHeader />}
+              {isMobile && view === 'week' && (
+                <div className="px-4">
+                  <CalendarHeader />
+                </div>
+              )}
+              {isMobile && view === 'month' && !lockView && (
+                <div className="px-4">
+                  <CalendarViewToggle />
+                </div>
+              )}
               <div className={isMobile ? 'w-full flex-1' : 'relative'}>
-                {isMobile ? (
+                {view === 'week' ? (
+                  <CalendarWeekView isLoading={isLoading} />
+                ) : isMobile ? (
                   <div className="w-full h-full">
                     <CalendarMobileList isLoading={isLoading} />
                   </div>
@@ -739,7 +825,7 @@ export function Calendar({
                   </>
                 )}
               </div>
-              {!isMobile && (
+              {!isMobile && view === 'month' && (
                 <CalendarWeeklyLoadChart
                   weeks={calendarData.displayedWeeks}
                   displayedMonth={calendarData.displayedMonth}

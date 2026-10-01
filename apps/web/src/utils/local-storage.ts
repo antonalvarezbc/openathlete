@@ -1,6 +1,7 @@
 export const ACCESS_TOKEN = 'access_token';
 export const REFRESH_TOKEN = 'refresh_token';
 export const CALENDAR_COLORED_BY = 'calendar_colored_by';
+export const CALENDAR_VIEW = 'calendar_view';
 export const SIDEBAR_OPEN_STATES = 'sidebar_open_states';
 export const CURRENT_SPACE = 'current_space';
 

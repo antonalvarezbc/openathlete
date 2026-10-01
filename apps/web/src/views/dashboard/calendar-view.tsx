@@ -158,6 +158,7 @@ export function CalendarView() {
           initialDate={
             calendarPlan.planId ? calendarPlan.initialDate : undefined
           }
+          initialView={calendarPlan.view}
           events={data}
           athleteId={space === 'ATHLETE' ? athlete?.athleteId : undefined}
           allowCreate={

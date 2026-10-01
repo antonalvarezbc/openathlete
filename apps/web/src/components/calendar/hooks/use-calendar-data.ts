@@ -1,18 +1,50 @@
 import { useIsMobile } from '@/hooks/use-mobile';
+import { addWeeks, startOfWeek } from 'date-fns';
 import { useCallback, useMemo, useState } from 'react';
 
 import { Event } from '@openathlete/shared';
 
+export type CalendarView = 'month' | 'week';
+
 interface CalendarData {
   defaultMonth?: Date;
   events?: Event[];
+  view?: CalendarView;
 }
 
-export function useCalendarData({ defaultMonth, events }: CalendarData) {
+/** Local Monday 00:00 of the week containing date. */
+export const localWeekStart = (date: Date) =>
+  startOfWeek(date, { weekStartsOn: 1 });
+
+export function useCalendarData({
+  defaultMonth,
+  events,
+  view = 'month',
+}: CalendarData) {
   const isMobile = useIsMobile();
   const [displayedMonth, setDisplayedMonth] = useState(
     defaultMonth || new Date(),
   );
+  const [weekStart, setWeekStart] = useState(() =>
+    localWeekStart(defaultMonth || new Date()),
+  );
+
+  // In week view the displayed month follows the week, so pages that load
+  // events per month (onMonthChange) still cover it.
+  const goToWeek = useCallback((date: Date) => {
+    const start = localWeekStart(date);
+    setWeekStart(start);
+    setDisplayedMonth(new Date(start));
+  }, []);
+  const nextWeek = useCallback(
+    () => goToWeek(addWeeks(weekStart, 1)),
+    [goToWeek, weekStart],
+  );
+  const prevWeek = useCallback(
+    () => goToWeek(addWeeks(weekStart, -1)),
+    [goToWeek, weekStart],
+  );
+  const goToCurrentWeek = useCallback(() => goToWeek(new Date()), [goToWeek]);
 
   const nextMonth = useCallback(() => {
     const nextMonth = new Date(
@@ -33,6 +65,15 @@ export function useCalendarData({ defaultMonth, events }: CalendarData) {
   }, []);
 
   const displayedWeeks = useMemo(() => {
+    if (view === 'week') {
+      return [
+        Array.from({ length: 7 }, (_, i) => {
+          const day = new Date(weekStart);
+          day.setDate(day.getDate() + i);
+          return day;
+        }),
+      ];
+    }
     const weeks: Date[][] = [];
     const firstDay = new Date(
       displayedMonth.getFullYear(),
@@ -148,13 +189,18 @@ export function useCalendarData({ defaultMonth, events }: CalendarData) {
     }
 
     return weeks;
-  }, [displayedMonth, isMobile]);
+  }, [displayedMonth, isMobile, view, weekStart]);
 
   return {
     displayedMonth,
     nextMonth,
     prevMonth,
     goToCurrentMonth,
+    weekStart,
+    goToWeek,
+    nextWeek,
+    prevWeek,
+    goToCurrentWeek,
     displayedWeeks,
     events: events || [],
   };

@@ -44,6 +44,40 @@ import { COLORED_BY } from './types/filter';
 interface P {
   event: Event;
   wrapped?: boolean;
+  /** Week view: adds the session load under the summary line. */
+  detailed?: boolean;
+}
+
+const loadFormatter = new Intl.NumberFormat(undefined, {
+  maximumFractionDigits: 0,
+});
+
+/** Actual TRIMP for activities, estimated load for sessions still to do. */
+function EventLoadLine({
+  event,
+  activityLoads,
+}: {
+  event: Event;
+  activityLoads?: Record<number, number>;
+}) {
+  let text: string | null = null;
+  if (event.type === EVENT_TYPE.ACTIVITY) {
+    const load = activityLoads?.[event.eventId];
+    if (load !== undefined)
+      text = m.week_load_short({ value: loadFormatter.format(load) });
+  } else if (
+    event.type === EVENT_TYPE.TRAINING &&
+    !event.relatedActivity &&
+    event.estimatedLoad != null
+  ) {
+    text = m.week_load_estimated_short({
+      value: loadFormatter.format(event.estimatedLoad),
+    });
+  }
+  if (!text) return null;
+  return (
+    <div className="px-1 text-xs text-gray-500 dark:text-gray-400">{text}</div>
+  );
 }
 
 function EventSecondLine({ event }: { event: Event }) {
@@ -93,7 +127,7 @@ function EventSecondLine({ event }: { event: Event }) {
   }
 }
 
-export function CalendarEvent({ event, wrapped }: P) {
+export function CalendarEvent({ event, wrapped, detailed }: P) {
   const roles = useUserRoles();
   const bulk = useBulkWorkoutSelection();
   const selectable = !!bulk?.selecting && bulk.eligible.has(event.eventId);
@@ -113,6 +147,7 @@ export function CalendarEvent({ event, wrapped }: P) {
     events: allEvents,
     coloredBy,
     athleteId,
+    weekOverview,
   } = useCalendarContext();
   const [deleteEventDialog, setDeleteEventDialog] = useState<boolean>(false);
   const deleteEventMutation = useDeleteEventMutation({
@@ -231,7 +266,12 @@ export function CalendarEvent({ event, wrapped }: P) {
                   {m.bulk_workouts_toggle({ name: event.name })}
                 </label>
               )}
-              <div className="text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis px-1">
+              <div
+                className={cn(
+                  'text-sm font-medium overflow-hidden px-1',
+                  detailed ? 'break-words' : 'whitespace-nowrap text-ellipsis',
+                )}
+              >
                 {event.type !== EVENT_TYPE.NOTE && (
                   <SportIcon
                     sport={event.sport}
@@ -267,6 +307,12 @@ export function CalendarEvent({ event, wrapped }: P) {
               <div className="px-1 w-full">
                 <EventSecondLine event={event} />
               </div>
+              {detailed && (
+                <EventLoadLine
+                  event={event}
+                  activityLoads={weekOverview?.activityLoads}
+                />
+              )}
               {relatedEvents.length > 0 && (
                 <div className="flex flex-col gap-1 mt-1 w-full mb-0.5">
                   {relatedEvents.map((relatedEvent) => (
@@ -274,6 +320,7 @@ export function CalendarEvent({ event, wrapped }: P) {
                       key={relatedEvent.eventId}
                       event={relatedEvent}
                       wrapped
+                      detailed={detailed}
                     />
                   ))}
                 </div>
