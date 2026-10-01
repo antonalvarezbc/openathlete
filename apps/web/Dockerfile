@@ -27,6 +27,13 @@ RUN pnpm build
 # Empty string means use relative URLs (works with Nginx proxy)
 ARG VITE_API_BASE_URL=""
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+# Optional public URLs and switches baked into the bundle
+ARG VITE_WEB_URL=""
+ARG VITE_WEBSITE_URL=""
+ARG VITE_DISABLE_PAYMENTS=""
+ENV VITE_WEB_URL=$VITE_WEB_URL
+ENV VITE_WEBSITE_URL=$VITE_WEBSITE_URL
+ENV VITE_DISABLE_PAYMENTS=$VITE_DISABLE_PAYMENTS
 
 WORKDIR /app/apps/web
 RUN pnpm build

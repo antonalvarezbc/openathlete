@@ -1,4 +1,7 @@
-# OpenAthlete — Backend stack for Coolify / VPS
+# OpenAthlete — Full stack (web, API, worker, Postgres, Redis) for Coolify / VPS
+#
+# In Coolify, assign a domain to `web` (port 80) and to `api` (port 3000).
+# VITE_API_BASE_URL must be the public API URL: it is baked into the web build.
 #
 # MUST live at the monorepo root so Coolify build context is correct.
 # (Coolify resolves relative paths against --project-directory = repo root.)
@@ -178,6 +181,26 @@ services:
       ENABLE_ACTIVITY_PROCESSING: "true"
       ENABLE_TRAINING_LOAD_ESTIMATION: "true"
       SKIP_MIGRATIONS: "true"
+    networks:
+      - openathlete
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+        VITE_WEB_URL: ${VITE_WEB_URL:-}
+        VITE_WEBSITE_URL: ${VITE_WEBSITE_URL:-}
+        VITE_DISABLE_PAYMENTS: ${VITE_DISABLE_PAYMENTS:-}
+    image: openathlete-web:latest
+    restart: unless-stopped
+    # nginx.conf proxies /socket.io to the api service on this network.
+    depends_on:
+      api:
+        condition: service_healthy
+    expose:
+      - "80"
     networks:
       - openathlete
 
