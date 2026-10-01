@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { m } from '@/paraglide/messages';
-import { isPaymentDisabled } from '@/utils/capacitor';
+import { isIOS } from '@/utils/capacitor';
 import { ExternalLink, Github, HeartHandshake } from 'lucide-react';
 
 import { SettingsSection } from './settings-section';
@@ -16,7 +16,10 @@ const PATREON_URL = 'https://www.patreon.com/OpenAthlete';
 const GITHUB_REPO_URL = 'https://github.com/openathleteorg/openathlete';
 
 export function ContributeTab() {
-  const hideFinancialSupport = isPaymentDisabled();
+  // Patreon is an external donation link, not an in-app payment, so it stays
+  // visible when VITE_DISABLE_PAYMENTS turns off Stripe (self-hosted). Only
+  // the iOS app hides it (App Store rules).
+  const hideFinancialSupport = isIOS();
 
   return (
     <div className="space-y-6">
