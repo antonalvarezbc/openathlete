@@ -1528,5 +1528,8 @@
   "week_panel_pending": "Pending (estimated)",
   "week_panel_by_sport": "Time by sport",
   "week_panel_empty": "No sessions or activities this week.",
-  "workspace_open_week_in_calendar": "Open in calendar"
+  "workspace_open_week_in_calendar": "Open in calendar",
+  "signup_email_exists": "An account with this email already exists.",
+  "signup_failed": "The account could not be created. Check the details and try again.",
+  "signup_login_failed": "Your account was created, but signing in failed."
 }

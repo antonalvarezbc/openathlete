@@ -9,6 +9,7 @@ import { getPath } from '@/routes/paths';
 import { cn } from '@/utils/shadcn';
 import { OAuthButtons } from '@/views/auth/oauth-buttons';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { isAxiosError } from 'axios';
 import { usePostHog } from 'posthog-js/react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -65,22 +66,35 @@ export function CreateAccountView({ className }: React.ComponentProps<'form'>) {
     }
   }, [invitationToken, coachInvitationToken, methods]);
 
+  // Without these messages a rejected sign-up (e.g. an email that already
+  // exists) left the form unchanged, which looked like it was stuck.
+  const [submitError, setSubmitError] = useState<
+    'exists' | 'failed' | 'login' | null
+  >(null);
   const loginMutation = useLoginMutation({
     onSuccess: async () => {
       await initialize();
       navigate(getPath(['dashboard', 'onboarding']));
     },
+    onError: () => setSubmitError('login'),
   });
   const createAccountMutation = useCreateAccountMutation({
     onSuccess: async (_, variables) => {
       posthog?.capture('user_signed_up');
       loginMutation.mutate(variables);
     },
+    onError: (error) =>
+      setSubmitError(
+        isAxiosError(error) && error.response?.status === 409
+          ? 'exists'
+          : 'failed',
+      ),
   });
 
   const { handleSubmit } = methods;
 
   const onSubmit = handleSubmit(async (data) => {
+    setSubmitError(null);
     const submitData = {
       ...data,
       invitationToken: invitationToken || undefined,
@@ -137,11 +151,29 @@ export function CreateAccountView({ className }: React.ComponentProps<'form'>) {
           required
           label={m.password()}
         />
+        {submitError && (
+          <p role="alert" className="text-center text-sm text-destructive">
+            {submitError === 'exists'
+              ? m.signup_email_exists()
+              : submitError === 'login'
+                ? m.signup_login_failed()
+                : m.signup_failed()}{' '}
+            {submitError !== 'failed' && (
+              <Link to="/auth/login" className="underline underline-offset-4">
+                {m.login()}
+              </Link>
+            )}
+          </p>
+        )}
         <Button
           type="submit"
           className="w-full"
           onClick={onSubmit}
-          isLoading={createAccountMutation.isPending || isVerifyingInvitation}
+          isLoading={
+            createAccountMutation.isPending ||
+            loginMutation.isPending ||
+            isVerifyingInvitation
+          }
         >
           {m.create_account()}
         </Button>
