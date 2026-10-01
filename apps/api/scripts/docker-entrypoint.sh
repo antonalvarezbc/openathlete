@@ -39,6 +39,21 @@ else
   log "Migrations completed successfully"
 fi
 
+# Manual Garmin sync: refresh the scripts from the image into the persistent
+# directory and link the Python environment the API expects at .venv.
+GARMIN_DIR="${GARMIN_UNOFFICIAL_DIRECTORY:-}"
+if [ "${ENABLE_MANUAL_GARMIN_SYNC:-false}" = "true" ] && [ -n "$GARMIN_DIR" ] \
+  && [ -d /opt/garmin-probe ]; then
+  log "Preparing manual Garmin directory $GARMIN_DIR"
+  mkdir -p "$GARMIN_DIR/accounts" "$GARMIN_DIR/.private"
+  cp /opt/garmin-probe/*.py "$GARMIN_DIR/"
+  ln -sfn /opt/garmin-venv "$GARMIN_DIR/.venv"
+  chmod 700 "$GARMIN_DIR/accounts" "$GARMIN_DIR/.private"
+  if [ "$(id -u)" = "0" ]; then
+    chown -R openathlete:openathlete "$GARMIN_DIR"
+  fi
+fi
+
 log "Starting NestJS (node dist/main.js)"
 cd /app/apps/api
 

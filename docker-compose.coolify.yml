@@ -79,6 +79,8 @@ services:
       SELF_HOSTED: ${SELF_HOSTED:-false}
       ENABLE_MANUAL_FIT_IMPORT: ${ENABLE_MANUAL_FIT_IMPORT:-false}
       ENABLE_MANUAL_GARMIN_SYNC: ${ENABLE_MANUAL_GARMIN_SYNC:-false}
+      # Persistent sessions for manual Garmin sync (volume garmin_data)
+      GARMIN_UNOFFICIAL_DIRECTORY: /data/garmin
       NODE_ENV: ${NODE_ENV}
       PORT: ${PORT:-3000}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
@@ -126,6 +128,8 @@ services:
       ENABLE_ACTIVITY_PROCESSING: "false"
       ENABLE_TRAINING_LOAD_ESTIMATION: "false"
       SKIP_MIGRATIONS: "false"
+    volumes:
+      - garmin_data:/data/garmin
     expose:
       - "3000"
     healthcheck:
@@ -221,6 +225,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  garmin_data:
 
 networks:
   openathlete:

@@ -64,6 +64,17 @@ COPY --from=build /app/libs/database/package.json ./libs/database/package.json
 COPY --from=build /app/libs/database/prisma ./libs/database/prisma
 COPY --from=build /app/libs/database/prisma.config.js ./libs/database/prisma.config.js
 
+# Manual Garmin sync (optional, ENABLE_MANUAL_GARMIN_SYNC): Python scripts and
+# their single dependency. The entrypoint links them into the persistent
+# GARMIN_UNOFFICIAL_DIRECTORY, which keeps per-athlete sessions.
+RUN apk add --no-cache python3 py3-pip tzdata
+COPY scripts/garmin-probe/requirements.txt /opt/garmin-probe/requirements.txt
+RUN pip3 install --no-cache-dir --break-system-packages \
+    -r /opt/garmin-probe/requirements.txt \
+  && mkdir -p /opt/garmin-venv/bin \
+  && ln -s /usr/bin/python3 /opt/garmin-venv/bin/python
+COPY scripts/garmin-probe/*.py /opt/garmin-probe/
+
 COPY apps/api/scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh \
   && chown -R openathlete:openathlete /app

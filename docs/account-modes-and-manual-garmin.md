@@ -82,6 +82,20 @@ the manual connector. Pending MFA state lives in the API process: restart requir
 fresh login, and multi-process deployments need request affinity for the two steps.
 The local session files must persist across server restarts.
 
+### Docker / Coolify deployment
+
+The production API image (`apps/api/Dockerfile`) includes Python, `tzdata`
+and the `scripts/garmin-probe` requirements, with the scripts in
+`/opt/garmin-probe`. `docker-compose.coolify.yml` sets
+`GARMIN_UNOFFICIAL_DIRECTORY=/data/garmin` on the `api` service and mounts the
+`garmin_data` volume there, so sessions survive restarts and redeploys.
+
+To enable it, set `SELF_HOSTED=true` and `ENABLE_MANUAL_GARMIN_SYNC=true` and
+redeploy. On start the entrypoint copies the scripts from the image into the
+directory, links `.venv` to the bundled Python and restricts `accounts/` and
+`.private/` to the API user. Each athlete then connects Garmin from their own
+space (login and MFA if Garmin asks). Only the `api` service runs the sync.
+
 ## Verification
 
 Automated permission tests exercise all role combinations, role revocation,
