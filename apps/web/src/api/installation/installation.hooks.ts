@@ -24,6 +24,10 @@ export function useInstallationFeatures(): InstallationFeaturesDto {
   return {
     manualFitImport: available && query.data?.manualFitImport === true,
     manualGarminSync: available && query.data?.manualGarminSync === true,
+    // Transcription predates this flag: keep the recorder visible while the
+    // status is unknown; the API still rejects unavailable transcription.
+    voiceTranscription:
+      (available && query.data?.voiceTranscription) || 'available',
   };
 }
 

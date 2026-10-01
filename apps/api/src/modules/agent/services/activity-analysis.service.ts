@@ -10,6 +10,7 @@ import {
 import { CoachActivityAnalysis, Prisma } from '@openathlete/database';
 import {
   ActivityAnalysisRequest,
+  ActivityAnalysisResult,
   SavedActivityAnalysis,
   UpdateActivityAnalysis,
   activityAnalysisResultSchema,
@@ -20,6 +21,7 @@ import {
   ACTIVITY_ANALYSIS_PROMPT_VERSION,
   activityAnalysisAgent,
 } from '../../../mastra/agents/activity-analysis.agent';
+import { AiMemoryService } from '../../ai-memory/ai-memory.service';
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { buildActivityAnalysisContext } from './activity-analysis-context';
@@ -28,7 +30,10 @@ import { buildActivityAnalysisContext } from './activity-analysis-context';
 export class ActivityAnalysisService {
   private readonly pending = new Set<string>();
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly memory: AiMemoryService,
+  ) {}
 
   private async authorize(
     user: AuthUser,
@@ -50,10 +55,17 @@ export class ActivityAnalysisService {
           ],
         },
       },
-      select: { activity: { select: { eventActivityId: true } } },
+      select: {
+        athleteId: true,
+        activity: { select: { eventActivityId: true } },
+      },
     });
-    if (!event?.activity) throw new NotFoundException('Activity not available');
-    return event.activity.eventActivityId;
+    if (!event?.activity || !event.athleteId)
+      throw new NotFoundException('Activity not available');
+    return {
+      eventActivityId: event.activity.eventActivityId,
+      athleteId: event.athleteId,
+    };
   }
 
   private serialize(
@@ -76,7 +88,7 @@ export class ActivityAnalysisService {
   }
 
   async list(user: AuthUser, eventId: number) {
-    const eventActivityId = await this.authorize(user, eventId);
+    const { eventActivityId } = await this.authorize(user, eventId);
     const records = await this.prisma.coachActivityAnalysis.findMany({
       where: { eventActivityId, coachUserId: user.userId },
       orderBy: [{ createdAt: 'desc' }, { activityAnalysisId: 'desc' }],
@@ -90,14 +102,28 @@ export class ActivityAnalysisService {
     eventId: number,
     request: ActivityAnalysisRequest,
   ) {
-    await this.authorize(user, eventId);
-    const data = await buildActivityAnalysisContext(
-      this.prisma,
-      eventId,
-      request.coachContext,
-      request.language,
-    );
+    const { data } = await this.buildContext(user, eventId, request);
     return { data };
+  }
+
+  private async buildContext(
+    user: AuthUser,
+    eventId: number,
+    request: ActivityAnalysisRequest,
+  ) {
+    const { eventActivityId, athleteId } = await this.authorize(user, eventId);
+    const [data, aiMemory] = await Promise.all([
+      buildActivityAnalysisContext(
+        this.prisma,
+        eventId,
+        request.coachContext,
+        request.language,
+      ),
+      this.memory.getCoachMemory(user.userId, athleteId, {
+        excludeEventActivityId: eventActivityId,
+      }),
+    ]);
+    return { data: aiMemory ? { ...data, aiMemory } : data, athleteId };
   }
 
   async generate(
@@ -110,7 +136,11 @@ export class ActivityAnalysisService {
       throw new ConflictException({ code: 'ACTIVITY_ANALYSIS_BUSY' });
     this.pending.add(key);
     try {
-      const { data } = await this.context(user, eventId, request);
+      const { data, athleteId } = await this.buildContext(
+        user,
+        eventId,
+        request,
+      );
       let output: unknown;
       try {
         const result = await activityAnalysisAgent.generate(
@@ -144,8 +174,8 @@ export class ActivityAnalysisService {
         });
       // The provider has no database tools. Only validated output is persisted,
       // and authorization is rechecked after the possibly long model request.
-      return await this.prisma.$transaction(async (tx) => {
-        const eventActivityId = await this.authorize(user, eventId, tx);
+      const saved = await this.prisma.$transaction(async (tx) => {
+        const { eventActivityId } = await this.authorize(user, eventId, tx);
         const saved = await tx.coachActivityAnalysis.create({
           data: {
             eventActivityId,
@@ -163,6 +193,13 @@ export class ActivityAnalysisService {
         });
         return this.serialize(saved, eventId);
       });
+      await this.memory.addNote(
+        user.userId,
+        athleteId,
+        'ACTIVITY_ANALYSIS',
+        activityAnalysisNote(data, parsed.data),
+      );
+      return saved;
     } finally {
       this.pending.delete(key);
     }
@@ -175,7 +212,7 @@ export class ActivityAnalysisService {
     request: UpdateActivityAnalysis,
   ) {
     return this.prisma.$transaction(async (tx) => {
-      const eventActivityId = await this.authorize(user, eventId, tx);
+      const { eventActivityId } = await this.authorize(user, eventId, tx);
       const where = {
         activityAnalysisId: analysisId,
         eventActivityId,
@@ -190,4 +227,29 @@ export class ActivityAnalysisService {
       return this.serialize(saved, eventId);
     });
   }
+}
+
+/** One-line digest of an analysis for the coach's AI memory. */
+export function activityAnalysisNote(
+  context: Record<string, unknown>,
+  analysis: ActivityAnalysisResult,
+): string {
+  const activity = context.activity as
+    | { name?: string; startDate?: string; sport?: string }
+    | undefined;
+  const label = [
+    activity?.startDate?.slice(0, 10),
+    activity?.sport,
+    activity?.name,
+  ]
+    .filter(Boolean)
+    .join(' ');
+  return [
+    label && `${label}:`,
+    analysis.summary,
+    analysis.concerns[0] && `Concern: ${analysis.concerns[0]}`,
+    analysis.nextSteps[0] && `Next: ${analysis.nextSteps[0]}`,
+  ]
+    .filter(Boolean)
+    .join(' ');
 }

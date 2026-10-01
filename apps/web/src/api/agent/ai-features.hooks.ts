@@ -12,9 +12,10 @@ export function useGenerateEventMutation() {
   return useMutation<
     GenerateEventResponseDto,
     Error,
-    { prompt: string; date: Date }
+    { prompt: string; date: Date; athleteId?: number }
   >({
-    mutationFn: ({ prompt, date }) => AIFeaturesAPI.generateEvent(prompt, date),
+    mutationFn: ({ prompt, date, athleteId }) =>
+      AIFeaturesAPI.generateEvent(prompt, date, athleteId),
   });
 }
 
@@ -22,9 +23,9 @@ export function useModifyEventMutation() {
   return useMutation<
     ModifyEventResponseDto,
     Error,
-    { prompt: string; eventData: CreateEventDto }
+    { prompt: string; eventData: CreateEventDto; athleteId?: number }
   >({
-    mutationFn: ({ prompt, eventData }) =>
-      AIFeaturesAPI.modifyEvent(prompt, eventData),
+    mutationFn: ({ prompt, eventData, athleteId }) =>
+      AIFeaturesAPI.modifyEvent(prompt, eventData, athleteId),
   });
 }

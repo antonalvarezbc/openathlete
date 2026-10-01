@@ -24,3 +24,4 @@ export * from './provider-preferences.dto';
 export * from './injury.dto';
 export * from './plan-workspace.dto';
 export * from './installation-features.dto';
+export * from './week-planning.dto';

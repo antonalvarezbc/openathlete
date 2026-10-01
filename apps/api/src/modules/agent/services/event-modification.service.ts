@@ -7,6 +7,10 @@ import {
 } from '@openathlete/shared';
 
 import { eventModificationAgent } from 'src/mastra/agents';
+import {
+  AiMemoryService,
+  aiMemoryPromptSection,
+} from 'src/modules/ai-memory/ai-memory.service';
 import { TrainingLoadService } from 'src/modules/core/services/training-load.service';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
@@ -33,13 +37,16 @@ export class EventModificationService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly trainingLoadService: TrainingLoadService,
+    private readonly memory: AiMemoryService,
   ) {}
 
   async modifyTrainingEvent(
     prompt: string,
     athleteId: number,
     eventData: TrainingEventSchema,
+    userId: number,
   ): Promise<TrainingEventSchema> {
+    const memory = await this.memory.getCoachMemory(userId, athleteId);
     const workoutForPrompt = eventData.workout
       ? (JSON.parse(
           JSON.stringify(eventData.workout),
@@ -161,7 +168,7 @@ ${JSON.stringify(existingEventContext, null, 2)}
 ATHLETE CONTEXT:
 ${zonesContext ? `TRAINING ZONES:\n${zonesContext}` : 'No training zones configured'}
 ${metricsContext ? `\nLATEST METRICS:\n${metricsContext}` : '\nNo metrics available'}
-
+${aiMemoryPromptSection(memory)}
 CRITICAL REQUIREMENTS FOR THE UPDATE:
 1. Return the COMPLETE, FULL training event - this is an UPDATE operation, not a partial modification
 2. Include ALL workout steps in the response - do not truncate or omit any steps
@@ -214,6 +221,13 @@ IMPORTANT: This is a FULL UPDATE. Return the complete event structure with all f
     if (!response.object) {
       throw new Error('Failed to modify event: no structured output received');
     }
+
+    await this.memory.addNote(
+      userId,
+      athleteId,
+      'EVENT_MODIFICATION',
+      `Modified ${response.object.sport} session "${response.object.name}" on request: ${prompt}`,
+    );
 
     return response.object;
   }

@@ -24,6 +24,7 @@ import {
 } from '@openathlete/shared';
 
 import { planAdaptationAgent } from '../../../mastra/agents/plan-adaptation.agent';
+import { AiMemoryService } from '../../ai-memory/ai-memory.service';
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { adaptationWeek } from './adaptation-dates';
@@ -130,7 +131,31 @@ const wellnessTypes = [
 
 @Injectable()
 export class PlanAdaptationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly memory: AiMemoryService,
+  ) {}
+
+  /**
+   * Adds the coach's AI memory to a prompt. Kept out of context() so memory
+   * updates never change contextVersion or invalidate a pending proposal.
+   */
+  async withMemory<T extends object>(
+    user: AuthUser,
+    athleteId: number,
+    data: T,
+  ) {
+    const aiMemory = await this.memory.getCoachMemory(user.userId, athleteId);
+    return aiMemory ? { ...data, aiMemory } : data;
+  }
+
+  async previewContext(user: AuthUser, request: PlanAdaptationRequest) {
+    const context = await this.context(user, request);
+    return {
+      ...context,
+      data: await this.withMemory(user, request.athleteId, context.data),
+    };
+  }
 
   async context(
     user: AuthUser,
@@ -559,7 +584,11 @@ export class PlanAdaptationService {
 
   async propose(user: AuthUser, request: PlanAdaptationRequest) {
     const context = await this.context(user, request);
-    const generated = await this.generateProposal(JSON.stringify(context.data));
+    const generated = await this.generateProposal(
+      JSON.stringify(
+        await this.withMemory(user, request.athleteId, context.data),
+      ),
+    );
     const validationIssue = generated.proposal
       ? this.proposalIssue(request, context.data, generated.proposal)
       : { code: 'ADAPTATION_MODEL_INVALID' };
@@ -574,7 +603,7 @@ export class PlanAdaptationService {
       );
     const generated = await this.generateProposal(
       JSON.stringify({
-        ...context.data,
+        ...(await this.withMemory(user, dto.request.athleteId, context.data)),
         revision: {
           previousProposal: dto.proposal,
           ...(dto.rawResponse !== undefined
@@ -595,6 +624,17 @@ export class PlanAdaptationService {
   }
 
   async apply(user: AuthUser, dto: ApplyPlanAdaptation) {
+    const result = await this.applyChanges(user, dto);
+    await this.memory.addNote(
+      user.userId,
+      dto.request.athleteId,
+      'PLAN_ADAPTATION',
+      `Applied plan adaptation (${result.updated} sessions changed, ${result.created} added): ${dto.proposal.summary}`,
+    );
+    return result;
+  }
+
+  private async applyChanges(user: AuthUser, dto: ApplyPlanAdaptation) {
     try {
       return await this.prisma.$transaction(
         async (tx) => {

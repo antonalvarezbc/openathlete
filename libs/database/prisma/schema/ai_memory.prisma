@@ -1,0 +1,14 @@
+/// Short digest of one AI result for a coach–athlete pair. Notes are written
+/// without extra model calls and periodically consolidated into
+/// CoachAthlete.aiMemorySummary, after which they are deleted.
+model AiMemoryNote {
+  aiMemoryNoteId Int            @id @default(autoincrement()) @map("ai_memory_note_id")
+  source         AiMemorySource
+  content        String
+  coachAthlete   CoachAthlete   @relation(fields: [coachAthleteId], references: [coachAthleteId], onDelete: Cascade)
+  coachAthleteId Int            @map("coach_athlete_id")
+  createdAt      DateTime       @default(now()) @map("created_at")
+
+  @@index([coachAthleteId, createdAt])
+  @@map("ai_memory_note")
+}

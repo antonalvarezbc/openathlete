@@ -12,6 +12,8 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { ApiEnvSchemaType } from '@openathlete/shared';
 
+import { AI_TRANSCRIPTION_PROVIDER } from 'src/common/constants/ai-models.constant';
+import { transcribeAudioWithGoogle } from 'src/common/utils/ai-transcription.util';
 import { ActivityFeedbackCompletedEvent } from 'src/events';
 import { CaslAbilityFactory } from 'src/modules/auth';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
@@ -359,6 +361,15 @@ export class ActivityFeedbackService {
         mimeTypeForOpenAI = 'audio/mp4';
       } else if (extension === 'flac') {
         mimeTypeForOpenAI = 'audio/flac';
+      }
+
+      if (AI_TRANSCRIPTION_PROVIDER === 'google') {
+        const text = await transcribeAudioWithGoogle(
+          file.buffer,
+          mimeTypeForOpenAI,
+          language,
+        );
+        return { text };
       }
 
       if (typeof File !== 'undefined') {

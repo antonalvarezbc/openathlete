@@ -10,6 +10,7 @@ import {
 } from '@openathlete/shared';
 
 import { coachAssistantAgent } from '../../../mastra/agents/coach-assistant.agent';
+import { disabledAiMemory } from '../../ai-memory/ai-memory.testing';
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { CoachAssistantService } from './coach-assistant.service';
@@ -63,8 +64,17 @@ function setup() {
     trainingZone: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: jest.fn(),
   };
-  const adaptation = new PlanAdaptationService(db as unknown as PrismaService);
-  return { db, adaptation, service: new CoachAssistantService(adaptation) };
+  const memory = disabledAiMemory();
+  const adaptation = new PlanAdaptationService(
+    db as unknown as PrismaService,
+    memory,
+  );
+  return {
+    db,
+    adaptation,
+    memory,
+    service: new CoachAssistantService(adaptation, memory),
+  };
 }
 beforeEach(() => jest.clearAllMocks());
 

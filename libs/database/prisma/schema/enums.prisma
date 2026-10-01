@@ -416,3 +416,23 @@ enum SubscriptionStatus {
 
   @@map("subscription_status")
 }
+
+/// Per coach–athlete AI memory size: OFF, COMPACT (at most ~600 tokens per call)
+/// or EXTENDED (at most ~1,700 tokens per call).
+enum AiMemoryMode {
+  OFF
+  COMPACT
+  EXTENDED
+
+  @@map("ai_memory_mode")
+}
+
+enum AiMemorySource {
+  ACTIVITY_ANALYSIS
+  PLAN_ADAPTATION
+  COACH_ASSISTANT
+  EVENT_GENERATION
+  EVENT_MODIFICATION
+
+  @@map("ai_memory_source")
+}

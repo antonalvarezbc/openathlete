@@ -17,6 +17,7 @@
     "tsc:check": "tsc --noEmit"
   },
   "dependencies": {
+    "@ai-sdk/google": "^2.0.17",
     "@ai-sdk/openai": "^2.0.47",
     "@casl/ability": "^6.7.3",
     "@casl/prisma": "^1.5.1",
@@ -47,6 +48,7 @@
     "@sports-alliance/sports-lib": "^5.4.24",
     "@we-gold/gpxjs": "^1.1.0",
     "adm-zip": "^0.5.16",
+    "ai": "^5.0.60",
     "argon2": "^0.41.1",
     "axios": "^1.8.2",
     "bull": "^4.16.5",

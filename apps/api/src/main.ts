@@ -1,9 +1,11 @@
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 import { ApiEnvSchemaType } from '@openathlete/shared';
 
+import { getAiProviderWarnings } from './common/utils/ai-provider-warnings.util';
 import './instrument';
 import { AppModule } from './modules/app.module';
 
@@ -13,6 +15,10 @@ async function bootstrap() {
   });
 
   const configService = app.get(ConfigService<ApiEnvSchemaType, true>);
+
+  const aiLogger = new Logger('AiProviders');
+  for (const warning of getAiProviderWarnings()) aiLogger.warn(warning);
+
   const corsOrigins = configService.get('CORS_ORIGINS');
   const allowedOrigins = corsOrigins
     ? corsOrigins.split(',')

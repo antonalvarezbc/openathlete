@@ -1,6 +1,8 @@
 import { RuntimeContext } from '@mastra/core/runtime-context';
 import { z } from 'zod';
 
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
+
 import { AthleteMetric, TrainingZoneType } from '@openathlete/database';
 import {
   METRIC_TYPE,
@@ -504,4 +506,25 @@ export async function withRetry<T>(
 
   // All retries failed, throw the last error
   throw lastError;
+}
+
+/**
+ * Athlete for AI session generation/modification. Coaches must name a linked
+ * athlete; athletes default to their own profile. A user id is never used as
+ * an athlete id.
+ */
+export async function resolveAiEventAthleteId(
+  prisma: PrismaService,
+  user: { userId: number; athlete?: { athleteId: number } | null },
+  requestedAthleteId?: number,
+): Promise<number> {
+  const athleteId = requestedAthleteId ?? user.athlete?.athleteId;
+  if (!athleteId) throw new BadRequestException('athleteId is required');
+  if (athleteId === user.athlete?.athleteId) return athleteId;
+  const link = await prisma.coachAthlete.findFirst({
+    where: { userId: user.userId, athleteId },
+    select: { coachAthleteId: true },
+  });
+  if (!link) throw new ForbiddenException('You cannot manage this athlete');
+  return athleteId;
 }

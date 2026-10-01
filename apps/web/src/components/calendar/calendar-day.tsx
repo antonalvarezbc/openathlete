@@ -1,6 +1,8 @@
 import { useDuplicateEventMutation } from '@/api/event';
 import { useFeatureAccess } from '@/hooks/use-feature-access';
 import { m } from '@/paraglide/messages';
+import { getLocale } from '@/paraglide/runtime';
+import { getDateLocale } from '@/utils/locales';
 import { cn } from '@/utils/shadcn';
 import { useDroppable } from '@dnd-kit/core';
 import {
@@ -35,9 +37,23 @@ interface P {
   day: Date;
   events: Event[];
   cycleSegments?: CycleDaySegment[];
+  /** Week view: taller cells, full day label, detailed cards and day load. */
+  variant?: 'month' | 'week';
+  dayLoad?: { actual: number; planned: number };
 }
 
-export function CalendarDay({ day, events, cycleSegments = [] }: P) {
+const loadFormatter = new Intl.NumberFormat(undefined, {
+  maximumFractionDigits: 0,
+});
+
+export function CalendarDay({
+  day,
+  events,
+  cycleSegments = [],
+  variant = 'month',
+  dayLoad,
+}: P) {
+  const isWeek = variant === 'week';
   const {
     displayedMonth,
     createEvent,
@@ -65,7 +81,7 @@ export function CalendarDay({ day, events, cycleSegments = [] }: P) {
   });
   const dayOfMonth = day.getDate();
   const isToday = day.toDateString() === new Date().toDateString();
-  const isCurrentMonth = day.getMonth() === displayedMonth.getMonth();
+  const isCurrentMonth = isWeek || day.getMonth() === displayedMonth.getMonth();
   const { isOver, setNodeRef } = useDroppable({
     id: day.toISOString(),
   });
@@ -175,7 +191,9 @@ export function CalendarDay({ day, events, cycleSegments = [] }: P) {
   return (
     <div
       className={cn(
-        'min-h-32 flex-1 [&:not(:last-child)]:border-r-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30 select-none',
+        isWeek
+          ? 'min-h-16 md:min-h-72 flex-1 border-b-1 md:border-b-0 md:[&:not(:last-child)]:border-r-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30 select-none'
+          : 'min-h-32 flex-1 [&:not(:last-child)]:border-r-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30 select-none',
         isOver ? 'bg-gray-100 dark:bg-gray-800/50' : '',
         isInDragSelection ? 'bg-blue-50 dark:bg-blue-950/30' : '',
       )}
@@ -186,17 +204,48 @@ export function CalendarDay({ day, events, cycleSegments = [] }: P) {
     >
       <ContextMenu>
         <ContextMenuTrigger className="flex-1 flex flex-col h-full">
-          <div
-            className={cn(
-              'flex justify-center p-2 text-sm font-medium text-gray-600',
-              {
-                'text-red-500 font-bold': isToday,
-                'text-gray-400': !isCurrentMonth,
-              },
-            )}
-          >
-            <span>{dayOfMonth}</span>
-          </div>
+          {isWeek ? (
+            <div
+              className={cn(
+                'flex items-baseline justify-between gap-2 p-2 text-sm font-medium text-gray-600 dark:text-gray-300',
+                { 'text-red-500 font-bold': isToday },
+              )}
+            >
+              <span className="capitalize">
+                {day.toLocaleDateString(getDateLocale(getLocale()), {
+                  weekday: 'short',
+                  day: 'numeric',
+                })}
+              </span>
+              {dayLoad && (dayLoad.actual > 0 || dayLoad.planned > 0) && (
+                <span
+                  className="text-xs font-normal text-muted-foreground"
+                  title={m.week_day_load_title({
+                    actual: loadFormatter.format(dayLoad.actual),
+                    planned: loadFormatter.format(dayLoad.planned),
+                  })}
+                >
+                  {m.week_load_short({
+                    value: loadFormatter.format(
+                      dayLoad.actual + dayLoad.planned,
+                    ),
+                  })}
+                </span>
+              )}
+            </div>
+          ) : (
+            <div
+              className={cn(
+                'flex justify-center p-2 text-sm font-medium text-gray-600',
+                {
+                  'text-red-500 font-bold': isToday,
+                  'text-gray-400': !isCurrentMonth,
+                },
+              )}
+            >
+              <span>{dayOfMonth}</span>
+            </div>
+          )}
 
           {/* Cycles display - positioned for cross-cell rendering */}
           {cycleSegments.length > 0 && (
@@ -219,7 +268,11 @@ export function CalendarDay({ day, events, cycleSegments = [] }: P) {
             {events
               .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
               .map((event) => (
-                <CalendarEvent key={event.eventId} event={event} />
+                <CalendarEvent
+                  key={event.eventId}
+                  event={event}
+                  detailed={isWeek}
+                />
               ))}
           </div>
         </ContextMenuTrigger>

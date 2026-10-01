@@ -1,6 +1,7 @@
 import { Agent } from '@mastra/core/agent';
 
 import { EVENT_MODIFICATION_MODEL } from '../../common/constants/ai-models.constant';
+import { AI_MEMORY_INSTRUCTIONS } from './ai-memory-instructions';
 
 export const planAdaptationAgent = new Agent({
   name: 'plan-adaptation',
@@ -63,5 +64,6 @@ Use null for absent optional numeric data. Repeat blocks may have only simple ch
 The top-level context.language is the requested interface language (es=Spanish, en=English, fr=French, it=Italian).
 Write summary, warnings, reasons and all NEW names/descriptions/notes in that language, regardless of
 the language of athlete records or comments. KEEP must copy existing names/descriptions unchanged.
-State limitations of the evidence; never describe the proposal as medically guaranteed safe.`,
+State limitations of the evidence; never describe the proposal as medically guaranteed safe.
+${AI_MEMORY_INSTRUCTIONS}`,
 });

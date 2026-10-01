@@ -174,9 +174,17 @@ export const routes = {
     getCycle: (cycleId: number) => `/cycle/${cycleId}`,
     deleteCycle: (cycleId: number) => `/cycle/${cycleId}`,
   },
+  weekPlanning: {
+    overview: '/week-planning/overview',
+    week: (trainingWeekId: number) => `/week-planning/weeks/${trainingWeekId}`,
+    copyEvents: '/week-planning/events/copy',
+    moveEvents: '/week-planning/events/move',
+    deleteEvents: '/week-planning/events/delete',
+  },
   aiFeatures: {
     generateEvent: '/agent/ai/events/generate',
     modifyEvent: '/agent/ai/events/modify',
+    memory: (athleteId: number) => `/agent/ai/memory/${athleteId}`,
   },
   messages: {
     createThread: '/messages/threads',

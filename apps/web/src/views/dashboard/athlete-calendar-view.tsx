@@ -75,6 +75,7 @@ export function AthleteCalendarView({ athleteId }: P) {
         key={`${athleteId}-${calendarPlan.planId ?? 0}`}
         trainingPlanId={calendarPlan.planId}
         initialDate={calendarPlan.planId ? calendarPlan.initialDate : undefined}
+        initialView={calendarPlan.view}
         allowCreate={
           !calendarPlan.plan ||
           ['ACTIVE', 'DRAFT'].includes(calendarPlan.plan.status)

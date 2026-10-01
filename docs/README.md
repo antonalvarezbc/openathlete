@@ -26,6 +26,8 @@ explicitly; they are not evidence that a live provider currently works.
 
 - [Account modes, administrators and manual Garmin](account-modes-and-manual-garmin.md)
 - [Official provider configuration](provider-configuration.md)
+- [AI providers: OpenAI, Google and Claude](ai-providers.md)
+- [Coach AI memory per athlete](ai-memory.md)
 - [Manual FIT import and GPS handling](manual-fit-import.md)
 - [Spanish localization and four-locale maintenance](spanish-localization.md)
 
@@ -34,6 +36,7 @@ explicitly; they are not evidence that a live provider currently works.
 - [Coach planning workspace, races and injuries](coach-training-plan-workspace.md)
 - [JSON plan import](training-plan-json.md)
 - [Bulk deletion of planned workouts](calendar-bulk-delete.md)
+- [Weekly training view and week planning](weekly-training-view.md)
 - [Heart-rate zones and percentage methods](heart-rate-percentage-zones.md)
 - [Reusable workouts with athlete-relative targets](athlete-relative-workout-templates.md)
 - [Saved training loads and automatic recalculation](training-load-recalculation.md)

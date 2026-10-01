@@ -397,7 +397,6 @@ OpenAthlete is actively developed. Here's what's coming next:
 - 🧩 **Modular Training Logic** - Custom goals, coach import, and flexible training methodologies
 - 📈 **Enhanced Dashboards** - Intuitive data visualizations and performance analytics
 - 🔗 **More Integrations** - Wahoo, Coros, Zwift, Oura, and more
-- 📅 **Weekly Training View** - Better calendar and planning interface
 - 🏃 **Advanced AI Features** - More intelligent training suggestions and injury prevention
 - 📱 **Mobile App Enhancements** - Improved mobile experience and offline support
 
@@ -470,7 +469,15 @@ authentication and athlete/coach authorization still apply. Billing operations
 are unavailable; existing subscription records are not upgraded or deleted.
 
 Supply your own `OPENAI_API_KEY` (and `GOOGLE_GENERATIVE_AI_API_KEY` when using
-the default feedback agent). Provider usage is billed separately. This setting
+the default feedback agent), or use Claude by setting `AI_PROVIDER=anthropic`
+and `ANTHROPIC_API_KEY`: every agent then runs on `anthropic/claude-opus-5`.
+Individual agents can still be overridden with `AI_MODEL_*` variables using the
+`provider/model` format. Claude has no embeddings or audio input, so activity
+feedback embeddings and voice-note transcription use OpenAI by default; set
+`AI_EMBEDDING_PROVIDER=google` and/or `AI_TRANSCRIPTION_PROVIDER=google` to use
+`GOOGLE_GENERATIVE_AI_API_KEY` instead. The API logs a startup warning with the
+trade-offs. See [docs/ai-providers.md](docs/ai-providers.md).
+Provider usage is billed separately. This setting
 does not change prompts, models, workout validation, or the review-before-save
 flow for generated sessions. It is a server setting, not a `VITE_` variable.
 

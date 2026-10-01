@@ -19,8 +19,13 @@ AI feedback questions and analysis.
 - Errors distinguish missing provider configuration, provider failure and invalid
   question output. When questions are disabled, the athlete is asked to contact
   their coach. This message does not itself change the settings permissions.
-- Questions use the athlete's language. Transcription uses the interface language
-  supplied by the client (`es`, `en`, `fr`, `it`); without it, Whisper detects the
+- `AI_PROVIDER=anthropic` also switches the question model to
+  `anthropic/claude-opus-5` (requires `ANTHROPIC_API_KEY`) unless
+  `AI_MODEL_POST_ACTIVITY_FEEDBACK` is set. See [AI providers](ai-providers.md).
+- Questions use the athlete's language. Voice notes are transcribed by the
+  provider selected with `AI_TRANSCRIPTION_PROVIDER`: OpenAI Whisper by default,
+  or Gemini with `google`. Transcription uses the interface language supplied by
+  the client (`es`, `en`, `fr`, `it`); without it, the provider detects the
   language.
 
 These model names describe repository configuration, not a guarantee of current
@@ -88,10 +93,29 @@ no longer invokes them.
 
 ## Embeddings and storage
 
-Indexing uses `text-embedding-3-small`. Text and vector are passed as Prisma
-parameters; the vector must contain 1,536 finite numbers. Settings are rechecked
-before saving. An UPSERT maintains one embedding per activity. This path does not
-require a new migration or automatically reprocess old activities.
+Feedback text is embedded into `activity_feedback_embedding` as a semantic
+index. **No feature reads this index yet**: there is no similarity query in the
+API, and the table is only written by the feedback listener and cleared when an
+activity or user is deleted. It is kept for a future semantic search over
+athlete feedback.
+
+The embedding provider is selected with `AI_EMBEDDING_PROVIDER`:
+
+- `openai` (default): `text-embedding-3-small`, using `OPENAI_API_KEY`.
+- `google`: `gemini-embedding-001` requested at 1,536 dimensions and
+  re-normalized, using `GOOGLE_GENERATIVE_AI_API_KEY`.
+
+Claude has no embeddings API, so installations using `AI_PROVIDER=anthropic`
+still need one of these keys; without it, the listener logs the error and the
+feedback flow is unaffected. Vectors from different providers are not
+comparable. Rows stored before a provider change must be regenerated before a
+similarity search uses them; the table does not record which model produced
+each row.
+
+Text and vector are passed as Prisma parameters; the vector must contain 1,536
+finite numbers. Settings are rechecked before saving. An UPSERT maintains one
+embedding per activity. This path does not require a new migration or
+automatically reprocess old activities.
 
 ## Verification coverage
 
@@ -108,3 +132,5 @@ require a new migration or automatically reprocess old activities.
 - [Question generation](../apps/api/src/modules/core/services/activity-feedback-generation.service.ts)
 - [Feedback processing listener](../apps/api/src/listeners/activity-feedback-extraction.listener.ts)
 - [Model defaults](../apps/api/src/common/constants/ai-models.constant.ts)
+- [Embedding providers](../apps/api/src/common/utils/ai-embedding.util.ts)
+- [Gemini transcription](../apps/api/src/common/utils/ai-transcription.util.ts)

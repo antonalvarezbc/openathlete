@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 
+import { AiMemoryModule } from '../ai-memory/ai-memory.module';
 import { AuthModule } from '../auth';
 import { CalendarModule } from '../calendar/calendar.module';
 import { MessagesModule } from '../messages/messages.module';
@@ -25,6 +26,7 @@ import { RecordController } from './controllers/record.controller';
 import { StatisticsController } from './controllers/statistics.controller';
 import { TrainingLoadController } from './controllers/training-load.controller';
 import { TrainingZoneController } from './controllers/training-zone.controller';
+import { WeekPlanningController } from './controllers/week-planning.controller';
 import { ManualFitImportGuard } from './guards/manual-fit-import.guard';
 import { ActivityFileParserService } from './helpers/activity-file-parser.service';
 import {
@@ -60,11 +62,13 @@ import { TrainingLoadService } from './services/training-load.service';
 import { TrainingZoneService } from './services/training-zone.service';
 import { OpenMeteoWeatherProvider } from './services/weather/providers/openmeteo.provider';
 import { WeatherService } from './services/weather/weather.service';
+import { WeekPlanningService } from './services/week-planning.service';
 
 @Module({
   imports: [
     SubscriptionModule,
     AuthModule,
+    AiMemoryModule,
     forwardRef(() => CalendarModule),
     forwardRef(() => MessagesModule),
     forwardRef(() => QueueModule),
@@ -74,6 +78,7 @@ import { WeatherService } from './services/weather/weather.service';
     InstallationFeaturesController,
     ManualFitImportController,
     PlanWorkspaceController,
+    WeekPlanningController,
     ActivityFeedbackController,
     EventController,
     EventTemplateController,
@@ -95,6 +100,7 @@ import { WeatherService } from './services/weather/weather.service';
     ManualFitImportGuard,
     ManualFitImportService,
     PlanWorkspaceService,
+    WeekPlanningService,
     EventService,
     WorkoutService,
     EventTemplateService,

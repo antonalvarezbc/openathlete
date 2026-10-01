@@ -1,10 +1,12 @@
 import { useSubmitQuestionAnswerMutation } from '@/api/activity-feedback';
 import type { ActivityFeedbackQuestion } from '@/api/activity-feedback';
+import { useInstallationFeatures } from '@/api/installation/installation.hooks';
 import { AudioRecorder } from '@/components/activity-feedback/audio-recorder';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { m } from '@/paraglide/messages';
 import { cn } from '@/utils/shadcn';
+import { MicOff } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -40,6 +42,7 @@ export function ActivityFeedbackFlow({
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const submitMutation = useSubmitQuestionAnswerMutation(eventId);
+  const { voiceTranscription } = useInstallationFeatures();
 
   const handleNext = async (answerText: string) => {
     if (!answerText.trim() || saving.current) return;
@@ -171,17 +174,26 @@ export function ActivityFeedbackFlow({
             <div className="flex flex-col gap-4 w-full">
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-center w-full">
-                  <AudioRecorder
-                    disabled={submitMutation.isPending}
-                    setIsRecording={setIsRecording}
-                    setIsTranscribing={setIsTranscribing}
-                    onTranscriptionComplete={(text) => {
-                      setAnswers({
-                        ...answers,
-                        [currentQuestion.questionId]: text,
-                      });
-                    }}
-                  />
+                  {voiceTranscription === 'available' ? (
+                    <AudioRecorder
+                      disabled={submitMutation.isPending}
+                      setIsRecording={setIsRecording}
+                      setIsTranscribing={setIsTranscribing}
+                      onTranscriptionComplete={(text) => {
+                        setAnswers({
+                          ...answers,
+                          [currentQuestion.questionId]: text,
+                        });
+                      }}
+                    />
+                  ) : (
+                    <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <MicOff className="h-4 w-4 shrink-0" />
+                      {voiceTranscription === 'unsupported-by-ai-provider'
+                        ? m.voice_transcription_unsupported_by_ai_provider()
+                        : m.voice_transcription_not_configured()}
+                    </p>
+                  )}
                 </div>
                 <div
                   className={cn(

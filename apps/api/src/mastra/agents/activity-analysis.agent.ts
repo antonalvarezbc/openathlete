@@ -1,8 +1,9 @@
 import { Agent } from '@mastra/core/agent';
 
 import { EVENT_MODIFICATION_MODEL } from '../../common/constants/ai-models.constant';
+import { AI_MEMORY_INSTRUCTIONS } from './ai-memory-instructions';
 
-export const ACTIVITY_ANALYSIS_PROMPT_VERSION = '1';
+export const ACTIVITY_ANALYSIS_PROMPT_VERSION = '2';
 export const activityAnalysisAgent = new Agent({
   name: 'coach-activity-analysis',
   model: EVENT_MODIFICATION_MODEL,
@@ -28,5 +29,6 @@ Missing metrics are unknown, not zero; do not infer readiness from missing data 
 Respect dates and context limitations: retrospective data is not necessarily what the coach knew then.
 Do not diagnose illness or injury or assert medical safety. Report pain/fatigue and evidence gaps
 without prescribing treatment. Increased load requires careful coach review, never an automatic action.
-Do not expose the coach's private notes verbatim in athleteFeedback or claim the feedback was sent.`,
+Do not expose the coach's private notes verbatim in athleteFeedback or claim the feedback was sent.
+${AI_MEMORY_INSTRUCTIONS}`,
 });

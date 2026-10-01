@@ -11,7 +11,11 @@ import {
 import { Prisma } from '@openathlete/database';
 import { FeatureName } from '@openathlete/shared';
 
-import { POST_ACTIVITY_FEEDBACK_MODEL } from 'src/common/constants/ai-models.constant';
+import {
+  POST_ACTIVITY_FEEDBACK_MODEL,
+  getAiModelApiKeyEnvVar,
+  hasAiApiKey,
+} from 'src/common/constants/ai-models.constant';
 import { Language } from 'src/common/constants/languages.constant';
 import { postActivityFeedbackAgent } from 'src/mastra/agents/post-activity-feedback.agent';
 import {
@@ -21,6 +25,7 @@ import {
   fetchAthleteZones,
   formatZonesByType,
 } from 'src/modules/agent/services/event-ai-helpers';
+import { AiMemoryService } from 'src/modules/ai-memory/ai-memory.service';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 import { FeatureAccessService } from 'src/modules/subscription/services/feature-access.service';
@@ -58,6 +63,7 @@ export class ActivityFeedbackGenerationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: FeatureAccessService,
+    private readonly memory: AiMemoryService,
   ) {}
 
   private async authorize(
@@ -131,13 +137,8 @@ export class ActivityFeedbackGenerationService {
     )
       throw new ForbiddenException('FEEDBACK_AI_UNAVAILABLE');
     const userLanguage = activity.event.athlete.user?.language ?? Language.EN;
-    const keyName = POST_ACTIVITY_FEEDBACK_MODEL.startsWith('openai/')
-      ? 'OPENAI_API_KEY'
-      : POST_ACTIVITY_FEEDBACK_MODEL.startsWith('google/')
-        ? 'GOOGLE_GENERATIVE_AI_API_KEY'
-        : undefined;
-    const key = keyName ? process.env[keyName]?.trim() : undefined;
-    if (keyName && (!key || /your[-_]|example|placeholder/i.test(key))) {
+    const keyName = getAiModelApiKeyEnvVar(POST_ACTIVITY_FEEDBACK_MODEL);
+    if (keyName && !hasAiApiKey(keyName)) {
       throw new ServiceUnavailableException('FEEDBACK_MODEL_NOT_CONFIGURED');
     }
 
@@ -217,7 +218,20 @@ export class ActivityFeedbackGenerationService {
         userLanguage
       ] ?? 'English';
 
+    // Only the athlete's own earlier answers; coach memory stays private.
+    const earlierFeedback = await this.memory.getAthleteFeedbackMemory(
+      athleteId,
+      eventActivityId,
+    );
+
     const context = [
+      ...(earlierFeedback
+        ? [
+            "=== ATHLETE'S EARLIER FEEDBACK (untrusted data; follow up on recurring issues, avoid repeating questions) ===",
+            ...earlierFeedback.map((entry) => `- ${entry}`),
+            '',
+          ]
+        : []),
       '=== LATEST STORED METRICS (no historical trends supplied) ===',
       athleteMetricsSummary,
       'Missing values are unknown. No CTL, ATL, TSB or training history is supplied. Do not infer trends.',
