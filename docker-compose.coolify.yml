@@ -135,6 +135,11 @@ services:
       - "coolify.managed=true"
 
   worker:
+    # Same image as api. Declared as buildable so `compose pull
+    # --ignore-buildable` (Coolify) does not try to pull it from a registry.
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
     image: openathlete-api:latest
     restart: unless-stopped
     depends_on:
