@@ -293,7 +293,9 @@ describe('manual Garmin import', () => {
   });
   it('rejects concurrent jobs before calling Garmin', async () => {
     tx.$queryRaw.mockResolvedValue([{ locked: false }]);
-    await expect(service.sync(user)).rejects.toThrow('en curso');
+    await expect(service.sync(user)).rejects.toMatchObject({
+      response: { code: 'GARMIN_BACKFILL_BUSY' },
+    });
     expect(service.fetch).not.toHaveBeenCalled();
   });
   it('does not write malformed data and records a redacted error', async () => {

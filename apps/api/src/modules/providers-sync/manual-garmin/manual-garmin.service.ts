@@ -8,6 +8,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   OnModuleDestroy,
   Optional,
   ServiceUnavailableException,
@@ -105,6 +106,7 @@ type SyncState = {
 
 @Injectable()
 export class ManualGarminService implements OnModuleDestroy {
+  private readonly logger = new Logger(ManualGarminService.name);
   private readonly backfillControllers = new Map<string, AbortController>();
 
   onModuleDestroy() {
@@ -312,9 +314,10 @@ export class ManualGarminService implements OnModuleDestroy {
       );
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return {};
-      throw new ServiceUnavailableException(
-        'No se puede leer el estado de Garmin manual.',
-      );
+      throw new ServiceUnavailableException({
+        code: 'GARMIN_STATE_UNREADABLE',
+        message: 'The manual Garmin state cannot be read.',
+      });
     }
   }
 
@@ -357,9 +360,10 @@ export class ManualGarminService implements OnModuleDestroy {
             { locked: boolean }[]
           >`SELECT pg_try_advisory_xact_lock(714203, ${athleteId}::int) AS locked`;
           if (!lock.locked)
-            throw new ConflictException(
-              'Ya hay una actualización Garmin en curso.',
-            );
+            throw new ConflictException({
+              code: 'GARMIN_BACKFILL_BUSY',
+              message: 'A Garmin update is already running.',
+            });
           if (backfillActive(await readBackfill(directory)))
             throw new ConflictException({
               code: 'GARMIN_BACKFILL_BUSY',
@@ -526,17 +530,33 @@ export class ManualGarminService implements OnModuleDestroy {
               },
             };
           } catch (error) {
-            const message =
+            // Store a code, not a sentence: the web shows it in the user's language.
+            const response =
               error instanceof ServiceUnavailableException
-                ? error.message
-                : 'La actualización Garmin falló. No se han guardado cambios.';
+                ? (error.getResponse() as { code?: unknown })
+                : undefined;
+            const code =
+              typeof response?.code === 'string'
+                ? response.code
+                : 'GARMIN_SYNC_FAILED';
+            // Server-side diagnosis only: error type and message, no payload.
+            this.logger.warn(
+              `Manual Garmin sync failed for athlete ${athleteId} (${code}): ${
+                error instanceof Error
+                  ? `${error.name}: ${error.message}`.slice(0, 500)
+                  : String(error).slice(0, 500)
+              }`,
+            );
             await this.save(directory, {
               ...state,
               running: false,
-              error: message,
+              error: code,
             });
             if (error instanceof ServiceUnavailableException) throw error;
-            throw new ServiceUnavailableException(message);
+            throw new ServiceUnavailableException({
+              code,
+              message: 'The Garmin update failed. No changes were saved.',
+            });
           }
         },
         { timeout: 210_000, maxWait: 5000 },

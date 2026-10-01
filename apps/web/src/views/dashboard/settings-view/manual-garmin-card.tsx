@@ -90,9 +90,13 @@ function backfillMessage(backfill: Backfill) {
   }
 }
 
-function actionError(failure: unknown) {
-  if (!isAxiosError(failure)) return m.garmin_manual_failed();
-  switch (failure.response?.data?.code) {
+/**
+ * Localized text for an API error code. The API stores and returns codes,
+ * never sentences; unknown values (including older stored messages) fall back
+ * to the generic message in the user's language.
+ */
+function garminErrorText(code: unknown) {
+  switch (code) {
     case 'GARMIN_BACKFILL_BUSY':
     case 'GARMIN_LOGIN_BUSY':
       return m.garmin_backfill_busy();
@@ -104,11 +108,16 @@ function actionError(failure: unknown) {
       return m.garmin_backfill_auth();
     case 'GARMIN_BACKFILL_FAILED':
       return m.garmin_backfill_failed();
+    case 'GARMIN_SYNC_FAILED':
+      return m.garmin_sync_failed();
     default:
-      return typeof failure.response?.data?.message === 'string'
-        ? failure.response.data.message
-        : m.garmin_manual_failed();
+      return m.garmin_manual_failed();
   }
+}
+
+function actionError(failure: unknown) {
+  if (!isAxiosError(failure)) return m.garmin_manual_failed();
+  return garminErrorText(failure.response?.data?.code);
 }
 
 function formatDate(value: string) {
@@ -519,7 +528,9 @@ export function ManualGarminCard({
         {status.isError && (
           <p role="alert">{m.garmin_manual_status_failed()}</p>
         )}
-        {(error || data.error) && <p role="alert">{error || data.error}</p>}
+        {(error || data.error) && (
+          <p role="alert">{error || garminErrorText(data.error)}</p>
+        )}
       </Content>
     </Container>
   );

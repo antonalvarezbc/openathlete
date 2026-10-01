@@ -1531,5 +1531,6 @@
   "workspace_open_week_in_calendar": "Apri nel calendario",
   "signup_email_exists": "Esiste già un account con questa email.",
   "signup_failed": "Impossibile creare l’account. Controlla i dati e riprova.",
-  "signup_login_failed": "Il tuo account è stato creato, ma l’accesso non è riuscito."
+  "signup_login_failed": "Il tuo account è stato creato, ma l’accesso non è riuscito.",
+  "garmin_sync_failed": "L’aggiornamento Garmin non è riuscito. Nessuna modifica è stata salvata."
 }

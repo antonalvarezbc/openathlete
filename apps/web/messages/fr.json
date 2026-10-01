@@ -1531,5 +1531,6 @@
   "workspace_open_week_in_calendar": "Ouvrir dans le calendrier",
   "signup_email_exists": "Un compte existe déjà avec cet e-mail.",
   "signup_failed": "Le compte n'a pas pu être créé. Vérifiez les informations et réessayez.",
-  "signup_login_failed": "Votre compte a été créé, mais la connexion a échoué."
+  "signup_login_failed": "Votre compte a été créé, mais la connexion a échoué.",
+  "garmin_sync_failed": "La mise à jour Garmin a échoué. Aucune modification n’a été enregistrée."
 }
