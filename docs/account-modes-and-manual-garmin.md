@@ -30,7 +30,7 @@ immediately removes its permissions on subsequent authenticated API requests.
 Other open browser sessions may need a reload to update their visible menus.
 
 Administrators are configured only on the server using `ADMIN_USER_IDS` in
-`apps/api/.env`: a comma-separated list of existing OpenAthlete user IDs. The empty value
+`apps/api/.env` (or the Coolify environment, passed by `docker-compose.coolify.yml`): a comma-separated list of existing OpenAthlete user IDs. The empty value
 disables administration. Restart the API after editing this configuration.
 IDs are used so changing an email address cannot transfer administrator rights.
 The authenticated `/user/me` response contains `isAdmin`; no admin setting is
@@ -42,6 +42,11 @@ Administrator endpoints:
 - `PATCH /admin/accounts/:userId/mode`: strict `{ roles: [...] }` body.
   Only accounts that completed onboarding can be changed.
   The API logs the administrator ID, target ID and selected roles.
+- `DELETE /admin/accounts/:userId`: permanently deletes the account and all
+  its data (events, activities, plans, messages, settings) in one transaction,
+  after confirmation in Settings → Account administration. Administrators
+  cannot delete themselves or another configured administrator. The API logs
+  the administrator ID and target ID.
 
 Existing account modes are preserved; there is no automatic migration.
 New users choose athlete, coach, or both during onboarding. The standard profile

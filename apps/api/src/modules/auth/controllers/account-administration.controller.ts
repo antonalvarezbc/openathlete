@@ -4,6 +4,7 @@ import { z } from 'zod';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -47,5 +48,12 @@ export class AccountAdministrationController {
     body: ChangeAccountMode,
   ) {
     return this.service.change(user, userId, body);
+  }
+  @Delete(':userId')
+  delete(
+    @JwtUser() user: AuthUser,
+    @Param('userId', ParseIntPipe) userId: number,
+  ) {
+    return this.service.delete(user, userId);
   }
 }

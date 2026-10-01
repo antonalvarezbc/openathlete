@@ -37,6 +37,7 @@ export function AccountAdministrationTab() {
     account: Account;
     roles: UserRole[];
   } | null>(null);
+  const [deleting, setDeleting] = useState<Account | null>(null);
   const accounts = useQuery({
     queryKey: ['admin-accounts', filter, page],
     queryFn: async () =>
@@ -60,6 +61,16 @@ export function AccountAdministrationTab() {
       toast.success(m.admin_mode_saved());
     },
     onError: () => toast.error(m.admin_mode_failed()),
+  });
+  const remove = useMutation({
+    mutationFn: async (account: Account) =>
+      client.delete('/admin/accounts/' + account.userId),
+    onSuccess: async () => {
+      setDeleting(null);
+      await cache.invalidateQueries({ queryKey: ['admin-accounts'] });
+      toast.success(m.admin_delete_done());
+    },
+    onError: () => toast.error(m.admin_delete_failed()),
   });
   if (!user?.isAdmin) return null;
   const label = (roles: UserRole[]) =>
@@ -127,6 +138,17 @@ export function AccountAdministrationTab() {
                 <p className="text-xs">{m.admin_onboarding_pending()}</p>
               )}
             </div>
+            {account.userId !== user.userId && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-destructive"
+                disabled={remove.isPending}
+                onClick={() => setDeleting(account)}
+              >
+                {m.admin_delete_account()}
+              </Button>
+            )}
           </div>
         ))}
         {accounts.data?.length === 0 && <p>{m.admin_no_accounts()}</p>}
@@ -147,6 +169,17 @@ export function AccountAdministrationTab() {
           {m.admin_next()}
         </Button>
       </div>
+      <ConfirmAction
+        open={!!deleting}
+        onClose={() => !remove.isPending && setDeleting(null)}
+        onConfirm={() => deleting && remove.mutate(deleting)}
+        isLoading={remove.isPending}
+        title={m.admin_delete_account()}
+        confirmText={m.admin_delete_account()}
+        message={
+          deleting ? m.admin_delete_confirm({ email: deleting.email }) : ''
+        }
+      />
       <ConfirmAction
         open={!!pending}
         onClose={() => !change.isPending && setPending(null)}

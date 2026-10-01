@@ -1533,5 +1533,9 @@
   "signup_failed": "Le compte n'a pas pu être créé. Vérifiez les informations et réessayez.",
   "signup_login_failed": "Votre compte a été créé, mais la connexion a échoué.",
   "garmin_sync_failed": "La mise à jour Garmin a échoué. Aucune modification n’a été enregistrée.",
-  "garmin_manual_owned_elsewhere": "Certaines activités Garmin appartiennent déjà à un autre athlète d’OpenAthlete et ont été ignorées. Le même compte Garmin est probablement connecté à plusieurs athlètes."
+  "garmin_manual_owned_elsewhere": "Certaines activités Garmin appartiennent déjà à un autre athlète d’OpenAthlete et ont été ignorées. Le même compte Garmin est probablement connecté à plusieurs athlètes.",
+  "admin_delete_account": "Supprimer le compte",
+  "admin_delete_confirm": "Supprimer définitivement {email} et toutes ses données (activités, plans, messages, réglages) ? Action irréversible.",
+  "admin_delete_done": "Compte supprimé",
+  "admin_delete_failed": "Impossible de supprimer le compte. Les comptes administrateur ne peuvent pas être supprimés."
 }

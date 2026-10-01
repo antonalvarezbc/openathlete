@@ -77,6 +77,8 @@ services:
     environment:
       ENV: ${ENV}
       SELF_HOSTED: ${SELF_HOSTED:-false}
+      # Comma-separated user IDs with access to Settings → Account administration
+      ADMIN_USER_IDS: ${ADMIN_USER_IDS:-}
       ENABLE_MANUAL_FIT_IMPORT: ${ENABLE_MANUAL_FIT_IMPORT:-false}
       ENABLE_MANUAL_GARMIN_SYNC: ${ENABLE_MANUAL_GARMIN_SYNC:-false}
       # Persistent sessions for manual Garmin sync (volume garmin_data)

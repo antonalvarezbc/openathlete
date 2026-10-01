@@ -12,7 +12,10 @@ import {
   AccountAdministrationService,
   isAccountAdministrator,
 } from './account-administration.service';
+import { deleteUserData } from './delete-user-data';
 import { UserService } from './user.service';
+
+jest.mock('./delete-user-data', () => ({ deleteUserData: jest.fn() }));
 
 const user: AuthUser = {
   userId: 8,
@@ -126,5 +129,46 @@ describe('First-login selection is single-use', () => {
       hrMax: 180,
     });
     expect(tx.athleteMetric.upsert).not.toHaveBeenCalled();
+  });
+});
+
+describe('Administrator account deletion', () => {
+  const setup = (adminIds = '8') => {
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue({ userId: 12 }) },
+      $transaction: jest.fn((run: (tx: unknown) => unknown) => run('tx')),
+    };
+    const service = new AccountAdministrationService(
+      prisma as unknown as PrismaService,
+      new ConfigService({ ADMIN_USER_IDS: adminIds }),
+    );
+    return { prisma, service };
+  };
+  beforeEach(() => jest.clearAllMocks());
+
+  it('deletes another account and its data in one transaction', async () => {
+    const { prisma, service } = setup();
+    await expect(service.delete(user, 12)).resolves.toEqual({ success: true });
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(deleteUserData).toHaveBeenCalledWith('tx', 12);
+  });
+
+  it('requires administrator access', async () => {
+    const { service } = setup('99');
+    await expect(service.delete(user, 12)).rejects.toThrow('Administrator');
+    expect(deleteUserData).not.toHaveBeenCalled();
+  });
+
+  it('refuses deleting itself, other administrators or missing accounts', async () => {
+    const { prisma, service } = setup('8,12');
+    await expect(service.delete(user, 8)).rejects.toThrow('themselves');
+    await expect(service.delete(user, 12)).rejects.toThrow(
+      'Administrator accounts',
+    );
+    const { prisma: other, service: plain } = setup();
+    other.user.findUnique.mockResolvedValue(null);
+    await expect(plain.delete(user, 40)).rejects.toThrow('not found');
+    expect(deleteUserData).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 });
