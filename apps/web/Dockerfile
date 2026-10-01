@@ -1,24 +1,34 @@
 # syntax=docker/dockerfile:1.7
 
 # ---- Build stage ----
-FROM node:22-alpine AS build
+FROM node:22.14.0-alpine AS build
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
+# Prisma (types used by libs/shared) needs OpenSSL on Alpine
+RUN apk add --no-cache openssl libc6-compat \
+  && corepack enable && corepack prepare pnpm@9.15.9 --activate
 
-# Copy monorepo manifests for better caching
+# Copy monorepo manifests for better caching. libs/shared depends on
+# @openathlete/database for its Prisma types.
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/web/package.json apps/web/package.json
 COPY libs/shared/package.json libs/shared/package.json
+COPY libs/database/package.json libs/database/package.json
 
-# Install dependencies (Hoisted with pnpm)
-RUN pnpm install --frozen-lockfile
+# Coolify injects NODE_ENV=production as a build arg, which would make pnpm
+# skip devDependencies (vite, prisma, rollup). Force a full install.
+RUN NODE_ENV=development pnpm install --frozen-lockfile --prod=false
 
 # Copy full repo (only after deps to maximize layer cache)
 COPY . .
 
-# Build shared (required by web)
+ENV NODE_ENV=development
+# Dummy URL is enough for `prisma generate` (no DB connection).
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build?schema=public"
+
+WORKDIR /app/libs/database
+RUN pnpm db:generate
+
 WORKDIR /app/libs/shared
 RUN pnpm build
 
@@ -36,7 +46,8 @@ ENV VITE_WEBSITE_URL=$VITE_WEBSITE_URL
 ENV VITE_DISABLE_PAYMENTS=$VITE_DISABLE_PAYMENTS
 
 WORKDIR /app/apps/web
-RUN pnpm build
+# Production bundle (vite reads NODE_ENV for the mode)
+RUN NODE_ENV=production pnpm build
 
 # ---- Runtime stage ----
 FROM nginx:alpine AS runtime
