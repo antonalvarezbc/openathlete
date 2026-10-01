@@ -40,17 +40,26 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: >
-      redis-server
-      --requirepass ${REDIS_PASSWORD}
-      --appendonly yes
+    # The password is read by the container shell ($$ escapes compose
+    # interpolation), so special characters cannot break the command line.
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    command:
+      - sh
+      - -c
+      - exec redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test:
+        [
+          "CMD-SHELL",
+          'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping | grep -q PONG',
+        ]
       interval: 10s
       timeout: 3s
       retries: 5
+      start_period: 10s
     networks:
       - openathlete
 
