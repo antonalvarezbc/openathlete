@@ -16,6 +16,7 @@ import {
   WorkoutSyncListener,
 } from 'src/listeners';
 
+import { omitBlankEnv } from '../common/utils/env.util';
 import { AgentModule } from './agent/agent.module';
 import { AppController } from './app.controller';
 import { AuthModule } from './auth';
@@ -34,7 +35,7 @@ import { SubscriptionModule } from './subscription';
     ConfigModule.forRoot({
       isGlobal: true,
       validate: (config) => {
-        const result = ApiEnvSchema.safeParse(config);
+        const result = ApiEnvSchema.safeParse(omitBlankEnv(config));
         if (!result.success) {
           const errors = result.error.errors.map((err) => {
             const path = err.path.join('.');
