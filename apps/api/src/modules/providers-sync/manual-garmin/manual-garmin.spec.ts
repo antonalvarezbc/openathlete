@@ -112,6 +112,7 @@ describe('manual Garmin import', () => {
     $queryRaw: jest.fn(),
     eventActivity: {
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
       findMany: jest.fn(),
       update: jest.fn(),
     },
@@ -279,6 +280,13 @@ describe('manual Garmin import', () => {
     ).toBe('2026-09-15T00:00:00.000Z');
     await expect(service.sync(user)).rejects.toThrow('dos minutos');
     expect(service.fetch).toHaveBeenCalledTimes(1);
+  });
+  it('skips activities another athlete already owns instead of failing', async () => {
+    tx.eventActivity.findUnique.mockResolvedValue({ eventActivityId: 5 });
+    const result = await service.sync(user);
+    expect(result.result).toMatchObject({ imported: 0, skipped: 1 });
+    expect(result.result?.warnings).toContain('ActivityOwnedByAnotherAthlete');
+    expect(tx.event.create).not.toHaveBeenCalled();
   });
   it('skips existing imports and still upserts metrics', async () => {
     tx.eventActivity.findFirst.mockResolvedValue({

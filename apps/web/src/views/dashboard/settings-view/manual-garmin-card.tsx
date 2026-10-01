@@ -415,6 +415,14 @@ export function ManualGarminCard({
               })}
             </p>
           )}
+          {data.result?.warnings.includes('ActivityOwnedByAnotherAthlete') && (
+            <p
+              role="alert"
+              className="text-sm text-amber-700 dark:text-amber-300"
+            >
+              {m.garmin_manual_owned_elsewhere()}
+            </p>
+          )}
           {data.result?.warnings.includes('ActivityHistoryIncomplete') && (
             <p
               role="alert"

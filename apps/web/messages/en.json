@@ -1532,5 +1532,6 @@
   "signup_email_exists": "An account with this email already exists.",
   "signup_failed": "The account could not be created. Check the details and try again.",
   "signup_login_failed": "Your account was created, but signing in failed.",
-  "garmin_sync_failed": "The Garmin update failed. No changes were saved."
+  "garmin_sync_failed": "The Garmin update failed. No changes were saved.",
+  "garmin_manual_owned_elsewhere": "Some Garmin activities already belong to another athlete in OpenAthlete, so they were skipped. The same Garmin account is probably connected to more than one athlete."
 }

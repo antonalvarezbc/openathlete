@@ -454,6 +454,18 @@ export class ManualGarminService implements OnModuleDestroy {
                 warnings.push('ExistingActivityAtSameTime');
                 continue;
               }
+              // externalId is unique across athletes. If the same Garmin account
+              // is linked to another athlete who already owns this activity,
+              // skip it instead of failing the whole sync.
+              const ownedElsewhere = await tx.eventActivity.findUnique({
+                where: { externalId },
+                select: { eventActivityId: true },
+              });
+              if (ownedElsewhere) {
+                skipped++;
+                warnings.push('ActivityOwnedByAnotherAthlete');
+                continue;
+              }
               const {
                 id: _id,
                 name,
