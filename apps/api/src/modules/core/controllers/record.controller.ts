@@ -154,7 +154,8 @@ export class RecordController {
   getRecords(
     @JwtUser() user: AuthUser,
     @Query('sport') sport?: string,
-    @Query('athleteId', ParseIntPipe) athleteId?: Athlete['athleteId'],
+    @Query('athleteId', new ParseIntPipe({ optional: true }))
+    athleteId?: Athlete['athleteId'],
   ) {
     return this.recordService.getRecords(user, sport as SportType, athleteId);
   }

@@ -135,7 +135,8 @@ export class InjuryController {
   })
   getInjuries(
     @JwtUser() user: AuthUser,
-    @Query('athleteId', ParseIntPipe) athleteId?: Athlete['athleteId'],
+    @Query('athleteId', new ParseIntPipe({ optional: true }))
+    athleteId?: Athlete['athleteId'],
   ): Promise<AthleteInjury[]> {
     return this.injuryService.getInjuries(user, athleteId);
   }
