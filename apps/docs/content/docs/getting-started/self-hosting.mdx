@@ -127,7 +127,7 @@ Back up the PostgreSQL database regularly, for example with `pg_dump`, and keep 
 
 **Links in emails point to the wrong host.** Set `APP_URL` to the public URL of the web app.
 
-**The web app calls the wrong API URL.** `API_PUBLIC_URL` is built into the web app: rebuild it with `docker compose up -d --build` after changing it.
+**The web app calls the wrong API URL.** Check `API_PUBLIC_URL`, then restart the web container: `docker compose up -d web`.
 
 ## Next steps
 

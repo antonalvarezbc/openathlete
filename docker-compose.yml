@@ -41,7 +41,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: apps/api/Dockerfile.local
+      dockerfile: apps/api/Dockerfile
     container_name: openathlete-api
     ports:
       - "${API_PORT:-3000}:3000"
@@ -131,10 +131,10 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-      args:
-        # Public URL browsers use to reach the API (baked into the build)
-        VITE_API_BASE_URL: ${API_PUBLIC_URL:-http://localhost:3000}
     container_name: openathlete-web
+    environment:
+      # Public URL browsers use to reach the API, injected at startup
+      API_PUBLIC_URL: ${API_PUBLIC_URL:-http://localhost:3000}
     ports:
       - "${WEB_PORT:-80}:80"
     depends_on:

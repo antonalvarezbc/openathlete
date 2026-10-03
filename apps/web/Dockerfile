@@ -23,9 +23,10 @@ WORKDIR /app/libs/shared
 RUN pnpm build
 
 # Build web app
-# Use ARG to allow passing VITE_API_BASE_URL at build time
-# Empty string means use relative URLs (works with Nginx proxy)
-ARG VITE_API_BASE_URL=""
+# VITE_API_BASE_URL is baked into the bundle. By default it is a placeholder
+# replaced at container start from API_PUBLIC_URL (see docker/), so the same
+# image works for any deployment.
+ARG VITE_API_BASE_URL="__OPENATHLETE_API_BASE_URL__"
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 WORKDIR /app/apps/web
@@ -39,6 +40,9 @@ COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 
 # Copy nginx configuration
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+
+# Run by the nginx image entrypoint before nginx starts
+COPY --chmod=755 apps/web/docker/40-api-public-url.sh /docker-entrypoint.d/40-api-public-url.sh
 
 EXPOSE 80
 
