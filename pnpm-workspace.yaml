@@ -1,13 +1,6 @@
 packages:
-  - "apps/**/*"
-  - "libs/**/*"
-  - "lab/**/*"
-  - "!**/legacy/**"
-  - "!**/build"
-  - "!**/dist*"
-  - "!library/*"
+  - "apps/*"
+  - "libs/*"
+  - "libs/config/*"
   - "!apps/firebase-functions"
   - "!apps/docs"
-catalogs:
-  prisma:
-    prisma: latest
