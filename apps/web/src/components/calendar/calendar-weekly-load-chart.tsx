@@ -12,8 +12,9 @@ import {
 } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { m } from '@/paraglide/messages';
+import { getLocale } from '@/paraglide/runtime';
+import { getDateFnsLocale } from '@/utils/locales';
 import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { useMemo } from 'react';
 import {
   Area,
@@ -26,7 +27,7 @@ import {
 
 import { CalendarWeekLoadSummary } from '@openathlete/shared';
 
-import { getWeekEnd, getWeekKey, getWeekStart } from './utils/week';
+import { getWeekKey } from './utils/week';
 
 interface CalendarWeeklyLoadChartProps {
   weeks: Date[][];
@@ -54,6 +55,7 @@ export function CalendarWeeklyLoadChart({
 }: CalendarWeeklyLoadChartProps) {
   const targetMonth = displayedMonth.getMonth();
   const targetYear = displayedMonth.getFullYear();
+  const dateFnsLocale = getDateFnsLocale(getLocale());
 
   const chartData = useMemo<ChartWeekRow[]>(() => {
     if (!weeks?.length) {
@@ -70,8 +72,8 @@ export function CalendarWeeklyLoadChart({
         ),
       )
       .map((week) => {
-        const weekStart = getWeekStart(week[0]);
-        const key = getWeekKey(weekStart);
+        // `week` holds local calendar days, Monday to Sunday.
+        const key = getWeekKey(week[0]);
 
         if (seen.has(key)) {
           return null;
@@ -90,11 +92,10 @@ export function CalendarWeeklyLoadChart({
           summary?.estimatedLoad ??
           0;
 
-        const weekEnd = getWeekEnd(weekStart);
-        const label = `${format(weekStart, 'dd MMM', { locale: fr })} → ${format(
-          weekEnd,
+        const label = `${format(week[0], 'dd MMM', { locale: dateFnsLocale })} → ${format(
+          week[week.length - 1],
           'dd MMM',
-          { locale: fr },
+          { locale: dateFnsLocale },
         )}`;
 
         return {
@@ -107,7 +108,7 @@ export function CalendarWeeklyLoadChart({
         };
       })
       .filter((week): week is ChartWeekRow => Boolean(week));
-  }, [weeks, weeklyLoadSummary, targetMonth, targetYear]);
+  }, [weeks, weeklyLoadSummary, targetMonth, targetYear, dateFnsLocale]);
 
   if (!hasScheduledActivities || !weeks?.length) {
     return null;
