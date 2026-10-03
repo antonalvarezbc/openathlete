@@ -6,8 +6,7 @@ import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
-import { ApiEnvSchema } from '@openathlete/shared';
-
+import { validateEnv } from 'src/common/config/validate-env';
 import { DEFAULT_RATE_LIMIT } from 'src/common/security/rate-limits';
 import {
   ActivityFeedbackExtractionListener,
@@ -35,19 +34,7 @@ import { SubscriptionModule } from './subscription';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      validate: (config) => {
-        const result = ApiEnvSchema.safeParse(config);
-        if (!result.success) {
-          const errors = result.error.errors.map((err) => {
-            const path = err.path.join('.');
-            return `  - ${path}: ${err.message}`;
-          });
-          throw new Error(
-            `Environment validation failed:\n${errors.join('\n')}\n\nPlease check your .env file and ensure all required variables are set.`,
-          );
-        }
-        return result.data;
-      },
+      validate: validateEnv,
       validationOptions: {
         allowUnknown: false,
         abortEarly: false,
