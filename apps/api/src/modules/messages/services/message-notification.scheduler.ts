@@ -1,5 +1,3 @@
-import * as brevo from '@getbrevo/brevo';
-
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
@@ -7,6 +5,7 @@ import { Cron } from '@nestjs/schedule';
 import type { ApiEnvSchemaType } from '@openathlete/shared';
 
 import { buildMessageThreadNotificationEmail } from 'src/modules/notification/emails/templates/message-thread-notification.template';
+import { EmailTransportService } from 'src/modules/notification/services/email-transport.service';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
 const TEN_MINUTES_IN_MS = 10 * 60 * 1000;
@@ -14,28 +13,18 @@ const TEN_MINUTES_IN_MS = 10 * 60 * 1000;
 @Injectable()
 export class MessageNotificationScheduler {
   private readonly logger = new Logger(MessageNotificationScheduler.name);
-  private readonly apiInstance: brevo.TransactionalEmailsApi;
-  private readonly fromEmail: string;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService<ApiEnvSchemaType, true>,
-  ) {
-    const apiKey = configService.get('BREVO_API_KEY') ?? '';
-    this.fromEmail =
-      configService.get('BREVO_FROM_EMAIL') ?? 'noreply@openathlete.org';
-    this.apiInstance = new brevo.TransactionalEmailsApi();
-    this.apiInstance.setApiKey(
-      brevo.TransactionalEmailsApiApiKeys.apiKey,
-      apiKey,
-    );
-  }
+    private readonly emailTransport: EmailTransportService,
+  ) {}
 
   // Run every minute to evaluate which threads need a grouped notification
   @Cron('* * * * *')
   async sendBatchedMessageNotifications() {
     const appUrl = this.configService.get('APP_URL');
-    if (!appUrl) return;
+    if (!appUrl || !this.emailTransport.isEnabled()) return;
 
     const now = new Date();
     const since = new Date(now.getTime() - 24 * 60 * 60 * 1000); // safety window
@@ -159,17 +148,12 @@ export class MessageNotificationScheduler {
           inboxUrl,
         });
 
-        const sendSmtpEmail = new brevo.SendSmtpEmail();
-        sendSmtpEmail.to = [{ email: recipientEmail }];
-        sendSmtpEmail.sender = {
-          email: this.fromEmail,
-          name: 'OpenAthlete',
-        };
-        sendSmtpEmail.subject =
-          'Nouveaux messages dans votre messagerie OpenAthlete';
-        sendSmtpEmail.htmlContent = htmlContent;
-
-        await this.apiInstance.sendTransacEmail(sendSmtpEmail);
+        await this.emailTransport.send({
+          to: recipientEmail,
+          subject: 'Nouveaux messages dans votre messagerie OpenAthlete',
+          html: htmlContent,
+          senderName: 'OpenAthlete',
+        });
         await (
           this.prisma as unknown as {
             messageThreadParticipant: {

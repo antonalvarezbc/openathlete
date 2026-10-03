@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 
 import { AuthModule } from '../auth';
 import { CoreModule } from '../core/core.module';
+import { NotificationModule } from '../notification/notification.module';
 import { PrismaService } from '../prisma/services/prisma.service';
 import { WebSocketModule } from '../websocket/websocket.module';
 import { MessagesController } from './controllers/messages.controller';
@@ -12,7 +13,12 @@ import { MessageThreadService } from './services/message-thread.service';
 import { MessageService } from './services/message.service';
 
 @Module({
-  imports: [AuthModule, forwardRef(() => CoreModule), WebSocketModule],
+  imports: [
+    AuthModule,
+    forwardRef(() => CoreModule),
+    NotificationModule,
+    WebSocketModule,
+  ],
   controllers: [MessagesController],
   providers: [
     MessageThreadService,
