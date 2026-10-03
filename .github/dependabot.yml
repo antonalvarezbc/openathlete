@@ -10,7 +10,6 @@ updates:
     # Standalone projects with their own lockfile or package manager
     exclude-paths:
       - apps/docs/**
-      - apps/firebase-functions/**
     schedule:
       interval: weekly
       day: monday
