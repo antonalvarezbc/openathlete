@@ -5,72 +5,101 @@ description: Deploy your own OpenAthlete instance
 
 OpenAthlete is designed to be self-hosted, giving you full control over your data and privacy.
 
-## Deployment Options
+## Docker Compose (recommended)
 
-### Docker Compose (Recommended)
-
-The easiest way to deploy OpenAthlete is using Docker Compose.
+Requirements: a server with `git`, `docker` and the `docker compose` plugin.
 
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/openathlete/openathlete.git
+git clone https://github.com/openathleteorg/openathlete.git
 cd openathlete
 ```
 
-2. Configure environment variables:
+2. Create your configuration. `docker compose` reads the `.env` file at the repository root:
 
 ```bash
-cp apps/api/.env.example .env
+cp .env.example .env
 ```
 
-3. Update the `.env` files with your production settings
-
-4. Start the services:
+3. Fill in the two required secrets, each with its own random value:
 
 ```bash
-docker-compose up -d
+openssl rand -base64 48   # paste as JWT_SECRET_KEY
+openssl rand -base64 48   # paste as HASH_PEPPER
 ```
 
-### Manual Deployment
+4. Set the public URLs if you are not running on `localhost`:
 
-#### Backend (NestJS)
+```properties
+APP_URL=https://openathlete.example.org          # where users open the app
+API_PUBLIC_URL=https://api.openathlete.example.org # where browsers reach the API
+CORS_ORIGINS=https://openathlete.example.org
+```
 
-1. Build the application:
+5. Start the stack:
 
 ```bash
-cd apps/api
+docker compose up -d --build
+```
+
+The web app listens on port 80 and the API on port 3000 (change them with `WEB_PORT` and `API_PORT`). PostgreSQL and Redis are only reachable from the server itself.
+
+Database migrations run automatically when the API starts. The first account you create is a regular account; there is no default admin.
+
+### Optional features
+
+Leave a variable empty to disable the feature:
+
+| Feature | Variables |
+| --- | --- |
+| AI session generation and feedback | `OPENAI_API_KEY` |
+| Transactional email (password reset, invitations) | `BREVO_API_KEY`, `BREVO_FROM_EMAIL` |
+| Device sync | `STRAVA_*`, `GARMIN_*`, `POLAR_*`, `SUUNTO_*` |
+| Background activity import | `ENABLE_ACTIVITY_IMPORT`, `ENABLE_ACTIVITY_PROCESSING` |
+| Billing | `STRIPE_*` (not needed for self-hosting) |
+
+Every API variable is documented in `apps/api/.env.example`.
+
+### HTTPS and reverse proxies
+
+Put the web app and the API behind a TLS-terminating reverse proxy (Caddy, Traefik, nginx, Coolify). The API trusts `X-Forwarded-For` only from proxies on private networks, which covers a proxy on the same host or Docker network. If another public proxy sits in front (for example Cloudflare), set `TRUST_PROXY` to the number of proxy hops so rate limiting sees real client IPs.
+
+### Updating
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+<Callout type="warn">
+**Upgrading an instance started before October 2026:** `JWT_SECRET_KEY` and `HASH_PEPPER` used to have built-in defaults and are now required.
+
+- Set a new random `JWT_SECRET_KEY`. The API refuses to start with the former default, which was public. Users are simply logged out.
+- Keep `HASH_PEPPER=dev-pepper-change-in-production-min-32-chars` if your instance used the default. Changing the pepper invalidates every existing password.
+</Callout>
+
+## Manual deployment
+
+### API (NestJS)
+
+```bash
 pnpm install
-pnpm build
+pnpm database run db:generate
+pnpm shared build
+pnpm api build
+pnpm database run db:deploy   # apply migrations
 ```
 
-2. Set up environment variables in `.env`
+Configure the API with the variables from `apps/api/.env.example` (at least `DATABASE_URL`, `JWT_SECRET_KEY`, `HASH_PEPPER`, `ENV` and `NODE_ENV`), then start it with `pnpm api start:prod`.
 
-3. Run database migrations:
+### Web app (React + Vite)
 
 ```bash
-pnpm database run db:deploy
+VITE_API_BASE_URL=https://api.your-domain.com pnpm web build
 ```
 
-4. Start the server:
-
-```bash
-pnpm start:prod
-```
-
-#### Frontend (React + Vite)
-
-1. Build the application:
-
-```bash
-cd apps/web
-pnpm install
-pnpm build
-```
-
-2. Serve the built files using a web server (nginx, Apache, etc.)
-
-Example nginx configuration:
+Serve `apps/web/dist` with any static web server, falling back to `index.html` for client-side routes:
 
 ```nginx
 server {
@@ -86,81 +115,21 @@ server {
 }
 ```
 
-## Environment Variables
+## Backups
 
-### Backend Required Variables
-
-```properties
-DATABASE_URL="postgresql://user:password@host:5432/openathlete"
-JWT_SECRET="your-secret-key"
-NODE_ENV="production"
-```
-
-### Frontend Required Variables
-
-```properties
-VITE_API_URL="https://api.your-domain.com"
-```
-
-## Database Setup
-
-1. Create a PostgreSQL database
-2. Update `DATABASE_URL` in your backend `.env`
-3. Run migrations:
-
-```bash
-pnpm database run db:deploy
-```
-
-## SSL/TLS
-
-For production, always use HTTPS. You can use:
-
-- **Let's Encrypt** with Certbot
-- **Cloudflare** for SSL termination
-- Your hosting provider's SSL certificates
-
-## Monitoring
-
-Consider setting up:
-
-- **Health checks** for your API
-- **Log aggregation** (e.g., with ELK stack)
-- **Error tracking** (e.g., Sentry)
-- **Uptime monitoring** (e.g., UptimeRobot)
-
-## Backup Strategy
-
-Regularly backup:
-
-- **Database** - Use PostgreSQL's `pg_dump`
-- **User uploads** - If you store files locally
-- **Configuration** - Keep your `.env` files secure
-
-## Security Best Practices
-
-- Use strong passwords for database and JWT secret
-- Keep dependencies updated
-- Use environment variables for secrets
-- Enable rate limiting
-- Set up firewall rules
-- Regular security audits
+Back up the PostgreSQL database regularly, for example with `pg_dump`, and keep your `.env` somewhere safe: losing `HASH_PEPPER` means no existing password can be verified.
 
 ## Troubleshooting
 
-### Database Connection
+**The API container keeps restarting.** Run `docker compose logs api`: the API lists every invalid or missing variable at startup.
 
-Ensure your database is accessible from your application server and firewall rules allow connections.
+**CORS errors in the browser.** `CORS_ORIGINS` must contain the exact URL users open, including the scheme and port.
 
-### CORS Issues
+**Links in emails point to the wrong host.** Set `APP_URL` to the public URL of the web app.
 
-Make sure your frontend URL is whitelisted in the backend CORS configuration.
+**The web app calls the wrong API URL.** `API_PUBLIC_URL` is built into the web app: rebuild it with `docker compose up -d --build` after changing it.
 
-### Build Errors
-
-Ensure you're using the correct Node.js version (v22.14.0) and all dependencies are installed.
-
-## Next Steps
+## Next steps
 
 - [Architecture Overview](/docs/architecture/overview) - Understand the system
 - [API Reference](/docs/api) - Integrate with your instance

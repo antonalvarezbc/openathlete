@@ -3,6 +3,12 @@ import { z } from 'zod';
 import { ENV } from '../environment.enum';
 import { NODE_ENV } from '../node-environment.enum';
 
+// Secrets that were shipped as defaults in docker-compose.yml. Instances
+// must not run with them since they are public.
+const PUBLIC_JWT_SECRETS = [
+  'dev-jwt-secret-key-change-in-production-min-32-chars-long',
+];
+
 /**
  * Environment variable validation schema for the API application.
  * This schema ensures all required environment variables are present and valid
@@ -54,6 +60,10 @@ export const ApiEnvSchema = z
         32,
         'JWT_SECRET_KEY must be at least 32 characters long for security',
       )
+      .refine((value) => !PUBLIC_JWT_SECRETS.includes(value), {
+        message:
+          'JWT_SECRET_KEY is a publicly known default: anyone could forge sessions. Generate one with `openssl rand -base64 48`',
+      })
       .describe('Secret key used to sign and verify JWT tokens'),
 
     // Database
