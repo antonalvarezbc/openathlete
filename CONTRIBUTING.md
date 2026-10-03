@@ -121,7 +121,7 @@ There are many ways to contribute to OpenAthlete, and not all of them require wr
 
 Before you begin, ensure you have the following installed:
 
-- **Node.js** v22.14.0 (we recommend using [nvm](https://github.com/nvm-sh/nvm) for version management)
+- **Node.js** v22 (version in `.nvmrc`; we recommend using [nvm](https://github.com/nvm-sh/nvm) for version management)
 - **pnpm** v9.x or higher ([installation guide](https://pnpm.io/installation))
 - **PostgreSQL** v13.x or higher
 - **Git** (latest version recommended)
