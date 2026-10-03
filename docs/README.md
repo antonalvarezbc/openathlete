@@ -28,6 +28,7 @@ explicitly; they are not evidence that a live provider currently works.
 - [Official provider configuration](provider-configuration.md)
 - [AI providers: OpenAI, Google and Claude](ai-providers.md)
 - [Coach AI memory per athlete](ai-memory.md)
+- [AI data tools and MCP server](mcp.md)
 - [Manual FIT import and GPS handling](manual-fit-import.md)
 - [Spanish localization and four-locale maintenance](spanish-localization.md)
 
