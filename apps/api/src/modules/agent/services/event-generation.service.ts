@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { trainingEventSchema } from '@openathlete/shared';
 
 import { eventGenerationAgent } from 'src/mastra/agents';
+import { toMastraSchema } from 'src/mastra/config/structured-output';
 import { TrainingLoadService } from 'src/modules/core/services/training-load.service';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
@@ -69,7 +70,7 @@ ${buildWorkoutTargetsInstructions()}`;
       const result = await eventGenerationAgent.generate(fullPrompt, {
         runtimeContext,
         structuredOutput: {
-          schema: trainingEventSchema,
+          schema: toMastraSchema(trainingEventSchema),
         },
       });
 

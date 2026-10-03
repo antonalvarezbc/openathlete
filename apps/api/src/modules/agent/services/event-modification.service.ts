@@ -7,6 +7,7 @@ import {
 } from '@openathlete/shared';
 
 import { eventModificationAgent } from 'src/mastra/agents';
+import { toMastraSchema } from 'src/mastra/config/structured-output';
 import { TrainingLoadService } from 'src/modules/core/services/training-load.service';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
@@ -191,7 +192,7 @@ IMPORTANT: This is a FULL UPDATE. Return the complete event structure with all f
       const result = await eventModificationAgent.generate(fullPrompt, {
         runtimeContext,
         structuredOutput: {
-          schema: trainingEventSchema,
+          schema: toMastraSchema(trainingEventSchema),
         },
       });
 
