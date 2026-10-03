@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -18,17 +19,30 @@ import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
 @Injectable()
 export class ActivityFeedbackService {
-  private readonly openai: OpenAI;
+  private openaiClient: OpenAI | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly abilities: CaslAbilityFactory,
     private readonly eventEmitter: EventEmitter2,
     private readonly configService: ConfigService<ApiEnvSchemaType, true>,
-  ) {
-    this.openai = new OpenAI({
-      apiKey: this.configService.get('OPENAI_API_KEY') ?? '',
-    });
+  ) {}
+
+  /**
+   * OpenAI is optional (self-hosted instances may run without it), so the
+   * client is only created when audio transcription is actually used.
+   */
+  private get openai(): OpenAI {
+    if (!this.openaiClient) {
+      const apiKey = this.configService.get('OPENAI_API_KEY');
+      if (!apiKey) {
+        throw new ServiceUnavailableException(
+          'Audio transcription is not configured on this instance',
+        );
+      }
+      this.openaiClient = new OpenAI({ apiKey });
+    }
+    return this.openaiClient;
   }
 
   async getActivityFeedbackQuestions(user: AuthUser, eventActivityId: number) {
