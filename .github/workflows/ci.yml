@@ -45,13 +45,32 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm -r --no-bail --aggregate-output test
 
+  docs:
+    # apps/docs is a standalone pnpm project with its own lockfile
+    name: Docs
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/docs
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+          cache-dependency-path: apps/docs/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm types:check
+      - run: pnpm build
+
   build:
     name: Build (${{ matrix.app }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        app: [api, web]
+        app: [api, web, website]
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup
