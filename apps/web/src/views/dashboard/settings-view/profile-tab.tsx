@@ -17,6 +17,7 @@ import { z } from 'zod';
 
 import { updateAccountDtoSchema } from '@openathlete/shared';
 
+import { AccessTokensCard } from './access-tokens-card';
 import { SettingsSection } from './settings-section';
 
 export function ProfileTab() {
@@ -110,6 +111,7 @@ export function ProfileTab() {
         athlete?.athleteId && (
           <SessionValidationSettingsCard athleteId={athlete.athleteId} />
         )}
+      <AccessTokensCard />
       <SettingsSection
         title={m.delete_account()}
         description={m.delete_account_description()}

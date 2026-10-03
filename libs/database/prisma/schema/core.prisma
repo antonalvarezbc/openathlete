@@ -50,6 +50,7 @@ model User {
   activityAlertSettings     CoachActivityAlertSettings[]
   activityChatNotices        ActivityChatNotice[]
   activityAnalyses          CoachActivityAnalysis[]
+  personalAccessTokens      PersonalAccessToken[]
   subscription              Subscription?
 
   // timestamps
