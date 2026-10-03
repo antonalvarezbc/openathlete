@@ -1,8 +1,10 @@
 import { z } from 'zod';
 
+import { existingPasswordSchema } from './password';
+
 export const loginDtoSchema = z.object({
   email: z.string().email(),
-  password: z.string(),
+  password: existingPasswordSchema,
 });
 
 export type LoginDto = z.infer<typeof loginDtoSchema>;

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useAuthContext } from '@/contexts/auth';
 import { m } from '@/paraglide/messages';
 import { getPath } from '@/routes/paths';
+import { localizedNewPasswordSchema } from '@/utils/password';
 import { cn } from '@/utils/shadcn';
 import { OAuthButtons } from '@/views/auth/oauth-buttons';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -30,7 +31,9 @@ export function CreateAccountView({ className }: React.ComponentProps<'form'>) {
   const [invitationEmail, setInvitationEmail] = useState<string | null>(null);
   const [isVerifyingInvitation, setIsVerifyingInvitation] = useState(false);
   const methods = useForm<z.infer<typeof createAccountDtoSchema>>({
-    resolver: zodResolver(createAccountDtoSchema),
+    resolver: zodResolver(
+      createAccountDtoSchema.extend({ password: localizedNewPasswordSchema() }),
+    ),
     defaultValues: {
       email: '',
       password: '',
