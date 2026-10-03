@@ -83,7 +83,7 @@ Claude Desktop (`claude_desktop_config.json`):
 ```
 
 The settings card shows the Claude Code command with your API URL and token
-filled in. Then ask, for example: "How was last week's training for Olaia?"
+filled in. Then ask, for example: "How was last week's training for the athlete?"
 
 Athlete-written names, comments and feedback are returned as data; the server
 instructions tell the model never to treat them as instructions.
