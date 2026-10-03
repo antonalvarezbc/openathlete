@@ -113,8 +113,7 @@ export function TemplateLibrarySidebar() {
 
       // Handle calendar event being dropped to create a template
       const calendarEventData = active.data.current as
-        | { type: 'event'; event: { eventId: number; name: string } }
-        | undefined;
+        { type: 'event'; event: { eventId: number; name: string } } | undefined;
       if (calendarEventData?.type === 'event' && calendarEventData.event) {
         let targetFolderId: number | null = null;
 

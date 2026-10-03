@@ -457,8 +457,7 @@ export function Calendar({
 
         // Get the template from the drag data for optimistic update
         const activeData = e.active.data.current as
-          | { type: string; template?: EventTemplate }
-          | undefined;
+          { type: string; template?: EventTemplate } | undefined;
         const template = activeData?.template;
 
         // Calculate start and end dates based on the template's default duration

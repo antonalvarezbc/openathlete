@@ -113,10 +113,7 @@ export type ActivityEvent = Omit<
   };
 
 export type Event =
-  | TrainingEvent
-  | CompetitionEvent
-  | NoteEvent
-  | ActivityEvent;
+  TrainingEvent | CompetitionEvent | NoteEvent | ActivityEvent;
 
 export interface EventTemplate extends PrismaEventTemplate {
   event?: Event;

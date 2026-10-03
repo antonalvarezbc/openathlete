@@ -22,11 +22,9 @@ type FirebaseWebConfig = {
 function getFirebaseWebConfig(): FirebaseWebConfig {
   const apiKey = import.meta.env.VITE_FIREBASE_API_KEY as string | undefined;
   const authDomain = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as
-    | string
-    | undefined;
+    string | undefined;
   const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID as
-    | string
-    | undefined;
+    string | undefined;
   const appId = import.meta.env.VITE_FIREBASE_APP_ID as string | undefined;
 
   if (!apiKey || !authDomain || !projectId || !appId) {

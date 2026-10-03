@@ -1237,11 +1237,7 @@ export class TrainingLoadService {
       const acwrResult = this.calculateACWRFromWeeklyLoads(weeklyLoadsForACWR);
       let acwr: number | undefined;
       let acwrStatus:
-        | 'safe'
-        | 'optimal'
-        | 'moderate_risk'
-        | 'high_risk'
-        | undefined;
+        'safe' | 'optimal' | 'moderate_risk' | 'high_risk' | undefined;
 
       if (acwrResult) {
         acwr = acwrResult.acwr;

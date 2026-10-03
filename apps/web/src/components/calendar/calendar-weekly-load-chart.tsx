@@ -163,8 +163,7 @@ export function CalendarWeeklyLoadChart({
                         return '';
                       }
                       const datum = payload[0]?.payload as
-                        | ChartWeekRow
-                        | undefined;
+                        ChartWeekRow | undefined;
                       if (!datum) {
                         return '';
                       }

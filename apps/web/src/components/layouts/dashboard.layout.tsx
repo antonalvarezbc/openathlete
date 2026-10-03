@@ -109,8 +109,7 @@ function LayoutContent({ children }: P) {
 
     // Calendar event being dragged
     const eventData = activeItem.data.current as
-      | { type: 'event'; event: Event }
-      | undefined;
+      { type: 'event'; event: Event } | undefined;
     if (eventData?.type === 'event' && eventData.event) {
       const event = eventData.event;
       const isTrainingOrCompetition =

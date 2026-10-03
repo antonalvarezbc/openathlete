@@ -222,10 +222,7 @@ export class ActivityFeedbackExtractionListener {
             ];
             const status = validStatuses.includes(injury.status)
               ? (injury.status as
-                  | 'WORSENING'
-                  | 'IMPROVING'
-                  | 'STABLE'
-                  | 'RESOLVED')
+                  'WORSENING' | 'IMPROVING' | 'STABLE' | 'RESOLVED')
               : 'STABLE';
 
             await tx.athleteInjury.create({

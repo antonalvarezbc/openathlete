@@ -51,13 +51,7 @@ function scanRoutes(
 function getRouteMetadata(path: string): {
   priority: number;
   changeFrequency:
-    | 'always'
-    | 'hourly'
-    | 'daily'
-    | 'weekly'
-    | 'monthly'
-    | 'yearly'
-    | 'never';
+    'always' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'never';
 } {
   // Homepage
   if (path === '/') {

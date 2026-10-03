@@ -14,11 +14,10 @@ const surfaceClass: Record<SectionSurface, string> = {
     'relative overflow-hidden border-y border-border/30 bg-gradient-to-b from-background via-muted/12 to-muted/20',
 };
 
-interface SectionProps
-  extends Omit<
-    HTMLMotionProps<'section'>,
-    'initial' | 'whileInView' | 'viewport' | 'transition'
-  > {
+interface SectionProps extends Omit<
+  HTMLMotionProps<'section'>,
+  'initial' | 'whileInView' | 'viewport' | 'transition'
+> {
   children: React.ReactNode;
   className?: string;
   animateOnScroll?: boolean;
