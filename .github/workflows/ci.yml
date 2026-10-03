@@ -30,6 +30,21 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm -r --parallel --no-bail --aggregate-output tsc:check
 
+  test:
+    name: Test (TZ=${{ matrix.tz }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Date bucketing must not depend on the runtime timezone
+        tz: [UTC, America/New_York, Asia/Tokyo]
+    env:
+      TZ: ${{ matrix.tz }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: pnpm -r --no-bail --aggregate-output test
+
   build:
     name: Build (${{ matrix.app }})
     runs-on: ubuntu-latest

@@ -21,6 +21,7 @@
     "format": "pnpm --parallel --aggregate-output format",
     "lint": "pnpm --parallel --aggregate-output lint",
     "tsc:check": "pnpm --parallel --aggregate-output tsc:check",
+    "test": "pnpm -r --aggregate-output test",
     "dev": "pnpm --parallel --aggregate-output dev",
     "find:untranslated": "node scripts/find-untranslated.js",
     "check:locale-parity": "node scripts/check-locale-parity.js",
