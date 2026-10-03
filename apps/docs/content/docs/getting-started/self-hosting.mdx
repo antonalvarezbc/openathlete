@@ -47,6 +47,15 @@ The web app listens on port 80 and the API on port 3000 (change them with `WEB_P
 
 Database migrations run automatically when the API starts. The first account you create is a regular account; there is no default admin.
 
+### Prebuilt images
+
+Each release publishes multi-architecture images (amd64 and arm64) to GitHub Container Registry:
+
+- `ghcr.io/openathleteorg/openathlete-api`
+- `ghcr.io/openathleteorg/openathlete-web`
+
+They take the same variables as the Compose setup; the web image reads `API_PUBLIC_URL` when it starts. Pin a version tag (for example `1.2.3` or `1.2`) rather than `latest` to control upgrades.
+
 ### Optional features
 
 Leave a variable empty to disable the feature:

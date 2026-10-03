@@ -64,6 +64,25 @@ jobs:
       - run: pnpm types:check
       - run: pnpm build
 
+  docker:
+    # Same Dockerfiles as releases and production, built without pushing
+    name: Docker image (${{ matrix.image }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [api, web]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/${{ matrix.image }}/Dockerfile
+          push: false
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
   build:
     name: Build (${{ matrix.app }})
     runs-on: ubuntu-latest
