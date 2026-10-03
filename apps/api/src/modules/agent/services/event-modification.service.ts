@@ -1,14 +1,8 @@
 import { Injectable } from '@nestjs/common';
 
-import {
-  WorkoutStepDto,
-  WorkoutStepTarget,
-  trainingEventSchema,
-} from '@openathlete/shared';
+import { WorkoutStepDto, WorkoutStepTarget } from '@openathlete/shared';
 
 import { eventModificationAgent } from 'src/mastra/agents';
-import { toMastraSchema } from 'src/mastra/config/structured-output';
-import { TrainingLoadService } from 'src/modules/core/services/training-load.service';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
 import {
@@ -18,12 +12,12 @@ import {
   buildZonesContext,
   convertWorkoutPaceTargetsToMinPerKm,
   convertWorkoutPaceTargetsToMs,
-  createRuntimeContext,
   createZoneIdMap,
   fetchAthleteMetrics,
   fetchAthleteZones,
   formatZonesByType,
   getLatestMetrics,
+  trainingEventOutputOptions,
   validateNoNestedRepeatBlocks,
   validateWorkoutZoneTargets,
   withRetry,
@@ -31,10 +25,7 @@ import {
 
 @Injectable()
 export class EventModificationService {
-  constructor(
-    private readonly prismaService: PrismaService,
-    private readonly trainingLoadService: TrainingLoadService,
-  ) {}
+  constructor(private readonly prismaService: PrismaService) {}
 
   async modifyTrainingEvent(
     prompt: string,
@@ -179,22 +170,13 @@ ${buildWorkoutTargetsInstructions()}
 
 IMPORTANT: This is a FULL UPDATE. Return the complete event structure with all fields and all workout steps.`;
 
-    const runtimeContext = createRuntimeContext(
-      this.prismaService,
-      athleteId,
-      this.trainingLoadService,
-      undefined, // existingEventContext is only used for JSON stringification in prompt, not for runtime context
-    );
-
     const zoneIdMap = createZoneIdMap(zones);
 
     const response = await withRetry(async () => {
-      const result = await eventModificationAgent.generate(fullPrompt, {
-        runtimeContext,
-        structuredOutput: {
-          schema: toMastraSchema(trainingEventSchema),
-        },
-      });
+      const result = await eventModificationAgent.generate(
+        fullPrompt,
+        trainingEventOutputOptions,
+      );
 
       if (!result.object) {
         throw new Error(

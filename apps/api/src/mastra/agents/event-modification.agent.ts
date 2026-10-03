@@ -3,6 +3,7 @@ import { Agent } from '@mastra/core/agent';
 import { EVENT_MODIFICATION_MODEL } from 'src/common/constants/ai-models.constant';
 
 export const eventModificationAgent = new Agent({
+  id: 'event-modification',
   name: 'event-modification',
   description:
     'Modifies existing training events based on natural language prompts, preserving the event structure while updating specific aspects.',

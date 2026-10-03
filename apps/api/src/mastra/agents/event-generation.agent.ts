@@ -3,6 +3,7 @@ import { Agent } from '@mastra/core/agent';
 import { EVENT_GENERATION_MODEL } from 'src/common/constants/ai-models.constant';
 
 export const eventGenerationAgent = new Agent({
+  id: 'event-generation',
   name: 'event-generation',
   description:
     'Generates complete training events with structured workouts from natural language prompts.',

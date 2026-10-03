@@ -15,17 +15,15 @@
     "format": "prettier --check \"src/**/*.ts\"",
     "lint": "eslint \"src/**/*.ts\" --max-warnings 0",
     "tsc:check": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest",
+    "test:agents": "node --test test/agents.test.cjs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.133",
     "@casl/ability": "^6.8.1",
     "@casl/prisma": "^1.6.2",
     "@garmin/fitsdk": "21.178.0",
-    "@mastra/core": "^0.21.1",
-    "@mastra/loggers": "^0.10.19",
-    "@mastra/memory": "^0.15.13",
-    "@mastra/pg": "^0.17.10",
+    "@mastra/core": "^1.74.0",
     "@nestjs/bull": "^11.0.5",
     "@nestjs/bullmq": "^11.0.5",
     "@nestjs/common": "^11.2.7",

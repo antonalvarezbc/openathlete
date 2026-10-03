@@ -47,12 +47,6 @@ export const POST_ACTIVITY_FEEDBACK_MODEL =
   process.env.AI_MODEL_POST_ACTIVITY_FEEDBACK || 'google/gemini-3-pro-preview';
 
 /**
- * Model for QnA agent
- * Fallback: 'gpt-4o' (standard OpenAI model)
- */
-export const QNA_MODEL = process.env.AI_MODEL_QNA || 'openai/gpt-4o';
-
-/**
  * Model for TRIMP estimation agent
  * Fallback: 'gpt-4o' (standard OpenAI model)
  */

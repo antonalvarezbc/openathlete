@@ -257,10 +257,6 @@ export const ApiEnvSchema = z
       .describe(
         'AI model for post-activity feedback agent (e.g., google/gemini-2.0-flash-exp, google/gemini-3-pro-preview)',
       ),
-    AI_MODEL_QNA: z
-      .string()
-      .optional()
-      .describe('AI model for QnA agent (e.g., gpt-4o)'),
     AI_MODEL_TRIMP_ESTIMATION: z
       .string()
       .optional()

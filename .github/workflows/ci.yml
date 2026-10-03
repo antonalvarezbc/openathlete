@@ -94,3 +94,6 @@ jobs:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - run: pnpm ${{ matrix.app }} build
+      - name: Test AI agents against a fake OpenAI API
+        if: matrix.app == 'api'
+        run: pnpm api test:agents

@@ -40,6 +40,8 @@ FROM node:22.23.3-alpine AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production
+# Mastra (AI agents) ships anonymous usage telemetry; keep it off
+ENV MASTRA_TELEMETRY_DISABLED=1
 
 RUN apk add --no-cache wget openssl libc6-compat su-exec \
   && corepack enable && corepack prepare pnpm@9.15.9 --activate \

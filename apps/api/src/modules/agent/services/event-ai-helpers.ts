@@ -1,4 +1,3 @@
-import { RuntimeContext } from '@mastra/core/runtime-context';
 import { z } from 'zod';
 
 import { AthleteMetric, TrainingZoneType } from '@openathlete/database';
@@ -10,10 +9,21 @@ import {
   trainingEventSchema,
 } from '@openathlete/shared';
 
-import { TrainingLoadService } from 'src/modules/core/services/training-load.service';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
 export type TrainingEventSchema = z.infer<typeof trainingEventSchema>;
+
+/**
+ * Generate options for agents that return a training event.
+ *
+ * OpenAI strict structured outputs reject this schema (recursive repeat
+ * blocks, optional fields), so the JSON schema is only a guide for the model
+ * and Mastra validates the response against the zod schema.
+ */
+export const trainingEventOutputOptions = {
+  structuredOutput: { schema: trainingEventSchema },
+  providerOptions: { openai: { strictJsonSchema: false } },
+};
 
 // Types for zones and metrics
 type Zone = {
@@ -419,26 +429,6 @@ export function validateNoNestedRepeatBlocks(
   };
 
   workout.steps.forEach((step) => checkStep(step));
-}
-
-/**
- * Create runtime context for AI agents
- */
-export function createRuntimeContext(
-  prismaService: PrismaService,
-  athleteId: number,
-  trainingLoadService: TrainingLoadService,
-  existingEvent?: Event,
-): RuntimeContext {
-  const runtimeContext = new RuntimeContext();
-  runtimeContext.set('prisma', prismaService);
-  runtimeContext.set('athleteId', athleteId);
-  runtimeContext.set('trainingLoadService', trainingLoadService);
-  runtimeContext.set('currentDate', new Date().toISOString());
-  if (existingEvent) {
-    runtimeContext.set('existingEvent', existingEvent);
-  }
-  return runtimeContext;
 }
 
 /**

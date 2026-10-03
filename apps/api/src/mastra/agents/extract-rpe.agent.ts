@@ -3,6 +3,7 @@ import { Agent } from '@mastra/core/agent';
 import { EXTRACT_RPE_MODEL } from 'src/common/constants/ai-models.constant';
 
 export const extractRpeAgent = new Agent({
+  id: 'extract-rpe',
   name: 'extract-rpe',
   description:
     'Extracts RPE (Rate of Perceived Exertion) from athlete feedback. Uses scientific RPE scale (0-10) and converts to 0-1 scale.',
