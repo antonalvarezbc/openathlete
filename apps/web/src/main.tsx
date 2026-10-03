@@ -9,6 +9,7 @@ import { loadAnalyticsScripts } from './utils/analytics';
 import { isCapacitor } from './utils/capacitor';
 import { initChunkLoadRecovery } from './utils/chunk-recovery';
 import { initErrorMonitoring } from './utils/error-monitoring';
+import { initPwa } from './utils/pwa';
 import { initStatusBar } from './utils/status-bar';
 
 posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN, {
@@ -32,6 +33,7 @@ initErrorMonitoring();
 loadAnalyticsScripts();
 initStatusBar();
 initChunkLoadRecovery();
+initPwa();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

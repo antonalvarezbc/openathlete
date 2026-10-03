@@ -1556,5 +1556,8 @@
   "access_token_revoke": "Revocar",
   "access_token_revoke_confirm": "¿Revocar el token «{name}»? Los asistentes que lo usen perderán el acceso de inmediato.",
   "access_token_revoked": "Token revocado",
-  "access_tokens_empty": "No hay tokens activos."
+  "access_tokens_empty": "No hay tokens activos.",
+  "pwa_install": "Instalar app",
+  "pwa_install_title": "Instalar OpenAthlete",
+  "pwa_install_ios_steps": "Pulsa el botón Compartir del navegador y elige «Añadir a pantalla de inicio». Después OpenAthlete se abrirá a pantalla completa desde su icono, como una app."
 }

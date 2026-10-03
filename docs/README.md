@@ -52,6 +52,7 @@ explicitly; they are not evidence that a live provider currently works.
 ### Navigation and communication
 
 - [Mobile navigation and collapsed coach sidebar](mobile-navigation.md)
+- [Installable web app (PWA)](pwa.md)
 - [Activity notifications in coach chats](coach-activity-chat-notifications.md)
 - [Search within one chat or all chats](chat-message-search.md)
 

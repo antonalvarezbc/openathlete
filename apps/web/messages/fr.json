@@ -1556,5 +1556,8 @@
   "access_token_revoke": "Révoquer",
   "access_token_revoke_confirm": "Révoquer le jeton « {name} » ? Les assistants qui l’utilisent perdront l’accès immédiatement.",
   "access_token_revoked": "Jeton révoqué",
-  "access_tokens_empty": "Aucun jeton actif."
+  "access_tokens_empty": "Aucun jeton actif.",
+  "pwa_install": "Installer l'application",
+  "pwa_install_title": "Installer OpenAthlete",
+  "pwa_install_ios_steps": "Touchez le bouton Partager du navigateur puis choisissez « Sur l'écran d'accueil ». OpenAthlete s'ouvrira ensuite en plein écran depuis son icône, comme une application."
 }
