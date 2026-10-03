@@ -2,9 +2,15 @@ version: 2
 
 # Security updates are always raised individually. Version updates are
 # grouped weekly so they arrive as a few reviewable PRs instead of dozens.
+# Major versions are left out of version updates: they need a planned
+# migration (Nest, Capacitor, Prisma, Mastra...), not an automatic PR.
 updates:
   - package-ecosystem: npm
     directory: /
+    # Standalone projects with their own lockfile or package manager
+    exclude-paths:
+      - apps/docs/**
+      - apps/firebase-functions/**
     schedule:
       interval: weekly
       day: monday
@@ -13,6 +19,8 @@ updates:
       minor-and-patch:
         update-types: [minor, patch]
     ignore:
+      - dependency-name: '*'
+        update-types: [version-update:semver-major]
       # Stripe SDK versions pin a Stripe API version: upgrade deliberately
       - dependency-name: stripe
         update-types: [version-update:semver-minor, version-update:semver-major]
@@ -26,6 +34,9 @@ updates:
     groups:
       docs:
         update-types: [minor, patch]
+    ignore:
+      - dependency-name: '*'
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: docker
     directories: [/apps/api, /apps/web]
@@ -35,6 +46,10 @@ updates:
     groups:
       base-images:
         patterns: ['*']
+    ignore:
+      # Stay on the Node.js LTS line used by .nvmrc; move majors deliberately
+      - dependency-name: node
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: github-actions
     directory: /
