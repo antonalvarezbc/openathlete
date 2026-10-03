@@ -160,6 +160,7 @@ import { WeekPlanningService } from './services/week-planning.service';
     TrainingPlanService,
     CycleService,
     ActivityFileParserService,
+    WeekPlanningService,
   ],
 })
 export class CoreModule {}

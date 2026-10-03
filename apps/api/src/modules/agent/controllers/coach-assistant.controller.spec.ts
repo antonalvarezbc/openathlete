@@ -9,6 +9,12 @@ import { CoachAssistantController } from './coach-assistant.controller';
 jest.mock('../../../mastra/agents/coach-assistant.agent', () => ({
   coachAssistantAgent: { generate: jest.fn() },
 }));
+jest.mock('../../../mastra/tools/openathlete-data.tools', () => ({
+  aiToolsRuntimeContext: jest.fn(),
+}));
+jest.mock('../../ai-tools/ai-tools.service', () => ({
+  AiToolsService: class {},
+}));
 jest.mock('../../../mastra/agents/plan-adaptation.agent', () => ({
   planAdaptationAgent: { generate: jest.fn() },
 }));

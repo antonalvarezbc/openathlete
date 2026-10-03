@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { AiMemoryModule } from '../ai-memory/ai-memory.module';
+import { AiToolsModule } from '../ai-tools/ai-tools.module';
 import { AuthModule } from '../auth';
 import { CoreModule } from '../core/core.module';
 import { PrismaService } from '../prisma/services/prisma.service';
@@ -19,6 +20,7 @@ import { PlanAdaptationService } from './services/plan-adaptation.service';
 @Module({
   imports: [
     AiMemoryModule,
+    AiToolsModule,
     AuthModule,
     CoreModule,
     SubscriptionModule,

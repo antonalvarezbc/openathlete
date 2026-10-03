@@ -6,7 +6,9 @@ import {
 } from '@openathlete/shared';
 
 import { coachAssistantAgent } from '../../../mastra/agents/coach-assistant.agent';
+import { aiToolsRuntimeContext } from '../../../mastra/tools/openathlete-data.tools';
 import { AiMemoryService } from '../../ai-memory/ai-memory.service';
+import { AiToolsService } from '../../ai-tools/ai-tools.service';
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PlanAdaptationService } from './plan-adaptation.service';
 
@@ -15,6 +17,7 @@ export class CoachAssistantService {
   constructor(
     private readonly adaptation: PlanAdaptationService,
     private readonly memory: AiMemoryService,
+    private readonly tools: AiToolsService,
   ) {}
 
   async context(user: AuthUser, input: CoachAssistantContextRequest) {
@@ -57,6 +60,11 @@ export class CoachAssistantService {
           history,
           question,
         }),
+        {
+          // Read-only data tools act as this user (same access checks as the API).
+          runtimeContext: aiToolsRuntimeContext(this.tools, user),
+          maxSteps: 6,
+        },
       );
       const reply = result.text?.trim();
       if (!reply || reply.length > 8000)
