@@ -15,11 +15,10 @@ async function bootstrap() {
     rawBody: true,
   });
 
-  // Security headers. CSP is left to the web app; the API serves JSON and
-  // the Swagger UI, which needs inline scripts.
+  // Security headers. Helmet's default CSP fits the JSON API and the Swagger
+  // UI at /docs, whose scripts are all served from the API itself.
   app.use(
     helmet({
-      contentSecurityPolicy: false,
       crossOriginResourcePolicy: { policy: 'cross-origin' },
     }),
   );
