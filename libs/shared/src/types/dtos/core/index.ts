@@ -26,3 +26,4 @@ export * from './plan-workspace.dto';
 export * from './installation-features.dto';
 export * from './week-planning.dto';
 export * from './access-token.dto';
+export * from './manual-garmin-workout.dto';

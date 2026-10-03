@@ -55,9 +55,11 @@ scripts/garmin-probe/.venv/bin/python -m unittest discover -s scripts/garmin-pro
 ## Alcance pendiente
 
 El diagnóstico por sí solo no importa datos en OA. El conector manual descrito
-a continuación añade esa importación. No hay sincronización programada,
-exportación al reloj ni integración IA. La dependencia está fijada; el protocolo
-no oficial puede cambiar.
+a continuación añade esa importación. `export_workout.py` envía sesiones
+planificadas al calendario de Garmin Connect, siempre por acción explícita desde
+OA (ver `docs/account-modes-and-manual-garmin.md`). No hay sincronización
+programada ni integración IA. La dependencia está fijada; el protocolo no oficial
+puede cambiar.
 
 Fuentes: https://github.com/cyberjunky/python-garminconnect y
 https://pypi.org/project/garminconnect/0.3.15/.

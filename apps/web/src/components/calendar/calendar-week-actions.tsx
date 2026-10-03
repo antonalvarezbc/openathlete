@@ -1,4 +1,10 @@
 import {
+  garminRequestErrorText,
+  garminWorkoutErrorText,
+  useManualGarminConnected,
+  useSendToGarminMutation,
+} from '@/api/provider/manual-garmin-workouts.hooks';
+import {
   useCopyEventsMutation,
   useDeleteEventsMutation,
   useMoveEventsMutation,
@@ -6,18 +12,24 @@ import {
 import { m } from '@/paraglide/messages';
 import { getLocale } from '@/paraglide/runtime';
 import { getDateLocale } from '@/utils/locales';
-import { addDays, format, isValid, parseISO } from 'date-fns';
+import { addDays, format, isValid, parseISO, startOfDay } from 'date-fns';
 import {
   ClipboardPaste,
   Copy,
   MoreHorizontal,
   MoveRight,
   Trash2,
+  Watch,
 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { Event, EventBatchResult } from '@openathlete/shared';
+import {
+  EVENT_TYPE,
+  Event,
+  EventBatchResult,
+  MANUAL_GARMIN_WORKOUT_BATCH,
+} from '@openathlete/shared';
 
 import { ConfirmAction } from '../confirm-action';
 import { Button } from '../ui/button';
@@ -82,6 +94,7 @@ export function CalendarWeekActions({ weekEvents }: P) {
   const copyMutation = useCopyEventsMutation();
   const moveMutation = useMoveEventsMutation();
   const deleteMutation = useDeleteEventsMutation();
+  const garminMutation = useSendToGarminMutation();
   const [confirmClear, setConfirmClear] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const [moveTarget, setMoveTarget] = useState(() =>
@@ -90,7 +103,21 @@ export function CalendarWeekActions({ weekEvents }: P) {
   const busy =
     copyMutation.isPending ||
     moveMutation.isPending ||
-    deleteMutation.isPending;
+    deleteMutation.isPending ||
+    garminMutation.isPending;
+
+  const today = startOfDay(new Date());
+  const garminSessions = weekEvents
+    .filter(
+      (event) =>
+        event.type === EVENT_TYPE.TRAINING &&
+        event.athleteId &&
+        new Date(event.startDate) >= today,
+    )
+    .slice(0, MANUAL_GARMIN_WORKOUT_BATCH);
+  const garminAthleteId =
+    weekEvents.find((event) => event.athleteId)?.athleteId ?? undefined;
+  const garminConnected = useManualGarminConnected(garminAthleteId);
 
   const copyable = weekEvents.filter(isCopyable);
   const movable = weekEvents.filter(isMovable);
@@ -147,6 +174,35 @@ export function CalendarWeekActions({ weekEvents }: P) {
     );
   };
 
+  const sendWeekToGarmin = () => {
+    if (!garminSessions.length) {
+      toast.info(m.garmin_week_nothing());
+      return;
+    }
+    garminMutation.mutate(
+      {
+        athleteId: garminAthleteId,
+        eventIds: garminSessions.map((event) => event.eventId),
+      },
+      {
+        onSuccess: (results) => {
+          const sent = results.filter((result) => result.ok);
+          const failed = results.filter((result) => !result.ok);
+          if (sent.length)
+            toast.success(m.garmin_week_sent({ count: sent.length }));
+          if (failed.length)
+            toast.error(
+              m.garmin_week_partial({
+                count: failed.length,
+                reason: garminWorkoutErrorText(failed[0].code),
+              }),
+            );
+        },
+        onError: (failure) => toast.error(garminRequestErrorText(failure)),
+      },
+    );
+  };
+
   const clearWeek = () =>
     deleteMutation.mutate(
       { eventIds: movable.map((event) => event.eventId) },
@@ -195,6 +251,12 @@ export function CalendarWeekActions({ weekEvents }: P) {
             <MoveRight className="size-4" />
             {m.week_move()}
           </DropdownMenuItem>
+          {garminConnected && (
+            <DropdownMenuItem onSelect={sendWeekToGarmin}>
+              <Watch className="size-4" />
+              {m.garmin_week_send()}
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem
             variant="destructive"
             disabled={!movable.length}

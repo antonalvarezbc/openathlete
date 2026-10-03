@@ -1,5 +1,6 @@
 import { useDeleteEventMutation, useDuplicateEventMutation } from '@/api/event';
 import { useCreateEventTemplateMutation } from '@/api/event-template';
+import { useManualGarminWorkoutsQuery } from '@/api/provider/manual-garmin-workouts.hooks';
 import { useUserRoles } from '@/contexts/auth';
 import { useIsEventValidated } from '@/hooks/use-event-validation';
 import { m } from '@/paraglide/messages';
@@ -150,6 +151,12 @@ export function CalendarEvent({ event, wrapped, detailed }: P) {
     weekOverview,
   } = useCalendarContext();
   const [deleteEventDialog, setDeleteEventDialog] = useState<boolean>(false);
+  // Deleting here never touches Garmin; warn when a copy was sent there.
+  const garminCopy = useManualGarminWorkoutsQuery(
+    event.athleteId ?? undefined,
+    [event.eventId],
+    deleteEventDialog && event.type === EVENT_TYPE.TRAINING,
+  );
   const deleteEventMutation = useDeleteEventMutation({
     onSuccess: () => {
       posthog?.capture(AnalyticsEvent.event_deleted, {
@@ -397,7 +404,11 @@ export function CalendarEvent({ event, wrapped, detailed }: P) {
           setDeleteEventDialog(false);
         }}
         title={m.delete_event()}
-        message={m.confirm_delete_event()}
+        message={
+          garminCopy.data?.length
+            ? `${m.confirm_delete_event()} ${m.garmin_workout_delete_note()}`
+            : m.confirm_delete_event()
+        }
         isLoading={deleteEventMutation.isPending}
       />
     </>

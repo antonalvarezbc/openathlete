@@ -4,7 +4,10 @@ import { z } from 'zod';
 import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 
+import { manualGarminWorkoutsSchema } from '@openathlete/shared';
+
 import { AuthUser, JwtUser } from '../../auth/decorators/user.decorator';
+import { ManualGarminWorkoutsService } from './manual-garmin-workouts.service';
 import { ManualGarminService } from './manual-garmin.service';
 
 const targetSchema = z
@@ -42,10 +45,24 @@ const loginSchema = z
       : !!value.email && !!value.password,
   );
 
+const workoutStatesSchema = z
+  .object({
+    athleteId: z.coerce.number().int().positive().optional(),
+    eventIds: z
+      .string()
+      .regex(/^\d+(,\d+)*$/)
+      .transform((value) => [...new Set(value.split(',').map(Number))])
+      .pipe(z.array(z.number().int().positive()).max(50)),
+  })
+  .strict();
+
 @Controller('provider/garmin-manual')
 @UseGuards(AuthGuard('jwt'))
 export class ManualGarminController {
-  constructor(private readonly service: ManualGarminService) {}
+  constructor(
+    private readonly service: ManualGarminService,
+    private readonly workouts: ManualGarminWorkoutsService,
+  ) {}
 
   @Get('status')
   status(
@@ -90,5 +107,33 @@ export class ManualGarminController {
     input: z.infer<typeof loginSchema>,
   ) {
     return this.service.connect(user, input);
+  }
+
+  @Get('workouts')
+  workoutStates(
+    @JwtUser() user: AuthUser,
+    @Query(new ZodValidationPipe(workoutStatesSchema))
+    query: z.infer<typeof workoutStatesSchema>,
+  ) {
+    return this.workouts.list(user, query.athleteId, query.eventIds);
+  }
+
+  /** Send (or update) up to MANUAL_GARMIN_WORKOUT_BATCH planned sessions. */
+  @Post('workouts/send')
+  sendWorkouts(
+    @JwtUser() user: AuthUser,
+    @Body(new ZodValidationPipe(manualGarminWorkoutsSchema))
+    input: z.infer<typeof manualGarminWorkoutsSchema>,
+  ) {
+    return this.workouts.send(user, input.athleteId, input.eventIds);
+  }
+
+  @Post('workouts/remove')
+  removeWorkouts(
+    @JwtUser() user: AuthUser,
+    @Body(new ZodValidationPipe(manualGarminWorkoutsSchema))
+    input: z.infer<typeof manualGarminWorkoutsSchema>,
+  ) {
+    return this.workouts.remove(user, input.athleteId, input.eventIds);
   }
 }

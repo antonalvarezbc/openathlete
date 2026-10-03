@@ -11,6 +11,7 @@ import { GarminAdapter } from './adapters/garmin.adapter';
 import { SuuntoAdapter } from './adapters/suunto.adapter';
 import { ProviderOAuthController } from './controllers/provider-oauth.controller';
 import { ProviderExportService } from './export.service';
+import { ManualGarminWorkoutsService } from './manual-garmin/manual-garmin-workouts.service';
 import { ManualGarminController } from './manual-garmin/manual-garmin.controller';
 import { ManualGarminService } from './manual-garmin/manual-garmin.service';
 import {
@@ -34,6 +35,7 @@ import { ProviderExportScheduler } from './scheduler.service';
   providers: [
     PrismaService,
     ManualGarminService,
+    ManualGarminWorkoutsService,
     GarminAdapter,
     SuuntoAdapter,
     CorosAdapter,

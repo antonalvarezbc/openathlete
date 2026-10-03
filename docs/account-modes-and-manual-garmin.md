@@ -220,8 +220,51 @@ permission/import regression tests. Automated tests never query Garmin and do
 not establish live-provider compatibility. See the [connector guide](../scripts/garmin-probe/README.md)
 for test commands and a controlled manual verification procedure.
 
+## Sending planned sessions to Garmin
+
+With manual Garmin connected, an upcoming planned session can be sent to the
+athlete's Garmin Connect calendar. Garmin then delivers it to the watch at the
+watch's next sync. This uses the same unofficial connector, so it can stop
+working if Garmin changes its private API.
+
+- **Entry points:** the session details dialog shows **Send to Garmin** for
+  training sessions dated today or later; the coach's week actions menu has
+  **Send week to Garmin** for the upcoming sessions of the displayed week.
+- **Who:** the athlete who owns the session and their linked coaches, the same
+  as for sync. The athlete must have connected Garmin from their own space.
+- **Always manual:** nothing is sent automatically. When a sent session changes
+  in OpenAthlete (steps, targets, name, description or day), the dialog shows
+  it as changed and **Update in Garmin** sends it again. The Garmin workout is
+  updated in place, and its calendar entry moves when the day changed.
+- **Removal:** **Remove from Garmin** deletes the calendar entry and the
+  workout from the Garmin library. Deleting a session in OpenAthlete does not
+  touch Garmin; the delete confirmation warns when a copy exists there.
+- **Conversion:** steps, repeats, time/distance/lap-button durations and heart
+  rate, power, pace (speed on the bike) and cadence targets. Zone and
+  percentage targets are converted to absolute values with the athlete's zones
+  and metrics; if one is missing, that session is not sent. Swimming sessions
+  are sent without targets and have not been verified on a watch. A session
+  without structured steps is sent as one step of its goal duration or
+  distance.
+- **Requests:** one send is one Garmin operation: one login, an identity check
+  that the session belongs to the linked Garmin account, then one request per
+  second. Up to 14 sessions are sent per operation. The shared two-minute pause
+  between Garmin operations and the rate-limit stop of the sync also apply
+  here. A workout Garmin rejects does not stop the others.
+- **Storage:** `manual_garmin_workout_export` keeps, per session, the Garmin
+  workout and calendar IDs, the Garmin day and a hash of what was sent. Copies
+  written to a previously linked Garmin account are never updated or deleted.
+
+Endpoints (JWT, validated with Zod): `GET /provider/garmin-manual/workouts`
+(`athleteId`, `eventIds` comma-separated, at most 50) returns the sent state;
+`POST /provider/garmin-manual/workouts/send` and `/workouts/remove` take
+`{ athleteId?, eventIds }` and return one `{ eventId, ok, code? }` per session.
+
 ## Source references
 
 - [Account-mode tests](../apps/api/src/modules/auth/services/account-modes.spec.ts)
 - [Manual Garmin service](../apps/api/src/modules/providers-sync/manual-garmin/manual-garmin.service.ts)
 - [Garmin summary worker](../scripts/garmin-probe/sync.py)
+- [Planned session export service](../apps/api/src/modules/providers-sync/manual-garmin/manual-garmin-workouts.service.ts)
+- [Garmin Connect workout mapper](../apps/api/src/modules/providers-sync/manual-garmin/manual-garmin-workout.mapper.ts)
+- [Garmin workout worker](../scripts/garmin-probe/export_workout.py)

@@ -9,11 +9,15 @@ import { AuthGuard } from '@nestjs/passport';
 import { Test } from '@nestjs/testing';
 
 import { AuthUser } from '../../auth/decorators/user.decorator';
+import { ManualGarminWorkoutsService } from './manual-garmin-workouts.service';
 import { ManualGarminController } from './manual-garmin.controller';
 import { ManualGarminService } from './manual-garmin.service';
 
 jest.mock('./manual-garmin.service', () => ({
   ManualGarminService: class {},
+}));
+jest.mock('./manual-garmin-workouts.service', () => ({
+  ManualGarminWorkoutsService: class {},
 }));
 
 // Exercise actual routing and Zod pipes over local HTTP. JWT verification and
@@ -29,6 +33,11 @@ describe('Manual Garmin HTTP boundary', () => {
     stopBackfill: jest.fn(),
     connect: jest.fn(),
   };
+  const workouts = {
+    list: jest.fn(),
+    send: jest.fn(),
+    remove: jest.fn(),
+  };
   const operations = [
     ['sync', 'sync'],
     ['backfill', 'backfill'],
@@ -38,7 +47,10 @@ describe('Manual Garmin HTTP boundary', () => {
   beforeAll(async () => {
     const module = await Test.createTestingModule({
       controllers: [ManualGarminController],
-      providers: [{ provide: ManualGarminService, useValue: service }],
+      providers: [
+        { provide: ManualGarminService, useValue: service },
+        { provide: ManualGarminWorkoutsService, useValue: workouts },
+      ],
     })
       .overrideGuard(AuthGuard('jwt'))
       .useValue({
@@ -70,7 +82,10 @@ describe('Manual Garmin HTTP boundary', () => {
       roles: ['COACH'],
       athlete: null,
     };
-    for (const method of Object.values(service))
+    for (const method of [
+      ...Object.values(service),
+      ...Object.values(workouts),
+    ])
       method.mockReset().mockResolvedValue({ accepted: true });
   });
 
@@ -85,7 +100,10 @@ describe('Manual Garmin HTTP boundary', () => {
     });
 
   const expectNoEffects = () => {
-    for (const method of Object.values(service))
+    for (const method of [
+      ...Object.values(service),
+      ...Object.values(workouts),
+    ])
       expect(method).not.toHaveBeenCalled();
   };
 
@@ -209,6 +227,45 @@ describe('Manual Garmin HTTP boundary', () => {
       headers: { Authorization: 'Bearer synthetic-test-token' },
     });
     expect(response.status).toBe(400);
+    expectNoEffects();
+  });
+
+  test.each([
+    ['workouts/send', 'send'],
+    ['workouts/remove', 'remove'],
+  ] as const)(
+    'validates the session batch of POST %s',
+    async (path, method) => {
+      expect(
+        (await post(path, { athleteId: 7, eventIds: [3, 4] })).status,
+      ).toBe(201);
+      expect(workouts[method]).toHaveBeenCalledWith(user, 7, [3, 4]);
+      workouts[method].mockClear();
+      for (const body of [
+        { athleteId: 7 },
+        { athleteId: 7, eventIds: [] },
+        { athleteId: 7, eventIds: [3, 3] },
+        { athleteId: 7, eventIds: ['3'] },
+        { athleteId: 7, eventIds: Array.from({ length: 15 }, (_, i) => i + 1) },
+        { athleteId: 7, eventIds: [3], workout: { workoutName: 'x' } },
+        { athleteId: 7, eventIds: [3], directory: '/tmp/arbitrary' },
+      ])
+        expect((await post(path, body)).status).toBe(400);
+      expect((await post(path, { eventIds: [3] }, false)).status).toBe(401);
+      expectNoEffects();
+    },
+  );
+
+  test('workout states read only the listed sessions', async () => {
+    const get = (query: string) =>
+      fetch(origin + 'workouts?' + query, {
+        headers: { Authorization: 'Bearer synthetic-test-token' },
+      });
+    expect((await get('athleteId=7&eventIds=3,4,3')).status).toBe(200);
+    expect(workouts.list).toHaveBeenCalledWith(user, 7, [3, 4]);
+    workouts.list.mockClear();
+    for (const query of ['athleteId=7', 'eventIds=3;4', 'eventIds=3&ids=1'])
+      expect((await get(query)).status).toBe(400);
     expectNoEffects();
   });
 });
