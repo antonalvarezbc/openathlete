@@ -18,6 +18,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { Gender, UserLanguage, UserRole } from '@openathlete/database';
 import {
@@ -34,6 +35,7 @@ import {
 } from '@openathlete/shared';
 
 import { Language } from 'src/common/constants/languages.constant';
+import { RATE_LIMITS } from 'src/common/security/rate-limits';
 
 import { JwtUser } from '../decorators';
 import { AuthUser } from '../decorators/user.decorator';
@@ -45,6 +47,7 @@ import { UserService } from '../services';
 export class UserController {
   constructor(private userService: UserService) {}
 
+  @Throttle(RATE_LIMITS.signup)
   @Post()
   @ApiOperation({
     summary: 'Create a new user account',
@@ -289,6 +292,7 @@ export class UserController {
     return this.userService.updateLanguage(user, body.language);
   }
 
+  @Throttle(RATE_LIMITS.passwordReset)
   @Post('password-reset/request')
   @ApiOperation({
     summary: 'Request password reset',
@@ -334,6 +338,7 @@ export class UserController {
     return this.userService.passwordResetRequest(body);
   }
 
+  @Throttle(RATE_LIMITS.passwordReset)
   @Post('password-reset')
   @ApiOperation({
     summary: 'Reset password with token',

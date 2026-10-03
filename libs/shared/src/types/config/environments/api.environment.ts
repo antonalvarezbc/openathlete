@@ -84,6 +84,13 @@ export const ApiEnvSchema = z
       .optional()
       .describe('Comma-separated list of allowed CORS origins'),
 
+    TRUST_PROXY: z
+      .string()
+      .optional()
+      .describe(
+        'Express "trust proxy" setting: a hop count or comma-separated addresses/presets. Defaults to private-network proxies',
+      ),
+
     // Strava OAuth (optional)
     STRAVA_CLIENT_ID: z
       .string()

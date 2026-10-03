@@ -27,6 +27,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 
 import { ConnectorProvider } from '@openathlete/database';
 import type { ApiEnvSchemaType } from '@openathlete/shared';
@@ -782,6 +783,7 @@ export class ProviderOAuthController {
   /**
    * Strava webhook verification (GET)
    */
+  @SkipThrottle()
   @Get('strava/webhook')
   @ApiOperation({
     summary: 'Strava webhook verification',
@@ -842,6 +844,7 @@ export class ProviderOAuthController {
   /**
    * Strava webhook handler (POST)
    */
+  @SkipThrottle()
   @Post('strava/webhook')
   @ApiOperation({
     summary: 'Strava webhook event handler',
@@ -888,6 +891,7 @@ export class ProviderOAuthController {
     await this.stravaProviderService.handleWebhook(body);
   }
 
+  @SkipThrottle()
   @Post('garmin/webhook/activity-ping')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -983,6 +987,7 @@ export class ProviderOAuthController {
     return { success: true };
   }
 
+  @SkipThrottle()
   @Post('garmin/webhook/health-ping')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -1020,6 +1025,7 @@ export class ProviderOAuthController {
     return { success: true };
   }
 
+  @SkipThrottle()
   @Post('garmin/webhook/activity-files')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -1192,6 +1198,7 @@ export class ProviderOAuthController {
     return { success: true };
   }
 
+  @SkipThrottle()
   @Post('garmin/webhook/deregistration')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -1233,6 +1240,7 @@ export class ProviderOAuthController {
     return { success: true };
   }
 
+  @SkipThrottle()
   @Post('garmin/webhook/user-permissions-change')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -1285,6 +1293,7 @@ export class ProviderOAuthController {
    * Polar webhook handler (POST)
    * Handles all Polar webhook events (EXERCISE, SLEEP, etc.)
    */
+  @SkipThrottle()
   @Post('polar/webhook')
   @ApiOperation({
     summary: 'Polar webhook event handler',
@@ -1399,6 +1408,7 @@ export class ProviderOAuthController {
    * Handles workout notifications from Suunto
    * Webhook URL: POST /provider/suunto/webhook
    */
+  @SkipThrottle()
   @Post('suunto/webhook')
   @ApiOperation({
     summary: 'Suunto webhook event handler',

@@ -2,11 +2,13 @@ import { SentryGlobalFilter, SentryModule } from '@sentry/nestjs/setup';
 
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 import { ApiEnvSchema } from '@openathlete/shared';
 
+import { DEFAULT_RATE_LIMIT } from 'src/common/security/rate-limits';
 import {
   ActivityFeedbackExtractionListener,
   ActivityFeedbackListener,
@@ -52,6 +54,7 @@ import { SubscriptionModule } from './subscription';
       },
     }),
     SentryModule.forRoot(),
+    ThrottlerModule.forRoot(DEFAULT_RATE_LIMIT),
     AuthModule,
     CoreModule,
     AgentModule,
@@ -69,6 +72,10 @@ import { SubscriptionModule } from './subscription';
     {
       provide: APP_FILTER,
       useClass: SentryGlobalFilter,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
     },
     PrismaService,
     NotificationListener,

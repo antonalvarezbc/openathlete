@@ -10,6 +10,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import {
   CreateTemporaryPlanDto,
@@ -18,6 +19,8 @@ import {
   createTemporaryPlanDtoSchema,
   importPlanBodyDtoSchema,
 } from '@openathlete/shared';
+
+import { RATE_LIMITS } from 'src/common/security/rate-limits';
 
 import { JwtUser } from '../auth';
 import { AuthUser } from '../auth/decorators/user.decorator';
@@ -32,6 +35,7 @@ export class SeoPlanController {
     private readonly trainingPlanService: TrainingPlanService,
   ) {}
 
+  @Throttle(RATE_LIMITS.publicWrite)
   @Post()
   @ApiOperation({
     summary: 'Create a temporary training plan',
