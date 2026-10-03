@@ -23,7 +23,7 @@
     "@openathlete/eslint-config": "workspace:*",
     "@openathlete/prettier-config": "workspace:*",
     "@rollup/plugin-typescript": "^11.1.6",
-    "rollup": "3.29.5",
+    "rollup": "~3.30.0",
     "typescript": "~5.9.3"
   },
   "dependencies": {

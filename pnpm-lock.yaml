@@ -7,6 +7,13 @@ settings:
 overrides:
   '@types/node': 22.13.10
   zod: 3.25.76
+  '@babel/runtime@<7.26.10': ^7.29.7
+  '@grpc/grpc-js@<1.13.6': ^1.13.6
+  effect@<3.20.0: ^3.22.2
+  js-yaml@>=4.0.0 <4.3.2: ^4.3.2
+  lodash@<4.18.0: ^4.18.1
+  postcss@>=8.0.0 <8.5.23: ^8.5.28
+  undici@<6.29.0: ^6.29.0
 
 importers:
 
@@ -36,16 +43,16 @@ importers:
         version: 21.178.0
       '@mastra/core':
         specifier: ^0.21.1
-        version: 0.21.1(effect@3.16.12)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76)
+        version: 0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76)
       '@mastra/loggers':
         specifier: ^0.10.19
-        version: 0.10.19(@mastra/core@0.21.1(effect@3.16.12)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76))
+        version: 0.10.19(@mastra/core@0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76))
       '@mastra/memory':
         specifier: ^0.15.13
-        version: 0.15.13(@mastra/core@0.21.1(effect@3.16.12)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76))(@opentelemetry/api@1.9.1)(react@19.3.0)(zod@3.25.76)
+        version: 0.15.13(@mastra/core@0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76))(@opentelemetry/api@1.9.1)(react@19.3.0)(zod@3.25.76)
       '@mastra/pg':
         specifier: ^0.17.10
-        version: 0.17.10(@mastra/core@0.21.1(effect@3.16.12)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76))(pg-query-stream@4.10.3(pg@8.16.3))
+        version: 0.17.10(@mastra/core@0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76))(pg-query-stream@4.10.3(pg@8.16.3))
       '@nestjs/bull':
         specifier: ^11.0.5
         version: 11.0.5(@nestjs/common@11.2.7(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.2.7)(bull@4.16.5)
@@ -708,10 +715,10 @@ importers:
         version: link:../config/prettier-config
       '@rollup/plugin-typescript':
         specifier: ^11.1.6
-        version: 11.1.6(rollup@3.29.5)(tslib@2.8.1)(typescript@5.9.3)
+        version: 11.1.6(rollup@3.30.0)(tslib@2.8.1)(typescript@5.9.3)
       rollup:
-        specifier: 3.29.5
-        version: 3.29.5
+        specifier: ~3.30.0
+        version: 3.30.0
       typescript:
         specifier: ~5.9.3
         version: 5.9.3
@@ -1001,9 +1008,6 @@ packages:
     engines: {node: '>=6.9.0'}
     peerDependencies:
       '@babel/core': ^7.0.0-0
-
-  '@babel/runtime@7.11.2':
-    resolution: {integrity: sha512-TeWkU52so0mPtDcaCTxNBI/IHiz0pZgr8VEFqXFtZWpYD08ZB6FaSwVAS8MKRQAP3bYKiVjwysOJgMFY28o6Tw==}
 
   '@babel/runtime@7.29.7':
     resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
@@ -1567,10 +1571,6 @@ packages:
     resolution: {integrity: sha512-43/qtrDUokr7LJqoF2c3+RInu/t4zfrpYdoSDfYyhg52rwLV6TnOvdG4fXm7IkSB3wErkcmJS9iEhjVtOSEjjA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
-  '@fastify/busboy@2.1.1':
-    resolution: {integrity: sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==}
-    engines: {node: '>=14'}
-
   '@fastify/busboy@3.2.2':
     resolution: {integrity: sha512-yXSS27qPExaXeuLvMRMXOLtpipzfQYNjG3FkunDWKGfMYjKuhFXko9CVzqxm8jcF+lmtS9Fd89QNdh9XDjnbNg==}
 
@@ -1865,10 +1865,6 @@ packages:
   '@grpc/grpc-js@1.14.5':
     resolution: {integrity: sha512-7VZM+SVdEcUUqSQeNI3zM8Qs/BhQKZndPo2h5VkYkAM8Iz0wJIa8mKV5ekQGqG8UUsnkQ0NMxIxwkIHYvj0qOw==}
     engines: {node: '>=12.10.0'}
-
-  '@grpc/grpc-js@1.9.16':
-    resolution: {integrity: sha512-wE4Ut/olIzfKqp631XrG+wbF0v1vWFN4YL9FyXC2LJiG33DsV7PLzURjrCvY/6je2ntdRkeLpPDluzSRGaVltQ==}
-    engines: {node: ^8.13.0 || >=10.10.0}
 
   '@grpc/proto-loader@0.7.15':
     resolution: {integrity: sha512-tMXdRCfYVixjuFK+Hk0Q1s38gV9zDiDJfWL3h1rv4Qc39oILCu1TRTDt7+fGUI8K4G1Fj125Hx/ru3azECWTyQ==}
@@ -6210,8 +6206,8 @@ packages:
   ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
 
-  effect@3.16.12:
-    resolution: {integrity: sha512-N39iBk0K71F9nb442TLbTkjl24FLUzuvx2i1I2RsEAQsdAdUTuUoW0vlfUXgkMTUOnYqKnWcFfqw4hK4Pw27hg==}
+  effect@3.22.2:
+    resolution: {integrity: sha512-fm1CQXCs7GTMwpadZxwU5rnAb2bN6mbQpknq/pXBGCzSKkosNYb9k0wsoL0TfB10rSa5xOEZJjo77u/KLXSANg==}
 
   electron-to-chromium@1.5.444:
     resolution: {integrity: sha512-5ss/uJfoDYDHT0lfJzT6FbcskIzROIOPf0BbbFkGcvDzoJU7i//9GDrwwIHQVmIsrAGiF3ihpADBRIsrEFt1rQ==}
@@ -6883,7 +6879,7 @@ packages:
       '@sinclair/typebox': ^0.34.9
       '@valibot/to-json-schema': ^1.0.0-beta.3
       arktype: ^2.0.0
-      effect: ^3.11.3
+      effect: ^3.22.2
       hono: ^4.6.13
       openapi-types: ^12.1.3
       valibot: ^1.0.0-beta.9
@@ -7357,10 +7353,6 @@ packages:
     resolution: {integrity: sha512-6EuL879VkRA+1Cz578mKMiKvjPNEuk6+r1JaFzoSWejZmtf7xWbIyw1e3KkxlkzTIt9Taw6JBhEppG7utc1P+w==}
     hasBin: true
 
-  js-yaml@4.1.0:
-    resolution: {integrity: sha512-wpxZs9NoxZaJESJGIZTyDEaYpl0FKSA+FB9aJiyemKhMwkxQg63h4T1KJgUGHpTqPDNRcmmYLugrRjJlBtWvRA==}
-    hasBin: true
-
   js-yaml@4.3.2:
     resolution: {integrity: sha512-SFNOvSJ+Dgf/9An904Yx+CgSlIPCkIpao4qo51lpee25TIRejdH3rhR4EZMGoNx3/TP3O+wzWuiTFl4sqbltzA==}
     hasBin: true
@@ -7602,9 +7594,6 @@ packages:
 
   lodash.once@4.1.1:
     resolution: {integrity: sha512-Sb487aTOCr9drQVL8pIxOzVhafOjZN9UU54hiN8PU3uAiSV7lx1yYNpbNmex2PK6dSJoNTSJUUswT651yww3Mg==}
-
-  lodash@4.17.21:
-    resolution: {integrity: sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==}
 
   lodash@4.18.1:
     resolution: {integrity: sha512-dMInicTPVE8d1e5otfwmmjlxkZoUpiVLwyeTdUsi/Caj/gfzzblBcCE5sRHV/AsjuCmxWrte2TNGSYuCeCq+0Q==}
@@ -8400,10 +8389,6 @@ packages:
     resolution: {integrity: sha512-IQ7TZdoaqbT+LCpShg46jnZVlhWD2w6iQYAcYXfHARZ7X1t/UGhhceQDs5X0cGqKvYlHNOuv7Oa1xmb0oQuA3w==}
     engines: {node: '>=4'}
 
-  postcss@8.4.31:
-    resolution: {integrity: sha512-PS08Iboia9mts/2ygV3eLpY5ghnUcfLV/EXTOW1E2qYxJKGGBUtNjN76FYHnMs36RmARn41bC0AZmn+rR0OVpQ==}
-    engines: {node: ^10 || ^12 || >=14}
-
   postcss@8.5.28:
     resolution: {integrity: sha512-RRuzqDtt5Y9h3quz5hWhK+TPnsmVs6WwSU6LkJMeY4HstUEDuYTG8UJSdawMRzmzAtV+KEoG8N3Qg2qLy5vM/A==}
     engines: {node: ^10 || ^12 || >=14}
@@ -8705,9 +8690,6 @@ packages:
   reflect-metadata@0.2.2:
     resolution: {integrity: sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q==}
 
-  regenerator-runtime@0.13.11:
-    resolution: {integrity: sha512-kY1AZVr2Ra+t+piVaJ4gxaFaReZVH40AKNo7UCX6W+dEwBo/2oZJzqfuN1qLq1oL45o56cPaTXELwrTh8Fpggg==}
-
   remark-breaks@4.0.0:
     resolution: {integrity: sha512-IjEjJOkH4FuJvHZVIW0QCDWxcG96kCq7An/KVH2NfJe6rKZU2AsHeB3OEjPNRxi4QC34Xdx7I2KGYn6IpT7gxQ==}
 
@@ -8787,8 +8769,8 @@ packages:
     engines: {node: 20 || >=22}
     hasBin: true
 
-  rollup@3.29.5:
-    resolution: {integrity: sha512-GVsDdsbJzzy4S/v3dqWPJ7EfvZJfCHiDqe80IyrF59LYuP+e6U1LJoUqeuqRbwAWoMNoXivMNeNAOf5E22VA1w==}
+  rollup@3.30.0:
+    resolution: {integrity: sha512-kQvGasUgN+AlWGliFn2POSajRQEsULVYFGTvOZmK06d7vCD+YhZztt70kGk3qaeAXeWYL5eO7zx+rAubBc55eA==}
     engines: {node: '>=14.18.0', npm: '>=8.0.0'}
     hasBin: true
 
@@ -9490,9 +9472,9 @@ packages:
   undici-types@6.20.0:
     resolution: {integrity: sha512-Ny6QZ2Nju20vw1SRHe3d9jVu6gJ+4e3+MMpqu7pqE5HT6WsTSlce++GQmK5UXS8mzV8DSYHrQH+Xrf2jVcuKNg==}
 
-  undici@5.29.0:
-    resolution: {integrity: sha512-raqeBD6NQK4SkWhQzeYKd1KmIG6dllBOTt55Rmkt4HtI9mwdWtJljnrXjAFUBLTSN67HWrOIZ3EPF4kjUw80Bg==}
-    engines: {node: '>=14.0'}
+  undici@6.29.0:
+    resolution: {integrity: sha512-R+RODBqp6i2pPflGdq+xIOUkl+RNfGgHwoinecKu/JCuf2uO06cOKoDbI2P7Dn6KcswdKwrczbU6IYJ6K8X+wg==}
+    engines: {node: '>=18.17'}
 
   unified@11.0.5:
     resolution: {integrity: sha512-xKvGhPWw3k84Qjh8bI3ZeJjqnyadK+GEFtazSfZv/rKeTkTjOJho6mFqh2SM96iIcZokxiOpg78GazTSg8+KHA==}
@@ -10013,7 +9995,7 @@ snapshots:
       '@ai-sdk/provider': 2.0.5
       '@standard-schema/spec': 1.1.0
       eventsource-parser: 3.1.1
-      undici: 5.29.0
+      undici: 6.29.0
       zod: 3.25.76
 
   '@ai-sdk/provider@1.1.3':
@@ -10286,10 +10268,6 @@ snapshots:
     dependencies:
       '@babel/core': 7.29.7
       '@babel/helper-plugin-utils': 7.29.7
-
-  '@babel/runtime@7.11.2':
-    dependencies:
-      regenerator-runtime: 0.13.11
 
   '@babel/runtime@7.29.7': {}
 
@@ -10722,8 +10700,6 @@ snapshots:
       '@eslint/core': 0.17.0
       levn: 0.4.1
 
-  '@fastify/busboy@2.1.1': {}
-
   '@fastify/busboy@3.2.2': {}
 
   '@firebase/ai@1.4.1(@firebase/app-types@0.9.3)(@firebase/app@0.13.2)':
@@ -10930,7 +10906,7 @@ snapshots:
       '@firebase/logger': 0.4.4
       '@firebase/util': 1.12.1
       '@firebase/webchannel-wrapper': 1.0.3
-      '@grpc/grpc-js': 1.9.16
+      '@grpc/grpc-js': 1.14.5
       '@grpc/proto-loader': 0.7.15
       tslib: 2.8.1
 
@@ -11160,11 +11136,6 @@ snapshots:
     dependencies:
       '@grpc/proto-loader': 0.8.1
       '@js-sdsl/ordered-map': 4.4.2
-
-  '@grpc/grpc-js@1.9.16':
-    dependencies:
-      '@grpc/proto-loader': 0.7.15
-      '@types/node': 22.13.10
 
   '@grpc/proto-loader@0.7.15':
     dependencies:
@@ -11814,7 +11785,7 @@ snapshots:
 
   '@lukeed/csprng@1.1.0': {}
 
-  '@mastra/core@0.21.1(effect@3.16.12)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76)':
+  '@mastra/core@0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76)':
     dependencies:
       '@a2a-js/sdk': 0.2.5
       '@ai-sdk/anthropic-v5': '@ai-sdk/anthropic@2.0.23(zod@3.25.76)'
@@ -11849,7 +11820,7 @@ snapshots:
       date-fns: 3.6.0
       dotenv: 16.6.1
       hono: 4.13.12
-      hono-openapi: 0.4.8(effect@3.16.12)(hono@4.13.12)(openapi-types@12.1.3)(zod@3.25.76)
+      hono-openapi: 0.4.8(effect@3.22.2)(hono@4.13.12)(openapi-types@12.1.3)(zod@3.25.76)
       js-tiktoken: 1.0.21
       json-schema: 0.4.0
       json-schema-to-zod: 2.8.1
@@ -11879,15 +11850,15 @@ snapshots:
       - valibot
       - zod-openapi
 
-  '@mastra/loggers@0.10.19(@mastra/core@0.21.1(effect@3.16.12)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76))':
+  '@mastra/loggers@0.10.19(@mastra/core@0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76))':
     dependencies:
-      '@mastra/core': 0.21.1(effect@3.16.12)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76)
+      '@mastra/core': 0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76)
       pino: 9.14.0
       pino-pretty: 13.1.3
 
-  '@mastra/memory@0.15.13(@mastra/core@0.21.1(effect@3.16.12)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76))(@opentelemetry/api@1.9.1)(react@19.3.0)(zod@3.25.76)':
+  '@mastra/memory@0.15.13(@mastra/core@0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76))(@opentelemetry/api@1.9.1)(react@19.3.0)(zod@3.25.76)':
     dependencies:
-      '@mastra/core': 0.21.1(effect@3.16.12)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76)
+      '@mastra/core': 0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76)
       '@mastra/schema-compat': 0.11.9(ai@4.3.19(react@19.3.0)(zod@3.25.76))(zod@3.25.76)
       '@upstash/redis': 1.39.0
       ai: 4.3.19(react@19.3.0)(zod@3.25.76)
@@ -11908,9 +11879,9 @@ snapshots:
       - pg-native
       - react
 
-  '@mastra/pg@0.17.10(@mastra/core@0.21.1(effect@3.16.12)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76))(pg-query-stream@4.10.3(pg@8.16.3))':
+  '@mastra/pg@0.17.10(@mastra/core@0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76))(pg-query-stream@4.10.3(pg@8.16.3))':
     dependencies:
-      '@mastra/core': 0.21.1(effect@3.16.12)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76)
+      '@mastra/core': 0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76)
       async-mutex: 0.5.0
       pg: 8.23.1
       pg-promise: 11.15.0(pg-query-stream@4.10.3(pg@8.16.3))
@@ -12220,8 +12191,8 @@ snapshots:
       '@nestjs/common': 11.2.7(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@nestjs/core': 11.2.7(@nestjs/common@11.2.7(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.2.7)(@nestjs/websockets@11.2.7)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@nestjs/mapped-types': 2.0.6(@nestjs/common@11.2.7(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
-      js-yaml: 4.1.0
-      lodash: 4.17.21
+      js-yaml: 4.3.2
+      lodash: 4.18.1
       path-to-regexp: 3.3.0
       reflect-metadata: 0.2.2
       swagger-ui-dist: 5.18.2
@@ -13395,7 +13366,7 @@ snapshots:
     dependencies:
       c12: 3.1.0
       deepmerge-ts: 7.1.5
-      effect: 3.16.12
+      effect: 3.22.2
       empathic: 2.0.0
     transitivePeerDependencies:
       - magicast
@@ -13957,22 +13928,22 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.0-beta.27': {}
 
-  '@rollup/plugin-typescript@11.1.6(rollup@3.29.5)(tslib@2.8.1)(typescript@5.9.3)':
+  '@rollup/plugin-typescript@11.1.6(rollup@3.30.0)(tslib@2.8.1)(typescript@5.9.3)':
     dependencies:
-      '@rollup/pluginutils': 5.4.0(rollup@3.29.5)
+      '@rollup/pluginutils': 5.4.0(rollup@3.30.0)
       resolve: 1.22.12
       typescript: 5.9.3
     optionalDependencies:
-      rollup: 3.29.5
+      rollup: 3.30.0
       tslib: 2.8.1
 
-  '@rollup/pluginutils@5.4.0(rollup@3.29.5)':
+  '@rollup/pluginutils@5.4.0(rollup@3.30.0)':
     dependencies:
       '@types/estree': 1.0.9
       estree-walker: 2.0.2
       picomatch: 4.0.7
     optionalDependencies:
-      rollup: 3.29.5
+      rollup: 3.30.0
 
   '@rollup/rollup-android-arm-eabi@4.64.0':
     optional: true
@@ -16006,7 +15977,7 @@ snapshots:
 
   ee-first@1.1.1: {}
 
-  effect@3.16.12:
+  effect@3.22.2:
     dependencies:
       '@standard-schema/spec': 1.1.0
       fast-check: 3.23.2
@@ -16744,7 +16715,7 @@ snapshots:
 
   get-blob-duration@1.2.0:
     dependencies:
-      '@babel/runtime': 7.11.2
+      '@babel/runtime': 7.29.7
 
   get-caller-file@2.0.5: {}
 
@@ -16939,12 +16910,12 @@ snapshots:
     dependencies:
       react-is: 16.13.1
 
-  hono-openapi@0.4.8(effect@3.16.12)(hono@4.13.12)(openapi-types@12.1.3)(zod@3.25.76):
+  hono-openapi@0.4.8(effect@3.22.2)(hono@4.13.12)(openapi-types@12.1.3)(zod@3.25.76):
     dependencies:
       json-schema-walker: 2.0.0
       openapi-types: 12.1.3
     optionalDependencies:
-      effect: 3.16.12
+      effect: 3.22.2
       hono: 4.13.12
       zod: 3.25.76
 
@@ -17534,10 +17505,6 @@ snapshots:
       argparse: 1.0.10
       esprima: 4.0.1
 
-  js-yaml@4.1.0:
-    dependencies:
-      argparse: 2.0.1
-
   js-yaml@4.3.2:
     dependencies:
       argparse: 2.0.1
@@ -17759,8 +17726,6 @@ snapshots:
   lodash.merge@4.6.2: {}
 
   lodash.once@4.1.1: {}
-
-  lodash@4.17.21: {}
 
   lodash@4.18.1: {}
 
@@ -18342,7 +18307,7 @@ snapshots:
       '@next/env': 15.5.27
       '@swc/helpers': 0.5.15
       caniuse-lite: 1.0.30001814
-      postcss: 8.4.31
+      postcss: 8.5.28
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
       styled-jsx: 5.1.6(react@19.3.0)
@@ -18750,12 +18715,6 @@ snapshots:
       cssesc: 3.0.0
       util-deprecate: 1.0.2
 
-  postcss@8.4.31:
-    dependencies:
-      nanoid: 3.3.19
-      picocolors: 1.1.1
-      source-map-js: 1.2.2
-
   postcss@8.5.28:
     dependencies:
       nanoid: 3.3.19
@@ -19066,8 +19025,6 @@ snapshots:
 
   reflect-metadata@0.2.2: {}
 
-  regenerator-runtime@0.13.11: {}
-
   remark-breaks@4.0.0:
     dependencies:
       '@types/mdast': 4.0.4
@@ -19171,7 +19128,7 @@ snapshots:
       glob: 13.0.6
       package-json-from-dist: 1.0.1
 
-  rollup@3.29.5:
+  rollup@3.30.0:
     optionalDependencies:
       fsevents: 2.3.3
 
@@ -19958,9 +19915,7 @@ snapshots:
 
   undici-types@6.20.0: {}
 
-  undici@5.29.0:
-    dependencies:
-      '@fastify/busboy': 2.1.1
+  undici@6.29.0: {}
 
   unified@11.0.5:
     dependencies:
