@@ -1003,7 +1003,7 @@ export class PolarProviderService
         account,
         async (accessToken) => {
           return axios.get<PolarExercise>(
-            `${POLAR_API_BASE}/exercises/${exerciseId}`,
+            `${POLAR_API_BASE}/exercises/${encodeURIComponent(exerciseId)}`,
             {
               headers: {
                 Authorization: `Bearer ${accessToken}`,
@@ -1221,7 +1221,7 @@ export class PolarProviderService
             account,
             async (accessToken) => {
               return axios.get<ArrayBuffer>(
-                `${POLAR_API_BASE}/exercises/${exerciseId}/${type}`,
+                `${POLAR_API_BASE}/exercises/${encodeURIComponent(exerciseId)}/${type}`,
                 {
                   headers: {
                     Authorization: `Bearer ${accessToken}`,

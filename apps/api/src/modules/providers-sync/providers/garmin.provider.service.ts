@@ -76,6 +76,8 @@ type MetricRecord = {
   value: number;
 };
 
+const GARMIN_CALLBACK_HOSTS = new Set(['apis.garmin.com']);
+
 @Injectable()
 export class GarminProviderService
   extends BaseProviderService
@@ -103,6 +105,12 @@ export class GarminProviderService
 
     // Only allow default HTTPS port (or explicitly 443).
     if (url.port && url.port !== '443') {
+      throw new BadRequestException('Invalid Garmin callbackURL');
+    }
+
+    // Callback URLs come from unauthenticated webhook payloads and are fetched
+    // with the user's Garmin access token: only ever send it to Garmin.
+    if (!GARMIN_CALLBACK_HOSTS.has(url.hostname)) {
       throw new BadRequestException('Invalid Garmin callbackURL');
     }
 
