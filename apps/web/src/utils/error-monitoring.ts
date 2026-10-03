@@ -2,16 +2,17 @@ import * as Sentry from '@sentry/react';
 
 let isInitialized = false;
 
-const BETTER_STACK_DSN =
-  'https://vv9qofwSfFvUHfR346XTyk81@eu-nbg-2.betterstackdata.com/1604505';
+// Set at build time by each deployment; unset disables error monitoring, so
+// self-hosted instances never report to the OpenAthlete cloud project.
+const ERROR_MONITORING_DSN = import.meta.env.VITE_ERROR_MONITORING_DSN;
 
 export function initErrorMonitoring() {
-  if (isInitialized || import.meta.env.DEV) {
+  if (isInitialized || import.meta.env.DEV || !ERROR_MONITORING_DSN) {
     return;
   }
 
   Sentry.init({
-    dsn: BETTER_STACK_DSN,
+    dsn: ERROR_MONITORING_DSN,
     environment: import.meta.env.MODE,
     integrations: [
       Sentry.browserTracingIntegration(),
