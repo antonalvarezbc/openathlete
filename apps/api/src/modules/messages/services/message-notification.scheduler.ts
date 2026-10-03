@@ -4,6 +4,7 @@ import { Cron } from '@nestjs/schedule';
 
 import type { ApiEnvSchemaType } from '@openathlete/shared';
 
+import { maskEmail } from 'src/common/utils/mask-email';
 import { buildMessageThreadNotificationEmail } from 'src/modules/notification/emails/templates/message-thread-notification.template';
 import { EmailTransportService } from 'src/modules/notification/services/email-transport.service';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
@@ -173,7 +174,7 @@ export class MessageNotificationScheduler {
         });
       } catch (error) {
         this.logger.error(
-          `Failed to send message-thread-notification email to ${recipientEmail} for thread ${participant.messageThreadId}`,
+          `Failed to send message-thread-notification email to ${maskEmail(recipientEmail)} for thread ${participant.messageThreadId}`,
           error instanceof Error ? error.stack : String(error),
         );
       }
