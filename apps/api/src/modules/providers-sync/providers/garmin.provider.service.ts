@@ -76,7 +76,7 @@ type MetricRecord = {
   value: number;
 };
 
-const GARMIN_CALLBACK_HOSTS = new Set(['apis.garmin.com']);
+const GARMIN_CALLBACK_HOST = 'apis.garmin.com';
 
 @Injectable()
 export class GarminProviderService
@@ -110,11 +110,12 @@ export class GarminProviderService
 
     // Callback URLs come from unauthenticated webhook payloads and are fetched
     // with the user's Garmin access token: only ever send it to Garmin.
-    if (!GARMIN_CALLBACK_HOSTS.has(url.hostname)) {
+    if (url.hostname !== GARMIN_CALLBACK_HOST) {
       throw new BadRequestException('Invalid Garmin callbackURL');
     }
 
-    return url.toString();
+    // Rebuild from a constant origin so the request host never comes from input.
+    return `https://${GARMIN_CALLBACK_HOST}/${url.pathname.slice(1)}${url.search}`;
   }
 
   protected get oauthConfig(): OAuthConfig {
