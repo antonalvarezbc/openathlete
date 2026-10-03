@@ -93,7 +93,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "@inlang/cli": "^3.3.8",
-    "@inlang/paraglide-js": "2.0.12",
+    "@inlang/paraglide-js": "2.25.4",
     "@openathlete/eslint-config": "workspace:*",
     "@openathlete/prettier-config": "workspace:*",
     "@types/leaflet": "^1.9.22",

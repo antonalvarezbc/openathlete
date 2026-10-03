@@ -18,7 +18,7 @@
     "tsc:check": "tsc --noEmit"
   },
   "dependencies": {
-    "@inlang/paraglide-js": "2.0.12",
+    "@inlang/paraglide-js": "2.25.4",
     "@openathlete/shared": "workspace:*",
     "@radix-ui/react-avatar": "^1.2.6",
     "@radix-ui/react-collapsible": "^1.1.20",

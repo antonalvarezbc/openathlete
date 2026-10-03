@@ -43,16 +43,16 @@ importers:
         version: 21.178.0
       '@mastra/core':
         specifier: ^0.21.1
-        version: 0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76)
+        version: 0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(valibot@1.5.0(typescript@5.9.3))(zod@3.25.76)
       '@mastra/loggers':
         specifier: ^0.10.19
-        version: 0.10.19(@mastra/core@0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76))
+        version: 0.10.19(@mastra/core@0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(valibot@1.5.0(typescript@5.9.3))(zod@3.25.76))
       '@mastra/memory':
         specifier: ^0.15.13
-        version: 0.15.13(@mastra/core@0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76))(@opentelemetry/api@1.9.1)(react@19.3.0)(zod@3.25.76)
+        version: 0.15.13(@mastra/core@0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(valibot@1.5.0(typescript@5.9.3))(zod@3.25.76))(@opentelemetry/api@1.9.1)(react@19.3.0)(zod@3.25.76)
       '@mastra/pg':
         specifier: ^0.17.10
-        version: 0.17.10(@mastra/core@0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76))(pg-query-stream@4.10.3(pg@8.16.3))
+        version: 0.17.10(@mastra/core@0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(valibot@1.5.0(typescript@5.9.3))(zod@3.25.76))(pg-query-stream@4.10.3(pg@8.16.3))
       '@nestjs/bull':
         specifier: ^11.0.5
         version: 11.0.5(@nestjs/common@11.2.7(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.2.7)(bull@4.16.5)
@@ -470,8 +470,8 @@ importers:
         specifier: ^3.3.8
         version: 3.3.8
       '@inlang/paraglide-js':
-        specifier: 2.0.12
-        version: 2.0.12
+        specifier: 2.25.4
+        version: 2.25.4(typescript@5.9.3)(vite@6.4.3(@types/node@22.13.10)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.51.2)(tsx@4.23.15))
       '@openathlete/eslint-config':
         specifier: workspace:*
         version: link:../../libs/config/eslint-config
@@ -521,8 +521,8 @@ importers:
   apps/website:
     dependencies:
       '@inlang/paraglide-js':
-        specifier: 2.0.12
-        version: 2.0.12
+        specifier: 2.25.4
+        version: 2.25.4(typescript@5.9.3)(vite@6.4.3(@types/node@22.13.10)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.51.2)(tsx@4.23.15))
       '@openathlete/shared':
         specifier: workspace:*
         version: link:../../libs/shared
@@ -2052,16 +2052,20 @@ packages:
     engines: {node: '>=18.0.0'}
     hasBin: true
 
-  '@inlang/paraglide-js@2.0.12':
-    resolution: {integrity: sha512-DL8yZ7Kh35+kRwfj/bZF0OAAHGpPBbj6Ku8JxGc/nOKYw7LKCMrRa5byqQcdM0tTBq0C6WCAVFxUu/vi83oJzQ==}
+  '@inlang/paraglide-js@2.25.4':
+    resolution: {integrity: sha512-z8OoKAcPT0DwlfTQ/SvaPBQILrtmkl4lUPCSQPjKxqERRp1n7W7a2eKi7EvfylatWivSZFGHGjlB6Ad20w0nzw==}
     hasBin: true
+    peerDependencies:
+      typescript: '>=5.6'
+      vite: '>=5.0.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+      vite:
+        optional: true
 
   '@inlang/recommend-sherlock@0.2.1':
     resolution: {integrity: sha512-ckv8HvHy/iTqaVAEKrr+gnl+p3XFNwe5D2+6w6wJk2ORV2XkcRkKOJ/XsTUJbPSiyi4PI+p+T3bqbmNx/rDUlg==}
-
-  '@inlang/sdk@2.4.8':
-    resolution: {integrity: sha512-tyXNe/5+1Vn/eDt3mVklVjZh5qxFwqdF9+hdB6wRUCexVRw6w/w854TIRFrHuaAwFq/0N/ij/yXzll9oScAB+Q==}
-    engines: {node: '>=18.0.0'}
 
   '@inlang/sdk@3.0.6':
     resolution: {integrity: sha512-JyUxQNjKNWglT8qhInmenKK/AnKkbX9AhAM8vFnTT8SyQ0gFA2YGKPntGp+3+UZP9F06Nmawf4sFTn7nGIyTXQ==}
@@ -2377,13 +2381,6 @@ packages:
 
   '@lix-js/sdk@0.17.0':
     resolution: {integrity: sha512-xplbKYEokKbm0/soUy9eXlROF55Si1J9HK97iwJrNl/av1VixZ2mvpDTa0QsX96UyxFnzkXru6hngjtIJTl73g==}
-
-  '@lix-js/sdk@0.4.7':
-    resolution: {integrity: sha512-pRbW+joG12L0ULfMiWYosIW0plmW4AsUdiPCp+Z8rAsElJ+wJ6in58zhD3UwUcd4BNcpldEGjg6PdA7e0RgsDQ==}
-    engines: {node: '>=18'}
-
-  '@lix-js/server-protocol-schema@0.1.1':
-    resolution: {integrity: sha512-jBeALB6prAbtr5q4vTuxnRZZv1M2rKe8iNqRQhFJ4Tv7150unEa0vKyz0hs8Gl3fUGsWaNJBh3J8++fpbrpRBQ==}
 
   '@lukeed/csprng@1.1.0':
     resolution: {integrity: sha512-Z7C/xXCiGWsg0KuKsHTKJxbWhpI3Vs5GwLfOean7MGyVFGqdRgBbAjOCh6u4bbjPc/8MJ2pZmK/0DLdCbivLDA==}
@@ -4494,10 +4491,6 @@ packages:
     peerDependencies:
       socket.io-adapter: ^2.5.4
 
-  '@sqlite.org/sqlite-wasm@3.48.0-build4':
-    resolution: {integrity: sha512-hI6twvUkzOmyGZhQMza1gpfqErZxXRw6JEsiVjUbo7tFanVD+8Oil0Ih3l2nGzHdxPI41zFmfUQG7GHqhciKZQ==}
-    hasBin: true
-
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
@@ -6075,14 +6068,6 @@ packages:
     resolution: {integrity: sha512-aW35yZM6Bb/4oJlZncMH2LCoZtJXTRxES17vE3hoRiowU2kWHaJKFkSBDnDR+cm9J+9QhXmREyIfv0pji9ejCQ==}
     engines: {node: '>=10'}
 
-  dedent@1.5.1:
-    resolution: {integrity: sha512-+LxW+KLWxu3HW3M2w2ympwtqPrqYRzU8fqi6Fhd18fBALe15blJPI/I4+UHveMVG6lJqB4JNd4UG0S5cnVHwIg==}
-    peerDependencies:
-      babel-plugin-macros: ^3.1.0
-    peerDependenciesMeta:
-      babel-plugin-macros:
-        optional: true
-
   dedent@1.7.2:
     resolution: {integrity: sha512-WzMx3mW98SN+zn3hgemf4OzdmyNhhhKz5Ay0pUfQiMQ3e1g+xmTJWp/pKdwKVXhdSkAEGIIzqeuWrL3mV/AXbA==}
     peerDependencies:
@@ -6963,10 +6948,6 @@ packages:
     resolution: {integrity: sha512-vK9P5/iUfdl95AI+JVyUuIcVtd4ofvtrOr3HNtM2yxC9bnMbEdp3x01OhQNnjb8IJYi38VlTE3mBXwcfvywuSw==}
     engines: {node: '>= 14'}
 
-  human-id@4.2.1:
-    resolution: {integrity: sha512-zPGsiS+dWoTZtZ4AtpA9Y+BdSFSNWvnouNlWNoUFyAM6xHOHmdCvqO3k8AIbdamCOv4gUFUVNPf6rJFfc4UiJw==}
-    hasBin: true
-
   human-signals@2.1.0:
     resolution: {integrity: sha512-B4FFZ6q/T2jhhksgkbEW3HBvWIfDW85snkQgawt07S7J5QXTk6BkNV+0yAeZrM5QpMAdYlocGoljn0sJ/WQkFw==}
     engines: {node: '>=10.17.0'}
@@ -7337,9 +7318,6 @@ packages:
     resolution: {integrity: sha512-34wB/Y7MW7bzjKRjUKTa46I2Z7eV62Rkhva+KkopW7Qvv/OSWBqvkSY7vusOPrNuZcUG3tApvdVgNB8POj3SPw==}
     engines: {node: '>=10'}
 
-  js-sha256@0.11.1:
-    resolution: {integrity: sha512-o6WSo/LUvY2uC4j7mO50a2ms7E/EAdbP0swigLV+nzHKTTaYnaLIWJ02VdXrsJX0vGedDESQnLsOekr94ryfjg==}
-
   js-tiktoken@1.0.21:
     resolution: {integrity: sha512-biOj/6M5qdgx5TKjDnFT1ymSpM5tbd3ylwDtrQvFQSu0Z7bBYko2dF+W/aUkXUPuk6IVpRxk/3Q2sHOzGlS36g==}
 
@@ -7444,10 +7422,6 @@ packages:
   kleur@4.1.5:
     resolution: {integrity: sha512-o+NO+8WrRiQEE4/7nwRJhN1HWpVmJm511pBHUxPLtp0BUISzlBplORYSmTclCnJvQq2tKu/sgl3xVpkc7ZWuQQ==}
     engines: {node: '>=6'}
-
-  kysely@0.27.6:
-    resolution: {integrity: sha512-FIyV/64EkKhJmjgC0g2hygpBv5RNWVPyNCqSAD7eTCv6eFWNIi4PN1UvdSJGicN/o35bnevgis4Y0UDC0qi8jQ==}
-    engines: {node: '>=14.0.0'}
 
   kysely@0.28.17:
     resolution: {integrity: sha512-nbD8lB9EB3wNdMhOCdx5Li8DxnLbvKByylRLcJ1h+4SkrowVeECAyZlyiKMThF7xFdRz0jSQ2MoJr+wXux2y0Q==}
@@ -9015,11 +8989,6 @@ packages:
   sprintf-js@1.0.3:
     resolution: {integrity: sha512-D9cPgkvLlV3t3IzL0D0YLvGA9Ahk4PcvVwUbN0dSGr1aP0Nrt4AEnTUbuGvquEC0mA64Gqt1fzirlRs5ibXx8g==}
 
-  sqlite-wasm-kysely@0.3.0:
-    resolution: {integrity: sha512-TzjBNv7KwRw6E3pdKdlRyZiTmUIE0UttT/Sl56MVwVARl/u5gp978KepazCJZewFUnlWHz9i3NQd4kOtP/Afdg==}
-    peerDependencies:
-      kysely: '*'
-
   stack-utils@2.0.6:
     resolution: {integrity: sha512-XlkWvfIm6RmsWtNJx+uqtKLS8eqFbxUg0ZzLXqY0caEy9l7hruX8IpiDnjsLavoBgqCCR71TqWO8MaXYheJ3RQ==}
     engines: {node: '>=10'}
@@ -9564,11 +9533,6 @@ packages:
   uuid-random@1.3.2:
     resolution: {integrity: sha512-UOzej0Le/UgkbWEO8flm+0y+G+ljUon1QWTEZOq1rnMAsxo2+SckbiZdKzAHHlVh6gJqI1TjC/xwgR50MuCrBQ==}
 
-  uuid@10.0.0:
-    resolution: {integrity: sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ==}
-    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
-    hasBin: true
-
   uuid@11.1.1:
     resolution: {integrity: sha512-vIYxrBCC/N/K+Js3qSN88go7kIfNPssr/hHCesKCQNAjmgvYS2oqr69kIufEG+O4+PfezOH4EbIeHCfFov8ZgQ==}
     hasBin: true
@@ -9593,6 +9557,14 @@ packages:
   v8-to-istanbul@9.3.0:
     resolution: {integrity: sha512-kiGUalWN+rgBJ/1OHZsBtU4rXZOfj/7rKQxULKlIzwzQSvMJUUNgPwJEEh7gU6xEVxC0ahoOBvN2YI8GH6FNgA==}
     engines: {node: '>=10.12.0'}
+
+  valibot@1.5.0:
+    resolution: {integrity: sha512-nil6AkP2TChWL43Z5uJ6GTxX01CUA+g8LWUM+N/rB9NBbkUMaUsi9PUNzlUPgoKASgmx9f7eGOYpJ04/fSa6FQ==}
+    peerDependencies:
+      typescript: '>=5'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   validator@13.15.35:
     resolution: {integrity: sha512-TQ5pAGhd5whStmqWvYF4OjQROlmv9SMFVt37qoCBdqRffuuklWYQlCNnEs2ZaIBD1kZRNnikiZOS1eqgkar0iw==}
@@ -11284,31 +11256,24 @@ snapshots:
       '@inlang/sdk': 3.0.6
       esbuild-wasm: 0.19.12
 
-  '@inlang/paraglide-js@2.0.12':
+  '@inlang/paraglide-js@2.25.4(typescript@5.9.3)(vite@6.4.3(@types/node@22.13.10)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.51.2)(tsx@4.23.15))':
     dependencies:
       '@inlang/recommend-sherlock': 0.2.1
-      '@inlang/sdk': 2.4.8
+      '@inlang/sdk': 3.0.6
       commander: 11.1.0
       consola: 3.4.0
+      jiti: 2.7.0
       json5: 2.2.3
       unplugin: 2.3.11
       urlpattern-polyfill: 10.1.0
-    transitivePeerDependencies:
-      - babel-plugin-macros
+      valibot: 1.5.0(typescript@5.9.3)
+    optionalDependencies:
+      typescript: 5.9.3
+      vite: 6.4.3(@types/node@22.13.10)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.51.2)(tsx@4.23.15)
 
   '@inlang/recommend-sherlock@0.2.1':
     dependencies:
       comment-json: 4.6.2
-
-  '@inlang/sdk@2.4.8':
-    dependencies:
-      '@lix-js/sdk': 0.4.7
-      '@sinclair/typebox': 0.31.30
-      kysely: 0.27.6
-      sqlite-wasm-kysely: 0.3.0(kysely@0.27.6)
-      uuid: 10.0.0
-    transitivePeerDependencies:
-      - babel-plugin-macros
 
   '@inlang/sdk@3.0.6':
     dependencies:
@@ -11769,23 +11734,9 @@ snapshots:
       '@lix-js/sdk-linux-x64': 0.17.0
       '@lix-js/sdk-win32-x64': 0.17.0
 
-  '@lix-js/sdk@0.4.7':
-    dependencies:
-      '@lix-js/server-protocol-schema': 0.1.1
-      dedent: 1.5.1
-      human-id: 4.2.1
-      js-sha256: 0.11.1
-      kysely: 0.27.6
-      sqlite-wasm-kysely: 0.3.0(kysely@0.27.6)
-      uuid: 10.0.0
-    transitivePeerDependencies:
-      - babel-plugin-macros
-
-  '@lix-js/server-protocol-schema@0.1.1': {}
-
   '@lukeed/csprng@1.1.0': {}
 
-  '@mastra/core@0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76)':
+  '@mastra/core@0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(valibot@1.5.0(typescript@5.9.3))(zod@3.25.76)':
     dependencies:
       '@a2a-js/sdk': 0.2.5
       '@ai-sdk/anthropic-v5': '@ai-sdk/anthropic@2.0.23(zod@3.25.76)'
@@ -11820,7 +11771,7 @@ snapshots:
       date-fns: 3.6.0
       dotenv: 16.6.1
       hono: 4.13.12
-      hono-openapi: 0.4.8(effect@3.22.2)(hono@4.13.12)(openapi-types@12.1.3)(zod@3.25.76)
+      hono-openapi: 0.4.8(effect@3.22.2)(hono@4.13.12)(openapi-types@12.1.3)(valibot@1.5.0(typescript@5.9.3))(zod@3.25.76)
       js-tiktoken: 1.0.21
       json-schema: 0.4.0
       json-schema-to-zod: 2.8.1
@@ -11850,15 +11801,15 @@ snapshots:
       - valibot
       - zod-openapi
 
-  '@mastra/loggers@0.10.19(@mastra/core@0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76))':
+  '@mastra/loggers@0.10.19(@mastra/core@0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(valibot@1.5.0(typescript@5.9.3))(zod@3.25.76))':
     dependencies:
-      '@mastra/core': 0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76)
+      '@mastra/core': 0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(valibot@1.5.0(typescript@5.9.3))(zod@3.25.76)
       pino: 9.14.0
       pino-pretty: 13.1.3
 
-  '@mastra/memory@0.15.13(@mastra/core@0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76))(@opentelemetry/api@1.9.1)(react@19.3.0)(zod@3.25.76)':
+  '@mastra/memory@0.15.13(@mastra/core@0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(valibot@1.5.0(typescript@5.9.3))(zod@3.25.76))(@opentelemetry/api@1.9.1)(react@19.3.0)(zod@3.25.76)':
     dependencies:
-      '@mastra/core': 0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76)
+      '@mastra/core': 0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(valibot@1.5.0(typescript@5.9.3))(zod@3.25.76)
       '@mastra/schema-compat': 0.11.9(ai@4.3.19(react@19.3.0)(zod@3.25.76))(zod@3.25.76)
       '@upstash/redis': 1.39.0
       ai: 4.3.19(react@19.3.0)(zod@3.25.76)
@@ -11879,9 +11830,9 @@ snapshots:
       - pg-native
       - react
 
-  '@mastra/pg@0.17.10(@mastra/core@0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76))(pg-query-stream@4.10.3(pg@8.16.3))':
+  '@mastra/pg@0.17.10(@mastra/core@0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(valibot@1.5.0(typescript@5.9.3))(zod@3.25.76))(pg-query-stream@4.10.3(pg@8.16.3))':
     dependencies:
-      '@mastra/core': 0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(zod@3.25.76)
+      '@mastra/core': 0.21.1(effect@3.22.2)(openapi-types@12.1.3)(react@19.3.0)(valibot@1.5.0(typescript@5.9.3))(zod@3.25.76)
       async-mutex: 0.5.0
       pg: 8.23.1
       pg-promise: 11.15.0(pg-query-stream@4.10.3(pg@8.16.3))
@@ -14150,8 +14101,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@sqlite.org/sqlite-wasm@3.48.0-build4': {}
-
   '@standard-schema/spec@1.1.0': {}
 
   '@standard-schema/utils@0.3.0': {}
@@ -15883,8 +15832,6 @@ snapshots:
     dependencies:
       mimic-response: 3.1.0
 
-  dedent@1.5.1: {}
-
   dedent@1.7.2: {}
 
   deep-eql@5.0.2: {}
@@ -16910,13 +16857,14 @@ snapshots:
     dependencies:
       react-is: 16.13.1
 
-  hono-openapi@0.4.8(effect@3.22.2)(hono@4.13.12)(openapi-types@12.1.3)(zod@3.25.76):
+  hono-openapi@0.4.8(effect@3.22.2)(hono@4.13.12)(openapi-types@12.1.3)(valibot@1.5.0(typescript@5.9.3))(zod@3.25.76):
     dependencies:
       json-schema-walker: 2.0.0
       openapi-types: 12.1.3
     optionalDependencies:
       effect: 3.22.2
       hono: 4.13.12
+      valibot: 1.5.0(typescript@5.9.3)
       zod: 3.25.76
 
   hono@4.13.12: {}
@@ -16982,8 +16930,6 @@ snapshots:
       debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
-
-  human-id@4.2.1: {}
 
   human-signals@2.1.0: {}
 
@@ -17490,8 +17436,6 @@ snapshots:
 
   joycon@3.1.1: {}
 
-  js-sha256@0.11.1: {}
-
   js-tiktoken@1.0.21:
     dependencies:
       base64-js: 1.5.1
@@ -17622,8 +17566,6 @@ snapshots:
   kleur@3.0.3: {}
 
   kleur@4.1.5: {}
-
-  kysely@0.27.6: {}
 
   kysely@0.28.17: {}
 
@@ -19483,11 +19425,6 @@ snapshots:
 
   sprintf-js@1.0.3: {}
 
-  sqlite-wasm-kysely@0.3.0(kysely@0.27.6):
-    dependencies:
-      '@sqlite.org/sqlite-wasm': 3.48.0-build4
-      kysely: 0.27.6
-
   stack-utils@2.0.6:
     dependencies:
       escape-string-regexp: 2.0.0
@@ -20009,8 +19946,6 @@ snapshots:
 
   uuid-random@1.3.2: {}
 
-  uuid@10.0.0: {}
-
   uuid@11.1.1: {}
 
   uuid@14.0.2: {}
@@ -20026,6 +19961,10 @@ snapshots:
       '@jridgewell/trace-mapping': 0.3.31
       '@types/istanbul-lib-coverage': 2.0.6
       convert-source-map: 2.0.0
+
+  valibot@1.5.0(typescript@5.9.3):
+    optionalDependencies:
+      typescript: 5.9.3
 
   validator@13.15.35: {}
 
