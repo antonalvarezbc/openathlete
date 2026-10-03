@@ -30,16 +30,17 @@ model Event {
   type      EventType
 
   // relationships
-  activityChatNotices ActivityChatNotice[]
-  training       EventTraining?
-  competition    EventCompetition?
-  note           EventNote?
-  activity       EventActivity?
-  athlete        Athlete?          @relation(fields: [athleteId], references: [athleteId])
-  athleteId      Int?              @map("athlete_id")
-  templates      EventTemplate[]
-  trainingWeek   TrainingWeek?     @relation(fields: [trainingWeekId], references: [trainingWeekId])
-  trainingWeekId Int?              @map("training_week_id")
+  activityChatNotices       ActivityChatNotice[]
+  training                  EventTraining?
+  competition               EventCompetition?
+  note                      EventNote?
+  activity                  EventActivity?
+  manualGarminWorkoutExport ManualGarminWorkoutExport?
+  athlete                   Athlete?                   @relation(fields: [athleteId], references: [athleteId])
+  athleteId                 Int?                       @map("athlete_id")
+  templates                 EventTemplate[]
+  trainingWeek              TrainingWeek?              @relation(fields: [trainingWeekId], references: [trainingWeekId])
+  trainingWeekId            Int?                       @map("training_week_id")
 
   // timestamps
   createdAt DateTime @default(now()) @map("created_at")

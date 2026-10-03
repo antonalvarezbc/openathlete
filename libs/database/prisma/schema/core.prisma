@@ -154,6 +154,41 @@ model ProviderWorkoutExport {
   @@map("provider_workout_export")
 }
 
+/// A planned session sent to Garmin Connect through the manual (unofficial)
+/// connector. Sending is always an explicit user action; edits in OA are not
+/// pushed automatically, the stored hash shows whether Garmin is out of date.
+model ManualGarminWorkoutExport {
+  // primary key
+  manualGarminWorkoutExportId Int @id @default(autoincrement()) @map("manual_garmin_workout_export_id")
+
+  // fields
+  /// Athlete whose Garmin account holds the copy
+  athleteId           Int      @map("athlete_id")
+  /// Garmin account the copy was written to
+  garminUserProfileId String   @map("garmin_user_profile_id")
+  /// Garmin Connect workout ID
+  garminWorkoutId     String   @map("garmin_workout_id")
+  /// Garmin Connect calendar entry ID
+  garminScheduleId    String   @map("garmin_schedule_id")
+  /// Day of the Garmin calendar entry (YYYY-MM-DD, athlete's Garmin time zone)
+  plannedDate         String   @map("planned_date")
+  /// Hash of the sent workout and date, to detect later changes in OA
+  contentHash         String   @map("content_hash")
+  /// Last successful send
+  sentAt              DateTime @map("sent_at")
+
+  // relationships
+  event   Event @relation(fields: [eventId], references: [eventId], onDelete: Cascade)
+  eventId Int   @unique @map("event_id")
+
+  // timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([athleteId])
+  @@map("manual_garmin_workout_export")
+}
+
 /// Authentication and invitation tokens.
 /// Used for password resets, athlete invitations, and coach invitations.
 /// Tokens are single-use and expire after a set period.

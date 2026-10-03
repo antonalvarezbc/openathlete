@@ -211,7 +211,8 @@ export class ManualGarminService implements OnModuleDestroy {
     return readManualFit(directory, profile, id);
   }
 
-  private async connection(user: AuthUser, requestedAthleteId?: number) {
+  /** Access-checked manual Garmin connection of an athlete, or null. */
+  async connection(user: AuthUser, requestedAthleteId?: number) {
     if (!getInstallationFeatures(this.config).manualGarminSync) return null;
     const root = this.config.getOrThrow<string>('GARMIN_UNOFFICIAL_DIRECTORY');
     let legacy: ReturnType<typeof manualGarminConnection.parse> | undefined;

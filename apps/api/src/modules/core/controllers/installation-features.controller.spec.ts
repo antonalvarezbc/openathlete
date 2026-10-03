@@ -8,6 +8,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { Test } from '@nestjs/testing';
 
 import { PrismaService } from '../../prisma/services/prisma.service';
+import { ManualGarminWorkoutsService } from '../../providers-sync/manual-garmin/manual-garmin-workouts.service';
 import { ManualGarminController } from '../../providers-sync/manual-garmin/manual-garmin.controller';
 import { ManualGarminService } from '../../providers-sync/manual-garmin/manual-garmin.service';
 import { QueueService } from '../../queue/queue.service';
@@ -33,6 +34,8 @@ describe('installation features HTTP boundary', () => {
   });
   const prisma = {
     athlete: { findUnique: jest.fn() },
+    event: { findMany: jest.fn() },
+    manualGarminWorkoutExport: { findMany: jest.fn() },
     $transaction: jest.fn(),
   };
   const queue = { addActivityProcessingJob: jest.fn() };
@@ -45,6 +48,7 @@ describe('installation features HTTP boundary', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: QueueService, useValue: queue },
         ManualGarminService,
+        ManualGarminWorkoutsService,
       ],
     })
       .overrideGuard(AuthGuard('jwt'))
@@ -128,6 +132,8 @@ describe('installation features HTTP boundary', () => {
       },
     ],
     ['connect', { code: '123456', timezone: 'Europe/Madrid' }],
+    ['workouts/send', { eventIds: [1] }],
+    ['workouts/remove', { eventIds: [1] }],
   ])(
     'rejects disabled Garmin POST %s before any database access',
     async (path, body) => {
@@ -138,8 +144,21 @@ describe('installation features HTTP boundary', () => {
       });
       expect(response.status).toBe(403);
       expect(prisma.athlete.findUnique).not.toHaveBeenCalled();
+      expect(prisma.event.findMany).not.toHaveBeenCalled();
+      expect(prisma.manualGarminWorkoutExport.findMany).not.toHaveBeenCalled();
       expect(prisma.$transaction).not.toHaveBeenCalled();
       expect(queue.addActivityProcessingJob).not.toHaveBeenCalled();
     },
   );
+
+  it('lists no Garmin copies while Garmin is disabled', async () => {
+    const response = await fetch(
+      origin + '/provider/garmin-manual/workouts?eventIds=1',
+      { headers },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual([]);
+    expect(prisma.athlete.findUnique).not.toHaveBeenCalled();
+    expect(prisma.event.findMany).not.toHaveBeenCalled();
+  });
 });

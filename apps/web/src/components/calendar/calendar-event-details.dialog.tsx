@@ -16,6 +16,7 @@ import { SportIcon } from '../sport-icon/sport-icon';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { GarminWorkoutButton } from './garmin-workout-button';
 import { useCalendarContext } from './hooks/use-calendar-context';
 
 interface P {
@@ -87,7 +88,10 @@ export function CalendarEventDetailsDialog({
                   </Badge>
                 )}
             </div>
-            <div className="flex items-center gap-2 md:pr-4 md:-translate-y-4 w-full md:w-auto mt-2 md:mt-0">
+            <div className="flex flex-wrap items-center gap-2 md:pr-4 md:-translate-y-4 w-full md:w-auto mt-2 md:mt-0">
+              {event?.type === EVENT_TYPE.TRAINING && (
+                <GarminWorkoutButton event={event} />
+              )}
               {(roles?.includes('COACH') || event?.type === 'ACTIVITY') && (
                 <Button
                   onClick={onEditEvent}
