@@ -22,18 +22,19 @@
     "cap:build": "CAPACITOR=true pnpm build && pnpm cap:sync",
     "cap:dev": "pnpm dev --host",
     "cap:dev:android": "pnpm cap:dev & pnpm cap:sync && pnpm cap:open:android",
-    "cap:dev:ios": "pnpm cap:dev & pnpm cap:sync && pnpm cap:open:ios"
+    "cap:dev:ios": "pnpm cap:dev & pnpm cap:sync && pnpm cap:open:ios",
+    "test": "vitest run"
   },
   "dependencies": {
     "@capacitor-community/safe-area": "^7.0.0",
     "@capacitor-firebase/authentication": "^7.4.0",
-    "@capacitor/status-bar": "^7.0.3",
     "@capacitor/android": "^7.4.4",
     "@capacitor/browser": "^7.0.2",
     "@capacitor/cli": "^7.4.4",
     "@capacitor/core": "^7.4.4",
     "@capacitor/ios": "^7.4.4",
     "@capacitor/push-notifications": "^7.0.1",
+    "@capacitor/status-bar": "^7.0.3",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -107,6 +108,7 @@
     "globals": "^15.15.0",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.24.1",
-    "vite": "^6.2.0"
+    "vite": "^6.2.0",
+    "vitest": "^3.2.4"
   }
 }

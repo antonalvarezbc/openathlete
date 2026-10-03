@@ -108,8 +108,8 @@ export class TrainingLoadListener {
         }
       }
 
-      // Calculate TRIMP if heart rate data is available
-      if (activity.stream && activity.averageHeartrate) {
+      // Calculate TRIMP if heart rate data is available (stream or average)
+      if (activity.averageHeartrate) {
         // Get athlete's HR metrics
         const hrMax = await this.prisma.athleteMetric.findFirst({
           where: {

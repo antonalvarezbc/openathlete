@@ -75,7 +75,7 @@ function DoneSummary({
       <DistanceStat distance={totalDistance} />
       <ElevationStat elevation={totalElevation} />
       <LoadStat
-        totalLoad={weekLoad?.totalLoad}
+        totalLoad={weekLoad?.actualLoad}
         actualLoad={weekLoad?.actualLoad}
         plannedLoad={weekLoad?.estimatedLoad}
         recommendedMin={weekLoad?.recommendedMin}
