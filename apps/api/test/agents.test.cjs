@@ -29,13 +29,20 @@ const {
 } = require('../dist/mastra/agents');
 const { AiService } = require('../dist/modules/ai/services/ai.service');
 // Agents outside the AI settings tasks, run on the instance keys
-const { workoutParserAgent } = require('../dist/mastra/agents');
+const {
+  workoutParserAgent,
+  planGenerationAgent,
+} = require('../dist/mastra/agents');
+const {
+  aiPlanOutputSchema,
+  toImportPlan,
+} = require('../dist/modules/agent/services/plan-generation');
 const {
   parsedSessionSchema,
   parsedWorkoutSchema,
   parsedWorkoutToSteps,
 } = require('../dist/modules/agent/services/workout-parser');
-const { trainingEventSchema } = require(
+const { trainingEventSchema, trainingPlanImportSchema } = require(
   require.resolve('@openathlete/shared', { paths: [__dirname] }),
 );
 
@@ -362,4 +369,61 @@ test('a new session from text also gets a name and the sport, still strict', asy
   assert.ok(JSON.stringify(body).length < 6000, JSON.stringify(body).length);
   assert.equal(result.object.name, '3x8 umbral');
   assert.equal(result.object.sport, 'RUNNING');
+});
+
+test('AI plans are drafted on the planning model with a strict schema', async () => {
+  const session = (day, minutes) => ({
+    day,
+    sport: 'RUNNING',
+    name: 'Rodaje',
+    description: "10' calentamiento + 30' Z2 + 5' vuelta a la calma",
+    minutes,
+    rpe: 4,
+    distanceKm: null,
+  });
+  providersAnswer(
+    JSON.stringify({
+      name: 'Plan 10K',
+      description: 'Base aeróbica y taper.',
+      cycles: [
+        {
+          name: 'Base',
+          description: 'Volumen suave',
+          phase: 'BASE',
+          weeks: [1, 2].map((weekNumber) => ({
+            weekNumber,
+            theme: 'Aeróbico',
+            sessions: [session('TUESDAY', 45), session('SATURDAY', 60)],
+          })),
+        },
+      ],
+    }),
+  );
+
+  const result = await planGenerationAgent.generate('{}', {
+    structuredOutput: { schema: aiPlanOutputSchema },
+  });
+
+  const { body } = requests[0];
+  // Same instance model as plan adaptation
+  assert.equal(body.model, 'gpt-5.1');
+  // Every field required and no recursion: OpenAI can enforce the schema.
+  assert.equal(body.text.format.type, 'json_schema');
+  assert.notEqual(body.text.format.strict, false);
+  // Instructions and schema, before any athlete data: about 2,000 tokens.
+  assert.ok(JSON.stringify(body).length < 9000, JSON.stringify(body).length);
+
+  const plan = toImportPlan(result.object, {
+    athleteId: 1,
+    goal: { name: '10K', date: '2030-11-02', sport: 'RUNNING' },
+    startDate: '2030-10-21',
+    timeZone: 'UTC',
+    sports: ['RUNNING'],
+    trainingDays: [2, 6],
+    weeklyHours: 3,
+    language: 'es',
+  });
+  assert.equal(trainingPlanImportSchema.safeParse(plan).success, true);
+  assert.equal(plan.cycles[0].weeks[1].sessions[1].dayOfWeek, 6);
+  assert.equal(plan.cycles[0].weeks[1].sessions[1].goalDuration, 3600);
 });

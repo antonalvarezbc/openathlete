@@ -228,4 +228,28 @@ describe('JSON import transaction boundary', () => {
       }),
     );
   });
+  test.each([
+    [undefined, 'ACTIVE'],
+    ['DRAFT' as const, 'DRAFT'],
+  ])('creates the plan with status %s as %s', async (status, expected) => {
+    const tx = {
+      athlete: { findFirst: jest.fn().mockResolvedValue({ athleteId: 3 }) },
+      trainingPlan: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ trainingPlanId: 9 }),
+      },
+      cycle: { create: jest.fn().mockResolvedValue({ cycleId: 1 }) },
+      trainingWeek: {
+        create: jest.fn().mockResolvedValue({ trainingWeekId: 1 }),
+      },
+      event: {
+        create: jest.fn().mockResolvedValue({ training: null }),
+      },
+    };
+    const prisma = { $transaction: jest.fn((fn) => fn(tx)) };
+    await new TrainingPlanService(
+      prisma as unknown as PrismaService,
+    ).importSeoPlan(user, fixture(), '2030-10-21', { status });
+    expect(tx.trainingPlan.create.mock.calls[0][0].data.status).toBe(expected);
+  });
 });

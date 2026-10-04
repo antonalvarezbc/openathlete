@@ -114,7 +114,8 @@ export class TrainingPlanService {
             goal: planData.plan.goal,
             startDate: schedule.startDate,
             endDate: schedule.endDate,
-            status: PlanStatus.ACTIVE,
+            status:
+              options.status === 'DRAFT' ? PlanStatus.DRAFT : PlanStatus.ACTIVE,
           };
           const duplicate = await tx.trainingPlan.findFirst({
             where: {

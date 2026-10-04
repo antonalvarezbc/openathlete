@@ -6,3 +6,4 @@ export { extractInjuryAgent } from './extract-injury.agent';
 export { extractRpeAgent } from './extract-rpe.agent';
 export * from './outputs';
 export { workoutParserAgent } from './workout-parser.agent';
+export { planGenerationAgent } from './plan-generation.agent';
