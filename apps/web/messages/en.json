@@ -1579,5 +1579,14 @@
   "garmin_workout_past": "Past sessions are not sent to Garmin.",
   "garmin_workout_targets": "Some targets need athlete zones or metrics that are missing.",
   "garmin_workout_failed": "Garmin did not respond correctly. Try again later.",
-  "garmin_workout_delete_note": "This session is also in Garmin. Deleting it here does not remove it from Garmin: first use “Remove from Garmin” in the session details."
+  "garmin_workout_delete_note": "This session is also in Garmin. Deleting it here does not remove it from Garmin: first use “Remove from Garmin” in the session details.",
+  "garmin_manual_open": "Manage",
+  "garmin_manual_connected": "Connected",
+  "garmin_manual_not_connected": "Not connected",
+  "garmin_manual_attention": "Needs attention",
+  "garmin_manual_account": "Garmin account",
+  "garmin_manual_sync_section": "Recent activities and recovery",
+  "garmin_backfill_section": "FIT details (GPS, sensors, laps)",
+  "garmin_login_reconnect": "Reconnect Garmin",
+  "garmin_login_reconnect_help": "Use it if you changed your Garmin password, the session expired or you connected the wrong account. Activities already imported are kept."
 }
