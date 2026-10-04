@@ -7,8 +7,9 @@ control searches all chats and has no current-chat selection.
 
 ## Matching and results
 
-- Search matches message text, sender names and conversation titles. All entered
-  words must match the combined text; matching ignores case and accents.
+- Search matches message text, sender names and conversation names as shown.
+  All entered words must match the combined text; matching ignores case and
+  accents.
 - Activity notices are searchable by their displayed description, activity name
   and displayed RPE. They do not contain the full activity comment text.
 - Results show the conversation, sender, date/time and message text, newest first.
@@ -21,6 +22,16 @@ control searches all chats and has no current-chat selection.
 - The dialog supports mobile/desktop layouts, empty results, loading and retry
   after a failed history request. Queries are limited to 200 characters and reset
   when the dialog is reopened.
+
+## Conversation names
+
+Conversations between people are named after their participants, built for the
+person viewing them: the other participants first (alphabetically) and the
+viewer last, with current names. The stored title is a snapshot ordered by user
+ID and shared by every participant, so it is only a fallback when participant
+names are unavailable. Conversations about a training session keep the session
+name. The same name is used in the conversation list, the conversation header,
+the floating chat and search results.
 
 ## Data access and implementation limits
 
@@ -64,4 +75,5 @@ sending after searching, error recovery and existing activity-dialog behavior.
 
 - [Search component](../apps/web/src/components/messages/message-search.tsx)
 - [Search matching](../apps/web/src/utils/message-search.ts)
+- [Conversation names](../apps/web/src/utils/messages.ts)
 - [Authorized history query](../apps/api/src/modules/messages/services/message-thread.service.ts)
