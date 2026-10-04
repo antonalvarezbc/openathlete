@@ -386,6 +386,31 @@ describe('manual Garmin import', () => {
     expect(service.worker).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['MOBILITY', 'PILATES', { sport: 'MOBILITY' }],
+    ['PILATES', 'PILATES', undefined],
+    ['MOBILITY', 'YOGA', undefined],
+  ])(
+    'Garmin %s stored as %s: re-labels only mobility imported as Pilates',
+    async (garminType, stored, expected) => {
+      service.fetch.mockResolvedValue({
+        ...payload,
+        activities: [{ ...payload.activities[0], sport: garminType }],
+      });
+      tx.eventActivity.findFirst.mockResolvedValue({
+        ...detailed,
+        sport: stored,
+      });
+      await service.sync(user);
+      if (expected)
+        expect(tx.eventActivity.update).toHaveBeenCalledWith({
+          where: { eventActivityId: 7 },
+          data: expected,
+        });
+      else expect(tx.eventActivity.update).not.toHaveBeenCalled();
+    },
+  );
+
   it('updates summaries and recovery without downloading or parsing any FIT', async () => {
     readyFit();
     service.fetch.mockResolvedValue({

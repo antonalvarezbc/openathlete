@@ -16,7 +16,12 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
-import { ConnectorProvider, EventType, Prisma } from '@openathlete/database';
+import {
+  ConnectorProvider,
+  EventType,
+  Prisma,
+  SportType,
+} from '@openathlete/database';
 
 import { CoachActivityNoticeEvent } from '../../../events/coach-activity-notice.event';
 import { AuthUser } from '../../auth/decorators/user.decorator';
@@ -428,6 +433,12 @@ export class ManualGarminService implements OnModuleDestroy {
                 );
                 if (!existing.description?.trim() && item.description?.trim())
                   data.description = item.description;
+                // Garmin mobility used to be imported as Pilates.
+                if (
+                  existing.sport === SportType.PILATES &&
+                  mapGarminActivityType(item.sport) === SportType.MOBILITY
+                )
+                  data.sport = SportType.MOBILITY;
                 if (Object.keys(data).length) {
                   await tx.eventActivity.update({
                     where: { eventActivityId: existing.eventActivityId },

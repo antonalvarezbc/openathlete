@@ -80,6 +80,9 @@ independent setting, `ENABLE_MANUAL_FIT_IMPORT`, also disabled by default.
 - New sessions are isolated under `GARMIN_UNOFFICIAL_DIRECTORY/accounts/<athleteId>/.private`.
   This directory is ignored by Git.
 - Sync retains the existing manual trigger, two-minute cooldown and database lock.
+- Garmin *Mobility* activities (FIT sport 86) are imported with the Mobility sport.
+  They used to be stored as Pilates; a migration corrects those with Garmin's
+  default mobility name, and sync corrects any it sees again.
 - Enabling requires ENABLE_MANUAL_GARMIN_SYNC=true, SELF_HOSTED=true and an absolute GARMIN_UNOFFICIAL_DIRECTORY.
 
 The login worker uses the Python environment and pinned dependency already used by

@@ -52,6 +52,7 @@ const SPORTS = {
   yoga: 7,
   pilates: 8,
   hiit: 9,
+  mobility: 11,
   walking: 17,
   hiking: 18,
 } as const;
@@ -119,6 +120,8 @@ export function garminSport(sport: SportType): GarminSport {
       return 'yoga';
     case SportType.PILATES:
       return 'pilates';
+    case SportType.MOBILITY:
+      return 'mobility';
     default:
       return 'other';
   }
