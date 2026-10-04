@@ -163,7 +163,7 @@ You are modifying an existing training event. This is a COMPLETE UPDATE - you mu
 MODIFICATION REQUEST: ${prompt}
 
 CURRENT EVENT (to be modified):
-${JSON.stringify(existingEventContext, null, 2)}
+${JSON.stringify(existingEventContext)}
 
 ATHLETE CONTEXT:
 ${zonesContext ? `TRAINING ZONES:\n${zonesContext}` : 'No training zones configured'}
