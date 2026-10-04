@@ -21,7 +21,7 @@ import { UnreadBadge } from '@/components/ui/unread-badge';
 import { useChatbot } from '@/contexts/chatbot';
 import { m } from '@/paraglide/messages';
 import type { MessageSearchTarget } from '@/utils/message-search';
-import { calculateUnreadCount } from '@/utils/messages';
+import { calculateUnreadCount, getThreadDisplayTitle } from '@/utils/messages';
 import { cn } from '@/utils/shadcn';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Maximize2, Plus, X } from 'lucide-react';
@@ -345,7 +345,10 @@ export function ChatWindow() {
                       {threads.map((thread) => {
                         const threadId = (thread as MessageThread)
                           .messageThreadId;
-                        const threadTitle = (thread as MessageThread).title;
+                        const threadTitle = getThreadDisplayTitle(
+                          thread as MessageThread,
+                          currentUser?.userId,
+                        );
                         const unreadCount = currentUser
                           ? calculateUnreadCount(
                               thread as MessageThread,
@@ -359,7 +362,9 @@ export function ChatWindow() {
                           >
                             <div className="flex items-center justify-between w-full gap-2">
                               <span className="flex-1 truncate">
-                                {threadTitle || `Thread ${threadId}`} -{' '}
+                                {threadTitle ||
+                                  m.message_thread_title({ id: threadId })}{' '}
+                                -{' '}
                                 {new Date(
                                   thread.createdAt,
                                 ).toLocaleDateString()}

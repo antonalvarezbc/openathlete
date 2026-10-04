@@ -21,7 +21,7 @@ import { getLocale } from '@/paraglide/runtime';
 import { AnalyticsEvent } from '@/utils/analytics-events';
 import { isCapacitor } from '@/utils/capacitor';
 import type { MessageSearchTarget } from '@/utils/message-search';
-import { calculateUnreadCount } from '@/utils/messages';
+import { calculateUnreadCount, getThreadDisplayTitle } from '@/utils/messages';
 import { cn } from '@/utils/shadcn';
 import { motion } from 'framer-motion';
 import { MessageCircle, Plus, Trash2 } from 'lucide-react';
@@ -201,10 +201,14 @@ export function MessagesPage() {
   }, [setNewThreadDialogOpen]);
 
   const pageTitle = m.messages();
-  const conversationTitle = activeId
-    ? messageThreads?.find((t) => t.messageThreadId === activeMessageThreadId)
-        ?.title || m.message_thread_title({ id: activeId })
-    : pageTitle;
+  const activeThread = messageThreads?.find(
+    (t) => t.messageThreadId === activeMessageThreadId,
+  );
+  const activeThreadTitle =
+    (activeThread &&
+      getThreadDisplayTitle(activeThread, currentUser?.userId)) ||
+    (activeId ? m.message_thread_title({ id: activeId }) : pageTitle);
+  const conversationTitle = activeId ? activeThreadTitle : pageTitle;
 
   const createAction = useMemo(
     () => ({
@@ -311,7 +315,10 @@ export function MessagesPage() {
             <div className="p-2 space-y-1">
               {threads?.map((thread: AgentThread | MessageThread) => {
                 const threadId = (thread as MessageThread).messageThreadId;
-                const threadTitle = thread.title;
+                const threadTitle = getThreadDisplayTitle(
+                  thread as MessageThread,
+                  currentUser?.userId,
+                );
                 const threadCreatedAt = thread.createdAt;
                 const unreadCount = currentUser
                   ? calculateUnreadCount(
@@ -557,9 +564,7 @@ export function MessagesPage() {
           <>
             <div className="flex-shrink-0 border-b border-border p-4 flex items-center justify-between gap-2">
               <h2 className="text-lg font-semibold min-w-0 break-words">
-                {messageThreads?.find(
-                  (t) => t.messageThreadId === activeMessageThreadId,
-                )?.title || m.message_thread_title({ id: activeId })}
+                {activeThreadTitle}
               </h2>
               <MessageSearch
                 activeThreadId={activeId}

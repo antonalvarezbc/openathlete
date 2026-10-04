@@ -1,4 +1,5 @@
 import { useGetUserThreadsQuery } from '@/api/messages';
+import { useGetMeQuery } from '@/api/user';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,10 +16,11 @@ import {
   MessageSearchTarget,
   searchThreadMessages,
 } from '@/utils/message-search';
+import { getThreadDisplayTitle } from '@/utils/messages';
 import { Search } from 'lucide-react';
-import { useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useId, useMemo, useRef, useState } from 'react';
 
-import type { Message } from '@openathlete/shared';
+import type { Message, MessageThread } from '@openathlete/shared';
 
 function searchableContent(message: Message) {
   const notice = message.activityNotice;
@@ -61,6 +63,12 @@ export function MessageSearch({
     isError,
     refetch,
   } = useGetUserThreadsQuery({ enabled: open });
+  const { data: currentUser } = useGetMeQuery();
+  const titleOf = useCallback(
+    (thread: MessageThread) =>
+      getThreadDisplayTitle(thread, currentUser?.userId),
+    [currentUser?.userId],
+  );
   const results = useMemo(
     () =>
       searchThreadMessages(
@@ -68,8 +76,9 @@ export function MessageSearch({
         query,
         scope === 'current' ? (activeThreadId ?? undefined) : undefined,
         searchableContent,
+        titleOf,
       ),
-    [threads, query, scope, activeThreadId],
+    [threads, query, scope, activeThreadId, titleOf],
   );
 
   return (
@@ -195,7 +204,7 @@ export function MessageSearch({
                       }}
                     >
                       <span className="block text-sm font-semibold">
-                        {thread.title ||
+                        {titleOf(thread) ||
                           m.message_thread_title({
                             id: thread.messageThreadId,
                           })}

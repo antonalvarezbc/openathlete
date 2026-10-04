@@ -33,3 +33,33 @@ export function calculateTotalUnreadCount(
     0,
   );
 }
+
+const fullName = (user?: { firstName?: string; lastName?: string }) =>
+  [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
+
+/**
+ * Name of a conversation for the person viewing it: the other participants
+ * first and the viewer last, with their current names. The stored title is
+ * a snapshot ordered by user ID and shared by everyone, so it can start with
+ * your own name or show an outdated one. Conversations about a training
+ * session keep the session name.
+ */
+export function getThreadDisplayTitle(
+  thread: MessageThread,
+  currentUserId?: number,
+): string | undefined {
+  if (thread.eventActivityId || thread.eventTrainingId) return thread.title;
+  const named = (thread.participants ?? []).flatMap((participant) => {
+    const name = fullName(participant.user);
+    return name ? [{ userId: participant.userId, name }] : [];
+  });
+  const others = named
+    .filter((participant) => participant.userId !== currentUserId)
+    .map((participant) => participant.name)
+    .sort((a, b) => a.localeCompare(b));
+  const viewer = named
+    .filter((participant) => participant.userId === currentUserId)
+    .map((participant) => participant.name);
+  const names = [...new Set([...others, ...viewer])];
+  return names.length ? names.join(', ') : thread.title;
+}

@@ -18,6 +18,8 @@ export function searchThreadMessages(
   query: string,
   threadId?: number,
   displayContent: (message: Message) => string = (message) => message.content,
+  displayTitle: (thread: MessageThread) => string | undefined = (thread) =>
+    thread.title,
 ) {
   const terms = normalizeMessageSearch(query)
     .trim()
@@ -34,7 +36,7 @@ export function searchThreadMessages(
     .filter(({ thread, message }) => {
       const text = normalizeMessageSearch(
         [
-          thread.title,
+          displayTitle(thread),
           message.sender?.firstName,
           message.sender?.lastName,
           displayContent(message),
