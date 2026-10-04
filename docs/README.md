@@ -34,6 +34,7 @@ explicitly; they are not evidence that a live provider currently works.
 
 ### Planning and training data
 
+- [Coach dashboard: compliance and athletes needing attention](coach-dashboard.md)
 - [Coach planning workspace, races and injuries](coach-training-plan-workspace.md)
 - [JSON plan import](training-plan-json.md)
 - [Bulk deletion of planned workouts](calendar-bulk-delete.md)

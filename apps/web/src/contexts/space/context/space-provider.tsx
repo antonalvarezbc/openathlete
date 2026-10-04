@@ -28,9 +28,7 @@ export function SpaceProvider({ children }: Props) {
     if (roles?.length && !roles.includes(currentSpace)) {
       setCurrentSpace(roles[0]);
       setItem(CURRENT_SPACE, roles[0]);
-      nav(
-        getPath(['dashboard', roles[0] === 'COACH' ? 'planning' : 'calendar']),
-      );
+      nav(getPath(['dashboard', roles[0] === 'COACH' ? 'coach' : 'calendar']));
     }
   }, [roles, currentSpace, nav]);
 
@@ -40,7 +38,7 @@ export function SpaceProvider({ children }: Props) {
       setCurrentSpace(space);
       setItem(CURRENT_SPACE, space);
       if (space === 'COACH') {
-        nav(getPath(['dashboard', 'planning']));
+        nav(getPath(['dashboard', 'coach']));
       } else {
         nav(getPath(['dashboard', 'calendar']));
       }

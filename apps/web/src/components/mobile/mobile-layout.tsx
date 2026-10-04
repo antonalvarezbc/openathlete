@@ -27,6 +27,7 @@ interface MobileLayoutProps {
 function getPageTitle(pathname: string): string {
   // Map routes to titles
   const titleMap: Record<string, string> = {
+    [getPath(['dashboard', 'coach'])]: m.coach_dashboard(),
     [getPath(['dashboard', 'planning'])]: m.coach_planning(),
     [getPath(['dashboard', 'calendar'])]: m.calendar(),
     [getPath(['dashboard', 'profile'])]: m.profile(),
@@ -45,6 +46,7 @@ function getPageTitle(pathname: string): string {
  */
 function shouldShowNavbar(pathname: string): boolean {
   const navbarRoutes = [
+    getPath(['dashboard', 'coach']),
     getPath(['dashboard', 'planning']),
     getPath(['dashboard', 'calendar']),
     getPath(['dashboard', 'profile']),
