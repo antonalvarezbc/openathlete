@@ -295,6 +295,13 @@ export const ApiEnvSchema = z
         'Model that consolidates coach AI memory notes (default: openai/gpt-4o-mini, or Claude with AI_PROVIDER=anthropic)',
       ),
 
+    AI_MODEL_WORKOUT_PARSER: z
+      .string()
+      .optional()
+      .describe(
+        'Model that converts a workout written in words into steps (default: openai/gpt-5-mini, or anthropic/claude-haiku-4-5 with AI_PROVIDER=anthropic)',
+      ),
+
     AI_MODEL_TRANSCRIPTION: z
       .string()
       .optional()

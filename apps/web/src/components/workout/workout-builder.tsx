@@ -8,7 +8,13 @@ import {
 } from '@/components/ui/dialog';
 import * as m from '@/paraglide/messages';
 import { Plus } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import type { WorkoutDto, WorkoutStepDto } from '@openathlete/shared';
 import {
@@ -27,6 +33,8 @@ interface WorkoutBuilderProps {
   hideMetadataForm?: boolean;
   hideActions?: boolean;
   onStepsChange?: (steps: WorkoutStepDto[]) => void;
+  /** Extra controls shown next to the "Structured workout" heading. */
+  headerActions?: ReactNode;
 }
 
 type DialogState =
@@ -36,6 +44,7 @@ export function WorkoutBuilder({
   workout,
   sport,
   onStepsChange,
+  headerActions,
 }: WorkoutBuilderProps) {
   const [steps, setSteps] = useState<WorkoutStepDto[]>(workout?.steps || []);
   const [dialogState, setDialogState] = useState<DialogState>({ type: 'none' });
@@ -302,9 +311,12 @@ export function WorkoutBuilder({
     <div className="space-y-6">
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <h3 className="text-lg font-semibold">
-            {m.workout_structured_training()}
-          </h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-lg font-semibold">
+              {m.workout_structured_training()}
+            </h3>
+            {headerActions}
+          </div>
           <div className="flex-1" />
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <Button

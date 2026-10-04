@@ -12,8 +12,8 @@ them.
 
 | Value | Agents use | Key |
 | --- | --- | --- |
-| `openai` (default) | OpenAI models; post-activity feedback questions use `google/gemini-3-pro-preview` | `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY` for feedback questions |
-| `anthropic` | `anthropic/claude-opus-5` for every agent | `ANTHROPIC_API_KEY` |
+| `openai` (default) | OpenAI models (the [written workout converter](written-workout-conversion.md) uses `openai/gpt-5-mini`); post-activity feedback questions use `google/gemini-3-pro-preview` | `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY` for feedback questions |
+| `anthropic` | `anthropic/claude-opus-5` for every agent except the written workout converter, which uses `anthropic/claude-haiku-4-5` | `ANTHROPIC_API_KEY` |
 
 Per-agent `AI_MODEL_*` variables always take precedence over `AI_PROVIDER`, for
 example `AI_MODEL_MEMORY=anthropic/claude-sonnet-5` or

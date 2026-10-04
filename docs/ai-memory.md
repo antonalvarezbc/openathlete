@@ -45,6 +45,7 @@ Only coaches see it; athletes have no access to the endpoints.
 | Plan adaptation | propose and refine | only when a proposal is **applied** |
 | AI assistant | every turn | every answered turn |
 | Generate / modify session with AI | yes | after a valid session is returned |
+| [Convert a written workout](written-workout-conversion.md) | no | no |
 | Post-activity feedback questions (athlete-facing) | the athlete's own earlier answers only | no |
 | TRIMP estimation | no | no |
 

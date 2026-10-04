@@ -39,6 +39,7 @@ import { PrismaService } from '../../prisma/services/prisma.service';
 import { resolveAiEventAthleteId } from '../services/event-ai-helpers';
 import { EventGenerationService } from '../services/event-generation.service';
 import { EventModificationService } from '../services/event-modification.service';
+import { WorkoutParserService } from '../services/workout-parser.service';
 
 type GeneratedStep = NonNullable<
   Awaited<
@@ -101,6 +102,7 @@ export class AIFeaturesController {
     private readonly eventGenerationService: EventGenerationService,
     private readonly eventModificationService: EventModificationService,
     private readonly prisma: PrismaService,
+    private readonly workoutParser: WorkoutParserService,
   ) {}
 
   @UseGuards(AuthGuard('jwt'), UserTypeGuard, FeatureAccessGuard)
@@ -682,42 +684,26 @@ export class AIFeaturesController {
   @ApiBearerAuth()
   @Post('events/structure')
   @ApiOperation({
-    summary: 'Generate the workout structure of a session with AI',
+    summary: 'Turn a workout written in words into structured steps',
     description:
-      "Returns only the steps (warm-up, intervals, recoveries, cool-down) of the session being edited, from its sport, name, description, goals and an optional request, using the athlete's zones and metrics. Nothing is saved.",
+      "Converts text such as \"15' warm-up + 3x8' at RPE 6-7, 3' easy jog recovery + cool-down\" into steps and repeat blocks with a small model. The text is `instructions`, else the description, else the name. Without `sport` (a new session from text alone) a short name and the sport come back too. With `athleteId`, zones and metrics are added only when the text refers to them; without it (templates) targets stay absolute. Nothing is saved.",
   })
   async generateWorkoutStructure(
     @JwtUser() user: AuthUser,
     @Body(new ZodValidationPipe(generateWorkoutStructureDtoSchema))
     dto: GenerateWorkoutStructureDto,
   ): Promise<GenerateWorkoutStructureResponseDto> {
-    const athleteId = await resolveAiEventAthleteId(
-      this.prisma,
-      user,
-      dto.athleteId,
-    );
-    const goals = [
-      dto.goalDuration && `duration ${Math.round(dto.goalDuration / 60)} min`,
-      dto.goalDistance && `distance ${(dto.goalDistance / 1000).toFixed(1)} km`,
-    ].filter(Boolean);
-    // Session text is coach data: describe the task first, then quote it.
-    const prompt = [
-      `Create only the workout structure (warm-up, main set with intervals or repeat blocks, recoveries, cool-down) of an existing ${dto.sport} session.`,
-      `Keep the sport ${dto.sport}. The session name, date and goals are already set; use them to understand what was planned.`,
-      dto.name && `Session name: ${dto.name}`,
-      dto.description && `Session description: ${dto.description}`,
-      goals.length && `Session goals: ${goals.join(', ')}`,
-      dto.instructions &&
-        `Structure requested by the coach: ${dto.instructions}`,
-    ]
-      .filter(Boolean)
-      .join('\n');
-    const generated = await this.eventGenerationService.generateTrainingEvent(
-      prompt,
-      athleteId,
-      user.userId,
-      `Built the workout structure of ${dto.sport} session "${dto.name || 'untitled'}"${dto.instructions ? `: ${dto.instructions}` : ''}`,
-    );
-    return { steps: toWorkoutSteps(generated.workout?.steps ?? []) };
+    const athleteId = dto.athleteId
+      ? await resolveAiEventAthleteId(this.prisma, user, dto.athleteId)
+      : undefined;
+    const text = dto.instructions || dto.description || dto.name || '';
+    if (!dto.sport) return this.workoutParser.parseSession({ text, athleteId });
+    return {
+      steps: await this.workoutParser.parse({
+        text,
+        sport: dto.sport,
+        athleteId,
+      }),
+    };
   }
 }

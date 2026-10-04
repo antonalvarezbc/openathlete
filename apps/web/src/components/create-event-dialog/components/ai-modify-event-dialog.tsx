@@ -1,9 +1,14 @@
-import { useGenerateEventMutation, useModifyEventMutation } from '@/api/agent';
+import {
+  useGenerateEventMutation,
+  useGenerateWorkoutStructureMutation,
+  useModifyEventMutation,
+} from '@/api/agent';
 import { m } from '@/paraglide/messages';
 import {
   AnalyticsEvent,
   analyticsErrorCodeFromUnknown,
 } from '@/utils/analytics-events';
+import { writtenWorkoutEvent } from '@/utils/workout/written-workout';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { usePostHog } from 'posthog-js/react';
 import { useEffect, useRef } from 'react';
@@ -67,9 +72,12 @@ export function AIModifyEventDialog({
   const generateEventMutation = useGenerateEventMutation();
   const modifyEventMutation = useModifyEventMutation();
 
+  const convertMutation = useGenerateWorkoutStructureMutation();
+
   const isGenerating = generateEventMutation.isPending;
   const isModifying = modifyEventMutation.isPending;
-  const isLoading = isGenerating || isModifying;
+  const isConverting = convertMutation.isPending;
+  const isLoading = isGenerating || isModifying || isConverting;
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -144,6 +152,49 @@ export function AIModifyEventDialog({
     }
   });
 
+  // The text is already the workout: a small model only turns it into steps.
+  // Editing keeps name, date and goals; a new session gets a name and sport.
+  const onConvert = methods.handleSubmit(async ({ prompt }) => {
+    try {
+      if (isCreateMode) {
+        if (!date) {
+          toast.error(m.date_required_for_event_generation());
+          return;
+        }
+        const result = await convertMutation.mutateAsync({
+          athleteId,
+          instructions: prompt,
+        });
+        if (!result.steps.length) throw new Error('No steps');
+        onEventGenerated?.(
+          writtenWorkoutEvent({
+            text: prompt,
+            date,
+            athleteId,
+            result,
+            fallbackSport: 'sport' in eventData ? eventData.sport : undefined,
+          }),
+        );
+      } else {
+        const { steps } = await convertMutation.mutateAsync({
+          athleteId,
+          sport: 'sport' in eventData ? eventData.sport : undefined,
+          instructions: prompt,
+        });
+        if (!steps.length) throw new Error('No steps');
+        onEventModified?.({
+          ...eventData,
+          workout: { steps },
+        } as UpdateEventDto);
+      }
+      toast.success(m.ai_structure_done());
+      methods.reset();
+      onClose();
+    } catch {
+      toast.error(m.ai_structure_failed());
+    }
+  });
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent
@@ -179,7 +230,10 @@ export function AIModifyEventDialog({
                 required
                 disabled={isLoading}
               />
-              <div className="flex justify-end gap-2">
+              <p className="text-sm text-muted-foreground">
+                {m.ai_convert_as_written_help()}
+              </p>
+              <div className="flex flex-wrap justify-end gap-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -188,7 +242,20 @@ export function AIModifyEventDialog({
                 >
                   {m.cancel()}
                 </Button>
-                <Button type="submit" isLoading={isLoading}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onConvert}
+                  isLoading={isConverting}
+                  disabled={isLoading}
+                >
+                  {m.ai_convert_as_written()}
+                </Button>
+                <Button
+                  type="submit"
+                  isLoading={isGenerating || isModifying}
+                  disabled={isLoading}
+                >
                   {isLoading
                     ? isCreateMode
                       ? m.generating_event()

@@ -35,8 +35,6 @@ export class EventGenerationService {
     prompt: string,
     athleteId: number,
     userId: number,
-    /** Coach memory entry; defaults to the whole request. */
-    memoryNote?: string,
   ): Promise<TrainingEventSchema> {
     const memory = await this.memory.getCoachMemory(userId, athleteId);
     const zones = await fetchAthleteZones(this.prismaService, athleteId);
@@ -96,8 +94,7 @@ ${buildWorkoutTargetsInstructions()}`;
       userId,
       athleteId,
       'EVENT_GENERATION',
-      memoryNote ??
-        `Generated ${response.object.sport} session "${response.object.name}" from request: ${prompt}`,
+      `Generated ${response.object.sport} session "${response.object.name}" from request: ${prompt}`,
     );
 
     return response.object;
