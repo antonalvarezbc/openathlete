@@ -45,11 +45,30 @@ The same image runs as the HTTP API and as the background worker. Which BullMQ p
 
   The integration test fails until you do.
 
-## AI agents
+## AI features
 
-- Add an agent in `src/mastra/agents/` with an `id`, and export it from `index.ts`.
-- Structured outputs: pass the Zod schema from `libs/shared` as `structuredOutput.schema`. Keep `providerOptions.openai.strictJsonSchema: false` for recursive schemas (see `trainingEventOutputOptions`).
-- Verify against the built code: `pnpm build && pnpm test:agents` (fake OpenAI server, `test/agents.test.cjs`).
+Every model call goes through `modules/ai`. No agent runs on a hardcoded model or key.
+
+- **Agents** are model-free specs (`AgentSpec`: id, name, instructions) in `src/mastra/agents/`. Their structured outputs are Zod schemas in `src/mastra/agents/outputs.ts`.
+- **Which model and key**: `AiModelResolverService` decides, per `AiTask`, in this order:
+  1. the user's model for that task, or their DEFAULT model, on their own encrypted key (Settings > AI);
+  2. otherwise the instance keys from env (`AI_MODEL_*`, `AI_MODEL_DEFAULT`), when `AI_HOSTED_ACCESS` allows: subscribers, everyone or none.
+
+  Use `resolveForUser` for user-triggered features: it throws `AI_NOT_CONFIGURED` (403). Use `tryResolveForAthlete` for background work: it tries the athlete, then each coach, and returns null to skip.
+- **Running**: `AiService.generateText` or `generateObject(agent, model, prompt, schema)`. It handles:
+  - the timeout;
+  - portable structured output (`jsonPromptInjection: 'auto'`, OpenAI strict mode off);
+  - error mapping to 422 `AI_CREDENTIAL_REJECTED`, `AI_QUOTA_EXCEEDED` or `AI_PROVIDER_ERROR`;
+  - the key's health (`lastError`, `lastUsedAt`).
+
+  The provider SDK already retries transient errors. Callers retry only invalid answers (`isRetryableAiError`).
+- **A new AI feature** needs:
+  - a value in the `AiTask` enum (Prisma migration, plus the shared enum);
+  - a hosted default in `common/constants/ai-models.constant.ts`;
+  - a label in the web app (`aiTaskLabel`);
+  - a call through the resolver and `AiService`.
+- **Security**: keys are encrypted with AES-256-GCM (derived from `HASH_PEPPER`) and never returned. Custom endpoints and local-URL providers are refused unless `AI_ALLOW_CUSTOM_ENDPOINTS` (default: off with Stripe), since the server calls those URLs.
+- **Verify against the build**: `pnpm build && pnpm test:agents` exercises fake OpenAI, Anthropic and OpenAI-compatible APIs. It checks which key each provider receives and how errors map, and that the module graph loads (circular imports).
 
 ## Tests
 

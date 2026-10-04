@@ -85,9 +85,16 @@ services:
       BREVO_API_KEY: ${BREVO_API_KEY:-}
       BREVO_FROM_EMAIL: ${BREVO_FROM_EMAIL:-}
 
-      # AI Services (optional)
+      # AI (optional): users can bring their own keys in Settings > AI; keys
+      # here are the instance's, see .env.example
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       GOOGLE_GENERATIVE_AI_API_KEY: ${GOOGLE_GENERATIVE_AI_API_KEY:-}
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      AI_MODEL_DEFAULT: ${AI_MODEL_DEFAULT:-}
+      AI_HOSTED_ACCESS: ${AI_HOSTED_ACCESS:-}
+      AI_ALLOW_CUSTOM_ENDPOINTS: ${AI_ALLOW_CUSTOM_ENDPOINTS:-}
       
       # Optional OAuth providers
       GARMIN_CLIENT_ID: ${GARMIN_CLIENT_ID:-}
