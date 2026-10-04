@@ -1,7 +1,11 @@
 import { useLoginMutation } from '@/api/auth';
 import { AuthAPI } from '@/api/auth/auth.api';
 import { useCreateAccountMutation } from '@/api/user';
-import { FormProvider, RHFTextField } from '@/components/hook-form';
+import {
+  FormProvider,
+  RHFPasswordField,
+  RHFTextField,
+} from '@/components/hook-form';
 import { Button } from '@/components/ui/button';
 import { useAuthContext } from '@/contexts/auth';
 import { m } from '@/paraglide/messages';
@@ -148,9 +152,9 @@ export function CreateAccountView({ className }: React.ComponentProps<'form'>) {
           required
           disabled={!!invitationEmail}
         />
-        <RHFTextField
+        <RHFPasswordField
           name="password"
-          type="password"
+          autoComplete="new-password"
           required
           label={m.password()}
         />

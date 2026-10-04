@@ -1,5 +1,5 @@
 import { usePasswordResetMutation } from '@/api/user';
-import { FormProvider, RHFTextField } from '@/components/hook-form';
+import { FormProvider, RHFPasswordField } from '@/components/hook-form';
 import { Button } from '@/components/ui/button';
 import { m } from '@/paraglide/messages';
 import { getPath } from '@/routes/paths';
@@ -56,9 +56,9 @@ export function PasswordResetView({ className }: React.ComponentProps<'form'>) {
       </div>
       <div className="grid gap-6">
         <div className="grid gap-3">
-          <RHFTextField
+          <RHFPasswordField
             name="password"
-            type="password"
+            autoComplete="new-password"
             label={m.new_password()}
             required
           />
