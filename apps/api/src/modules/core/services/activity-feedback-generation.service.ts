@@ -172,7 +172,10 @@ export class ActivityFeedbackGenerationService {
     ) as Parameters<typeof buildMetricsContext>[0];
     const athleteMetricsSummary = buildMetricsContext(latestMetrics);
     const zonesByType = formatZonesByType(zones);
-    const trainingZonesSummary = buildZonesContext(zonesByType);
+    // Only this activity's sport; zone IDs are not needed to ask questions.
+    const trainingZonesSummary =
+      buildZonesContext(zonesByType, { sport: activity.sport, ids: false }) ||
+      `No training zones configured for ${activity.sport}.`;
 
     const training = activity.relatedTraining;
     const competition = activity.relatedCompetition;

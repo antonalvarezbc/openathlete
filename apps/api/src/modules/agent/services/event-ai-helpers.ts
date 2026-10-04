@@ -3,7 +3,11 @@ import { z } from 'zod';
 
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 
-import { AthleteMetric, TrainingZoneType } from '@openathlete/database';
+import {
+  AthleteMetric,
+  SportType,
+  TrainingZoneType,
+} from '@openathlete/database';
 import {
   METRIC_TYPE,
   WORKOUT_STEP_TYPE,
@@ -230,25 +234,63 @@ export function formatZonesByType(
   );
 }
 
+const ALL_SPORTS = Object.values(SportType) as string[];
+
 /**
- * Build zones context string for prompt
+ * Sports a zone value applies to, as short as possible: nothing when it
+ * applies to every sport (most heart-rate zones list all 56), otherwise the
+ * list or its complement, whichever is shorter.
+ */
+export function describeZoneSports(sports: readonly string[]): string {
+  const covered = new Set(sports);
+  const missing = ALL_SPORTS.filter((sport) => !covered.has(sport));
+  if (!sports.length || !missing.length) return '';
+  return missing.length < sports.length
+    ? `all sports except ${missing.join(', ')}`
+    : sports.join(', ');
+}
+
+/**
+ * Build zones context string for prompt.
+ *
+ * - `sport`: keep only the values that apply to that sport (and leave out
+ *   sport lists). Use it when the sport is fixed, e.g. a completed activity.
+ * - `ids`: include zone IDs and how to use them, only needed when the model
+ *   writes ZONE targets.
  */
 export function buildZonesContext(
   zonesByType: Record<TrainingZoneType, Zone[]>,
+  options: { sport?: string; ids?: boolean } = {},
 ): string {
+  const { sport, ids = true } = options;
+  const applies = (value: Zone['values'][number]) =>
+    !sport || !value.sports.length || value.sports.includes(sport);
   return Object.entries(zonesByType)
-    .map(
-      ([type, zoneList]) => `
-${type} Zones:
-${zoneList
-  .map(
-    (zone) =>
-      `  Zone ID ${zone.trainingZoneId} (display: ${zone.name}): ${zone.name} - ${zone.description}
-    Values: ${zone.values.map((v) => `${v.min}-${v.max} (sports: ${v.sports.join(', ')})`).join(', ')}
-    IMPORTANT: Use zone ID ${zone.trainingZoneId} for ZONE targets of type ${type}`,
-  )
-  .join('\n')}`,
-    )
+    .map(([type, zoneList]) => {
+      const lines = zoneList.flatMap((zone) => {
+        const values = zone.values.filter(applies);
+        if (!values.length) return [];
+        const ranges = values
+          .map((value) => {
+            const sports = sport ? '' : describeZoneSports(value.sports);
+            return `${value.min}-${value.max}${sports ? ` (${sports})` : ''}`;
+          })
+          .join(', ');
+        const label = ids
+          ? `Zone ID ${zone.trainingZoneId} ${zone.name}`
+          : zone.name;
+        const description = zone.description?.trim()
+          ? ` - ${zone.description.trim()}`
+          : '';
+        return [`  ${label}${description}: ${ranges}`];
+      });
+      if (!lines.length) return '';
+      const usage = ids
+        ? `\n  Use the zone ID for ZONE targets of type ${type}.`
+        : '';
+      return `${type} Zones:\n${lines.join('\n')}${usage}`;
+    })
+    .filter(Boolean)
     .join('\n');
 }
 

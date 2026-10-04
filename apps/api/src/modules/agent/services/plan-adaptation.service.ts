@@ -28,6 +28,7 @@ import { AiMemoryService } from '../../ai-memory/ai-memory.service';
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { adaptationWeek } from './adaptation-dates';
+import { describeZoneSports } from './event-ai-helpers';
 import { validateAdaptation } from './plan-adaptation.validation';
 
 const workoutInclude = {
@@ -462,11 +463,11 @@ export class PlanAdaptationService {
         type: zone.type,
         index: zone.index,
         name: zone.name,
-        values: zone.values.map((value) => ({
-          min: value.min,
-          max: value.max,
-          sports: value.sports,
-        })),
+        // A sport list only when the value does not apply to every sport.
+        values: zone.values.map((value) => {
+          const sports = describeZoneSports(value.sports);
+          return { min: value.min, max: value.max, ...(sports && { sports }) };
+        }),
       })),
       surroundingCalendar: calendar.map((event) => ({
         eventId: event.eventId,
