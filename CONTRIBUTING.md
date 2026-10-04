@@ -123,7 +123,7 @@ Before you begin, ensure you have the following installed:
 
 - **Node.js** v22 (version in `.nvmrc`; we recommend using [nvm](https://github.com/nvm-sh/nvm) for version management)
 - **pnpm** v9.x or higher ([installation guide](https://pnpm.io/installation))
-- **PostgreSQL** v13.x or higher
+- **Docker**, for the local PostgreSQL and Redis and the integration and end-to-end tests
 - **Git** (latest version recommended)
 
 > 💡 **Tip**: If you have Node.js installed, you can check your version with `node --version`. Use `nvm use` (or `nvm install && nvm use` if needed) to ensure you're using the correct version.
@@ -154,15 +154,16 @@ Before you begin, ensure you have the following installed:
    cp apps/web/.env.example apps/web/.env
    ```
    
-   **Backend:**
+   **Backend and database:**
    ```bash
    cp apps/api/.env.example apps/api/.env
+   cp libs/database/.env.example libs/database/.env
    ```
    
    Update the `.env` files with your local configuration. At minimum, you'll need:
    - `DATABASE_URL` - PostgreSQL connection string (e.g., `postgresql://user:password@localhost:5432/openathlete`)
-   - `JWT_SECRET` - Secret key for JWT tokens (generate with `openssl rand -base64 32`)
-   - `VITE_API_URL` - Backend API URL (for frontend, e.g., `http://localhost:3000`)
+   - `JWT_SECRET_KEY` and `HASH_PEPPER` - secrets of at least 32 characters (generate with `openssl rand -base64 48`)
+   - `VITE_API_BASE_URL` - Backend API URL (for frontend, e.g., `http://localhost:3000`)
 
 5. **Set up Node.js version:**
    ```bash
@@ -176,23 +177,14 @@ Before you begin, ensure you have the following installed:
    pnpm shared build
    ```
 
-7. **Set up the database:**
-   
-   Create a local PostgreSQL database:
+7. **Start PostgreSQL and Redis, and apply the migrations:**
    ```bash
-   createdb openathlete
-   # Or using psql:
-   # psql -c "CREATE DATABASE openathlete;"
+   docker compose -f docker-compose.dev.yml up -d
+   pnpm database run db:generate
+   pnpm database run db:deploy
    ```
-   
-   Update `DATABASE_URL` in `apps/api/.env` with your database connection string.
-   
-   Run migrations:
-   ```bash
-   pnpm database run db:migrate dev
-   ```
-   
-   > 💡 **Note**: For development, use `db:migrate dev`. For production, use `db:deploy`.
+
+   The default `DATABASE_URL` and `REDIS_URL` in the `.env.example` files match this setup. To use your own PostgreSQL instead, it needs the [pgvector](https://github.com/pgvector/pgvector) extension.
 
 8. **Start the development servers:**
    ```bash
@@ -621,47 +613,17 @@ const mutation = useMutation({
 
 ## Testing
 
-While we're building our test suite, here are guidelines for writing tests:
+Add tests with every bug fix and feature, at the lowest level that catches the regression:
 
-**Guidelines:**
-- Write tests for new features and bug fixes
-- Test edge cases and error scenarios
-- Keep tests focused and readable
-- Use descriptive test names
+| Level | Where | Run |
+| --- | --- | --- |
+| Unit (API) | `apps/api/src/**/*.spec.ts` (Jest) | `pnpm api test` |
+| Unit (web) | `apps/web/src/**/*.test.ts` (Vitest) | `pnpm web test` |
+| Integration (real PostgreSQL) | `apps/api/src/**/*.int-spec.ts` | `scripts/verify.sh --integration` |
+| AI agents (fake OpenAI API) | `apps/api/test/agents.test.cjs` | `scripts/verify.sh --build` |
+| End to end (production Docker images, Playwright) | `e2e/tests/` | `scripts/verify.sh --e2e` |
 
-**Backend tests (Jest):**
-```typescript
-// apps/api/src/modules/workout/workout.service.spec.ts
-import { Test } from '@nestjs/testing';
-import { WorkoutService } from './workout.service';
-
-describe('WorkoutService', () => {
-  let service: WorkoutService;
-
-  beforeEach(async () => {
-    const module = await Test.createTestingModule({
-      providers: [WorkoutService],
-    }).compile();
-
-    service = module.get<WorkoutService>(WorkoutService);
-  });
-
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-});
-```
-
-**Running tests:**
-```bash
-# Backend tests
-cd apps/api
-pnpm test
-
-# Frontend tests (when available)
-cd apps/web
-pnpm test
-```
+`scripts/verify.sh` runs the same checks as CI: lint, type check, translations and unit tests by default, and more with `--build`, `--integration`, `--e2e` or `--all`. It needs Docker for the last two.
 
 ## Pull Request Process
 

@@ -22,6 +22,7 @@
     "format": "pnpm --parallel --aggregate-output format",
     "lint": "pnpm --parallel --aggregate-output lint",
     "tsc:check": "pnpm --parallel --aggregate-output tsc:check",
+    "verify": "scripts/verify.sh",
     "test": "pnpm -r --aggregate-output test",
     "test:e2e": "pnpm e2e stack:up && pnpm e2e test:e2e",
     "dev": "pnpm --parallel --aggregate-output dev",
