@@ -1,0 +1,31 @@
+{
+  "name": "@openathlete/e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "End-to-end tests against the production Docker images",
+  "scripts": {
+    "stack:up": "docker compose up -d --build --wait",
+    "stack:up:prebuilt": "docker compose up -d --no-build --wait",
+    "stack:down": "docker compose down -v",
+    "stack:logs": "docker compose logs --no-color api worker web",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "report": "playwright show-report",
+    "tsc:check": "tsc --noEmit",
+    "lint": "eslint \"**/*.ts\" --max-warnings 0",
+    "format": "prettier --check \"**/*.ts\""
+  },
+  "devDependencies": {
+    "@openathlete/eslint-config": "workspace:*",
+    "@openathlete/prettier-config": "workspace:*",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^22.13.10",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.6",
+    "prettier": "^3.9.9",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.71.0"
+  },
+  "type": "module"
+}

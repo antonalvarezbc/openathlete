@@ -1,0 +1,80 @@
+# Production images of the API, worker and web app, with throwaway
+# PostgreSQL and Redis, for the end-to-end tests:
+#
+#   pnpm e2e stack:up && pnpm e2e test:e2e && pnpm e2e stack:down
+#
+# Ports are offset so the stack can run next to a dev setup.
+name: openathlete-e2e
+
+x-api-env: &api-env
+  ENV: production
+  NODE_ENV: production
+  DATABASE_URL: postgresql://oa:oa@postgres:5432/oa?schema=public
+  REDIS_URL: redis://redis:6379/0
+  JWT_SECRET_KEY: e2e-jwt-secret-key-at-least-32-characters-long
+  HASH_PEPPER: e2e-pepper-at-least-32-characters-long-xxxx
+  APP_URL: http://localhost:18080
+  CORS_ORIGINS: http://localhost:18080
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: oa
+      POSTGRES_PASSWORD: oa
+      POSTGRES_DB: oa
+    ports: ['127.0.0.1:15435:5432']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U oa -d oa']
+      interval: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 3s
+      retries: 20
+
+  api:
+    image: openathlete-api:e2e
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    environment:
+      <<: *api-env
+      # Background jobs run in the worker, as in production
+      ENABLE_ACTIVITY_IMPORT: 'false'
+      ENABLE_ACTIVITY_PROCESSING: 'false'
+      ENABLE_TRAINING_LOAD_ESTIMATION: 'false'
+    ports: ['127.0.0.1:13000:3000']
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  worker:
+    image: openathlete-api:e2e
+    environment:
+      <<: *api-env
+      SKIP_MIGRATIONS: 'true'
+      ENABLE_ACTIVITY_IMPORT: 'true'
+      ENABLE_ACTIVITY_PROCESSING: 'true'
+      ENABLE_TRAINING_LOAD_ESTIMATION: 'false'
+    depends_on:
+      api: { condition: service_healthy }
+
+  web:
+    image: openathlete-web:e2e
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    environment:
+      # Injected into index.html when the container starts
+      API_PUBLIC_URL: http://localhost:13000
+    ports: ['127.0.0.1:18080:80']
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO /dev/null http://127.0.0.1/ || exit 1']
+      interval: 3s
+      retries: 20
+    depends_on:
+      api: { condition: service_healthy }
