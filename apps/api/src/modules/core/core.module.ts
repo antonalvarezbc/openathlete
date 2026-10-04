@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 
+import { AiModule } from '../ai';
 import { AiMemoryModule } from '../ai-memory/ai-memory.module';
 import { AuthModule } from '../auth';
 import { CalendarModule } from '../calendar/calendar.module';
@@ -68,6 +69,7 @@ import { WeekPlanningService } from './services/week-planning.service';
   imports: [
     SubscriptionModule,
     AuthModule,
+    AiModule,
     AiMemoryModule,
     forwardRef(() => CalendarModule),
     forwardRef(() => MessagesModule),
