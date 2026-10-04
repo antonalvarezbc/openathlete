@@ -1,0 +1,319 @@
+/**
+ * A fictional three-week plan that shows every part of the JSON import
+ * format: plan metadata, two cycles, several sports, sessions with and without
+ * structure, repeat blocks, time and distance steps, and RPE, relative heart
+ * rate and absolute pace targets (m/s). The sample text is Spanish, like the
+ * documentation example (docs/examples/training-plan.json), which must stay
+ * identical to it.
+ */
+export const TRAINING_PLAN_EXAMPLE = {
+  plan: {
+    name: 'Ejemplo · 10K en 3 semanas',
+    description:
+      'Plan ficticio para ver el formato. Revísalo y adáptalo antes de usarlo con un atleta.',
+    goal: 'Correr un 10K en unos 50 minutos',
+    sportType: 'RUNNING',
+    distance: 10000,
+    duration: 3,
+    timeTarget: 3000,
+  },
+  cycles: [
+    {
+      name: 'Base',
+      description: 'Dos semanas de rodajes, series, fuerza y tirada larga.',
+      phase: 'BASE',
+      color: '#3b82f6',
+      weeks: [
+        {
+          weekNumber: 1,
+          theme: 'Volumen suave',
+          sessions: [
+            {
+              dayOfWeek: 2,
+              name: 'Rodaje suave',
+              sport: 'RUNNING',
+              description: '40 minutos cómodos, pudiendo hablar.',
+              goalDuration: 2400,
+              goalDistance: 6500,
+              goalRpe: 3,
+              workout: {
+                steps: [
+                  {
+                    stepType: 'STEADY',
+                    durationType: 'TIME',
+                    durationValue: 2400,
+                    targets: [
+                      {
+                        targetType: 'HEARTRATE',
+                        targetMin: 0.7,
+                        targetMax: 0.8,
+                        metricType: 'HR_MAX',
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+            {
+              dayOfWeek: 4,
+              name: "Series 3x8'",
+              sport: 'RUNNING',
+              description:
+                "15' calentar + 3x8' a RPE 6-7 (4:35-4:40/km), recuperación 3' trote muy suave + enfriar.",
+              goalDuration: 3300,
+              goalRpe: 6,
+              workout: {
+                steps: [
+                  {
+                    stepType: 'WARMUP',
+                    durationType: 'TIME',
+                    durationValue: 900,
+                  },
+                  {
+                    stepType: 'REPEAT',
+                    durationType: 'OPEN',
+                    repeatBlock: {
+                      repetitions: 3,
+                      childSteps: [
+                        {
+                          stepType: 'INTERVAL_ACTIVE',
+                          durationType: 'TIME',
+                          durationValue: 480,
+                          notes: 'RPE 6-7',
+                          targets: [
+                            {
+                              targetType: 'PACE',
+                              targetMin: 3.57,
+                              targetMax: 3.64,
+                            },
+                          ],
+                        },
+                        {
+                          stepType: 'INTERVAL_REST',
+                          durationType: 'TIME',
+                          durationValue: 180,
+                          notes: 'Trote muy suave',
+                        },
+                      ],
+                    },
+                  },
+                  {
+                    stepType: 'COOLDOWN',
+                    durationType: 'LAP_BUTTON',
+                  },
+                ],
+              },
+            },
+            {
+              dayOfWeek: 6,
+              name: 'Fuerza y movilidad',
+              sport: 'STRENGTH',
+              description: 'Circuito general de 30 minutos.',
+              goalDuration: 1800,
+              goalRpe: 5,
+            },
+            {
+              dayOfWeek: 0,
+              name: 'Tirada larga',
+              sport: 'RUNNING',
+              description:
+                '60 minutos suaves, en terreno ondulado si es posible.',
+              goalDuration: 3600,
+              goalDistance: 10000,
+              goalElevationGain: 80,
+              goalRpe: 4,
+            },
+          ],
+        },
+        {
+          weekNumber: 2,
+          theme: 'Más ritmo',
+          sessions: [
+            {
+              dayOfWeek: 2,
+              name: 'Rodaje suave',
+              sport: 'RUNNING',
+              description: '45 minutos cómodos.',
+              goalDuration: 2700,
+              goalDistance: 7500,
+              goalRpe: 3,
+            },
+            {
+              dayOfWeek: 4,
+              name: 'Series 5x1000 m',
+              sport: 'RUNNING',
+              description:
+                "15' calentar + 5x1000 m a ritmo de 10K (4:20-4:25/km), recuperación 90\" + 10' enfriar.",
+              goalDuration: 3300,
+              goalDistance: 9500,
+              goalRpe: 7,
+              workout: {
+                steps: [
+                  {
+                    stepType: 'WARMUP',
+                    durationType: 'TIME',
+                    durationValue: 900,
+                  },
+                  {
+                    stepType: 'REPEAT',
+                    durationType: 'OPEN',
+                    repeatBlock: {
+                      repetitions: 5,
+                      childSteps: [
+                        {
+                          stepType: 'INTERVAL_ACTIVE',
+                          durationType: 'DISTANCE',
+                          durationValue: 1000,
+                          targets: [
+                            {
+                              targetType: 'PACE',
+                              targetMin: 3.77,
+                              targetMax: 3.85,
+                            },
+                          ],
+                        },
+                        {
+                          stepType: 'INTERVAL_REST',
+                          durationType: 'TIME',
+                          durationValue: 90,
+                        },
+                      ],
+                    },
+                  },
+                  {
+                    stepType: 'COOLDOWN',
+                    durationType: 'TIME',
+                    durationValue: 600,
+                    targets: [{ targetType: 'RPE', targetValue: 2 }],
+                  },
+                ],
+              },
+            },
+            {
+              dayOfWeek: 6,
+              name: 'Fuerza y movilidad',
+              sport: 'STRENGTH',
+              description: 'Circuito general de 30 minutos.',
+              goalDuration: 1800,
+              goalRpe: 5,
+            },
+            {
+              dayOfWeek: 0,
+              name: 'Tirada larga',
+              sport: 'RUNNING',
+              description: '70 minutos suaves.',
+              goalDuration: 4200,
+              goalDistance: 11500,
+              goalElevationGain: 100,
+              goalRpe: 4,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      name: 'Afinar',
+      description: 'Semana de descarga antes del 10K.',
+      phase: 'TAPER',
+      color: '#f59e0b',
+      weeks: [
+        {
+          weekNumber: 3,
+          theme: 'Descarga y 10K',
+          sessions: [
+            {
+              dayOfWeek: 2,
+              name: 'Rodaje con rectas',
+              sport: 'RUNNING',
+              description:
+                '25\' suaves + 4 rectas de 20" alegres con 40" al paso.',
+              goalDuration: 1900,
+              goalRpe: 4,
+              workout: {
+                steps: [
+                  {
+                    stepType: 'STEADY',
+                    durationType: 'TIME',
+                    durationValue: 1500,
+                  },
+                  {
+                    stepType: 'REPEAT',
+                    durationType: 'OPEN',
+                    repeatBlock: {
+                      repetitions: 4,
+                      childSteps: [
+                        {
+                          stepType: 'INTERVAL_ACTIVE',
+                          durationType: 'TIME',
+                          durationValue: 20,
+                          targets: [{ targetType: 'RPE', targetValue: 7 }],
+                        },
+                        {
+                          stepType: 'INTERVAL_REST',
+                          durationType: 'TIME',
+                          durationValue: 40,
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+            {
+              dayOfWeek: 4,
+              name: 'Activación',
+              sport: 'RUNNING',
+              description: '20 minutos muy suaves.',
+              goalDuration: 1200,
+              goalRpe: 2,
+            },
+            {
+              dayOfWeek: 0,
+              name: '10K de prueba',
+              sport: 'RUNNING',
+              description: "15' calentar y 10 km a 5:00/km o algo mejor.",
+              goalDuration: 3000,
+              goalDistance: 10000,
+              goalRpe: 9,
+              workout: {
+                steps: [
+                  {
+                    stepType: 'WARMUP',
+                    durationType: 'TIME',
+                    durationValue: 900,
+                  },
+                  {
+                    stepType: 'STEADY',
+                    durationType: 'DISTANCE',
+                    durationValue: 10000,
+                    notes: 'Ritmo objetivo 5:00/km',
+                    targets: [
+                      {
+                        targetType: 'PACE',
+                        targetMin: 3.3,
+                        targetMax: 3.4,
+                      },
+                    ],
+                  },
+                  {
+                    stepType: 'COOLDOWN',
+                    durationType: 'LAP_BUTTON',
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+/** The example as the import box and the download show it. */
+export const TRAINING_PLAN_EXAMPLE_TEXT = `${JSON.stringify(
+  TRAINING_PLAN_EXAMPLE,
+  null,
+  2,
+)}\n`;
+
+export const TRAINING_PLAN_EXAMPLE_FILE = 'training-plan-example.json';

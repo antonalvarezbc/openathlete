@@ -28,6 +28,10 @@ import {
   DialogTitle,
 } from '../ui/dialog';
 import { Input } from '../ui/input';
+import {
+  TRAINING_PLAN_EXAMPLE_FILE,
+  TRAINING_PLAN_EXAMPLE_TEXT,
+} from './training-plan-example';
 
 interface ImportPlanDialogProps {
   open: boolean;
@@ -124,6 +128,28 @@ export function ImportPlanDialog({
   );
   const dateLabel = (date: Date | string) =>
     new Date(date).toLocaleDateString(getLocale(), { timeZone });
+  // The example fills the box so the preview shows what it would create.
+  const loadExample = () => {
+    if (
+      text.trim() &&
+      text !== TRAINING_PLAN_EXAMPLE_TEXT &&
+      !window.confirm(m.json_plan_example_replace())
+    )
+      return;
+    setText(TRAINING_PLAN_EXAMPLE_TEXT);
+    setFileError('');
+    setConfirmed(false);
+  };
+  const downloadExample = () => {
+    const url = URL.createObjectURL(
+      new Blob([TRAINING_PLAN_EXAMPLE_TEXT], { type: 'application/json' }),
+    );
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = TRAINING_PLAN_EXAMPLE_FILE;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
   return (
     <Dialog
       open={open}
@@ -135,6 +161,50 @@ export function ImportPlanDialog({
           <DialogDescription>{m.json_plan_review_help()}</DialogDescription>
         </DialogHeader>
         <fieldset disabled={mutation.isPending} className="min-w-0 space-y-4">
+          {!planToken && (
+            <section
+              aria-label={m.json_plan_example_title()}
+              className="space-y-2 rounded-md border bg-muted/30 p-3"
+            >
+              <p className="text-sm font-medium">
+                {m.json_plan_example_title()}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {m.json_plan_example_help()}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={loadExample}
+                >
+                  {m.json_plan_example_load()}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={downloadExample}
+                >
+                  {m.json_plan_example_download()}
+                </Button>
+              </div>
+              <details>
+                <summary className="cursor-pointer text-sm">
+                  {m.json_plan_format_title()}
+                </summary>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
+                  <li>{m.json_plan_format_plan()}</li>
+                  <li>{m.json_plan_format_cycles()}</li>
+                  <li>{m.json_plan_format_sessions()}</li>
+                  <li>{m.json_plan_format_steps()}</li>
+                  <li>{m.json_plan_format_targets()}</li>
+                  <li>{m.json_plan_format_limits()}</li>
+                </ul>
+              </details>
+            </section>
+          )}
           {!planToken && (
             <label className="block space-y-2">
               {m.json_plan_file()}

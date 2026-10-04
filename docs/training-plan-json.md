@@ -7,7 +7,20 @@ review the weeks, confirm the review and publish to the calendar. JSON remains
 editable before publication. Cancelling creates no plans or sessions. File preview
 is local; the import request is sent only after confirmation.
 
-The [two-week example](examples/training-plan.json) contains fictional data.
+The dialog starts with **First time? Start from an example**:
+
+- **Load example** puts a fictional three-week 10K plan in the JSON box, so the
+  preview shows what it would create. If the box already has other JSON, it asks
+  before replacing it. Nothing is imported until you confirm and publish.
+- **Download example** saves it as `training-plan-example.json` to edit.
+- **The format in brief** summarizes the rules below.
+
+The example is also in [examples/training-plan.json](examples/training-plan.json).
+It covers two cycles, running and strength sessions, sessions with and without
+structure, repeat blocks, time and distance steps, and RPE, maximum heart rate
+percentage and absolute pace targets. A web test keeps that file identical to the
+one the dialog uses and checks that it passes import and workout validation.
+
 Importing JSON needs no AI API key or LLM call. AI session generation is a separate
 workflow.
 
@@ -24,6 +37,10 @@ workflow.
   converted to the stored 0–1 scale; zero is preserved.
 - Sessions start at 09:00 in the browser's timezone, respecting daylight saving
   changes. The API accepts an IANA `timeZone`, defaulting to UTC when omitted.
+- Targets: `RPE` uses `targetValue`; heart rate relative to the maximum uses
+  `targetMin`/`targetMax` between 0 and 1 with `metricType: "HR_MAX"`; absolute
+  `PACE` is in m/s (1000 ÷ seconds per km, so 4:30/km is 3.70), the slower pace as
+  `targetMin`.
 - `workout.steps` uses the existing OpenAthlete step types. Repeats require child
   steps, allow 1–99 repetitions and cannot be nested. Both `repeatBlock` and legacy
   `childSteps`/`repeatTimes` representations are accepted. Array order takes
