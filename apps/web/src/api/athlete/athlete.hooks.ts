@@ -84,6 +84,28 @@ export const useInviteAthleteMutation = (
   });
 };
 
+/** Adds the user's own athlete profile to their athletes (both roles). */
+export const useCoachSelfMutation = (
+  opt?: MutationOptions<
+    Awaited<ReturnType<typeof AthleteAPI.coachSelf>>,
+    Error,
+    void
+  >,
+) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    ...opt,
+    mutationFn: AthleteAPI.coachSelf,
+    onSuccess: (data, variables, onMutateResult, context) => {
+      if (opt?.onSuccess)
+        opt.onSuccess(data, variables, onMutateResult, context);
+      queryClient.invalidateQueries({
+        queryKey: [athleteKeys.getCoachedAthletes],
+      });
+    },
+  });
+};
+
 export const useRemoveAthleteMutation = (
   opt?: MutationOptions<
     Awaited<ReturnType<typeof AthleteAPI.removeAthlete>>,

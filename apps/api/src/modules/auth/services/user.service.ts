@@ -35,6 +35,7 @@ import { maskEmail } from 'src/common/utils/mask-email';
 import { SendEmailEvent } from 'src/events';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
+import { ensureSelfCoachingLink } from '../../core/helpers/self-coaching';
 import { AuthUser } from '../decorators/user.decorator';
 import { isAccountAdministrator } from './account-administration.service';
 import { AthleteInvitationService } from './athlete-invitation.service';
@@ -420,6 +421,13 @@ export class UserService {
           value: data.hrRest,
         });
       }
+
+      if (
+        data.coachSelf &&
+        data.roles.includes('ATHLETE') &&
+        data.roles.includes('COACH')
+      )
+        await ensureSelfCoachingLink(tx, user.userId, athlete.athleteId);
 
       // Create metrics (upsert to avoid duplicates)
       for (const metric of metricsToCreate) {

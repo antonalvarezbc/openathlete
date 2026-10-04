@@ -14,6 +14,8 @@ import { AthleteInvitationService } from 'src/modules/auth/services/athlete-invi
 import { CoachInvitationService } from 'src/modules/auth/services/coach-invitation.service';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
+import { ensureSelfCoachingLink } from '../helpers/self-coaching';
+
 const ATHLETE_INCLUDES = {
   trainingZones: {
     include: {
@@ -171,10 +173,31 @@ export class AthleteService {
   }
 
   async getMyCoaches(userId: AuthUser['userId']) {
+    // Coaches linked to this user's athlete profile (the athlete ID is not
+    // the user ID), without the user themselves when self-coaching.
     const users = await this.prisma.user.findMany({
-      where: { coachAthletes: { some: { athleteId: userId } } },
+      where: {
+        userId: { not: userId },
+        coachAthletes: { some: { athlete: { userId } } },
+      },
     });
     return users;
+  }
+
+  /** Lets a user with both roles coach their own athlete profile. */
+  async coachSelf(user: AuthUser) {
+    const athleteId = user.athlete?.athleteId;
+    if (
+      !athleteId ||
+      !user.roles?.includes('ATHLETE') ||
+      !user.roles?.includes('COACH')
+    )
+      throw new ForbiddenException(
+        'Only accounts that are both athlete and coach can coach themselves',
+      );
+    return this.prisma.$transaction((tx) =>
+      ensureSelfCoachingLink(tx, user.userId, athleteId),
+    );
   }
 
   async inviteCoach(userId: AuthUser['userId'], email: string) {

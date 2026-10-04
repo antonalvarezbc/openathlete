@@ -6,6 +6,7 @@ import logoWhiteSrc from '@/assets/logos/logo_white.svg';
 import { ConnectorsList } from '@/components/connectors';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -51,6 +52,7 @@ interface OnboardingData {
   hrRest?: number;
   coachEmail?: string;
   athleteEmails: string[];
+  coachSelf?: boolean;
 }
 
 const ONBOARDING_STORAGE_KEY = 'openathlete_onboarding_data';
@@ -311,6 +313,10 @@ export function OnboardingView() {
       coachEmail: data.coachEmail || undefined,
       athleteEmails:
         validAthleteEmails.length > 0 ? validAthleteEmails : undefined,
+      coachSelf:
+        data.roles.includes('ATHLETE') &&
+        data.roles.includes('COACH') &&
+        !!data.coachSelf,
     };
 
     completeOnboardingMutation.mutate(payload);
@@ -634,6 +640,18 @@ export function OnboardingView() {
                   className="mt-2 min-h-[120px]"
                 />
               </div>
+              {data.roles.includes('ATHLETE') && (
+                <label className="flex items-start gap-3 rounded-md border p-3 text-sm">
+                  <Checkbox
+                    className="mt-0.5"
+                    checked={!!data.coachSelf}
+                    onCheckedChange={(checked) =>
+                      setData((d) => ({ ...d, coachSelf: checked === true }))
+                    }
+                  />
+                  <span>{m.onboarding_coach_self()}</span>
+                </label>
+              )}
               <Button variant="ghost" onClick={handleSkip} className="w-full">
                 {m.onboarding_athlete_invitations_skip()}
               </Button>

@@ -20,6 +20,7 @@ import {
   planHasAIFeatures,
 } from '@openathlete/shared';
 
+import { otherAthleteLinks } from '../../core/helpers/self-coaching';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { StripeService } from './stripe.service';
 
@@ -398,8 +399,9 @@ export class SubscriptionService {
       return true; // Unlimited
     }
 
+    // Coaching yourself does not use an athlete slot.
     const currentCount = await this.prisma.coachAthlete.count({
-      where: { userId: userId },
+      where: otherAthleteLinks(userId),
     });
 
     return currentCount < maxAthletes;
@@ -440,7 +442,7 @@ export class SubscriptionService {
     }
 
     const currentCount = await this.prisma.coachAthlete.count({
-      where: { userId: userId },
+      where: otherAthleteLinks(userId),
     });
 
     return currentCount > maxAthletes;

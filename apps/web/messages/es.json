@@ -1600,5 +1600,14 @@
   "ai_structure_generate": "Generar estructura",
   "ai_structure_done": "Estructura creada. Revísala antes de guardar.",
   "ai_structure_failed": "No se ha podido crear la estructura. Inténtalo de nuevo o descríbela de otra forma.",
-  "ai_structure_need_text": "Añade un nombre, una descripción o qué debe incluir la estructura."
+  "ai_structure_need_text": "Añade un nombre, una descripción o qué debe incluir la estructura.",
+  "coach_self_title": "Entrenarte a ti mismo",
+  "coach_self_help": "También eres atleta: añádete a tus atletas para planificar tu propio entrenamiento desde el espacio de entrenador, con las mismas herramientas que para cualquier atleta.",
+  "coach_self_button": "Entrenarme a mí mismo",
+  "coach_self_added": "Ya estás entre tus atletas",
+  "coach_self_failed": "No se ha podido añadirte a tus atletas",
+  "coach_self_you": "Tú",
+  "coach_self_stop": "Dejar de entrenarme",
+  "coach_self_stop_confirm": "Dejarás de aparecer entre tus atletas. Tus datos de entrenamiento se conservan.",
+  "onboarding_coach_self": "Entrenarme también a mí mismo (apareceré entre mis atletas)"
 }

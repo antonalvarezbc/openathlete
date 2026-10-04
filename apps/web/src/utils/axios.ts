@@ -120,6 +120,7 @@ export const routes = {
     inviteCoach: '/athlete/invite/coach',
     inviteAthlete: '/athlete/invite/athlete',
     removeAthlete: (athleteId: number) => `/athlete/${athleteId}`,
+    coachSelf: '/athlete/coach-self',
     removeCoach: (coachId: number) => `/athlete/coach/${coachId}`,
     getAthleteSettings: (athleteId: number) => `/athlete/${athleteId}/settings`,
     updateAthleteSettings: (athleteId: number) =>

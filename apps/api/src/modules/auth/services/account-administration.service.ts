@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 
 import { ChangeAccountMode } from '@openathlete/shared';
 
+import { selfCoachingLink } from '../../core/helpers/self-coaching';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { AuthUser } from '../decorators/user.decorator';
 import { deleteUserData } from './delete-user-data';
@@ -69,9 +70,18 @@ export class AccountAdministrationService {
 
   async change(user: AuthUser, userId: number, input: ChangeAccountMode) {
     this.authorize(user);
-    const result = await this.prisma.user.updateMany({
-      where: { userId, onboardingCompleted: true },
-      data: { roles: input.roles },
+    const result = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.user.updateMany({
+        where: { userId, onboardingCompleted: true },
+        data: { roles: input.roles },
+      });
+      // Coaching yourself needs both roles.
+      if (
+        updated.count === 1 &&
+        !(input.roles.includes('ATHLETE') && input.roles.includes('COACH'))
+      )
+        await tx.coachAthlete.deleteMany({ where: selfCoachingLink(userId) });
+      return updated;
     });
     if (result.count !== 1)
       throw new ConflictException(
