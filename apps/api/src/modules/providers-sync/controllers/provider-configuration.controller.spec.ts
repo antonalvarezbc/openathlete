@@ -9,6 +9,7 @@ import { Test } from '@nestjs/testing';
 
 import { InstallationFeaturesController } from '../../core/controllers/installation-features.controller';
 import { PrismaService } from '../../prisma/services/prisma.service';
+import { QueueService } from '../../queue/queue.service';
 import { CorosProviderService, SuuntoProviderService } from '../providers';
 import { GarminProviderService } from '../providers/garmin.provider.service';
 import { PolarProviderService } from '../providers/polar.provider.service';
@@ -56,6 +57,8 @@ describe('provider configuration HTTP boundary', () => {
       providers: [
         { provide: ConfigService, useValue: config },
         { provide: PrismaService, useValue: prisma },
+        // Historical imports are queued; these tests never start one.
+        { provide: QueueService, useValue: {} },
         ...[
           StravaProviderService,
           GarminProviderService,

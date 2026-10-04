@@ -277,6 +277,24 @@ export class StripeService {
   }
 
   /**
+   * Cancel subscription immediately, e.g. when the account is deleted.
+   * A subscription Stripe no longer knows is already gone.
+   */
+  async cancelSubscriptionNow(subscriptionId: string): Promise<void> {
+    try {
+      await this.stripe.subscriptions.cancel(subscriptionId);
+    } catch (error) {
+      if (
+        error instanceof Stripe.errors.StripeInvalidRequestError &&
+        error.code === 'resource_missing'
+      ) {
+        return;
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Resume subscription (remove cancellation)
    */
   async resumeSubscription(

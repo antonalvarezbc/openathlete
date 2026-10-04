@@ -40,6 +40,8 @@ model User {
   tokens                    Token[]
   templates                 EventTemplate[]
   agentThreads              AgentThread[]
+  aiCredentials             AiCredential[]
+  aiModelPreferences        AiModelPreference[]
   eventTemplateFolder       EventTemplateFolder[]
   athleteInvitations        AthleteInvitation[]
   coachInvitationsSent      CoachInvitation[]          @relation("CoachInvitationsSent")

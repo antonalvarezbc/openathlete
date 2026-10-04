@@ -1,4 +1,5 @@
 import { ActivityAnalysisAPI } from '@/api/activity-analysis/activity-analysis.api';
+import { useAiAccessQuery } from '@/api/ai-settings';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -11,7 +12,6 @@ import { Label } from '@/components/ui/label';
 import { SparklesIcon } from '@/components/ui/sparkles-icon';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuthContext } from '@/contexts/auth';
-import { useFeatureAccess } from '@/hooks/use-feature-access';
 import { m } from '@/paraglide/messages';
 import { getLocale } from '@/paraglide/runtime';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -21,7 +21,6 @@ import { useId, useRef, useState } from 'react';
 
 import {
   ActivityAnalysisRequest,
-  FeatureName,
   SavedActivityAnalysis,
 } from '@openathlete/shared';
 
@@ -63,9 +62,9 @@ function Observations({ title, items }: { title: string; items: string[] }) {
 
 export function ActivityDetailsAnalysisTab({ eventId }: { eventId: number }) {
   const { user, authenticated } = useAuthContext();
-  const { hasAccess, isLoading: accessLoading } = useFeatureAccess(
-    FeatureName.AI_GENERATION,
-  );
+  // The analysis runs on the instance's AI keys, not on personal ones.
+  const { data: aiAccess, isLoading: accessLoading } = useAiAccessQuery();
+  const hasAccess = !!aiAccess?.hostedAccess;
   const queryClient = useQueryClient();
   const queryKey = ['activity-analysis', user?.userId, eventId];
   const history = useQuery({

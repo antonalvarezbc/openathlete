@@ -6,22 +6,16 @@ In the Athlete space, open **Settings → Profile → Session validation** and e
 AI feedback questions and analysis.
 
 - Athlete settings must exist with `requireFeedbackQuestions: true`.
-- The athlete or a linked coach must have access to `AI_RPE_QUESTIONS`.
-- `SELF_HOSTED=true` enables feature access without a platform subscription;
-  the selected AI provider still needs its credentials.
-- `AI_MODEL_POST_ACTIVITY_FEEDBACK` selects the question model. Its code default
-  is `google/gemini-3-pro-preview`.
-- The repository's OpenAI configuration example is
-  `AI_MODEL_POST_ACTIVITY_FEEDBACK=openai/gpt-5.1`, together with
-  `OPENAI_API_KEY` in `apps/api/.env`. Restart the API after editing it. An OpenAI
-  key does not configure the default Google model; that provider uses
-  `GOOGLE_GENERATIVE_AI_API_KEY`.
-- Errors distinguish missing provider configuration, provider failure and invalid
-  question output. When questions are disabled, the athlete is asked to contact
-  their coach. This message does not itself change the settings permissions.
-- `AI_PROVIDER=anthropic` also switches the question model to
-  `anthropic/claude-opus-5` (requires `ANTHROPIC_API_KEY`) unless
-  `AI_MODEL_POST_ACTIVITY_FEEDBACK` is set. See [AI providers](ai-providers.md).
+- Questions run on the first model available for the athlete: their own key in
+  **Settings → AI**, then a linked coach's, then the instance keys when
+  `AI_HOSTED_ACCESS` allows it. See [AI providers](ai-providers.md).
+- The instance question model is `AI_MODEL_POST_ACTIVITY_FEEDBACK`, else
+  `AI_MODEL_DEFAULT` or `AI_PROVIDER=anthropic`; its code default is
+  `google/gemini-3-pro-preview`, which needs `GOOGLE_GENERATIVE_AI_API_KEY`.
+- Errors distinguish missing AI (`FEEDBACK_MODEL_NOT_CONFIGURED`), provider
+  failure and invalid question output. When questions are disabled, the athlete
+  is asked to contact their coach. This message does not itself change the
+  settings permissions.
 - Questions use the athlete's language. Voice notes are transcribed by the
   provider selected with `AI_TRANSCRIPTION_PROVIDER`: OpenAI Whisper by default,
   or Gemini with `google`. Transcription uses the interface language supplied by
@@ -82,47 +76,24 @@ unanswered question.
 
 ## Subsequent processing
 
-Completing the questionnaire or saving RPE/comments can update the existing
-semantic index when settings and feature access allow it. **AI does not create
-injuries or fill in missing RPE automatically.** Answers and athlete-entered RPE
-remain unchanged, including older records.
+When the questionnaire is complete (or RPE and a comment are saved), the AI
+reads the answers and comment and **records injuries and fills in the RPE**
+(0–1 scale) of the activity. It runs on the first model available for the
+athlete, then their coaches, then the instance (the feedback extraction feature
+in Settings → AI), and only while the athlete keeps feedback questions enabled.
+There is no review screen for these values: the coach sees and edits them like
+any other injury or RPE.
 
-There is no Accept/Edit/Reject screen for extracted inferences. Extraction agents
-remain in the code for a possible future review workflow, but the feedback listener
-no longer invokes them.
-
-## Embeddings and storage
-
-Feedback text is embedded into `activity_feedback_embedding` as a semantic
-index. **No feature reads this index yet**: there is no similarity query in the
-API, and the table is only written by the feedback listener and cleared when an
-activity or user is deleted. It is kept for a future semantic search over
-athlete feedback.
-
-The embedding provider is selected with `AI_EMBEDDING_PROVIDER`:
-
-- `openai` (default): `text-embedding-3-small`, using `OPENAI_API_KEY`.
-- `google`: `gemini-embedding-001` requested at 1,536 dimensions and
-  re-normalized, using `GOOGLE_GENERATIVE_AI_API_KEY`.
-
-Claude has no embeddings API, so installations using `AI_PROVIDER=anthropic`
-still need one of these keys; without it, the listener logs the error and the
-feedback flow is unaffected. Vectors from different providers are not
-comparable. Rows stored before a provider change must be regenerated before a
-similarity search uses them; the table does not record which model produced
-each row.
-
-Text and vector are passed as Prisma parameters; the vector must contain 1,536
-finite numbers. Settings are rechecked before saving. An UPSERT maintains one
-embedding per activity. This path does not require a new migration or
-automatically reprocess old activities.
+Feedback is no longer embedded for semantic search: nothing read that index.
+The `activity_feedback_embedding` table is kept, without new rows.
 
 ## Verification coverage
 
 - Permission and disabled-setting checks, invalid JSON, concurrent generation,
   provider errors and preservation of existing answers.
-- Empty answers, save failures, transcription language and absence of automatic
-  injury/RPE writes.
+- Empty answers, save failures and transcription language.
+- Feedback extraction: model resolution, athletes with questions turned off,
+  bounded pain scores and RPE updates.
 - Browser checks for on-demand generation, retry, partial answers and retained text.
 - PostgreSQL integration checks with two service instances and simulated model
   output. Use disposable fixtures and remove only the data created by the test.
@@ -132,5 +103,4 @@ automatically reprocess old activities.
 - [Question generation](../apps/api/src/modules/core/services/activity-feedback-generation.service.ts)
 - [Feedback processing listener](../apps/api/src/listeners/activity-feedback-extraction.listener.ts)
 - [Model defaults](../apps/api/src/common/constants/ai-models.constant.ts)
-- [Embedding providers](../apps/api/src/common/utils/ai-embedding.util.ts)
 - [Gemini transcription](../apps/api/src/common/utils/ai-transcription.util.ts)

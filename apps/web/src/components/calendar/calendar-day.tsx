@@ -1,10 +1,11 @@
+import { useAiTaskAvailable } from '@/api/ai-settings';
 import { useDuplicateEventMutation } from '@/api/event';
-import { useFeatureAccess } from '@/hooks/use-feature-access';
 import { m } from '@/paraglide/messages';
 import { getLocale } from '@/paraglide/runtime';
 import { getDateLocale } from '@/utils/locales';
 import { cn } from '@/utils/shadcn';
 import { useDroppable } from '@dnd-kit/core';
+import { format } from 'date-fns';
 import {
   Activity,
   Award,
@@ -15,9 +16,9 @@ import {
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { EVENT_TYPE, Event, FeatureName } from '@openathlete/shared';
+import { AiTask, EVENT_TYPE, Event } from '@openathlete/shared';
 
-import { PaywallDialog } from '../paywall';
+import { AiSetupDialog } from '../ai-settings';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -67,10 +68,10 @@ export function CalendarDay({
     setCycleResize,
   } = useCalendarContext();
   const { clipboard, hasClipboard } = useEventClipboard();
-  const { hasAccess: hasAIAccess } = useFeatureAccess(
-    FeatureName.AI_GENERATION,
+  const { available: hasAIAccess } = useAiTaskAvailable(
+    AiTask.EVENT_GENERATION,
   );
-  const [paywallOpen, setPaywallOpen] = useState(false);
+  const [aiSetupOpen, setAiSetupOpen] = useState(false);
   const duplicateEventMutation = useDuplicateEventMutation({
     onSuccess: () => {
       toast.success(m.event_created_successfully());
@@ -203,7 +204,10 @@ export function CalendarDay({
       ref={setNodeRef}
     >
       <ContextMenu>
-        <ContextMenuTrigger className="flex-1 flex flex-col h-full">
+        <ContextMenuTrigger
+          className="flex-1 flex flex-col h-full"
+          data-calendar-day={format(day, 'yyyy-MM-dd')}
+        >
           {isWeek ? (
             <div
               className={cn(
@@ -326,7 +330,7 @@ export function CalendarDay({
                 if (hasAIAccess) {
                   createEventWithAI(day);
                 } else {
-                  setPaywallOpen(true);
+                  setAiSetupOpen(true);
                 }
               }}
             >
@@ -358,10 +362,9 @@ export function CalendarDay({
           </ContextMenuContent>
         )}
       </ContextMenu>
-      <PaywallDialog
-        open={paywallOpen}
-        onOpenChange={setPaywallOpen}
-        reason="ai-feature"
+      <AiSetupDialog
+        open={aiSetupOpen}
+        onOpenChange={setAiSetupOpen}
         analyticsSource="calendar_day"
       />
     </div>

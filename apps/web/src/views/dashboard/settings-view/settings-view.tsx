@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 
 import { AccountAdministrationTab } from './account-administration-tab';
+import { AiTab } from './ai/ai-tab';
 import { AthletesTab } from './athletes-tab';
 import { CoachesTab } from './coaches-tab';
 import { ConnectorsTab } from './connectors-tab';
@@ -41,6 +42,7 @@ export function SettingsView() {
       ? ['connectors', 'equipment', 'training_zones', 'coaches']
       : []),
     ...(isCoach ? ['athletes'] : []),
+    'ai',
   ];
   const tabLabels: Record<string, string> = {
     profile: m.profile(),
@@ -53,6 +55,7 @@ export function SettingsView() {
     training_zones: m.training_zones(),
     coaches: m.coaches(),
     athletes: m.athletes(),
+    ai: m.ai_settings_tab(),
   };
   const visibleTab = allowedTabs.includes(activeTab) ? activeTab : 'profile';
   // Update active tab when URL param changes
@@ -112,6 +115,7 @@ export function SettingsView() {
                 {m.training_zones()}
               </TabsTrigger>
             )}
+            <TabsTrigger value="ai">{m.ai_settings_tab()}</TabsTrigger>
             {isCoach && (
               <TabsTrigger value="athletes">{m.athletes()}</TabsTrigger>
             )}
@@ -158,6 +162,9 @@ export function SettingsView() {
             <CoachesTab />
           </TabsContent>
         )}
+        <TabsContent value="ai" className="mt-6">
+          <AiTab />
+        </TabsContent>
         <TabsContent value="invitations" className="mt-6">
           <InvitationsTab />
         </TabsContent>

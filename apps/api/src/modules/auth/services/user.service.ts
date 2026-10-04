@@ -38,9 +38,9 @@ import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 import { ensureSelfCoachingLink } from '../../core/helpers/self-coaching';
 import { AuthUser } from '../decorators/user.decorator';
 import { isAccountAdministrator } from './account-administration.service';
+import { AccountDeletionService } from './account-deletion.service';
 import { AthleteInvitationService } from './athlete-invitation.service';
 import { CoachInvitationService } from './coach-invitation.service';
-import { deleteUserData } from './delete-user-data';
 import { TokenService } from './token.service';
 
 @Injectable()
@@ -55,6 +55,7 @@ export class UserService {
     private tokenService: TokenService,
     private invitationService: AthleteInvitationService,
     private coachInvitationService: CoachInvitationService,
+    private readonly accountDeletionService: AccountDeletionService,
   ) {
     this.HASH_PEPPER = this.configService.get('HASH_PEPPER')
       ? Buffer.from(this.configService.get('HASH_PEPPER'))
@@ -489,15 +490,7 @@ export class UserService {
   };
 
   public deleteAccount = async (user: AuthUser) => {
-    const userId = user.userId;
-    // One transaction: a failing step must not leave a half-deleted account.
-    await this.prisma.$transaction((tx) => deleteUserData(tx, userId), {
-      timeout: 120_000,
-      maxWait: 10_000,
-    });
-
-    this.logger.log(`Account deleted for user ${userId}`);
-
+    await this.accountDeletionService.deleteAccount(user.userId);
     return { success: true };
   };
 }

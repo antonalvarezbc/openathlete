@@ -187,6 +187,15 @@ export const routes = {
     workoutStructure: '/agent/ai/events/structure',
     memory: (athleteId: number) => `/agent/ai/memory/${athleteId}`,
   },
+  aiSettings: {
+    providers: '/ai/providers',
+    credentials: '/ai/credentials',
+    credential: (aiCredentialId: number) => `/ai/credentials/${aiCredentialId}`,
+    testCredential: (aiCredentialId: number) =>
+      `/ai/credentials/${aiCredentialId}/test`,
+    models: '/ai/models',
+    access: '/ai/access',
+  },
   messages: {
     createThread: '/messages/threads',
     getThreads: '/messages/threads',
@@ -222,8 +231,6 @@ export const routes = {
     resume: '/subscription/resume',
     invoices: '/subscription/invoices',
     portal: '/subscription/portal',
-    getAthleteFeatureAccess: (athleteId: number, featureName: string) =>
-      `/subscription/athlete/${athleteId}/feature-access/${featureName}`,
   },
   seoPlan: {
     create: '/seo-plan',

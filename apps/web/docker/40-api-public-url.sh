@@ -1,23 +1,25 @@
 #!/bin/sh
-# Injects the public API URL into the built web app at container start, so a
-# single image works for any deployment. Builds made with a real
-# VITE_API_BASE_URL contain no placeholder and are left untouched.
+# Injects the public API URL into index.html at container start, so a single
+# image works for any deployment. The app reads it from a <meta> tag at
+# runtime: index.html is never cached, while the hashed bundles are cached for
+# a year and must not change. Builds made with a real VITE_API_BASE_URL contain
+# no placeholder and are left untouched.
 set -eu
 
 PLACEHOLDER="__OPENATHLETE_API_BASE_URL__"
-ROOT=/usr/share/nginx/html
+INDEX=/usr/share/nginx/html/index.html
 
-if ! grep -rqF "$PLACEHOLDER" "$ROOT"; then
+if ! grep -qF "$PLACEHOLDER" "$INDEX"; then
   exit 0
 fi
 
 API_URL="${API_PUBLIC_URL:-http://localhost:3000}"
-case "$API_URL" in
-  http://*|https://*) ;;
-  *) echo "API_PUBLIC_URL must start with http:// or https:// (got '$API_URL')" >&2; exit 1 ;;
-esac
+API_URL="${API_URL%/}"
+# Only characters that are safe inside an HTML attribute and a sed replacement
+if ! printf '%s' "$API_URL" | grep -Eq '^https?://[A-Za-z0-9._~:/?#@!$()*+,;=%-]+$'; then
+  echo "API_PUBLIC_URL must be an http:// or https:// URL (got '$API_URL')" >&2
+  exit 1
+fi
 
-# Escape characters that are special in the sed replacement
-ESCAPED=$(printf '%s' "${API_URL%/}" | sed 's/[&|\\]/\\&/g')
-grep -rlF "$PLACEHOLDER" "$ROOT" | xargs sed -i "s|$PLACEHOLDER|$ESCAPED|g"
-echo "Web app configured to call the API at ${API_URL%/}"
+sed -i "s|$PLACEHOLDER|$API_URL|g" "$INDEX"
+echo "Web app configured to call the API at $API_URL"

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { AiModule } from '../ai';
 import { AiMemoryModule } from '../ai-memory/ai-memory.module';
 import { AiToolsModule } from '../ai-tools/ai-tools.module';
 import { AuthModule } from '../auth';
@@ -22,6 +23,7 @@ import { WorkoutParserService } from './services/workout-parser.service';
   imports: [
     AiMemoryModule,
     AiToolsModule,
+    AiModule,
     AuthModule,
     CoreModule,
     SubscriptionModule,

@@ -105,14 +105,13 @@ export class AIFeaturesController {
     private readonly workoutParser: WorkoutParserService,
   ) {}
 
-  @UseGuards(AuthGuard('jwt'), UserTypeGuard, FeatureAccessGuard)
-  @RequireFeature(FeatureName.AI_GENERATION)
+  @UseGuards(AuthGuard('jwt'), UserTypeGuard)
   @ApiBearerAuth()
   @Post('events/generate')
   @ApiOperation({
     summary: 'Generate a training event using AI',
     description:
-      "Generates a complete training event using AI based on a natural language prompt. The AI considers the athlete's training zones, latest metrics, and training load to create a personalized workout. The generated event includes a structured workout with steps (warmup, intervals, cooldown, etc.), targets (heart rate zones, pace, power), and goals (duration, distance, elevation, RPE). The event is scheduled for the specified date with a default start time of 8:00 AM. Requires AI_GENERATION feature access (available in paid subscription plans).",
+      "Generates a complete training event using AI based on a natural language prompt. The AI considers the athlete's training zones, latest metrics, and training load to create a personalized workout. The generated event includes a structured workout with steps (warmup, intervals, cooldown, etc.), targets (heart rate zones, pace, power), and goals (duration, distance, elevation, RPE). The event is scheduled for the specified date with a default start time of 8:00 AM. Runs on the user's own AI key and model (Settings > AI), or on the instance keys when their plan includes AI.",
   })
   @ApiBody({
     description: 'Event generation request',
@@ -287,7 +286,12 @@ export class AIFeaturesController {
   @ApiResponse({
     status: 403,
     description:
-      'Forbidden - AI_GENERATION feature access required (paid subscription)',
+      'AI_NOT_CONFIGURED: no AI key of the user and no hosted AI in their plan',
+  })
+  @ApiResponse({
+    status: 422,
+    description:
+      'The AI provider failed: AI_CREDENTIAL_REJECTED, AI_QUOTA_EXCEEDED or AI_PROVIDER_ERROR',
   })
   @ApiResponse({
     status: 500,
@@ -344,14 +348,13 @@ export class AIFeaturesController {
     return result;
   }
 
-  @UseGuards(AuthGuard('jwt'), UserTypeGuard, FeatureAccessGuard)
-  @RequireFeature(FeatureName.AI_GENERATION)
+  @UseGuards(AuthGuard('jwt'), UserTypeGuard)
   @ApiBearerAuth()
   @Post('events/modify')
   @ApiOperation({
     summary: 'Modify an existing training event using AI',
     description:
-      "Modifies an existing training event using AI based on a natural language prompt. The AI considers the current event structure, athlete's training zones, latest metrics, and training load to apply the requested modifications. This is a COMPLETE UPDATE operation - the AI returns the full, complete event with all workout steps. The modification can change event details (name, description, goals), adjust workout structure, modify targets, or add/remove steps. Requires AI_GENERATION feature access (available in paid subscription plans).",
+      "Modifies an existing training event using AI based on a natural language prompt. The AI considers the current event structure, athlete's training zones, latest metrics, and training load to apply the requested modifications. This is a COMPLETE UPDATE operation - the AI returns the full, complete event with all workout steps. The modification can change event details (name, description, goals), adjust workout structure, modify targets, or add/remove steps. Runs on the user's own AI key and model (Settings > AI), or on the instance keys when their plan includes AI.",
   })
   @ApiBody({
     description: 'Event modification request',
@@ -585,7 +588,12 @@ export class AIFeaturesController {
   @ApiResponse({
     status: 403,
     description:
-      'Forbidden - AI_GENERATION feature access required (paid subscription)',
+      'AI_NOT_CONFIGURED: no AI key of the user and no hosted AI in their plan',
+  })
+  @ApiResponse({
+    status: 422,
+    description:
+      'The AI provider failed: AI_CREDENTIAL_REJECTED, AI_QUOTA_EXCEEDED or AI_PROVIDER_ERROR',
   })
   @ApiResponse({
     status: 500,

@@ -45,6 +45,30 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm -r --no-bail --aggregate-output test
 
+  integration:
+    # API tests against a real, freshly migrated PostgreSQL database
+    name: Integration tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: oa
+          POSTGRES_PASSWORD: oa
+          POSTGRES_DB: oa
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U oa -d oa"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://oa:oa@localhost:5432/oa?schema=public
+      INTEGRATION_DATABASE_URL: postgresql://oa:oa@localhost:5432/oa?schema=public
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: pnpm database run db:deploy
+      - run: pnpm api test:integration
+
   docs:
     # apps/docs is a standalone pnpm project with its own lockfile
     name: Docs
@@ -64,24 +88,59 @@ jobs:
       - run: pnpm types:check
       - run: pnpm build
 
-  docker:
-    # Same Dockerfiles as releases and production, built without pushing
-    name: Docker image (${{ matrix.image }})
+  e2e:
+    # The production images (same Dockerfiles as releases) with PostgreSQL,
+    # Redis and the worker, tested through the API and a real browser
+    name: End-to-end tests
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        image: [api, web]
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
-      - uses: docker/build-push-action@v7
+
+      - name: Build API image
+        uses: docker/build-push-action@v7
         with:
           context: .
-          file: apps/${{ matrix.image }}/Dockerfile
-          push: false
-          cache-from: type=gha,scope=${{ matrix.image }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+          file: apps/api/Dockerfile
+          load: true
+          tags: openathlete-api:e2e
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Build web image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          load: true
+          tags: openathlete-web:e2e
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+      - name: Start the stack
+        run: docker compose -f e2e/docker-compose.yml up -d --no-build --wait
+
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile --filter @openathlete/e2e...
+      - run: pnpm e2e exec playwright install --with-deps chromium
+
+      - run: pnpm e2e test:e2e
+
+      - name: Service logs
+        if: failure()
+        run: docker compose -f e2e/docker-compose.yml logs --no-color api worker web
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: e2e/playwright-report
+          retention-days: 14
 
   build:
     name: Build (${{ matrix.app }})

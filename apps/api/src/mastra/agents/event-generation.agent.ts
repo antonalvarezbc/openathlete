@@ -1,10 +1,8 @@
-import { Agent } from '@mastra/core/agent';
-
-import { EVENT_GENERATION_MODEL } from 'src/common/constants/ai-models.constant';
+import type { AgentSpec } from 'src/modules/ai';
 
 import { AI_MEMORY_INSTRUCTIONS } from './ai-memory-instructions';
 
-export const eventGenerationAgent = new Agent({
+export const eventGenerationAgent: AgentSpec = {
   id: 'event-generation',
   name: 'event-generation',
   description:
@@ -204,5 +202,4 @@ CONTEXT:
 
 Remember: Generate appropriate workouts with proper targets!
 ${AI_MEMORY_INSTRUCTIONS}`,
-  model: EVENT_GENERATION_MODEL,
-});
+};

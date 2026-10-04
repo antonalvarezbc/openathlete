@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { CreateCheckoutSessionDto, FeatureName } from '@openathlete/shared';
+import { CreateCheckoutSessionDto } from '@openathlete/shared';
 
 import { SubscriptionAPI } from './subscription.api';
 import { subscriptionKeys } from './subscription.keys';
@@ -57,22 +57,5 @@ export function useCustomerPortal() {
   return useMutation({
     mutationFn: (returnUrl: string) =>
       SubscriptionAPI.getCustomerPortalUrl(returnUrl),
-  });
-}
-
-export function useAthleteFeatureAccess(
-  athleteId: number | undefined,
-  featureName: FeatureName,
-) {
-  return useQuery({
-    queryKey: [
-      ...subscriptionKeys.all,
-      'athleteFeatureAccess',
-      athleteId,
-      featureName,
-    ],
-    queryFn: () =>
-      SubscriptionAPI.getAthleteFeatureAccess(athleteId!, featureName),
-    enabled: !!athleteId,
   });
 }

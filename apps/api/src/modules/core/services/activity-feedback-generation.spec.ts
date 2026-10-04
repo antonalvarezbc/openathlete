@@ -1,23 +1,33 @@
 import { ForbiddenException } from '@nestjs/common';
 
-import * as models from 'src/common/constants/ai-models.constant';
-import { postActivityFeedbackAgent } from 'src/mastra/agents/post-activity-feedback.agent';
+import { postActivityFeedbackAgent } from 'src/mastra/agents';
 import { disabledAiMemory } from 'src/modules/ai-memory/ai-memory.testing';
+import { AiModelResolverService } from 'src/modules/ai/services/ai-model-resolver.service';
+import { AiService } from 'src/modules/ai/services/ai.service';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
-import { FeatureAccessService } from 'src/modules/subscription/services/feature-access.service';
 
 import { ActivityFeedbackGenerationService } from './activity-feedback-generation.service';
 
-jest.mock('src/mastra/agents/post-activity-feedback.agent', () => ({
-  postActivityFeedbackAgent: { generate: jest.fn() },
+// Jest cannot load Mastra's ESM providers: the agents and AI services are
+// replaced, the service under test only sees their interfaces.
+jest.mock('src/mastra/agents', () => ({
+  postActivityFeedbackAgent: { id: 'post-activity-feedback' },
+  feedbackQuestionsOutputSchema: {},
+}));
+jest.mock('src/modules/ai/services/ai.service', () => ({
+  AiService: class {},
+}));
+jest.mock('src/modules/ai/services/ai-model-resolver.service', () => ({
+  AiModelResolverService: class {},
 }));
 jest.mock('src/modules/prisma/services/prisma.service', () => ({
   PrismaService: class {},
 }));
-jest.mock('src/modules/subscription/services/feature-access.service', () => ({
-  FeatureAccessService: class {},
-}));
+
+const model = { task: 'POST_ACTIVITY_QUESTIONS', source: 'hosted' };
+const ai = { generateObject: jest.fn() };
+const resolver = { tryResolveForAthlete: jest.fn() };
 
 const owner = {
   userId: 1,
@@ -76,46 +86,36 @@ function setup() {
     athleteInjury: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: jest.fn(async (fn) => fn(tx)),
   };
-  const access = {
-    canAccessFeatureForAthlete: jest.fn().mockResolvedValue(true),
-  };
   const service = new ActivityFeedbackGenerationService(
     db as unknown as PrismaService,
-    access as unknown as FeatureAccessService,
+    resolver as unknown as AiModelResolverService,
+    ai as unknown as AiService,
     disabledAiMemory(),
   );
-  return { activity, tx, db, access, service };
+  return { activity, tx, db, service };
 }
-const previousKeys = {
-  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-  GOOGLE_GENERATIVE_AI_API_KEY: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
-};
-afterEach(() => {
-  jest.restoreAllMocks();
-  for (const [key, value] of Object.entries(previousKeys)) {
-    if (value === undefined) delete process.env[key];
-    else process.env[key] = value;
-  }
-});
 beforeEach(() => {
-  process.env.OPENAI_API_KEY = 'test-provider-key';
-  process.env.GOOGLE_GENERATIVE_AI_API_KEY = 'test-provider-key';
   jest.clearAllMocks();
-  (postActivityFeedbackAgent.generate as jest.Mock).mockResolvedValue({
-    text: JSON.stringify(questions),
-  });
+  resolver.tryResolveForAthlete.mockResolvedValue(model);
+  ai.generateObject.mockResolvedValue(questions);
 });
 it.each([owner, coach])(
   'allows owner or linked coach and uses Spanish without invented heart rate',
   async (user) => {
     const { service, tx } = setup();
     await service.generateForUser(user, 10);
-    expect(postActivityFeedbackAgent.generate).toHaveBeenCalledWith(
-      expect.stringContaining('Spanish (ES)'),
-      expect.objectContaining({ abortSignal: expect.any(AbortSignal) }),
+    // The athlete's chain decides the model: own key, a coach's, or hosted.
+    expect(resolver.tryResolveForAthlete).toHaveBeenCalledWith(
+      'POST_ACTIVITY_QUESTIONS',
+      2,
     );
-    const prompt = (postActivityFeedbackAgent.generate as jest.Mock).mock
-      .calls[0][0];
+    expect(ai.generateObject).toHaveBeenCalledWith(
+      postActivityFeedbackAgent,
+      model,
+      expect.stringContaining('Spanish (ES)'),
+      expect.anything(),
+    );
+    const prompt = ai.generateObject.mock.calls[0][2];
     expect(prompt).not.toContain('HR_MAX: 195');
     expect(prompt).not.toContain('HR_REST: 60');
     expect(tx.activityFeedbackQuestion.createMany).toHaveBeenCalledTimes(1);
@@ -129,22 +129,20 @@ it.each([
   await expect(
     service.generateForUser(user as AuthUser, 10),
   ).rejects.toBeInstanceOf(ForbiddenException);
-  expect(postActivityFeedbackAgent.generate).not.toHaveBeenCalled();
+  expect(ai.generateObject).not.toHaveBeenCalled();
 });
 it('rejects an unlinked coach', async () => {
   const { service, db } = setup();
   db.coachAthlete.findFirst.mockResolvedValue(null);
   await expect(service.generateForUser(coach, 10)).rejects.toThrow();
-  expect(postActivityFeedbackAgent.generate).not.toHaveBeenCalled();
+  expect(ai.generateObject).not.toHaveBeenCalled();
 });
 it('rechecks coach access after generation before writing', async () => {
   const { service, tx } = setup();
-  (postActivityFeedbackAgent.generate as jest.Mock).mockImplementation(
-    async () => {
-      tx.coachAthlete.findFirst.mockResolvedValue(null);
-      return { text: JSON.stringify(questions) };
-    },
-  );
+  ai.generateObject.mockImplementation(async () => {
+    tx.coachAthlete.findFirst.mockResolvedValue(null);
+    return questions;
+  });
   await expect(service.generateForUser(coach, 10)).rejects.toThrow();
   expect(tx.activityFeedbackQuestion.createMany).not.toHaveBeenCalled();
 });
@@ -158,41 +156,40 @@ it.each([false, null])(
     await expect(service.generateForUser(owner, 10)).rejects.toThrow(
       'FEEDBACK_DISABLED',
     );
-    expect(postActivityFeedbackAgent.generate).not.toHaveBeenCalled();
+    expect(ai.generateObject).not.toHaveBeenCalled();
   },
 );
-it('requires AI feature access', async () => {
-  const { service, access } = setup();
-  access.canAccessFeatureForAthlete.mockResolvedValue(false);
+it('needs AI for the athlete or one of their coaches', async () => {
+  const { service, tx } = setup();
+  resolver.tryResolveForAthlete.mockResolvedValue(null);
   await expect(service.generateForUser(owner, 10)).rejects.toThrow(
-    'FEEDBACK_AI_UNAVAILABLE',
+    'FEEDBACK_MODEL_NOT_CONFIGURED',
   );
-  expect(postActivityFeedbackAgent.generate).not.toHaveBeenCalled();
+  expect(tx.activityFeedbackQuestion.createMany).not.toHaveBeenCalled();
+  expect(ai.generateObject).not.toHaveBeenCalled();
 });
 it('preserves existing questions and answers without a model call', async () => {
   const { service, activity, tx } = setup();
   activity.feedbackQuestions = [{ answerText: 'Saved response' }];
   await service.generateForUser(owner, 10);
-  expect(postActivityFeedbackAgent.generate).not.toHaveBeenCalled();
+  expect(ai.generateObject).not.toHaveBeenCalled();
   expect(tx.activityFeedbackQuestion.createMany).not.toHaveBeenCalled();
 });
 it.each([
-  'not json',
-  '{}',
-  JSON.stringify({ questions: [{ text: 'Only one' }] }),
-  JSON.stringify({
-    questions: [{ text: 'Same' }, { text: 'Same' }, { text: 'Same' }],
-  }),
-  JSON.stringify({
+  null,
+  {},
+  { questions: [{ text: 'Only one' }] },
+  { questions: [{ text: 'Same' }, { text: 'Same' }, { text: 'Same' }] },
+  {
     questions: [
       { text: 'a' },
       { text: 'b' },
       { text: 'c', qcmOptions: [{ label: '' }] },
     ],
-  }),
-])('rejects malformed questionnaires atomically: %s', async (text) => {
+  },
+])('rejects malformed questionnaires atomically: %j', async (answer) => {
   const { service, tx } = setup();
-  (postActivityFeedbackAgent.generate as jest.Mock).mockResolvedValue({ text });
+  ai.generateObject.mockResolvedValue(answer);
   await expect(service.generateForUser(owner, 10)).rejects.toThrow(
     'FEEDBACK_INVALID_QUESTIONS',
   );
@@ -200,14 +197,12 @@ it.each([
 });
 it('releases failed in-flight requests so the user can retry', async () => {
   const { service } = setup();
-  (postActivityFeedbackAgent.generate as jest.Mock).mockRejectedValueOnce(
-    new Error('Unavailable'),
-  );
+  ai.generateObject.mockRejectedValueOnce(new Error('Unavailable'));
   await expect(service.generateForUser(owner, 10)).rejects.toThrow(
     'FEEDBACK_PROVIDER_ERROR',
   );
   await service.generateForUser(owner, 10);
-  expect(postActivityFeedbackAgent.generate).toHaveBeenCalledTimes(2);
+  expect(ai.generateObject).toHaveBeenCalledTimes(2);
 });
 it('shares concurrent automatic and manual generation', async () => {
   const { service, tx } = setup();
@@ -216,7 +211,7 @@ it('shares concurrent automatic and manual generation', async () => {
     service.generateForUser(owner, 10),
     service.generateForUser(coach, 10),
   ]);
-  expect(postActivityFeedbackAgent.generate).toHaveBeenCalledTimes(1);
+  expect(ai.generateObject).toHaveBeenCalledTimes(1);
   expect(tx.activityFeedbackQuestion.createMany).toHaveBeenCalledTimes(1);
 });
 it('does not replace questions inserted by another API process', async () => {
@@ -228,36 +223,14 @@ it('does not replace questions inserted by another API process', async () => {
 });
 it('respects opt-out changed while AI was running', async () => {
   const { service, tx } = setup();
-  (postActivityFeedbackAgent.generate as jest.Mock).mockImplementation(
-    async () => {
-      tx.athleteSettings.findUnique.mockResolvedValue({
-        requireFeedbackQuestions: false,
-      });
-      return { text: JSON.stringify(questions) };
-    },
-  );
+  ai.generateObject.mockImplementation(async () => {
+    tx.athleteSettings.findUnique.mockResolvedValue({
+      requireFeedbackQuestions: false,
+    });
+    return questions;
+  });
   await expect(service.generateForUser(owner, 10)).rejects.toThrow(
     'FEEDBACK_DISABLED',
   );
   expect(tx.activityFeedbackQuestion.createMany).not.toHaveBeenCalled();
-});
-
-it.each([
-  ['openai/gpt-5.1', 'OPENAI_API_KEY'],
-  ['google/gemini-3-pro-preview', 'GOOGLE_GENERATIVE_AI_API_KEY'],
-  ['anthropic/claude-opus-5', 'ANTHROPIC_API_KEY'],
-])('requires the key for the selected provider %s', async (model, key) => {
-  jest.replaceProperty(models, 'POST_ACTIVITY_FEEDBACK_MODEL', model);
-  const { service, tx } = setup();
-  for (const value of ['', 'your-provider-api-key']) {
-    process.env[key] = value;
-    await expect(service.generateForUser(owner, 10)).rejects.toThrow(
-      'FEEDBACK_MODEL_NOT_CONFIGURED',
-    );
-  }
-  expect(postActivityFeedbackAgent.generate).not.toHaveBeenCalled();
-  expect(tx.activityFeedbackQuestion.createMany).not.toHaveBeenCalled();
-  process.env[key] = 'test-provider-key';
-  await service.generateForUser(owner, 10);
-  expect(postActivityFeedbackAgent.generate).toHaveBeenCalledTimes(1);
 });

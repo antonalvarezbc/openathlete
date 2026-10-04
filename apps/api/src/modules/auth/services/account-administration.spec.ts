@@ -12,10 +12,15 @@ import {
   AccountAdministrationService,
   isAccountAdministrator,
 } from './account-administration.service';
-import { deleteUserData } from './delete-user-data';
+import { AccountDeletionService } from './account-deletion.service';
 import { UserService } from './user.service';
 
-jest.mock('./delete-user-data', () => ({ deleteUserData: jest.fn() }));
+jest.mock('./account-deletion.service', () => ({
+  AccountDeletionService: class {},
+}));
+
+const accountDeletion = { deleteAccount: jest.fn() };
+const deletion = accountDeletion as unknown as AccountDeletionService;
 
 const user: AuthUser = {
   userId: 8,
@@ -35,6 +40,7 @@ describe('Administrator-only mode changes', () => {
     const service = new AccountAdministrationService(
       prisma as unknown as PrismaService,
       new ConfigService({ ADMIN_USER_IDS: '99' }),
+      deletion,
     );
     await expect(service.list(user, '', 0)).rejects.toThrow('Administrator');
     await expect(
@@ -57,6 +63,7 @@ describe('Administrator-only mode changes', () => {
     const service = new AccountAdministrationService(
       prisma as unknown as PrismaService,
       new ConfigService({ ADMIN_USER_IDS: '8' }),
+      deletion,
     );
     return { prisma, service };
   };
@@ -130,6 +137,7 @@ describe('First-login selection is single-use', () => {
       {} as never,
       invitations as never,
       invitations as never,
+      {} as never,
     );
     return { service, tx, prisma, invitations };
   }
@@ -192,31 +200,30 @@ describe('Administrator account deletion', () => {
   const setup = (adminIds = '8') => {
     const prisma = {
       user: { findUnique: jest.fn().mockResolvedValue({ userId: 12 }) },
-      $transaction: jest.fn((run: (tx: unknown) => unknown) => run('tx')),
     };
     const service = new AccountAdministrationService(
       prisma as unknown as PrismaService,
       new ConfigService({ ADMIN_USER_IDS: adminIds }),
+      deletion,
     );
     return { prisma, service };
   };
   beforeEach(() => jest.clearAllMocks());
 
-  it('deletes another account and its data in one transaction', async () => {
-    const { prisma, service } = setup();
+  it('deletes another account with the account deletion service', async () => {
+    const { service } = setup();
     await expect(service.delete(user, 12)).resolves.toEqual({ success: true });
-    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
-    expect(deleteUserData).toHaveBeenCalledWith('tx', 12);
+    expect(accountDeletion.deleteAccount).toHaveBeenCalledWith(12);
   });
 
   it('requires administrator access', async () => {
     const { service } = setup('99');
     await expect(service.delete(user, 12)).rejects.toThrow('Administrator');
-    expect(deleteUserData).not.toHaveBeenCalled();
+    expect(accountDeletion.deleteAccount).not.toHaveBeenCalled();
   });
 
   it('refuses deleting itself, other administrators or missing accounts', async () => {
-    const { prisma, service } = setup('8,12');
+    const { service } = setup('8,12');
     await expect(service.delete(user, 8)).rejects.toThrow('themselves');
     await expect(service.delete(user, 12)).rejects.toThrow(
       'Administrator accounts',
@@ -224,7 +231,6 @@ describe('Administrator account deletion', () => {
     const { prisma: other, service: plain } = setup();
     other.user.findUnique.mockResolvedValue(null);
     await expect(plain.delete(user, 40)).rejects.toThrow('not found');
-    expect(deleteUserData).not.toHaveBeenCalled();
-    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(accountDeletion.deleteAccount).not.toHaveBeenCalled();
   });
 });

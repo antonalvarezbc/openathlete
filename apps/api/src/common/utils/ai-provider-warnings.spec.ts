@@ -2,7 +2,6 @@ import { getAiProviderWarnings } from './ai-provider-warnings.util';
 
 const defaults = {
   agents: 'openai',
-  embeddings: 'openai',
   transcription: 'openai',
 };
 
@@ -22,37 +21,34 @@ describe('getAiProviderWarnings', () => {
     expect(warnings).toEqual([expect.stringContaining('ANTHROPIC_API_KEY')]);
   });
 
-  it('warns when Claude agents leave OpenAI features without a key', () => {
+  it('warns when Claude agents leave transcription without a key', () => {
     const warnings = getAiProviderWarnings(
       { ...defaults, agents: 'anthropic' },
       { ANTHROPIC_API_KEY: 'sk-ant-real' },
     );
-    expect(warnings).toHaveLength(2);
-    expect(warnings.join('\n')).toContain(
-      'Embeddings: AI_EMBEDDING_PROVIDER=openai',
-    );
-    expect(warnings.join('\n')).toContain(
-      'Voice note transcription: AI_TRANSCRIPTION_PROVIDER=openai',
-    );
+    expect(warnings).toEqual([
+      expect.stringContaining(
+        'Voice note transcription: AI_TRANSCRIPTION_PROVIDER=openai',
+      ),
+    ]);
   });
 
-  it('warns about Google embeddings and transcription trade-offs', () => {
+  it('warns about the Google transcription trade-offs', () => {
     const warnings = getAiProviderWarnings(
-      { agents: 'anthropic', embeddings: 'google', transcription: 'google' },
+      { agents: 'anthropic', transcription: 'google' },
       {
         ANTHROPIC_API_KEY: 'sk-ant-real',
         GOOGLE_GENERATIVE_AI_API_KEY: 'g-real',
       },
     );
     expect(warnings).toEqual([
-      expect.stringContaining('not comparable'),
       expect.stringContaining('not guaranteed verbatim'),
     ]);
   });
 
   it('warns when Google is selected without a Google key', () => {
     const warnings = getAiProviderWarnings(
-      { ...defaults, embeddings: 'google' },
+      { ...defaults, transcription: 'google' },
       {},
     );
     expect(warnings[0]).toContain('GOOGLE_GENERATIVE_AI_API_KEY');

@@ -13,7 +13,7 @@ import { ChangeAccountMode } from '@openathlete/shared';
 import { selfCoachingLink } from '../../core/helpers/self-coaching';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { AuthUser } from '../decorators/user.decorator';
-import { deleteUserData } from './delete-user-data';
+import { AccountDeletionService } from './account-deletion.service';
 
 export function isAccountAdministrator(
   userId: number,
@@ -30,6 +30,7 @@ export class AccountAdministrationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly accountDeletion: AccountDeletionService,
   ) {}
 
   private authorize(user: AuthUser) {
@@ -113,10 +114,7 @@ export class AccountAdministrationService {
       select: { userId: true },
     });
     if (!target) throw new NotFoundException('Account not found');
-    await this.prisma.$transaction((tx) => deleteUserData(tx, userId), {
-      timeout: 120_000,
-      maxWait: 10_000,
-    });
+    await this.accountDeletion.deleteAccount(userId);
     this.logger.log({
       action: 'account_deleted',
       administratorId: user.userId,

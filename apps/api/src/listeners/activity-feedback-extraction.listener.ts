@@ -1,24 +1,30 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 
-import { FeatureName } from '@openathlete/shared';
+import { AiTask } from '@openathlete/shared';
 
-import { createTextEmbedder } from 'src/common/utils/ai-embedding.util';
 import { ActivityFeedbackCompletedEvent } from 'src/events';
+import {
+  extractInjuryAgent,
+  extractRpeAgent,
+  injuriesOutputSchema,
+  rpeOutputSchema,
+} from 'src/mastra/agents';
+import { AiModelResolverService, AiService } from 'src/modules/ai';
+import { isRetryableAiError } from 'src/modules/ai/ai.errors';
+import { CalendarWebSocketService } from 'src/modules/calendar/services/calendar-websocket.service';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
-import { FeatureAccessService } from 'src/modules/subscription/services/feature-access.service';
-
-import { feedbackEmbeddingUpsert } from './activity-feedback-embedding';
 
 @Injectable()
 export class ActivityFeedbackExtractionListener {
   private readonly logger = new Logger(ActivityFeedbackExtractionListener.name);
-  private readonly embedder = createTextEmbedder();
   private readonly MAX_RETRIES = 3;
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly featureAccessService: FeatureAccessService,
+    private readonly calendarWebSocketService: CalendarWebSocketService,
+    private readonly aiModelResolver: AiModelResolverService,
+    private readonly aiService: AiService,
   ) {}
 
   @OnEvent(ActivityFeedbackCompletedEvent.SLUG, { async: true })
@@ -54,25 +60,19 @@ export class ActivityFeedbackExtractionListener {
       }
 
       const athleteId = activity.event.athleteId;
+      const eventId = activity.event.eventId;
 
-      // Use the same opt-out and feature entitlement as feedback questions.
-      // Check before sending any athlete content to agents or the embedder.
+      // Athletes who turned feedback questions off keep their answers out of
+      // the AI too (they may have turned them off after the questions came).
       const settings = await this.prisma.athleteSettings.findUnique({
         where: { athleteId },
       });
       if (!settings?.requireFeedbackQuestions) return;
-      if (
-        !(await this.featureAccessService.canAccessFeatureForAthlete(
-          athleteId,
-          FeatureName.AI_RPE_QUESTIONS,
-        ))
-      )
-        return;
 
       // Collect all answers and comment
       const questions = activity.feedbackQuestions;
-      const allAnswered = questions.every((q: { answerText: string | null }) =>
-        Boolean(q.answerText?.trim()),
+      const allAnswered = questions.every(
+        (q: { answerText: string | null }) => q.answerText !== null,
       );
 
       // Only process if all questions are answered OR if RPE+comment are present
@@ -104,59 +104,115 @@ export class ActivityFeedbackExtractionListener {
         return;
       }
 
-      // Create embeddings with retry
-      const embedding = await this.retryWithBackoff(async () => {
-        const result = await this.embedder.doEmbed({
-          values: [feedbackText],
-        });
+      const model = await this.aiModelResolver.tryResolveForAthlete(
+        AiTask.FEEDBACK_EXTRACTION,
+        athleteId,
+      );
+      if (!model) {
+        this.logger.debug(
+          `Neither athlete ${athleteId} nor their coaches have AI for feedback analysis, skipping extraction`,
+        );
+        return;
+      }
 
-        // doEmbed returns an object with embeddings property
-        // Structure: { embeddings: number[][] }
-        if (!result || typeof result !== 'object') {
-          throw new Error(
-            `Invalid embedding result: ${JSON.stringify(result)}`,
+      // Fetch recent injury logs (last 2 weeks)
+      const twoWeeksAgo = new Date();
+      twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+
+      const recentInjuries = await this.prisma.athleteInjury.findMany({
+        where: {
+          athleteId: athleteId,
+          createdAt: {
+            gte: twoWeeksAgo,
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      });
+
+      const recentInjuriesContext =
+        recentInjuries.length === 0
+          ? 'No recent injuries logged in the last 2 weeks.'
+          : recentInjuries
+              .map(
+                (inj: {
+                  location: string;
+                  painScore: number;
+                  status: string;
+                  createdAt: Date;
+                }) =>
+                  `- ${inj.location} (pain: ${inj.painScore.toFixed(2)}, status: ${inj.status}, date: ${inj.createdAt.toISOString().split('T')[0]})`,
+              )
+              .join('\n');
+
+      // Build context for injury extraction agent
+      const injuryContext = [
+        '=== ATHLETE FEEDBACK ===',
+        feedbackText,
+        '',
+        '=== RECENT INJURY LOGS (LAST 2 WEEKS) ===',
+        recentInjuriesContext,
+      ].join('\n');
+
+      const { injuries } = await this.retryWithBackoff(
+        () =>
+          this.aiService.generateObject(
+            extractInjuryAgent,
+            model,
+            injuryContext,
+            injuriesOutputSchema,
+          ),
+        'injury extraction',
+      );
+
+      const { extractedRpe: rpeResult } = await this.retryWithBackoff(
+        () =>
+          this.aiService.generateObject(
+            extractRpeAgent,
+            model,
+            feedbackText,
+            rpeOutputSchema,
+          ),
+        'RPE extraction',
+      );
+
+      // Store everything in a transaction
+      await this.prisma.$transaction(async (tx) => {
+        // Store injuries
+        if (injuries.length > 0) {
+          for (const injury of injuries) {
+            await tx.athleteInjury.create({
+              data: {
+                athleteId: athleteId,
+                sourceActivityId: eventActivityId,
+                location: injury.location,
+                painScore: Math.max(0, Math.min(1, injury.painScore)),
+                context: injury.context,
+                status: injury.status,
+              },
+            });
+          }
+          this.logger.log(
+            `✓ Stored ${injuries.length} injuries for activity ${eventActivityId}`,
           );
         }
 
-        if ('embeddings' in result && Array.isArray(result.embeddings)) {
-          const embeddings = result.embeddings as number[][];
-          if (embeddings.length === 0 || !Array.isArray(embeddings[0])) {
-            throw new Error(
-              `Invalid embeddings array: ${JSON.stringify(embeddings)}`,
-            );
-          }
-          return embeddings[0];
+        // Update RPE if extracted (the schema bounds it to 0-1)
+        if (rpeResult !== null) {
+          await tx.eventActivity.update({
+            where: { eventActivityId: eventActivityId },
+            data: { rpe: rpeResult },
+          });
+          this.logger.log(
+            `✓ Updated RPE to ${rpeResult} for activity ${eventActivityId}`,
+          );
+
+          // Notify calendar via WebSocket that activity was updated
+          this.calendarWebSocketService.notifyActivityProcessed(
+            eventId,
+            athleteId,
+          );
         }
-
-        // Fallback: check if result is directly an array
-        if (
-          Array.isArray(result) &&
-          result.length > 0 &&
-          Array.isArray(result[0])
-        ) {
-          return result[0];
-        }
-
-        throw new Error(
-          `Unexpected embedding result structure: ${JSON.stringify(result)}`,
-        );
-      }, 'embedding creation');
-
-      // Validate vector dimensions and values before any writes.
-      const embeddingQuery = feedbackEmbeddingUpsert(
-        eventActivityId,
-        feedbackText,
-        embedding,
-      );
-
-      // Questionnaire answers remain the athlete's words. Do not infer or
-      // write an RPE or injury without an explicit review workflow.
-      await this.prisma.$transaction(async (tx) => {
-        const currentSettings = await tx.athleteSettings.findUnique({
-          where: { athleteId },
-        });
-        if (!currentSettings?.requireFeedbackQuestions) return;
-        await tx.$executeRaw(embeddingQuery);
       });
 
       this.logger.log(
@@ -182,6 +238,7 @@ export class ActivityFeedbackExtractionListener {
         return await fn();
       } catch (error) {
         lastError = error;
+        if (!isRetryableAiError(error)) break;
         if (attempt < retries) {
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000); // Exponential backoff, max 10s
           this.logger.warn(

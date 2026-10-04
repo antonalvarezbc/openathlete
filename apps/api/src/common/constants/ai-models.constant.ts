@@ -1,42 +1,74 @@
-/**
- * AI Model Constants
- *
- * This file contains constants for AI models used by Mastra agents.
- * Models can be configured via environment variables with fallbacks to default models.
- *
- * Model ids use the Mastra model router format `provider/model`
- * (e.g. `openai/gpt-5.1`, `google/gemini-3-pro-preview`, `anthropic/claude-opus-5`).
- *
- * Note: These constants use process.env because they are used at module initialization time
- * when creating Mastra agents, before ConfigService is available.
- */
+import { AiFeatureTask, AiTask } from '@openathlete/shared';
 
 /**
- * Default AI provider for every agent that has no explicit AI_MODEL_* override.
- * - unset / 'openai': OpenAI defaults (Google for post-activity feedback)
- * - 'anthropic': Claude for every agent
+ * Models used with the instance keys ("hosted AI"), as `provider/model`.
+ * Each can be overridden by its environment variables (first set wins, later
+ * names are kept for older configurations), and AI_MODEL_DEFAULT replaces
+ * every default at once, e.g. to run everything on one provider.
  */
+export const HOSTED_MODEL_ENV_VARS: Record<AiFeatureTask, string[]> = {
+  [AiTask.EVENT_GENERATION]: ['AI_MODEL_EVENT_GENERATION'],
+  [AiTask.EVENT_MODIFICATION]: ['AI_MODEL_EVENT_MODIFICATION'],
+  [AiTask.POST_ACTIVITY_QUESTIONS]: ['AI_MODEL_POST_ACTIVITY_FEEDBACK'],
+  [AiTask.FEEDBACK_EXTRACTION]: [
+    'AI_MODEL_FEEDBACK_EXTRACTION',
+    'AI_MODEL_EXTRACT_RPE',
+    'AI_MODEL_EXTRACT_INJURY',
+  ],
+  [AiTask.TRAINING_LOAD_ESTIMATION]: ['AI_MODEL_TRIMP_ESTIMATION'],
+};
+
+export const DEFAULT_HOSTED_MODELS: Record<AiFeatureTask, string> = {
+  [AiTask.EVENT_GENERATION]: 'openai/gpt-5.1',
+  [AiTask.EVENT_MODIFICATION]: 'openai/gpt-5.1',
+  [AiTask.POST_ACTIVITY_QUESTIONS]: 'google/gemini-3-pro-preview',
+  [AiTask.FEEDBACK_EXTRACTION]: 'openai/gpt-5.1',
+  [AiTask.TRAINING_LOAD_ESTIMATION]: 'openai/gpt-5.1',
+};
+
+/**
+ * Claude model for every agent when AI_PROVIDER=anthropic (an older way to
+ * put a whole installation on Claude; AI_MODEL_DEFAULT does it too).
+ */
+export const CLAUDE_DEFAULT_MODEL = 'anthropic/claude-opus-5';
+
+const providerDefault = (env: Record<string, string | undefined>) =>
+  env.AI_PROVIDER?.trim().toLowerCase() === 'anthropic'
+    ? CLAUDE_DEFAULT_MODEL
+    : undefined;
+
+/** Hosted model for a task, from the environment or the defaults above. */
+export function hostedModelFor(
+  task: AiFeatureTask,
+  env: Record<string, string | undefined>,
+): string {
+  const configured = HOSTED_MODEL_ENV_VARS[task]
+    .map((name) => env[name])
+    .find(Boolean);
+  return (
+    configured ||
+    env.AI_MODEL_DEFAULT ||
+    providerDefault(env) ||
+    DEFAULT_HOSTED_MODELS[task]
+  );
+}
+
+/*
+ * The agents below run on the instance keys only; they are not AI settings
+ * tasks yet. These constants use process.env because the agents are created
+ * at module initialization, before ConfigService is available.
+ */
+
+/** Default provider of the agents below: 'openai' (default) or 'anthropic'. */
 export const AI_PROVIDER = (process.env.AI_PROVIDER || 'openai')
   .trim()
   .toLowerCase();
 
-/**
- * Claude model used for every agent when AI_PROVIDER=anthropic
- */
-export const CLAUDE_DEFAULT_MODEL = 'anthropic/claude-opus-5';
-
-const defaultModel = (fallback: string): string =>
-  AI_PROVIDER === 'anthropic' ? CLAUDE_DEFAULT_MODEL : fallback;
-
-/**
- * Provider for text embeddings: 'openai' (default) or 'google'.
- * Claude has no embeddings API, so Claude installs use one of these.
- */
-export const AI_EMBEDDING_PROVIDER = (
-  process.env.AI_EMBEDDING_PROVIDER || 'openai'
-)
-  .trim()
-  .toLowerCase();
+const instanceModel = (variable: string, fallback: string) =>
+  process.env[variable] ||
+  process.env.AI_MODEL_DEFAULT ||
+  providerDefault(process.env) ||
+  fallback;
 
 /**
  * Provider for voice note transcription: 'openai' (Whisper, default) or
@@ -85,49 +117,24 @@ export function getAiModelApiKeyEnvVar(model: string): string | undefined {
 }
 
 /**
- * Model for event generation agent
+ * Model of the activity analysis, plan adaptation and coach assistant agents
+ * (named after event modification, whose variable it shares).
  * Fallback: 'openai/gpt-5.1'
  */
-export const EVENT_GENERATION_MODEL =
-  process.env.AI_MODEL_EVENT_GENERATION || defaultModel('openai/gpt-5.1');
-
-/**
- * Model for event modification agent (also used by activity analysis,
- * plan adaptation and coach assistant agents)
- * Fallback: 'openai/gpt-5.1'
- */
-export const EVENT_MODIFICATION_MODEL =
-  process.env.AI_MODEL_EVENT_MODIFICATION || defaultModel('openai/gpt-5.1');
-
-/**
- * Model for injury extraction agent
- * Fallback: 'openai/gpt-5.1'
- */
-export const EXTRACT_INJURY_MODEL =
-  process.env.AI_MODEL_EXTRACT_INJURY || defaultModel('openai/gpt-5.1');
-
-/**
- * Model for RPE extraction agent
- * Fallback: 'openai/gpt-5.1'
- */
-export const EXTRACT_RPE_MODEL =
-  process.env.AI_MODEL_EXTRACT_RPE || defaultModel('openai/gpt-5.1');
-
-/**
- * Model for post-activity feedback agent
- * Fallback: 'google/gemini-3-pro-preview'
- */
-export const POST_ACTIVITY_FEEDBACK_MODEL =
-  process.env.AI_MODEL_POST_ACTIVITY_FEEDBACK ||
-  defaultModel('google/gemini-3-pro-preview');
+export const EVENT_MODIFICATION_MODEL = instanceModel(
+  'AI_MODEL_EVENT_MODIFICATION',
+  'openai/gpt-5.1',
+);
 
 /**
  * Model that consolidates AI memory notes into the coach–athlete summary.
  * It only runs every few notes; a small model is enough here.
  * Fallback: 'openai/gpt-4o-mini'
  */
-export const AI_MEMORY_MODEL =
-  process.env.AI_MODEL_MEMORY || defaultModel('openai/gpt-4o-mini');
+export const AI_MEMORY_MODEL = instanceModel(
+  'AI_MODEL_MEMORY',
+  'openai/gpt-4o-mini',
+);
 
 /**
  * Model that turns a workout written in plain words into structured steps.
@@ -139,10 +146,3 @@ export const WORKOUT_PARSER_MODEL =
   (AI_PROVIDER === 'anthropic'
     ? 'anthropic/claude-haiku-4-5'
     : 'openai/gpt-5-mini');
-
-/**
- * Model for TRIMP estimation agent
- * Fallback: 'openai/gpt-5.1'
- */
-export const TRIMP_ESTIMATION_MODEL =
-  process.env.AI_MODEL_TRIMP_ESTIMATION || defaultModel('openai/gpt-5.1');

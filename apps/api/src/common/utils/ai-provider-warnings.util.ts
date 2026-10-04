@@ -1,5 +1,4 @@
 import {
-  AI_EMBEDDING_PROVIDER,
   AI_PROVIDER,
   AI_TRANSCRIPTION_PROVIDER,
   hasAiApiKey,
@@ -7,7 +6,6 @@ import {
 
 export interface AiProviderSettings {
   agents: string;
-  embeddings: string;
   transcription: string;
 }
 
@@ -19,13 +17,12 @@ const KEY_BY_PROVIDER: Record<string, string> = {
 
 /**
  * Warnings for AI provider choices that need attention: a missing key for an
- * explicitly selected provider, or a switch away from the OpenAI defaults
- * for embeddings or transcription.
+ * explicitly selected provider, or a switch away from the OpenAI default for
+ * transcription.
  */
 export function getAiProviderWarnings(
   settings: AiProviderSettings = {
     agents: AI_PROVIDER,
-    embeddings: AI_EMBEDDING_PROVIDER,
     transcription: AI_TRANSCRIPTION_PROVIDER,
   },
   env: NodeJS.ProcessEnv = process.env,
@@ -43,29 +40,14 @@ export function getAiProviderWarnings(
     );
   }
 
-  // With Claude agents, OpenAI may no longer be configured for the rest.
-  for (const [feature, provider, variable] of [
-    ['Embeddings', settings.embeddings, 'AI_EMBEDDING_PROVIDER'],
-    [
-      'Voice note transcription',
-      settings.transcription,
-      'AI_TRANSCRIPTION_PROVIDER',
-    ],
-  ]) {
-    const key = missingKey(provider);
-    if (!key) continue;
-    if (provider !== 'openai' || settings.agents === 'anthropic') {
-      warnings.push(
-        `${feature}: ${variable}=${provider} needs ${key}, which is not set; this feature will fail.`,
-      );
-    }
-  }
-
-  if (settings.embeddings === 'google') {
+  // With Claude agents, OpenAI may no longer be configured for transcription.
+  const transcriptionKey = missingKey(settings.transcription);
+  if (
+    transcriptionKey &&
+    (settings.transcription !== 'openai' || settings.agents === 'anthropic')
+  ) {
     warnings.push(
-      'AI_EMBEDDING_PROVIDER=google: Gemini embeddings are not comparable with OpenAI ones. ' +
-        'No feature reads activity_feedback_embedding yet, but rows stored before switching ' +
-        '(in either direction) must be regenerated before any similarity search uses them.',
+      `Voice note transcription: AI_TRANSCRIPTION_PROVIDER=${settings.transcription} needs ${transcriptionKey}, which is not set; this feature will fail.`,
     );
   }
 

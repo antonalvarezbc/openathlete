@@ -103,7 +103,7 @@ export function ExercisePicker({
           </PopoverTrigger>
         </div>
         <PopoverContent
-          className="w-[--radix-popover-trigger-width] p-0"
+          className="w-[var(--radix-popover-trigger-width)] p-0"
           align="start"
         >
           <Command>

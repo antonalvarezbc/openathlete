@@ -9,15 +9,13 @@ import {
 } from '@nestjs/common';
 
 import { Prisma } from '@openathlete/database';
-import { FeatureName } from '@openathlete/shared';
+import { AiTask } from '@openathlete/shared';
 
-import {
-  POST_ACTIVITY_FEEDBACK_MODEL,
-  getAiModelApiKeyEnvVar,
-  hasAiApiKey,
-} from 'src/common/constants/ai-models.constant';
 import { Language } from 'src/common/constants/languages.constant';
-import { postActivityFeedbackAgent } from 'src/mastra/agents/post-activity-feedback.agent';
+import {
+  feedbackQuestionsOutputSchema,
+  postActivityFeedbackAgent,
+} from 'src/mastra/agents';
 import {
   buildMetricsContext,
   buildZonesContext,
@@ -26,9 +24,10 @@ import {
   formatZonesByType,
 } from 'src/modules/agent/services/event-ai-helpers';
 import { AiMemoryService } from 'src/modules/ai-memory/ai-memory.service';
+import { AiModelResolverService } from 'src/modules/ai/services/ai-model-resolver.service';
+import { AiService } from 'src/modules/ai/services/ai.service';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
-import { FeatureAccessService } from 'src/modules/subscription/services/feature-access.service';
 
 export const feedbackQuestionsSchema = z
   .object({
@@ -62,7 +61,8 @@ export class ActivityFeedbackGenerationService {
   private readonly pending = new Map<number, Promise<void>>();
   constructor(
     private readonly prisma: PrismaService,
-    private readonly access: FeatureAccessService,
+    private readonly aiModelResolver: AiModelResolverService,
+    private readonly aiService: AiService,
     private readonly memory: AiMemoryService,
   ) {}
 
@@ -129,18 +129,14 @@ export class ActivityFeedbackGenerationService {
     });
     if (!settings?.requireFeedbackQuestions)
       throw new ForbiddenException('FEEDBACK_DISABLED');
-    if (
-      !(await this.access.canAccessFeatureForAthlete(
-        athleteId,
-        FeatureName.AI_RPE_QUESTIONS,
-      ))
-    )
-      throw new ForbiddenException('FEEDBACK_AI_UNAVAILABLE');
-    const userLanguage = activity.event.athlete.user?.language ?? Language.EN;
-    const keyName = getAiModelApiKeyEnvVar(POST_ACTIVITY_FEEDBACK_MODEL);
-    if (keyName && !hasAiApiKey(keyName)) {
+    // The athlete's own key or model, else a coach's, else the instance's.
+    const model = await this.aiModelResolver.tryResolveForAthlete(
+      AiTask.POST_ACTIVITY_QUESTIONS,
+      athleteId,
+    );
+    if (!model)
       throw new ServiceUnavailableException('FEEDBACK_MODEL_NOT_CONFIGURED');
-    }
+    const userLanguage = activity.event.athlete.user?.language ?? Language.EN;
 
     // Fetch last metrics & zones for context
     const [metrics, zones] = await Promise.all([
@@ -256,27 +252,22 @@ export class ActivityFeedbackGenerationService {
       `Use ${({ French: 'tu', Italian: 'tu', Spanish: 'tú', English: 'you' } as Record<string, string>)[targetLanguage]} form, direct and friendly coaching style.`,
     ].join('\n');
 
-    let response: { text?: string };
+    let generated: z.infer<typeof feedbackQuestionsOutputSchema>;
     try {
-      response = await postActivityFeedbackAgent.generate(context, {
-        abortSignal: AbortSignal.timeout(120_000),
-      });
+      generated = await this.aiService.generateObject(
+        postActivityFeedbackAgent,
+        model,
+        context,
+        feedbackQuestionsOutputSchema,
+      );
     } catch {
       throw new BadGatewayException('FEEDBACK_PROVIDER_ERROR');
     }
-    let parsed: z.infer<typeof feedbackQuestionsSchema>;
-    try {
-      const text = response.text
-        ?.trim()
-        .replace(/^```(?:json)?\s*([\s\S]*?)\s*```$/i, '$1');
-      const result = feedbackQuestionsSchema.safeParse(
-        JSON.parse(text || 'null'),
-      );
-      if (!result.success) throw new Error('Invalid generated questionnaire');
-      parsed = result.data;
-    } catch {
+    // Stricter than what the model may return: 3-4 distinct, bounded questions.
+    const result = feedbackQuestionsSchema.safeParse(generated);
+    if (!result.success)
       throw new BadGatewayException('FEEDBACK_INVALID_QUESTIONS');
-    }
+    const parsed = result.data;
     // No external requests while holding a row lock. All generation paths share
     // this lock so separate API processes cannot insert duplicate questionnaires.
     await this.prisma.$transaction(async (tx) => {

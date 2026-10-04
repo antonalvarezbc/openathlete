@@ -27,4 +27,6 @@ export const RATE_LIMITS = {
   accountLookup: { default: { limit: 30, ttl: MINUTE } },
   /** Unauthenticated routes that write to the database */
   publicWrite: { default: { limit: 20, ttl: 60 * MINUTE } },
+  /** Routes calling an AI provider on the user's key just to check it */
+  aiCheck: { default: { limit: 10, ttl: MINUTE } },
 } as const;

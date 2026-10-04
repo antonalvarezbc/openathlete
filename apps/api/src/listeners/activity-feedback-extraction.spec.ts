@@ -1,164 +1,150 @@
-import { Logger } from '@nestjs/common';
-
 import { ActivityFeedbackCompletedEvent } from 'src/events';
 import { extractInjuryAgent, extractRpeAgent } from 'src/mastra/agents';
+import { AiModelResolverService, AiService } from 'src/modules/ai';
+import { CalendarWebSocketService } from 'src/modules/calendar/services/calendar-websocket.service';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
-import { FeatureAccessService } from 'src/modules/subscription/services/feature-access.service';
 
 import { ActivityFeedbackExtractionListener } from './activity-feedback-extraction.listener';
 
-const mockDoEmbed = jest.fn();
-jest.mock('@ai-sdk/openai', () => ({
-  openai: { embedding: () => ({ doEmbed: mockDoEmbed }) },
-}));
+// Jest cannot load Mastra's ESM providers: agents and AI services are
+// replaced, the listener only sees their interfaces.
 jest.mock('src/mastra/agents', () => ({
-  extractInjuryAgent: { generate: jest.fn() },
-  extractRpeAgent: { generate: jest.fn() },
+  extractInjuryAgent: { id: 'extract-injury' },
+  extractRpeAgent: { id: 'extract-rpe' },
+  injuriesOutputSchema: {},
+  rpeOutputSchema: {},
+}));
+jest.mock('src/modules/ai', () => ({
+  AiModelResolverService: class {},
+  AiService: class {},
 }));
 jest.mock('src/modules/calendar/services/calendar-websocket.service', () => ({
   CalendarWebSocketService: class {},
 }));
-jest.mock('src/modules/prisma/services/prisma.service', () => ({
-  PrismaService: class {},
-}));
-jest.mock('src/modules/subscription/services/feature-access.service', () => ({
-  FeatureAccessService: class {},
-}));
 
-describe('feedback extraction policy and persistence', () => {
-  const event = new ActivityFeedbackCompletedEvent({
-    eventActivityId: 32,
-    eventId: 90,
-    trigger: 'rpe_comment_updated',
-  });
+const model = { task: 'FEEDBACK_EXTRACTION', source: 'hosted' };
+
+function setup() {
   const activity = {
-    rpe: 0.6 as number | null,
-    description: 'Test comment',
-    event: { eventId: 90, athleteId: 4 },
-    feedbackQuestions: [],
+    description: 'Felt strong',
+    event: { eventId: 30, athleteId: 2 },
+    feedbackQuestions: [
+      { questionText: 'How did it go?', answerText: 'Hard, knee sore' },
+    ],
   };
-  let tx: {
-    athleteSettings: { findUnique: jest.Mock };
-    athleteInjury: { create: jest.Mock };
-    eventActivity: { updateMany: jest.Mock };
-    $executeRaw: jest.Mock;
+  const tx = {
+    athleteInjury: { create: jest.fn() },
+    eventActivity: { update: jest.fn() },
   };
-  let prisma: {
-    eventActivity: { findUnique: jest.Mock };
-    athleteSettings: { findUnique: jest.Mock };
-    athleteInjury: { findMany: jest.Mock };
-    $transaction: jest.Mock;
+  const prisma = {
+    eventActivity: { findUnique: jest.fn().mockResolvedValue(activity) },
+    athleteSettings: {
+      findUnique: jest
+        .fn()
+        .mockResolvedValue({ requireFeedbackQuestions: true }),
+    },
+    athleteInjury: { findMany: jest.fn().mockResolvedValue([]) },
+    $transaction: jest.fn(async (run: (client: typeof tx) => unknown) =>
+      run(tx),
+    ),
   };
-  let access: { canAccessFeatureForAthlete: jest.Mock };
-  let calendar: { notifyActivityProcessed: jest.Mock };
-  let listener: ActivityFeedbackExtractionListener;
+  const resolver = { tryResolveForAthlete: jest.fn().mockResolvedValue(model) };
+  const ai = {
+    generateObject: jest.fn(async (agent: { id: string }) =>
+      agent.id === 'extract-injury'
+        ? {
+            injuries: [
+              {
+                location: 'knee',
+                painScore: 1.4,
+                context: 'sore',
+                status: 'STABLE',
+              },
+            ],
+          }
+        : { extractedRpe: 0.8 },
+    ),
+  };
+  const calendar = { notifyActivityProcessed: jest.fn() };
+  const listener = new ActivityFeedbackExtractionListener(
+    prisma as unknown as PrismaService,
+    calendar as unknown as CalendarWebSocketService,
+    resolver as unknown as AiModelResolverService,
+    ai as unknown as AiService,
+  );
+  const run = () =>
+    listener.handleActivityFeedbackCompleted({
+      payload: { eventActivityId: 10, trigger: 'questions_completed' },
+    } as ActivityFeedbackCompletedEvent);
+  return { prisma, tx, resolver, ai, calendar, run };
+}
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-    tx = {
-      athleteSettings: {
-        findUnique: jest
-          .fn()
-          .mockResolvedValue({ requireFeedbackQuestions: true }),
-      },
-      athleteInjury: { create: jest.fn() },
-      eventActivity: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
-      $executeRaw: jest.fn().mockResolvedValue(1),
-    };
-    prisma = {
-      eventActivity: {
-        findUnique: jest.fn().mockResolvedValue({ ...activity }),
-      },
-      athleteSettings: {
-        findUnique: jest
-          .fn()
-          .mockResolvedValue({ requireFeedbackQuestions: true }),
-      },
-      athleteInjury: { findMany: jest.fn().mockResolvedValue([]) },
-      $transaction: jest.fn(async (fn) => fn(tx)),
-    };
-    access = { canAccessFeatureForAthlete: jest.fn().mockResolvedValue(true) };
-    calendar = { notifyActivityProcessed: jest.fn() };
-    (extractInjuryAgent.generate as jest.Mock).mockResolvedValue({
-      text: '{"injuries":[]}',
-    });
-    (extractRpeAgent.generate as jest.Mock).mockResolvedValue({
-      text: '{"extractedRpe":0.8}',
-    });
-    mockDoEmbed.mockResolvedValue({ embeddings: [Array(1536).fill(0.25)] });
-    listener = new ActivityFeedbackExtractionListener(
-      prisma as unknown as PrismaService,
-      access as unknown as FeatureAccessService,
+describe('ActivityFeedbackExtractionListener', () => {
+  it('extracts injuries and RPE on the resolved model', async () => {
+    const { tx, resolver, ai, calendar, run } = setup();
+    await run();
+    expect(resolver.tryResolveForAthlete).toHaveBeenCalledWith(
+      'FEEDBACK_EXTRACTION',
+      2,
     );
+    expect(ai.generateObject).toHaveBeenCalledWith(
+      extractInjuryAgent,
+      model,
+      expect.stringContaining('Hard, knee sore'),
+      expect.anything(),
+    );
+    expect(ai.generateObject).toHaveBeenCalledWith(
+      extractRpeAgent,
+      model,
+      expect.stringContaining('Felt strong'),
+      expect.anything(),
+    );
+    // Pain is bounded to the stored 0-1 scale.
+    expect(tx.athleteInjury.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        athleteId: 2,
+        sourceActivityId: 10,
+        location: 'knee',
+        painScore: 1,
+      }),
+    });
+    expect(tx.eventActivity.update).toHaveBeenCalledWith({
+      where: { eventActivityId: 10 },
+      data: { rpe: 0.8 },
+    });
+    expect(calendar.notifyActivityProcessed).toHaveBeenCalledWith(30, 2);
   });
-
-  afterEach(() => jest.restoreAllMocks());
 
   it.each([null, { requireFeedbackQuestions: false }])(
-    'does not invoke AI when feedback is disabled or settings missing',
+    'sends nothing to AI when the athlete turned questions off (%j)',
     async (settings) => {
+      const { prisma, resolver, ai, run } = setup();
       prisma.athleteSettings.findUnique.mockResolvedValue(settings);
-      await listener.handleActivityFeedbackCompleted(event);
-      expect(access.canAccessFeatureForAthlete).not.toHaveBeenCalled();
-      expect(extractInjuryAgent.generate).not.toHaveBeenCalled();
-      expect(extractRpeAgent.generate).not.toHaveBeenCalled();
-      expect(mockDoEmbed).not.toHaveBeenCalled();
-      expect(prisma.$transaction).not.toHaveBeenCalled();
+      await run();
+      expect(resolver.tryResolveForAthlete).not.toHaveBeenCalled();
+      expect(ai.generateObject).not.toHaveBeenCalled();
     },
   );
 
-  it('does not invoke AI without feature access', async () => {
-    access.canAccessFeatureForAthlete.mockResolvedValue(false);
-    await listener.handleActivityFeedbackCompleted(event);
-    expect(extractInjuryAgent.generate).not.toHaveBeenCalled();
-    expect(mockDoEmbed).not.toHaveBeenCalled();
-  });
-
-  it.each([0, 0.6])('preserves manually entered RPE %s', async (rpe) => {
-    prisma.eventActivity.findUnique.mockResolvedValue({ ...activity, rpe });
-    await listener.handleActivityFeedbackCompleted(event);
-    expect(extractRpeAgent.generate).not.toHaveBeenCalled();
-    expect(tx.eventActivity.updateMany).not.toHaveBeenCalled();
-    expect(tx.$executeRaw).toHaveBeenCalled();
-    expect(calendar.notifyActivityProcessed).not.toHaveBeenCalled();
-  });
-
-  it('keeps missing RPE empty and never infers injuries from feedback', async () => {
-    prisma.eventActivity.findUnique.mockResolvedValue({
-      ...activity,
-      rpe: null,
-      description: 'Pain in my knee, very hard run',
-    });
-    await listener.handleActivityFeedbackCompleted(event);
-    expect(extractRpeAgent.generate).not.toHaveBeenCalled();
-    expect(extractInjuryAgent.generate).not.toHaveBeenCalled();
-    expect(tx.eventActivity.updateMany).not.toHaveBeenCalled();
-    expect(tx.athleteInjury.create).not.toHaveBeenCalled();
-    expect(tx.$executeRaw).toHaveBeenCalled();
-  });
-
-  it('does not store embeddings if the setting was disabled during processing', async () => {
-    tx.athleteSettings.findUnique.mockResolvedValue({
-      requireFeedbackQuestions: false,
-    });
-    await listener.handleActivityFeedbackCompleted(event);
-    expect(tx.$executeRaw).not.toHaveBeenCalled();
-  });
-
-  it('does not start writing malformed vectors', async () => {
-    mockDoEmbed.mockResolvedValue({ embeddings: [[0.25]] });
-    await listener.handleActivityFeedbackCompleted(event);
+  it('skips without AI for the athlete or their coaches', async () => {
+    const { resolver, ai, prisma, run } = setup();
+    resolver.tryResolveForAthlete.mockResolvedValue(null);
+    await run();
+    expect(ai.generateObject).not.toHaveBeenCalled();
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it('does not notify when persistence fails', async () => {
+  it('waits until every question is answered', async () => {
+    const { prisma, ai, run } = setup();
     prisma.eventActivity.findUnique.mockResolvedValue({
-      ...activity,
-      rpe: null,
+      description: '',
+      event: { eventId: 30, athleteId: 2 },
+      feedbackQuestions: [
+        { questionText: 'How did it go?', answerText: 'Fine' },
+        { questionText: 'Any pain?', answerText: null },
+      ],
     });
-    tx.$executeRaw.mockRejectedValue(new Error('Database failure'));
-    await listener.handleActivityFeedbackCompleted(event);
-    expect(calendar.notifyActivityProcessed).not.toHaveBeenCalled();
+    await run();
+    expect(ai.generateObject).not.toHaveBeenCalled();
   });
 });

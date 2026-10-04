@@ -13,6 +13,10 @@ export interface ActivityImportJobData {
   bulkImport?: boolean;
 }
 
+export interface ProviderFullImportJobData {
+  providerAccountId: number;
+}
+
 export interface ActivityProcessingJobData {
   eventActivityId: number;
   eventId: number;
@@ -28,7 +32,33 @@ export class QueueService {
     private readonly activityImportQueue: Queue<ActivityImportJobData>,
     @InjectQueue('activity-processing')
     private readonly activityProcessingQueue: Queue<ActivityProcessingJobData>,
+    @InjectQueue('provider-full-import')
+    private readonly fullImportQueue: Queue<ProviderFullImportJobData>,
   ) {}
+
+  /**
+   * Queue the historical import of a provider account. Listing years of
+   * activities takes minutes and many rate-limited provider calls, so it runs
+   * in the worker rather than in the HTTP request.
+   */
+  async addFullImportJob(providerAccountId: number): Promise<void> {
+    const jobId = `full-import-${providerAccountId}`;
+    // A finished job keeps its id until it expires: remove it so a new
+    // import can be queued (an active one is left alone)
+    const existing = await this.fullImportQueue.getJob(jobId);
+    if (existing) {
+      const state = await existing.getState();
+      if (state !== 'completed' && state !== 'failed') {
+        return;
+      }
+      await existing.remove();
+    }
+    await this.fullImportQueue.add(
+      'full-import',
+      { providerAccountId },
+      { jobId },
+    );
+  }
 
   private calculatePriority(startDate: string | Date): number {
     const activityDate = new Date(startDate);

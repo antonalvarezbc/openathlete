@@ -52,6 +52,7 @@ import {
   ConnectorProvider,
   ProviderPreferencesDto,
   getProviderSyncCapabilities,
+  isFullImportInProgress,
 } from '@openathlete/shared';
 
 import { ManualGarminCard } from './manual-garmin-card';
@@ -326,8 +327,8 @@ export function ConnectorsTab() {
                 const fullImportCompleted =
                   providerDetails?.fullImportCompletedAt != null;
                 const fullImportInProgress =
-                  providerDetails?.fullImportRequestedAt != null &&
-                  !providerDetails.fullImportCompletedAt;
+                  providerDetails != null &&
+                  isFullImportInProgress(providerDetails);
 
                 return (
                   <Card key={provider}>

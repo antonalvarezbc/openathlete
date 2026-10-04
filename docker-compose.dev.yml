@@ -1,0 +1,38 @@
+# Databases for local development (pnpm dev runs the API and web app):
+#
+#   docker compose -f docker-compose.dev.yml up -d
+#
+# Credentials and ports match apps/api/.env.example and
+# libs/database/.env.example. For self-hosting, use docker-compose.yml.
+name: openathlete-dev
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: openathlete
+      POSTGRES_PASSWORD: openathlete_dev_password
+      POSTGRES_DB: openathlete
+    ports:
+      - '127.0.0.1:5433:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U openathlete']
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '127.0.0.1:6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
+  redis_data:
