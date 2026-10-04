@@ -624,17 +624,24 @@ export class ManualGarminService implements OnModuleDestroy {
   ) {
     const known = await tx.eventActivity.findMany({
       where: { provider: ConnectorProvider.GARMIN, event: { athleteId } },
-      select: { eventActivityId: true, externalId: true, stream: true },
+      select: {
+        eventActivityId: true,
+        externalId: true,
+        stream: true,
+        event: { select: { startDate: true } },
+      },
       orderBy: { eventActivityId: 'asc' },
     });
     const prefix = `garmin-manual:${profile}:`;
     const seen = new Set<string>();
+    const startedAt = new Map<string, number>();
     const pending = known.flatMap((activity) => {
       const id = activity.externalId.startsWith(prefix)
         ? activity.externalId.slice(prefix.length)
         : activity.externalId;
       if (!/^\d+$/.test(id) || seen.has(id)) return [];
       seen.add(id);
+      startedAt.set(id, activity.event.startDate.getTime());
       const review = state.fitReviews?.[prefix + id];
       return hasActivityStream(activity.stream) &&
         review?.version === FIT_REVIEW_VERSION &&
@@ -642,12 +649,17 @@ export class ManualGarminService implements OnModuleDestroy {
         ? []
         : [id];
     });
+    const attemptedAt = (id: string) =>
+      Date.parse(state.fitAttempts?.[prefix + id] ?? '') || 0;
     // A failed original must not starve the rest or be downloaded again before
     // files that have never been attempted. Retries still require a new click.
+    // Otherwise the most recent activities come first, so they can be reviewed
+    // while older ones are still being completed. Import order is not a date:
+    // later syncs add the newest activities at the end.
     return pending.sort(
       (a, b) =>
-        (Date.parse(state.fitAttempts?.[prefix + a] ?? '') || 0) -
-        (Date.parse(state.fitAttempts?.[prefix + b] ?? '') || 0),
+        attemptedAt(a) - attemptedAt(b) ||
+        (startedAt.get(b) ?? 0) - (startedAt.get(a) ?? 0),
     );
   }
 

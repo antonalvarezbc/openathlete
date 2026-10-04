@@ -322,6 +322,7 @@ describe('manual Garmin import', () => {
     averageHeartrate: 130,
     maxHeartrate: 155,
     segments: [],
+    event: { startDate: new Date('2026-09-15T08:00:00Z') },
   };
   const parsed = {
     stream: { time: [0, 1], heartrate: [120, 121] },
@@ -594,6 +595,33 @@ describe('manual Garmin import', () => {
     expect(state.fitReviews).toBeUndefined();
     expect(JSON.stringify(result)).not.toContain('private raw');
     expect(queue.addActivityProcessingJob).not.toHaveBeenCalled();
+  });
+
+  it('completes the most recent activities first, whatever their import order', async () => {
+    readyFit();
+    const activity = (eventActivityId: number, id: string, day: string) => ({
+      ...detailed,
+      eventActivityId,
+      externalId: `garmin-manual:123:${id}`,
+      event: { startDate: new Date(`${day}T08:00:00Z`) },
+    });
+    // First sync imported newest to oldest; a later sync added the newest.
+    tx.eventActivity.findMany.mockResolvedValue([
+      activity(1, '300', '2026-09-20'),
+      activity(2, '200', '2026-09-10'),
+      activity(3, '100', '2026-09-01'),
+      activity(4, '500', '2026-10-01'),
+      activity(5, '400', '2026-09-25'),
+    ]);
+    service.worker.mockResolvedValue({ reason: 'BUDGET' });
+    await complete();
+    expect(service.worker.mock.calls[0][1]).toEqual([
+      '500',
+      '400',
+      '300',
+      '200',
+      '100',
+    ]);
   });
 
   it('tries unattempted files before retrying an invalid FIT on the next click', async () => {

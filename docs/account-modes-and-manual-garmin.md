@@ -169,6 +169,9 @@ when a download is necessary, the worker authenticates and verifies the linked
 Garmin profile before requesting originals. Each explicit run reviews at most
 100 files and downloads at most 20 new originals, with at least 15 seconds between
 HTTP responses and new requests, including authentication requests.
+Activities are completed from the most recent to the oldest by start date, so
+recent sessions can be reviewed first; files that failed before go after those
+never attempted.
 
 Both actions and credential login share a filesystem lock across accounts in
 this installation and a two-minute cooldown after the last remote response. A 429 blocks remote requests
