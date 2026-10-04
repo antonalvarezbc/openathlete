@@ -50,7 +50,16 @@ const workoutInclude = {
 } satisfies Prisma.WorkoutInclude;
 const calendarInclude = {
   training: { include: { workout: { include: workoutInclude } } },
-  trainingWeek: { include: { cycle: { select: { trainingPlanId: true } } } },
+  trainingWeek: {
+    include: {
+      cycle: {
+        select: {
+          trainingPlanId: true,
+          trainingPlan: { select: { startDate: true, endDate: true } },
+        },
+      },
+    },
+  },
   competition: true,
   note: true,
 } satisfies Prisma.EventInclude;
@@ -189,19 +198,25 @@ export class PlanAdaptationService {
           select: { language: true },
         })
       ).language;
-    const plan = await db.trainingPlan.findFirst({
-      where: { trainingPlanId: request.planId, athleteId: request.athleteId },
-      select: {
-        trainingPlanId: true,
-        name: true,
-        description: true,
-        goal: true,
-        startDate: true,
-        endDate: true,
-        status: true,
-      },
-    });
-    if (!plan)
+    // Without a plan, the athlete's calendar is adapted on its own.
+    const plan = request.planId
+      ? await db.trainingPlan.findFirst({
+          where: {
+            trainingPlanId: request.planId,
+            athleteId: request.athleteId,
+          },
+          select: {
+            trainingPlanId: true,
+            name: true,
+            description: true,
+            goal: true,
+            startDate: true,
+            endDate: true,
+            status: true,
+          },
+        })
+      : null;
+    if (request.planId && !plan)
       throw new ForbiddenException('Plan does not belong to this athlete');
     let range: ReturnType<typeof adaptationWeek>;
     try {
@@ -209,12 +224,13 @@ export class PlanAdaptationService {
     } catch {
       throw new BadRequestException('Invalid week or timezone');
     }
+    // Every upcoming session in the calendar, linked to a plan week or not:
+    // sessions added or moved by hand count as much as the planned ones.
     const future = await db.event.findMany({
       where: {
         athleteId: request.athleteId,
         type: 'TRAINING',
         startDate: { gte: now },
-        trainingWeek: { cycle: { trainingPlanId: request.planId } },
         training: { relatedActivityId: null },
         ...(request.scope === 'WEEK'
           ? {
@@ -256,18 +272,43 @@ export class PlanAdaptationService {
       const date = `${parts.year}-${parts.month}-${parts.day}`;
       range = adaptationWeek(date, request.timeZone);
     }
-    const availableWeeks =
-      request.allowNewSessions && request.scope === 'WEEK'
-        ? await db.trainingWeek.findMany({
-            where: {
-              cycle: { trainingPlanId: request.planId },
-              startDate: { lt: range.end },
-              endDate: { gt: now > range.start ? now : range.start },
+    const periodStart = now > range.start ? now : range.start;
+    const newSessions = request.allowNewSessions && request.scope === 'WEEK';
+    // With a plan, new sessions go into its weeks; without one, into the
+    // selected period of the calendar.
+    const availableWeeks: Array<{
+      trainingWeekId: number | null;
+      startDate: Date;
+      endDate: Date;
+    }> = !newSessions
+      ? []
+      : plan
+        ? (
+            await db.trainingWeek.findMany({
+              where: {
+                cycle: { trainingPlanId: plan.trainingPlanId },
+                startDate: { lt: range.end },
+                endDate: { gt: periodStart },
+              },
+              select: { trainingWeekId: true, startDate: true, endDate: true },
+              orderBy: [{ startDate: 'asc' }, { trainingWeekId: 'asc' }],
+            })
+          ).map((week) => ({
+            ...week,
+            startDate: new Date(
+              Math.max(week.startDate.getTime(), plan.startDate.getTime()),
+            ),
+            endDate: new Date(
+              Math.min(week.endDate.getTime(), plan.endDate.getTime()),
+            ),
+          }))
+        : [
+            {
+              trainingWeekId: null,
+              startDate: periodStart,
+              endDate: range.end,
             },
-            select: { trainingWeekId: true, startDate: true, endDate: true },
-            orderBy: [{ startDate: 'asc' }, { trainingWeekId: 'asc' }],
-          })
-        : [];
+          ];
     if (request.allowNewSessions && !availableWeeks.length)
       throw new BadRequestException({
         code: 'ADAPTATION_NO_WEEK',
@@ -374,28 +415,34 @@ export class PlanAdaptationService {
         }),
       )
       .digest('hex');
-    const sessions = future.map((event) => ({
-      rescheduleStart: new Date(
-        Math.max(
-          range.start.getTime(),
-          now.getTime(),
-          event.trainingWeek!.startDate.getTime(),
-          plan.startDate.getTime(),
-        ),
-      ).toISOString(),
-      rescheduleEnd: new Date(
-        Math.min(
-          range.end.getTime(),
-          event.trainingWeek!.endDate.getTime(),
-          plan.endDate.getTime(),
-        ),
-      ).toISOString(),
-      durationInferred: event.training?.goalDuration == null,
-      startDate: event.startDate.toISOString(),
-      endDate: event.endDate.toISOString(),
-      exported: !!event.training?.workout?.providerWorkoutExports.length,
-      original: originalSession(event),
-    }));
+    const sessions = future.map((event) => {
+      // A session in a plan week stays inside that week and its plan, so it
+      // keeps its link; one outside any plan only stays in the period.
+      const bounds = [
+        event.trainingWeek,
+        event.trainingWeek?.cycle?.trainingPlan,
+      ].filter((item) => !!item);
+      return {
+        rescheduleStart: new Date(
+          Math.max(
+            range.start.getTime(),
+            now.getTime(),
+            ...bounds.map((item) => item.startDate.getTime()),
+          ),
+        ).toISOString(),
+        rescheduleEnd: new Date(
+          Math.min(
+            range.end.getTime(),
+            ...bounds.map((item) => item.endDate.getTime()),
+          ),
+        ).toISOString(),
+        durationInferred: event.training?.goalDuration == null,
+        startDate: event.startDate.toISOString(),
+        endDate: event.endDate.toISOString(),
+        exported: !!event.training?.workout?.providerWorkoutExports.length,
+        original: originalSession(event),
+      };
+    });
     const data = {
       language,
       allowRedistribution: request.allowRedistribution ?? false,
@@ -406,19 +453,10 @@ export class PlanAdaptationService {
       availableWeeks: availableWeeks.map((week) => ({
         trainingWeekId: week.trainingWeekId,
         startDate: new Date(
-          Math.max(
-            now.getTime(),
-            range.start.getTime(),
-            plan.startDate.getTime(),
-            week.startDate.getTime(),
-          ),
+          Math.max(periodStart.getTime(), week.startDate.getTime()),
         ).toISOString(),
         endDate: new Date(
-          Math.min(
-            range.end.getTime(),
-            plan.endDate.getTime(),
-            week.endDate.getTime(),
-          ),
+          Math.min(range.end.getTime(), week.endDate.getTime()),
         ).toISOString(),
       })),
       asOf: now.toISOString(),
@@ -633,7 +671,7 @@ export class PlanAdaptationService {
       user.userId,
       dto.request.athleteId,
       'PLAN_ADAPTATION',
-      `Applied plan adaptation (${result.updated} sessions changed, ${result.created} added): ${dto.proposal.summary}`,
+      `Applied ${dto.request.planId ? 'plan' : 'calendar'} adaptation (${result.updated} sessions changed, ${result.created} added): ${dto.proposal.summary}`,
     );
     return result;
   }
