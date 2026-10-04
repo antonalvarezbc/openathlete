@@ -14,6 +14,10 @@ JWT authentication reads current roles from the database on each request.
 Planning restrictions apply to API permissions as well as calendar controls.
 An old coach-athlete link does not grant planning rights after the coach role is removed.
 Linking a performed activity to an existing session remains available to its athlete.
+In the session details, **Linked activity** suggests the same day's unlinked
+activities first: up to three one-click suggestions, the session's sport before
+others and then the closest in time. The dropdown lists the same day, then
+activities up to three days away, each with its time (or date) and distance.
 
 ### Coaching yourself
 
