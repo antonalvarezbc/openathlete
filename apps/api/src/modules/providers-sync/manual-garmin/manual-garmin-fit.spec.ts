@@ -198,7 +198,8 @@ describe('Manual Garmin FIT reader', () => {
       weightedAverageWatts: null,
       kilojoules: null,
     });
-    expect(result.incomplete).toBe(true);
+    // The FIT parser itself leaves out a partial temperature series.
+    expect(result.incomplete).toBe(false);
     expect(uncompressActivityStream(result.stream).temp).toBeUndefined();
   });
   it('leaves missing sensors unknown and preserves explicit zero values', async () => {

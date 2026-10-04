@@ -62,12 +62,17 @@ export class ActivityFeedbackExtractionListener {
       const athleteId = activity.event.athleteId;
       const eventId = activity.event.eventId;
 
-      // Athletes who turned feedback questions off keep their answers out of
-      // the AI too (they may have turned them off after the questions came).
+      // Same switch as question generation: with it off, answers and comments
+      // stay out of the AI too (questions may predate the change).
       const settings = await this.prisma.athleteSettings.findUnique({
         where: { athleteId },
       });
-      if (!settings?.requireFeedbackQuestions) return;
+      if (!settings?.requireFeedbackQuestions) {
+        this.logger.debug(
+          `Feedback questions disabled for athlete ${athleteId}, skipping extraction`,
+        );
+        return;
+      }
 
       // Collect all answers and comment
       const questions = activity.feedbackQuestions;

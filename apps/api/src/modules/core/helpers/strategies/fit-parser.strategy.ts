@@ -182,6 +182,8 @@ export class FitParserStrategy implements ActivityParser {
         previousLat = latDeg;
         previousLon = lonDeg;
       } else {
+        // Keep the sample so positions stay aligned with time; the gap is
+        // not bridged when computing distance either.
         latlng.push([]);
         previousLat = null;
         previousLon = null;
@@ -239,7 +241,8 @@ export class FitParserStrategy implements ActivityParser {
     if (distance.length) {
       result.distance = distance;
     }
-    if (temp.length) {
+    // Only a complete series: a shorter one could not be aligned with time.
+    if (temp.length && temp.length === time.length) {
       result.temp = temp;
     }
 

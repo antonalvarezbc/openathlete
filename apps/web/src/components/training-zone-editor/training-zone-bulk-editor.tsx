@@ -17,6 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { m } from '@/paraglide/messages';
 import { Plus, Trash2 } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 import {
   METRIC_TYPE,
@@ -132,7 +133,7 @@ export function TrainingZoneBulkEditor({
   const hrMax = Number(hrMaxValue);
   const hrRestValue =
     hrRestInput ?? String(metrics?.[METRIC_TYPE.HR_REST]?.value ?? '');
-  const hrRest = Number.parseFloat(hrRestValue);
+  const hrRest = Number(hrRestValue);
   // Never treat a missing resting HR as zero when reserve mode is selected.
   const calculationRest = reserveMode ? hrRest : 0;
   const deletedIds = useRef(new Set<number>());
@@ -317,7 +318,7 @@ export function TrainingZoneBulkEditor({
       onComplete();
     } catch (error) {
       console.error('Error saving zones:', error);
-      setError(m.hr_zones_save_error());
+      toast.error(m.hr_zones_save_error());
     } finally {
       setIsSaving(false);
     }
@@ -378,6 +379,7 @@ export function TrainingZoneBulkEditor({
           >
             <Button
               type="button"
+              className="min-h-11 md:min-h-9"
               variant={percentageMode ? 'outline' : 'default'}
               aria-pressed={!percentageMode}
               onClick={() => changeMode('bpm')}
@@ -386,6 +388,7 @@ export function TrainingZoneBulkEditor({
             </Button>
             <Button
               type="button"
+              className="min-h-11 md:min-h-9"
               variant={percentageMode && reserveMode ? 'default' : 'outline'}
               aria-pressed={percentageMode && reserveMode}
               onClick={() => changeMode('reserve')}
@@ -394,6 +397,7 @@ export function TrainingZoneBulkEditor({
             </Button>
             <Button
               type="button"
+              className="min-h-11 md:min-h-9"
               variant={percentageMode && !reserveMode ? 'default' : 'outline'}
               aria-pressed={percentageMode && !reserveMode}
               onClick={() => changeMode('max')}

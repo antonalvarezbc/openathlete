@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import {
   BadRequestException,
   ConflictException,
@@ -6,6 +9,8 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+
+import { Prisma } from '@openathlete/database';
 
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PrismaService } from '../../prisma/services/prisma.service';
@@ -112,8 +117,10 @@ const parse = async (file = fixture()) =>
   prepareManualFit(
     await new FitParserStrategy().parse(Uint8Array.from(file.buffer).buffer),
   );
+// The athlete always comes from the user ID, never from the token's profile.
 const athlete = {
   userId: 4,
+  email: 'athlete@example.test',
   roles: ['ATHLETE'],
   athlete: { athleteId: 999 },
 } as AuthUser;
@@ -153,6 +160,19 @@ function setup(enabled = true) {
 }
 
 describe('Manual FIT parsing', () => {
+  test('accepts the synthetic run used by the end-to-end tests', async () => {
+    const buffer = readFileSync(
+      join(__dirname, '../../../../../../e2e/fixtures/synthetic-run.fit'),
+    );
+    const result = await parse({
+      originalname: 'synthetic-run.fit',
+      buffer,
+      size: buffer.length,
+    });
+    expect(result.startDate).toEqual(new Date('2024-05-01T07:00:00Z'));
+    expect(result.warnings).toEqual([]);
+    expect(result.activity).toMatchObject({ sport: 'RUNNING', distance: 1666 });
+  });
   test('decodes summary, GPS, streams and laps using the real SDK', async () => {
     const result = await parse(fixture({ gps: true }));
     expect(result.startDate).toEqual(new Date('2020-01-02T09:00:00Z'));
@@ -255,15 +275,35 @@ describe('Manual FIT ownership and persistence', () => {
     expect(db.$transaction).not.toHaveBeenCalled();
     expect(queue.addActivityProcessingJob).not.toHaveBeenCalled();
   });
-  test('binds import to authenticated user, writes atomically and queues without AI feedback', async () => {
-    const { db, queue, service, emitter } = setup();
-    const result = await service.import(athlete, fixture(), 'Test trail');
+  test('tells the coaches about a new import, once', async () => {
+    const { db, service, emitter } = setup();
+    await service.import(athlete, fixture(), 'Test trail');
     expect(emitter.emit).toHaveBeenCalledWith(
       'coach.activity.notice',
       expect.objectContaining({
         payload: { eventId: 90, kind: 'ACTIVITY', deliveryKey: 'import:90' },
       }),
     );
+    emitter.emit.mockClear();
+    db.eventActivity.findUnique.mockResolvedValue({
+      eventActivityId: 80,
+      eventId: 90,
+      stream: {},
+      event: { startDate: new Date(), name: 'Test trail' },
+    });
+    await service.import(athlete, fixture(), 'Test trail');
+    expect(emitter.emit).not.toHaveBeenCalled();
+  });
+  test('denies coach-only accounts', async () => {
+    const { db, service } = setup();
+    await expect(
+      service.import({ ...athlete, roles: ['COACH'] }, fixture(), 'Test'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(db.athlete.findUnique).not.toHaveBeenCalled();
+  });
+  test('binds import to authenticated user, writes atomically and queues without AI feedback', async () => {
+    const { db, queue, service } = setup();
+    const result = await service.import(athlete, fixture(), 'Test trail');
     expect(db.athlete.findUnique).toHaveBeenCalledWith({
       where: { userId: 4 },
     });
@@ -285,11 +325,8 @@ describe('Manual FIT ownership and persistence', () => {
       processingQueued: true,
     });
   });
-  test('denies coach-only accounts and accounts without an athlete', async () => {
+  test('denies accounts without an athlete profile', async () => {
     const { db, service } = setup();
-    await expect(
-      service.import({ ...athlete, roles: ['COACH'] }, fixture(), 'Test'),
-    ).rejects.toBeInstanceOf(ForbiddenException);
     db.athlete.findUnique.mockResolvedValue(null);
     await expect(
       service.import(athlete, fixture(), 'Test'),
@@ -393,6 +430,34 @@ describe('Manual FIT ownership and persistence', () => {
       expect(db.eventActivity.update).not.toHaveBeenCalled();
     },
   );
+  test('retries a transaction that failed to serialize with another import', async () => {
+    const { db, service } = setup();
+    const serialization = new Prisma.PrismaClientKnownRequestError(
+      'could not serialize access',
+      { code: 'P2034', clientVersion: 'test' },
+    );
+    db.$transaction
+      .mockRejectedValueOnce(serialization)
+      .mockRejectedValueOnce(serialization);
+    expect(await service.import(athlete, fixture(), 'Test')).toMatchObject({
+      eventId: 90,
+      alreadyImported: false,
+    });
+    expect(db.$transaction).toHaveBeenCalledTimes(3);
+  });
+  test('reports a conflict once retries are exhausted', async () => {
+    const { db, service } = setup();
+    db.$transaction.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('could not serialize access', {
+        code: 'P2034',
+        clientVersion: 'test',
+      }),
+    );
+    await expect(service.import(athlete, fixture(), 'Test')).rejects.toThrow(
+      'FIT_CONFLICT',
+    );
+    expect(db.$transaction).toHaveBeenCalledTimes(3);
+  });
   test('queue failure reports a saved activity, not a failed import', async () => {
     const { queue, service } = setup();
     queue.addActivityProcessingJob.mockRejectedValue(
@@ -424,6 +489,9 @@ describe('Manual GPX import', () => {
   test('stores a GPX like a FIT file, with its own source and sport', async () => {
     const { db, queue, service } = setup();
     const result = await service.importGpx(athlete, gpxFile(), 'Rodaje');
+    expect(db.athlete.findUnique).toHaveBeenCalledWith({
+      where: { userId: 4 },
+    });
     const data = db.event.create.mock.calls[0][0].data;
     expect(data).toMatchObject({
       athleteId: 4,
@@ -467,14 +535,49 @@ describe('Manual GPX import', () => {
         'Rodaje',
       ),
     ).rejects.toBeInstanceOf(PayloadTooLargeException);
-    await expect(
-      service.importGpx({ ...athlete, roles: ['COACH'] }, gpxFile(), 'Rodaje'),
-    ).rejects.toBeInstanceOf(ForbiddenException);
     db.event.findFirst.mockResolvedValue({ eventId: 42 });
     await expect(
       service.importGpx(athlete, gpxFile(), 'Rodaje'),
-    ).rejects.toThrow('FIT_DUPLICATE_TIME');
+    ).rejects.toThrow('GPX_DUPLICATE_TIME');
+    db.athlete.findUnique.mockResolvedValue(null);
+    await expect(
+      service.importGpx(athlete, gpxFile(), 'Rodaje'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
     expect(db.event.create).not.toHaveBeenCalled();
+  });
+
+  test('a FIT file sent as GPX is refused as invalid', async () => {
+    const { service } = setup();
+    await expect(
+      service.importGpx(
+        athlete,
+        { ...fixture(), originalname: 'synthetic.gpx' },
+        'Rodaje',
+      ),
+    ).rejects.toThrow('GPX_INVALID');
+  });
+
+  test('the same GPX again returns the stored activity', async () => {
+    const { db, service } = setup();
+    const file = gpxFile();
+    await service.importGpx(athlete, file, 'Rodaje');
+    const externalId = db.event.create.mock.calls[0][0].data.activity.create
+      .externalId as string;
+    db.eventActivity.findUnique.mockResolvedValue({
+      eventActivityId: 80,
+      eventId: 90,
+      externalId,
+      stream: db.event.create.mock.calls[0][0].data.activity.create.stream,
+      event: { startDate: new Date('2020-01-02T09:00:00Z'), name: 'Rodaje' },
+    });
+    const again = await service.importGpx(athlete, file, 'Other name');
+    expect(db.eventActivity.findUnique).toHaveBeenLastCalledWith({
+      where: { externalId },
+      include: { event: true },
+    });
+    expect(db.event.create).toHaveBeenCalledTimes(1);
+    expect(db.eventActivity.update).not.toHaveBeenCalled();
+    expect(again).toMatchObject({ alreadyImported: true, name: 'Rodaje' });
   });
 
   test('is off with manual file import', async () => {

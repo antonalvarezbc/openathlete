@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { BadRequestException } from '@nestjs/common';
 
 import { uncompressActivityStream } from './activity-stream';
@@ -68,6 +71,22 @@ const expectCode = (fn: () => unknown, code: string) => {
 };
 
 describe('prepareManualGpx', () => {
+  it('accepts the synthetic run used by the end-to-end tests', () => {
+    const result = prepareManualGpx(
+      readFileSync(
+        join(__dirname, '../../../../../../e2e/fixtures/synthetic-run.gpx'),
+      ),
+    );
+    const stream = uncompressActivityStream(result.details.stream);
+    expect(result.startDate).toEqual(new Date('2024-05-02T07:00:00Z'));
+    expect(result.activity.sport).toBe('RUNNING');
+    // 60 steps of ~25 m.
+    expect(result.activity.distance).toBeGreaterThan(1450);
+    expect(result.activity.distance).toBeLessThan(1550);
+    expect(stream.heartrate).toHaveLength(61);
+    expect(result.warnings).toEqual([]);
+  });
+
   it('reads every segment, skips the pause and fills short sensor gaps', () => {
     // Garmin Connect writes ns3:hr. Ten points, a 5-minute stop, ten more.
     const first = run(0, 10);
@@ -211,7 +230,7 @@ describe('prepareManualGpx', () => {
       lon: -8,
       at: i,
     }));
-    expectCode(() => prepareManualGpx(gpx([huge])), 'FIT_LIMIT');
+    expectCode(() => prepareManualGpx(gpx([huge])), 'GPX_LIMIT');
   });
 });
 

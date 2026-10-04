@@ -20,11 +20,16 @@ export const routes = {
     createAccount: '/user',
     updateAccount: '/user',
     deleteAccount: '/user',
+    exportData: '/user/me/export',
     updateLanguage: '/user/language',
     passwordReset: '/user/password-reset',
     passwordResetRequest: '/user/password-reset/request',
     completeOnboarding: '/user/complete-onboarding',
     updatePushToken: '/user/push-token',
+  },
+  activityImport: {
+    fit: '/activity-import/fit',
+    gpx: '/activity-import/gpx',
   },
   event: {
     create: '/event',

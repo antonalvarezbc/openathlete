@@ -1,5 +1,7 @@
-import { eventKeys } from '@/api/event/event.keys';
-import { trainingLoadKeys } from '@/api/training-load/training-load.keys';
+import {
+  useImportFitMutation,
+  useImportGpxMutation,
+} from '@/api/activity-import';
 import { EventDetails } from '@/components/event-details/event-details';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,12 +15,17 @@ import {
 import { Input } from '@/components/ui/input';
 import { m } from '@/paraglide/messages';
 import { getLocale } from '@/paraglide/runtime';
-import client from '@/utils/axios';
 import { sportTypeLabelMap } from '@/utils/label-map/core';
-import { useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { Upload } from 'lucide-react';
 import { FormEvent, useRef, useState } from 'react';
+
+import {
+  ActivityImportWarning,
+  ImportedActivityDto,
+  MAX_ACTIVITY_FILE_BYTES,
+  SPORT_TYPE,
+} from '@openathlete/shared';
 
 import {
   activityFileKind,
@@ -26,95 +33,136 @@ import {
   gpxTrackName,
 } from './activity-file';
 
-interface ImportResult {
-  eventId: number;
-  name: string;
-  startDate: string;
-  alreadyImported: boolean;
-  processingQueued: boolean;
-  warnings: string[];
+type FileResult = {
+  fileName: string;
+  result?: ImportedActivityDto;
+  error?: string;
+};
+
+const isGpx = (file: File) => activityFileKind(file.name) === 'gpx';
+
+const nameFromFile = (file: File) =>
+  fileActivityName(file.name) || file.name.slice(0, 100);
+
+/** The track name a GPX stores, else the file name. */
+async function suggestedName(file: File) {
+  if (!isGpx(file)) return nameFromFile(file);
+  return gpxTrackName(await file.text().catch(() => '')) || nameFromFile(file);
 }
 
+const isActivityFile = (file: File) =>
+  activityFileKind(file.name) !== null &&
+  file.size > 0 &&
+  file.size <= MAX_ACTIVITY_FILE_BYTES;
+
+function errorText(failure: unknown, gpx: boolean) {
+  const status = isAxiosError(failure) ? failure.response?.status : undefined;
+  const code = isAxiosError(failure)
+    ? failure.response?.data?.message
+    : undefined;
+  if (status === 413 || code === 'FIT_LIMIT' || code === 'GPX_LIMIT')
+    return m.fit_import_limit();
+  if (code === 'FIT_MULTISPORT_UNSUPPORTED') return m.fit_import_multisport();
+  if (code === 'FIT_DUPLICATE_TIME' || code === 'GPX_DUPLICATE_TIME')
+    return m.fit_import_duplicate_time();
+  if (code === 'GPX_NO_TIME') return m.gpx_import_no_time();
+  if (status === 403) return m.fit_import_forbidden();
+  if (status === 400)
+    return gpx ? m.gpx_import_invalid() : m.fit_import_invalid();
+  return m.fit_import_failed();
+}
+
+function warningText(warning: ActivityImportWarning) {
+  switch (warning) {
+    case 'FIT_INCOMPLETE_CHANNELS':
+    case 'GPX_INCOMPLETE_CHANNELS':
+      return m.fit_import_incomplete();
+    case 'FIT_NO_STREAM':
+      return m.fit_import_no_stream();
+    case 'FIT_MISSING_SUMMARY':
+      return m.fit_import_missing_summary();
+    case 'GPX_NO_GPS':
+      return m.gpx_import_no_gps();
+    case 'FIT_UNKNOWN_SPORT':
+    case 'GPX_UNKNOWN_SPORT':
+      return m.fit_import_unknown_sport();
+  }
+}
+
+/**
+ * Imports FIT and GPX files of recorded activities into the athlete's
+ * calendar, one request per file. A single file can be renamed; several are
+ * named after their GPX track or their file. Each file is checked on its
+ * own: one failure does not stop the others.
+ */
 export function ImportFitDialog() {
   const [open, setOpen] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [name, setName] = useState('');
-  // GPX only: '' keeps the sport the file declares.
-  const [sport, setSport] = useState('');
-  const latestFile = useRef<File | null>(null);
-  const [error, setError] = useState('');
+  // GPX only: '' keeps the sport each file states.
+  const [sport, setSport] = useState<SPORT_TYPE | ''>('');
+  const chosenFiles = useRef<File[]>([]);
+  const [skipped, setSkipped] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState(0);
   const running = useRef(false);
-  const [result, setResult] = useState<ImportResult | null>(null);
-  const [viewActivity, setViewActivity] = useState(false);
-  const clientCache = useQueryClient();
-  const isGpx = !!file && activityFileKind(file.name) === 'gpx';
-  const warnings: Record<string, string> = {
-    FIT_INCOMPLETE_CHANNELS: m.fit_import_incomplete(),
-    FIT_NO_STREAM: m.fit_import_no_stream(),
-    FIT_MISSING_SUMMARY: m.fit_import_missing_summary(),
-    FIT_UNKNOWN_SPORT: m.fit_import_unknown_sport(),
-    GPX_INCOMPLETE_CHANNELS: m.fit_import_incomplete(),
-    GPX_NO_GPS: m.gpx_import_no_gps(),
-    GPX_UNKNOWN_SPORT: m.fit_import_unknown_sport(),
-  };
+  const [results, setResults] = useState<FileResult[] | null>(null);
+  const [viewEventId, setViewEventId] = useState<number | null>(null);
+  const importFit = useImportFitMutation();
+  const importGpx = useImportGpxMutation();
+  const single = files.length === 1;
   const sports = Object.entries(sportTypeLabelMap).sort(([, a], [, b]) =>
     a.localeCompare(b, getLocale()),
   );
+
+  function reset() {
+    setFiles([]);
+    setName('');
+    setSport('');
+    setSkipped([]);
+    setProgress(0);
+    setResults(null);
+    setViewEventId(null);
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!file || running.current) return;
+    if (!files.length || running.current) return;
     running.current = true;
     setBusy(true);
-    setError('');
-    try {
-      const body = new FormData();
-      body.append('file', file);
-      body.append('name', name.trim());
-      if (isGpx && sport) body.append('sport', sport);
-      const response = await client.post<ImportResult>(
-        isGpx ? '/activity-import/gpx' : '/activity-import/fit',
-        body,
-      );
-      await Promise.allSettled([
-        clientCache.invalidateQueries({ queryKey: [eventKeys.getMyEvents] }),
-        clientCache.invalidateQueries({
-          queryKey: [eventKeys.getEventStream, response.data.eventId],
-        }),
-        clientCache.invalidateQueries({
-          queryKey: [trainingLoadKeys.getWeeklyLoadSummary],
-        }),
-      ]);
-      setResult(response.data);
-    } catch (failure) {
-      const status = isAxiosError(failure)
-        ? failure.response?.status
-        : undefined;
-      const code = isAxiosError(failure)
-        ? failure.response?.data?.message
-        : undefined;
-      setError(
-        status === 413 || code === 'FIT_LIMIT'
-          ? m.fit_import_limit()
-          : code === 'FIT_MULTISPORT_UNSUPPORTED'
-            ? m.fit_import_multisport()
-            : code === 'FIT_DUPLICATE_TIME'
-              ? m.fit_import_duplicate_time()
-              : code === 'GPX_NO_TIME'
-                ? m.gpx_import_no_time()
-                : status === 403
-                  ? m.fit_import_forbidden()
-                  : status === 400
-                    ? isGpx
-                      ? m.gpx_import_invalid()
-                      : m.fit_import_invalid()
-                    : m.fit_import_failed(),
-      );
-    } finally {
-      running.current = false;
-      setBusy(false);
+    setProgress(0);
+    const done: FileResult[] = [];
+    for (const [index, file] of files.entries()) {
+      try {
+        const fileName = single ? name.trim() : await suggestedName(file);
+        const result = isGpx(file)
+          ? await importGpx.mutateAsync({
+              file,
+              name: fileName,
+              sport: sport || undefined,
+            })
+          : await importFit.mutateAsync({ file, name: fileName });
+        done.push({ fileName: file.name, result });
+      } catch (failure) {
+        done.push({
+          fileName: file.name,
+          error: errorText(failure, isGpx(file)),
+        });
+      }
+      setProgress(index + 1);
     }
+    setResults(done);
+    running.current = false;
+    setBusy(false);
   }
+
+  const counts = results && {
+    imported: results.filter((r) => r.result && !r.result.alreadyImported)
+      .length,
+    already: results.filter((r) => r.result?.alreadyImported).length,
+    failed: results.filter((r) => r.error).length,
+  };
+
   return (
     <>
       <Button
@@ -122,12 +170,7 @@ export function ImportFitDialog() {
         className="min-h-11"
         data-import-fit-trigger
         onClick={() => {
-          setFile(null);
-          setName('');
-          setSport('');
-          setError('');
-          setResult(null);
-          setViewActivity(false);
+          reset();
           setOpen(true);
         }}
       >
@@ -140,37 +183,71 @@ export function ImportFitDialog() {
           if (!running.current) setOpen(value);
         }}
       >
-        <DialogContent className={viewActivity ? 'sm:max-w-6xl' : undefined}>
+        <DialogContent className={viewEventId ? 'sm:max-w-6xl' : undefined}>
           <DialogHeader>
-            <DialogTitle>
-              {viewActivity ? result?.name : m.fit_import_title()}
-            </DialogTitle>
+            <DialogTitle>{m.fit_import_title()}</DialogTitle>
             <DialogDescription>{m.fit_import_help()}</DialogDescription>
           </DialogHeader>
-          {viewActivity && result ? (
-            <EventDetails eventId={result.eventId} />
-          ) : result ? (
+          {viewEventId ? (
+            <EventDetails eventId={viewEventId} />
+          ) : results ? (
             <div className="space-y-4">
-              <p role="status" className="font-medium">
-                {result.alreadyImported
-                  ? m.fit_import_already()
-                  : m.fit_import_success()}
-              </p>
-              <p className="break-words">
-                {result.name} ·{' '}
-                {new Date(result.startDate).toLocaleString(getLocale())}
-              </p>
-              {!result.processingQueued && (
-                <p role="alert">{m.fit_import_processing_pending()}</p>
-              )}
-              {result.warnings.map((warning) => (
-                <p className="text-sm text-muted-foreground" key={warning}>
-                  {warnings[warning] ?? m.fit_import_incomplete()}
+              {counts && results.length > 1 && (
+                <p role="status" className="font-medium">
+                  {m.fit_import_summary(counts)}
                 </p>
-              ))}
-              <Button onClick={() => setViewActivity(true)}>
-                {m.fit_import_view()}
-              </Button>
+              )}
+              <ul className="space-y-3">
+                {results.map(({ fileName, result, error }) => (
+                  <li
+                    key={fileName}
+                    className="space-y-1 rounded-md border p-3 text-sm"
+                    data-import-result={result ? 'ok' : 'error'}
+                  >
+                    <p className="font-medium break-words">
+                      {result?.name ?? fileName}
+                    </p>
+                    {result ? (
+                      <>
+                        <p role="status">
+                          {result.alreadyImported
+                            ? m.fit_import_already()
+                            : m.fit_import_success()}{' '}
+                          {new Date(result.startDate).toLocaleString(
+                            getLocale(),
+                          )}
+                        </p>
+                        {!result.processingQueued && (
+                          <p role="alert">
+                            {m.fit_import_processing_pending()}
+                          </p>
+                        )}
+                        {result.warnings.map((warning) => (
+                          <p className="text-muted-foreground" key={warning}>
+                            {warningText(warning)}
+                          </p>
+                        ))}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setViewEventId(result.eventId)}
+                        >
+                          {m.fit_import_view()}
+                        </Button>
+                      </>
+                    ) : (
+                      <p role="alert" className="text-destructive">
+                        {error}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <DialogFooter>
+                <Button variant="outline" onClick={reset}>
+                  {m.fit_import_more()}
+                </Button>
+              </DialogFooter>
             </div>
           ) : (
             <form onSubmit={submit} className="space-y-4">
@@ -179,45 +256,40 @@ export function ImportFitDialog() {
                 <Input
                   type="file"
                   accept=".fit,.gpx,application/vnd.garmin.fit,application/fit,application/gpx+xml"
+                  multiple
                   required
                   disabled={busy}
                   onChange={async (event) => {
-                    const selected = event.target.files?.[0] ?? null;
-                    latestFile.current = selected;
-                    setError('');
-                    setFile(null);
-                    setSport('');
-                    if (!selected) return;
-                    const kind = activityFileKind(selected.name);
-                    if (!kind || !selected.size) {
-                      setError(m.activity_import_unsupported());
-                      return;
-                    }
-                    if (selected.size > 20 * 1024 * 1024) {
-                      setError(m.fit_import_limit());
-                      return;
-                    }
-                    setFile(selected);
-                    setName(fileActivityName(selected.name));
-                    if (kind !== 'gpx') return;
-                    // Suggest the track's own name, unless another file
-                    // was chosen meanwhile.
-                    const trackName = gpxTrackName(
-                      await selected.text().catch(() => ''),
+                    const selected = [...(event.target.files ?? [])];
+                    const valid = selected.filter(isActivityFile);
+                    chosenFiles.current = valid;
+                    setSkipped(
+                      selected
+                        .filter((file) => !isActivityFile(file))
+                        .map((file) => file.name),
                     );
-                    if (trackName && latestFile.current === selected)
-                      setName(trackName);
+                    setFiles(valid);
+                    setSport('');
+                    const only = valid.length === 1 ? valid[0] : undefined;
+                    setName(only ? nameFromFile(only) : '');
+                    if (!only || !isGpx(only)) return;
+                    // Suggest the track name, unless other files were
+                    // chosen meanwhile.
+                    const suggested = await suggestedName(only);
+                    if (chosenFiles.current === valid) setName(suggested);
                   }}
                 />
               </label>
-              {isGpx && (
+              {files.some(isGpx) && (
                 <label className="block space-y-2 text-sm font-medium">
                   <span>{m.sport()}</span>
                   <select
                     name="sport"
-                    className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                    className="min-h-11 w-full rounded-md border bg-background px-3 text-base text-foreground md:text-sm"
                     value={sport}
-                    onChange={(event) => setSport(event.target.value)}
+                    onChange={(event) =>
+                      setSport(event.target.value as SPORT_TYPE | '')
+                    }
                     disabled={busy}
                   >
                     <option value="">{m.gpx_import_sport_auto()}</option>
@@ -232,20 +304,37 @@ export function ImportFitDialog() {
                   </span>
                 </label>
               )}
-              <label className="block space-y-2 text-sm font-medium">
-                <span>{m.name()}</span>
-                <Input
-                  name="name"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  required
-                  maxLength={100}
-                  disabled={busy}
-                />
-              </label>
-              {error && (
+              {skipped.length > 0 && (
                 <p role="alert" className="text-sm text-destructive">
-                  {error}
+                  {m.fit_import_skipped({ files: skipped.join(', ') })}
+                </p>
+              )}
+              {single ? (
+                <label className="block space-y-2 text-sm font-medium">
+                  <span>{m.name()}</span>
+                  <Input
+                    name="name"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    required
+                    maxLength={100}
+                    disabled={busy}
+                  />
+                </label>
+              ) : (
+                files.length > 1 && (
+                  <p className="text-sm text-muted-foreground">
+                    {m.fit_import_files({ count: files.length })}{' '}
+                    {m.fit_import_names_from_files()}
+                  </p>
+                )
+              )}
+              {busy && files.length > 1 && (
+                <p role="status" className="text-sm">
+                  {m.fit_import_progress({
+                    done: progress,
+                    total: files.length,
+                  })}
                 </p>
               )}
               <DialogFooter>
@@ -259,7 +348,7 @@ export function ImportFitDialog() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={!file || !name.trim() || busy}
+                  disabled={!files.length || (single && !name.trim()) || busy}
                   isLoading={busy}
                 >
                   {m.fit_import_submit()}

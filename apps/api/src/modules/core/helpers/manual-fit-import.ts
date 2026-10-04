@@ -1,12 +1,16 @@
 import { BadRequestException } from '@nestjs/common';
 
-import { SPORT_TYPE } from '@openathlete/shared';
+import {
+  ActivityImportWarning,
+  MAX_ACTIVITY_FILE_BYTES,
+  SPORT_TYPE,
+} from '@openathlete/shared';
 
 import { ActivityParseResult } from './activity-parser.interface';
 import { calculateSegmentMetrics } from './activity-segment';
 import { buildFitActivityDetails } from './fit-activity-details';
 
-export const MAX_MANUAL_FIT_BYTES = 20 * 1024 * 1024;
+export const MAX_MANUAL_FIT_BYTES = MAX_ACTIVITY_FILE_BYTES;
 
 export function fitSport(sport: unknown, subSport: unknown): SPORT_TYPE {
   if (sport === 1)
@@ -126,11 +130,11 @@ export function prepareManualFit(parsed: ActivityParseResult) {
     endDate: new Date(startDate.getTime() + elapsed * 1000),
     details,
     warnings: [
-      ...(details.incomplete ? ['FIT_INCOMPLETE_CHANNELS'] : []),
-      ...(!parsed.stream.time?.length ? ['FIT_NO_STREAM'] : []),
-      ...(missingSummary ? ['FIT_MISSING_SUMMARY'] : []),
-      ...(sport === SPORT_TYPE.OTHER ? ['FIT_UNKNOWN_SPORT'] : []),
-    ],
+      ...(details.incomplete ? ['FIT_INCOMPLETE_CHANNELS' as const] : []),
+      ...(!parsed.stream.time?.length ? ['FIT_NO_STREAM' as const] : []),
+      ...(missingSummary ? ['FIT_MISSING_SUMMARY' as const] : []),
+      ...(sport === SPORT_TYPE.OTHER ? ['FIT_UNKNOWN_SPORT' as const] : []),
+    ] satisfies ActivityImportWarning[],
     activity: {
       sport,
       distance,

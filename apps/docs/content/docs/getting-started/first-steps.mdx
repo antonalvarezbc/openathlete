@@ -20,6 +20,28 @@ OpenAthlete integrates with Strava to automatically import your workouts.
 3. Authorize OpenAthlete to access your Strava data
 4. Your workouts will start syncing automatically
 
+## Import Activity Files
+
+Activities recorded elsewhere can be imported from their FIT or GPX files:
+
+1. Go to [**Settings** → **Connectors**](https://app.openathlete.org/dashboard/settings)
+2. Under **Import activities (FIT or GPX)**, select one or several `.fit` or `.gpx` files (up to 20 MB each)
+3. For GPX files, choose the sport if the file does not state it
+4. Click **Import**
+
+Each activity appears in your calendar on its original date and is processed like
+a synced one. Importing the same file again does not duplicate it, and a file whose
+start time matches an existing activity is refused.
+
+- **FIT** keeps all the data the device recorded (heart rate, power, laps...) and its
+  summary. Planned workouts, courses and multisport files are not accepted.
+- **GPX** has no laps or summary: distance, moving time and elevation gain are
+  calculated from the track. Points need times, so planned routes are not accepted.
+  The activity takes the track name stored in the file.
+
+The same imports are available to scripts at `POST /activity-import/fit` and
+`POST /activity-import/gpx` (see the [API reference](/docs/api)).
+
 ## Explore Your Dashboard
 
 Once logged in, you'll see your dashboard with:
@@ -28,6 +50,27 @@ Once logged in, you'll see your dashboard with:
 - **Statistics** - Weekly/monthly summaries
 - **Training Plan** - Your current training schedule
 - **Progress Charts** - Visualize your improvement
+
+## Set Up Heart-Rate Zones
+
+Workouts and training load use your zones. To create them:
+
+1. Go to **Settings** → **Training zones** → **Heart Rate**
+2. Click **Create zones** (or **Edit zones**)
+3. Choose how to enter them:
+   - **Manual**: limits in bpm
+   - **% of heart-rate reserve** (Karvonen): needs your maximum and resting heart rate.
+     Target HR = resting HR + percentage × (maximum HR − resting HR)
+   - **% of Max Heart Rate**: needs your maximum heart rate
+4. Click **Save**
+
+New zones start from six default ranges (Zone 0 below 50%, then 50–60% up to
+90–100%), which you can edit. The heart rates saved in your profile are filled in
+for you; enter your resting heart rate, not the lowest one of the day.
+
+Limits are rounded to whole bpm, and a shared limit belongs to the higher zone.
+Zones are saved in bpm: they do not change by themselves when your maximum or
+resting heart rate changes. Open the editor again to recalculate them.
 
 ## Create a Manual Training Session
 

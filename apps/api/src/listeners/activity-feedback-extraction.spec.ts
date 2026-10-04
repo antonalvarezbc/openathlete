@@ -72,9 +72,11 @@ function setup() {
     resolver as unknown as AiModelResolverService,
     ai as unknown as AiService,
   );
-  const run = () =>
+  const run = (
+    trigger: ActivityFeedbackCompletedEvent['payload']['trigger'] = 'questions_completed',
+  ) =>
     listener.handleActivityFeedbackCompleted({
-      payload: { eventActivityId: 10, trigger: 'questions_completed' },
+      payload: { eventActivityId: 10, trigger },
     } as ActivityFeedbackCompletedEvent);
   return { prisma, tx, resolver, ai, calendar, run };
 }
@@ -115,12 +117,17 @@ describe('ActivityFeedbackExtractionListener', () => {
     expect(calendar.notifyActivityProcessed).toHaveBeenCalledWith(30, 2);
   });
 
-  it.each([null, { requireFeedbackQuestions: false }])(
-    'sends nothing to AI when the athlete turned questions off (%j)',
-    async (settings) => {
+  it.each([
+    [null, 'questions_completed'],
+    [{ requireFeedbackQuestions: false }, 'questions_completed'],
+    // Saving an RPE with a comment triggers the analysis too.
+    [{ requireFeedbackQuestions: false }, 'rpe_comment_updated'],
+  ] as const)(
+    'sends nothing to AI when the athlete turned questions off (%j, %s)',
+    async (settings, trigger) => {
       const { prisma, resolver, ai, run } = setup();
       prisma.athleteSettings.findUnique.mockResolvedValue(settings);
-      await run();
+      await run(trigger);
       expect(resolver.tryResolveForAthlete).not.toHaveBeenCalled();
       expect(ai.generateObject).not.toHaveBeenCalled();
     },

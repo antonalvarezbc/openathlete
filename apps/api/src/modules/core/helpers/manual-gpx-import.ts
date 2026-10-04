@@ -3,7 +3,11 @@ import { DOMParser } from 'xmldom-qsa';
 
 import { BadRequestException } from '@nestjs/common';
 
-import { ActivityStream, SPORT_TYPE } from '@openathlete/shared';
+import {
+  ActivityImportWarning,
+  ActivityStream,
+  SPORT_TYPE,
+} from '@openathlete/shared';
 
 import {
   calculateDistance,
@@ -177,7 +181,7 @@ export function prepareManualGpx(buffer: Buffer, sport?: SPORT_TYPE) {
     );
   }
   if (track.points!.length > MAX_MANUAL_GPX_POINTS)
-    throw new BadRequestException('FIT_LIMIT');
+    throw new BadRequestException('GPX_LIMIT');
 
   // Timed points in order; a point going back in time is a recording glitch.
   const points: { at: number; point: GpxPoint }[] = [];
@@ -285,10 +289,10 @@ export function prepareManualGpx(buffer: Buffer, sport?: SPORT_TYPE) {
     endDate: new Date(startDate.getTime() + elapsed * 1000),
     details,
     warnings: [
-      ...(incomplete ? ['GPX_INCOMPLETE_CHANNELS'] : []),
-      ...(hasGps ? [] : ['GPX_NO_GPS']),
-      ...(chosen === SPORT_TYPE.OTHER ? ['GPX_UNKNOWN_SPORT'] : []),
-    ],
+      ...(incomplete ? ['GPX_INCOMPLETE_CHANNELS' as const] : []),
+      ...(hasGps ? [] : ['GPX_NO_GPS' as const]),
+      ...(chosen === SPORT_TYPE.OTHER ? ['GPX_UNKNOWN_SPORT' as const] : []),
+    ] satisfies ActivityImportWarning[],
     activity: {
       sport: chosen,
       distance: hasGps ? Math.round(total) : 0,

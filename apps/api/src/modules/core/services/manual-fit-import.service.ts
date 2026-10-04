@@ -37,6 +37,7 @@ export type ManualFitFile = {
   buffer: Buffer;
 };
 
+type FileFormat = 'FIT' | 'GPX';
 type PreparedActivity =
   ReturnType<typeof prepareManualFit> | ReturnType<typeof prepareManualGpx>;
 
@@ -49,7 +50,7 @@ export class ManualFitImportService {
     @Optional() private readonly emitter?: EventEmitter2,
   ) {}
 
-  /** The importing user's own athlete profile. */
+  /** The activity always goes to the caller's own athlete profile. */
   private async ownAthlete(user: AuthUser) {
     assertManualFitImportEnabled(this.config);
     if (!user.roles?.includes('ATHLETE')) throw new ForbiddenException();
@@ -62,44 +63,23 @@ export class ManualFitImportService {
 
   private checkFile(
     file: ManualFitFile | undefined,
-    extension: '.fit' | '.gpx',
-    invalid: string,
+    format: FileFormat,
   ): asserts file is ManualFitFile {
     if (
       !file?.buffer?.length ||
-      !file.originalname.toLowerCase().endsWith(extension)
+      !file.originalname.toLowerCase().endsWith(`.${format.toLowerCase()}`)
     )
-      throw new BadRequestException(invalid);
+      throw new BadRequestException(`${format}_INVALID`);
     if (
       file.size > MAX_MANUAL_FIT_BYTES ||
       file.buffer.length > MAX_MANUAL_FIT_BYTES
     )
-      throw new PayloadTooLargeException('FIT_LIMIT');
-  }
-
-  /**
-   * A recorded GPX activity. GPX does not say the sport reliably, so the
-   * athlete can choose it; otherwise the track's type is used when known.
-   */
-  async importGpx(
-    user: AuthUser,
-    file: ManualFitFile | undefined,
-    name: string,
-    sport?: SPORT_TYPE,
-  ) {
-    const athlete = await this.ownAthlete(user);
-    this.checkFile(file, '.gpx', 'GPX_INVALID');
-    return this.save(
-      athlete,
-      prepareManualGpx(file.buffer, sport),
-      `gpx-manual:${athlete.athleteId}:${createHash('sha256').update(file.buffer).digest('hex')}`,
-      name,
-    );
+      throw new PayloadTooLargeException(`${format}_LIMIT`);
   }
 
   async import(user: AuthUser, file: ManualFitFile | undefined, name: string) {
     const athlete = await this.ownAthlete(user);
-    this.checkFile(file, '.fit', 'FIT_INVALID');
+    this.checkFile(file, 'FIT');
     let fit: ReturnType<typeof prepareManualFit>;
     try {
       fit = prepareManualFit(
@@ -111,11 +91,27 @@ export class ManualFitImportService {
       if (error instanceof BadRequestException) throw error;
       throw new BadRequestException('FIT_INVALID');
     }
+    return this.save(athlete, fit, file, name, 'FIT');
+  }
+
+  /**
+   * A recorded GPX activity. GPX has no reliable sport, so the athlete can
+   * choose it; otherwise the track's type is used when known.
+   */
+  async importGpx(
+    user: AuthUser,
+    file: ManualFitFile | undefined,
+    name: string,
+    sport?: SPORT_TYPE,
+  ) {
+    const athlete = await this.ownAthlete(user);
+    this.checkFile(file, 'GPX');
     return this.save(
       athlete,
-      fit,
-      `fit-manual:${athlete.athleteId}:${createHash('sha256').update(file.buffer).digest('hex')}`,
+      prepareManualGpx(file.buffer, sport),
+      file,
       name,
+      'GPX',
     );
   }
 
@@ -127,17 +123,18 @@ export class ManualFitImportService {
   private async save(
     athlete: Athlete,
     fit: PreparedActivity,
-    externalId: string,
+    file: ManualFitFile,
     name: string,
+    format: FileFormat,
   ) {
+    const externalId = `${format.toLowerCase()}-manual:${athlete.athleteId}:${createHash('sha256').update(file.buffer).digest('hex')}`;
     const findExisting = () =>
       this.prisma.eventActivity.findUnique({
         where: { externalId },
         include: { event: true },
       });
-    let saved;
-    try {
-      saved = await this.prisma.$transaction(
+    const store = () =>
+      this.prisma.$transaction(
         async (tx) => {
           const existing = await tx.eventActivity.findUnique({
             where: { externalId },
@@ -174,7 +171,8 @@ export class ManualFitImportService {
               startDate: fit.startDate,
             },
           });
-          if (sameStart) throw new ConflictException('FIT_DUPLICATE_TIME');
+          if (sameStart)
+            throw new ConflictException(`${format}_DUPLICATE_TIME`);
           const event = await tx.event.create({
             data: {
               athleteId: athlete.athleteId,
@@ -205,15 +203,23 @@ export class ManualFitImportService {
           timeout: 15000,
         },
       );
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        ['P2002', 'P2034'].includes(error.code)
-      ) {
+    // Concurrent serializable imports, from other athletes too, can fail to
+    // serialize: retry them before reporting a conflict.
+    let saved: Awaited<ReturnType<typeof store>> | undefined;
+    for (let attempt = 1; !saved; attempt++) {
+      try {
+        saved = await store();
+      } catch (error) {
+        if (
+          !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+          !['P2002', 'P2034'].includes(error.code)
+        )
+          throw error;
         const existing = await findExisting();
-        if (!existing) throw new ConflictException('FIT_CONFLICT');
-        saved = { activity: existing, alreadyImported: true };
-      } else throw error;
+        if (existing) saved = { activity: existing, alreadyImported: true };
+        else if (error.code === 'P2002' || attempt >= 3)
+          throw new ConflictException(`${format}_CONFLICT`);
+      }
     }
     if (!saved.alreadyImported)
       this.emitter?.emit(
