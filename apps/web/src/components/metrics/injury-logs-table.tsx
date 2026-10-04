@@ -19,7 +19,6 @@ import { m } from '@/paraglide/messages';
 import { getPainScoreColor } from '@/utils/color';
 import { cn } from '@/utils/shadcn';
 import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 
 import { AthleteInjury, INJURY_STATUS } from '@openathlete/shared';
 
@@ -113,9 +112,7 @@ export function InjuryLogsTable({
             {injuries.map((injury: AthleteInjury) => (
               <TableRow key={injury.athleteInjuryId}>
                 <TableCell>
-                  {format(new Date(injury.updatedAt), 'dd/MM/yyyy', {
-                    locale: fr,
-                  })}
+                  {format(new Date(injury.updatedAt), 'dd/MM/yyyy')}
                 </TableCell>
                 <TableCell className="font-medium">{injury.location}</TableCell>
                 <TableCell>

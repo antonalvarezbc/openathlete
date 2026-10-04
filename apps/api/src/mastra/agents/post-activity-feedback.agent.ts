@@ -3,6 +3,7 @@ import { Agent } from '@mastra/core/agent';
 import { POST_ACTIVITY_FEEDBACK_MODEL } from 'src/common/constants/ai-models.constant';
 
 export const postActivityFeedbackAgent = new Agent({
+  id: 'post-activity-feedback',
   name: 'post-activity-feedback',
   description:
     'Generates 3–4 targeted questions after an activity to capture athlete feedback (ressenti, fatigue, douleurs, charge mentale) inspired by the Hooper Index and session context.',

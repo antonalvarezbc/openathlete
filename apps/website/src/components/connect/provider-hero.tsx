@@ -56,10 +56,7 @@ const titleVariants = {
 
 const getProviderMessages = (provider: Provider) => {
   const key = provider.toLowerCase() as
-    | 'garmin'
-    | 'strava'
-    | 'suunto'
-    | 'polar';
+    'garmin' | 'strava' | 'suunto' | 'polar';
   return {
     title: (m[`connect_${key}_hero_title` as keyof typeof m] as () => string)(),
     subtitle: (

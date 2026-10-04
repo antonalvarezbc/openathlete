@@ -5,6 +5,7 @@ import { openAthleteDataTools } from '../tools/openathlete-data.tools';
 import { AI_MEMORY_INSTRUCTIONS } from './ai-memory-instructions';
 
 export const coachAssistantAgent = new Agent({
+  id: 'coach-assistant',
   name: 'coach-assistant',
   model: EVENT_MODIFICATION_MODEL,
   tools: openAthleteDataTools,

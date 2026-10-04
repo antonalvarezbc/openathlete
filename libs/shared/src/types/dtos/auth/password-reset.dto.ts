@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { newPasswordSchema } from './password';
+
 export const passwordResetRequestSchema = z.object({
   email: z.string().email(),
 });
@@ -10,7 +12,7 @@ export type PasswordResetRequestDto = z.infer<
 
 export const passwordResetSchema = z.object({
   token: z.string(),
-  password: z.string(),
+  password: newPasswordSchema,
 });
 
 export type PasswordResetDto = z.infer<typeof passwordResetSchema>;

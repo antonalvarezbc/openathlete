@@ -215,9 +215,8 @@ export class AiMemoryService {
 
       // Loaded lazily: only consolidation needs a model, and services that
       // read memory should not pull Mastra in (nor their specs).
-      const { aiMemoryConsolidationAgent } = await import(
-        '../../mastra/agents/ai-memory-consolidation.agent'
-      );
+      const { aiMemoryConsolidationAgent } =
+        await import('../../mastra/agents/ai-memory-consolidation.agent');
       const result = await aiMemoryConsolidationAgent.generate(
         JSON.stringify({
           maxChars: limits.summaryChars,

@@ -43,9 +43,6 @@ apps/docs
 apps/website
 lab
 
-# Firebase functions (separate deployment)
-apps/firebase-functions
-
 # Infrastructure as code (not needed at runtime)
 infra
 

@@ -3,6 +3,7 @@ import { Agent } from '@mastra/core/agent';
 import { EXTRACT_INJURY_MODEL } from 'src/common/constants/ai-models.constant';
 
 export const extractInjuryAgent = new Agent({
+  id: 'extract-injury',
   name: 'extract-injury',
   description:
     'Extracts injury information from athlete feedback (questions answers + comment). Returns empty array if no injury/pain mentioned.',

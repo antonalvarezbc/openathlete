@@ -67,8 +67,10 @@ export interface WorkoutRepeat extends PrismaWorkoutRepeat {
   childSteps: WorkoutStep[];
 }
 
-export interface WorkoutStepTarget
-  extends Omit<PrismaWorkoutStepTarget, 'zoneReference'> {
+export interface WorkoutStepTarget extends Omit<
+  PrismaWorkoutStepTarget,
+  'zoneReference'
+> {
   zoneReference?: WorkoutZoneReference | null;
   step: WorkoutStep;
 }
@@ -117,10 +119,7 @@ export type ActivityEvent = Omit<
   };
 
 export type Event =
-  | TrainingEvent
-  | CompetitionEvent
-  | NoteEvent
-  | ActivityEvent;
+  TrainingEvent | CompetitionEvent | NoteEvent | ActivityEvent;
 
 export interface EventTemplate extends PrismaEventTemplate {
   event?: Event;

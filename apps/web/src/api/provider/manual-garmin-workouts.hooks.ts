@@ -96,7 +96,6 @@ export function garminWorkoutErrorText(code?: string, retryAfter?: number) {
 export function garminRequestErrorText(failure: unknown) {
   if (!isAxiosError(failure)) return m.garmin_workout_failed();
   const data = failure.response?.data as
-    | { code?: string; retryAfterSeconds?: number }
-    | undefined;
+    { code?: string; retryAfterSeconds?: number } | undefined;
   return garminWorkoutErrorText(data?.code, data?.retryAfterSeconds);
 }

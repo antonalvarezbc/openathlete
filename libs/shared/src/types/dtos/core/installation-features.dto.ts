@@ -7,9 +7,7 @@ import type { ConnectorProvider } from '../../../entities/core';
  * - `not-configured`: the transcription provider has no API key.
  */
 export type VoiceTranscriptionStatus =
-  | 'available'
-  | 'unsupported-by-ai-provider'
-  | 'not-configured';
+  'available' | 'unsupported-by-ai-provider' | 'not-configured';
 
 /** Effective installation capabilities; credentials and filesystem paths are never exposed. */
 export type InstallationFeaturesDto = {

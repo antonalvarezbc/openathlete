@@ -5,6 +5,7 @@ import { EVENT_GENERATION_MODEL } from 'src/common/constants/ai-models.constant'
 import { AI_MEMORY_INSTRUCTIONS } from './ai-memory-instructions';
 
 export const eventGenerationAgent = new Agent({
+  id: 'event-generation',
   name: 'event-generation',
   description:
     'Generates complete training events with structured workouts from natural language prompts.',

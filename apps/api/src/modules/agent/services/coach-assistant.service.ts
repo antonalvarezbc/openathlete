@@ -6,7 +6,7 @@ import {
 } from '@openathlete/shared';
 
 import { coachAssistantAgent } from '../../../mastra/agents/coach-assistant.agent';
-import { aiToolsRuntimeContext } from '../../../mastra/tools/openathlete-data.tools';
+import { aiToolsRequestContext } from '../../../mastra/tools/openathlete-data.tools';
 import { AiMemoryService } from '../../ai-memory/ai-memory.service';
 import { AiToolsService } from '../../ai-tools/ai-tools.service';
 import { AuthUser } from '../../auth/decorators/user.decorator';
@@ -62,7 +62,7 @@ export class CoachAssistantService {
         }),
         {
           // Read-only data tools act as this user (same access checks as the API).
-          runtimeContext: aiToolsRuntimeContext(this.tools, user),
+          requestContext: aiToolsRequestContext(this.tools, user),
           maxSteps: 6,
         },
       );

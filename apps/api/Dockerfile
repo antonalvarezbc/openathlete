@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 # ---- Build stage ----
-FROM node:22.14.0-alpine AS build
+FROM node:22.23.3-alpine AS build
 WORKDIR /app
 
 # Prisma engines on Alpine need OpenSSL; libc6-compat for Node native addons
@@ -36,10 +36,12 @@ WORKDIR /app/apps/api
 RUN NODE_ENV=development pnpm build
 
 # ---- Runtime stage ----
-FROM node:22.14.0-alpine AS runtime
+FROM node:22.23.3-alpine AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production
+# Mastra (AI agents) ships anonymous usage telemetry; keep it off
+ENV MASTRA_TELEMETRY_DISABLED=1
 
 RUN apk add --no-cache wget openssl libc6-compat su-exec \
   && corepack enable && corepack prepare pnpm@9.15.9 --activate \

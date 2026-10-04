@@ -16,10 +16,10 @@ them.
 | `anthropic` | `anthropic/claude-opus-5` for every agent | `ANTHROPIC_API_KEY` |
 
 Per-agent `AI_MODEL_*` variables always take precedence over `AI_PROVIDER`, for
-example `AI_MODEL_QNA=anthropic/claude-sonnet-5` or
-`AI_MODEL_POST_ACTIVITY_FEEDBACK=openai/gpt-5.1`. The chat routing agent follows
-`AI_MODEL_QNA`. See [model defaults](../apps/api/src/common/constants/ai-models.constant.ts)
-for the full list.
+example `AI_MODEL_MEMORY=anthropic/claude-sonnet-5` or
+`AI_MODEL_POST_ACTIVITY_FEEDBACK=openai/gpt-5.1`. See
+[model defaults](../apps/api/src/common/constants/ai-models.constant.ts) for
+the full list.
 
 ## Embeddings and transcription
 

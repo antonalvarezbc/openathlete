@@ -13,33 +13,25 @@ import { ApiEnvSchemaType } from '@openathlete/shared';
 @Injectable()
 export class StripeService {
   private readonly logger = new Logger(StripeService.name);
-  private readonly client?: Stripe;
-
-  private get stripe(): Stripe {
-    if (!this.client) {
-      throw new ServiceUnavailableException(
-        'Billing is disabled in self-hosted mode',
-      );
-    }
-    return this.client;
-  }
+  private readonly client: Stripe | null;
   private readonly priceIds: Record<SubscriptionPlan, string>;
 
   constructor(
     private readonly configService: ConfigService<ApiEnvSchemaType, true>,
   ) {
-    if (this.configService.get('SELF_HOSTED') === true) {
-      this.priceIds = {} as Record<SubscriptionPlan, string>;
-      return;
-    }
     const secretKey = this.configService.get('STRIPE_SECRET_KEY');
-    if (!secretKey) {
-      throw new Error('STRIPE_SECRET_KEY is not set');
+    if (this.configService.get('SELF_HOSTED') === true) {
+      // Self-hosted installations never bill, even with a key configured.
+      this.client = null;
+    } else if (secretKey) {
+      this.client = new Stripe(secretKey, {
+        apiVersion: '2025-11-17.clover',
+      });
+    } else {
+      // Billing is optional: the API boots without Stripe.
+      this.client = null;
+      this.logger.warn('STRIPE_SECRET_KEY is not set, billing is disabled');
     }
-
-    this.client = new Stripe(secretKey, {
-      apiVersion: '2025-11-17.clover',
-    });
 
     const priceIdsJson = this.configService.get('STRIPE_PRICE_IDS');
     if (!priceIdsJson) {
@@ -73,6 +65,15 @@ export class StripeService {
         [SubscriptionPlan.CLUB_ULTRA]: '',
       };
     }
+  }
+
+  private get stripe(): Stripe {
+    if (!this.client) {
+      throw new ServiceUnavailableException(
+        'Billing is not configured on this instance',
+      );
+    }
+    return this.client;
   }
 
   /**
@@ -327,7 +328,7 @@ export class StripeService {
   ): Stripe.Event {
     const webhookSecret = this.configService.get('STRIPE_WEBHOOK_SECRET');
     if (!webhookSecret) {
-      throw new Error('STRIPE_WEBHOOK_SECRET is not set');
+      throw new ServiceUnavailableException('STRIPE_WEBHOOK_SECRET is not set');
     }
 
     return this.stripe.webhooks.constructEvent(

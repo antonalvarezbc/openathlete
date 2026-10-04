@@ -16,7 +16,6 @@ import {
   TrainingLoadCalculationType,
 } from '@openathlete/database';
 import {
-  ActivityStream,
   CalendarWeekLoadSummary,
   CompressedActivityStream,
 } from '@openathlete/shared';
@@ -33,10 +32,6 @@ import {
   LOAD_SLOPE_CLAMP,
   RECOMMENDATION_ADJUSTMENTS,
   RECOMMENDATION_BASE_RATIOS,
-  TRIMP_COEFFICIENT_K_FEMALE,
-  TRIMP_COEFFICIENT_K_MALE,
-  TRIMP_COEFFICIENT_Y_FEMALE,
-  TRIMP_COEFFICIENT_Y_MALE,
   TSB_DETRAINING_THRESHOLD,
   TSB_OVERREACHING_THRESHOLD,
 } from 'src/common/constants/training-formulas.constants';
@@ -45,6 +40,14 @@ import { CaslAbilityFactory } from 'src/modules/auth/services/casl-ability.facto
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
 import { uncompressActivityStream } from '../helpers/activity-stream';
+import {
+  addUtcDays,
+  calculateTrimpFromAverage,
+  calculateTrimpFromStream,
+  getUtcWeekStart,
+  startOfUtcDay,
+  toUtcDateKey,
+} from '../helpers/training-load';
 
 /**
  * Training load calculation metadata
@@ -146,9 +149,8 @@ export class TrainingLoadService {
     let sum = 0;
 
     while (cursor <= weekEnd) {
-      const key = cursor.toISOString().split('T')[0];
-      sum += dailyLoadLookup.get(key) ?? 0;
-      cursor.setDate(cursor.getDate() + 1);
+      sum += dailyLoadLookup.get(toUtcDateKey(cursor)) ?? 0;
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
     }
 
     return sum;
@@ -162,10 +164,8 @@ export class TrainingLoadService {
     const loads: number[] = [];
 
     for (let weekOffset = 0; weekOffset < weeks; weekOffset++) {
-      const weekEnd = new Date(referenceDate);
-      weekEnd.setDate(weekEnd.getDate() - weekOffset * 7);
-      const weekStart = new Date(weekEnd);
-      weekStart.setDate(weekStart.getDate() - 6);
+      const weekEnd = addUtcDays(referenceDate, -weekOffset * 7);
+      const weekStart = addUtcDays(weekEnd, -6);
       loads.push(this.getWeekLoadSum(dailyLoadLookup, weekStart, weekEnd));
     }
 
@@ -546,6 +546,8 @@ export class TrainingLoadService {
             select: {
               sport: true,
               stream: true,
+              averageHeartrate: true,
+              movingTime: true,
               trainingLoadEntries: {
                 where: { calculation: { type: 'TRIMP' } },
                 select: { metadata: true },
@@ -577,9 +579,14 @@ export class TrainingLoadService {
             reference = await this.resolveTrimpHeartRates(athleteId, sport);
             references.set(sport, reference);
           }
+          // Same inputs as calculateActivityLoad: the stream, or the
+          // average heart rate and duration when there is no stream.
           const signature = this.trimpSignature(
             event.startDate,
-            event.activity.stream,
+            event.activity.stream ?? {
+              averageHeartrate: event.activity.averageHeartrate,
+              movingTime: event.activity.movingTime,
+            },
             reference,
             athlete.user.gender,
           );
@@ -643,79 +650,6 @@ export class TrainingLoadService {
         calculationType: 'FOSTER_RPE',
         rpe: rpeScale,
         duration: durationSeconds,
-      },
-    };
-  }
-
-  /**
-   * Calculate TRIMP (exponential weighting)
-   * Formula: Duration × HR fraction × 0.64 × e^(1.92 × HR fraction)
-   * where HR fraction = (HR - HR rest) / (HR max - HR rest)
-   */
-  private calculateTRIMP(
-    stream: ActivityStream,
-    hrMax: number,
-    hrRest: number,
-    gender: 'male' | 'female' = 'male',
-  ): { value: number; metadata: TrainingLoadMetadata } {
-    if (
-      !stream.heartrate ||
-      !stream.time ||
-      stream.time.length < 2 ||
-      stream.heartrate.length !== stream.time.length
-    ) {
-      throw new Error('Heart rate or time data not available');
-    }
-
-    const hrReserve = hrMax - hrRest;
-
-    // Gender-specific coefficients
-    const k =
-      gender === 'male' ? TRIMP_COEFFICIENT_K_MALE : TRIMP_COEFFICIENT_K_FEMALE;
-    const y =
-      gender === 'male' ? TRIMP_COEFFICIENT_Y_MALE : TRIMP_COEFFICIENT_Y_FEMALE;
-
-    let trimp = 0;
-    let totalHr = 0;
-    let validPoints = 0;
-    let usableIntervals = 0;
-
-    for (let i = 1; i < stream.time.length; i++) {
-      const hr = stream.heartrate[i];
-      const timeDelta = (stream.time[i] - stream.time[i - 1]) / 60; // Convert to minutes
-
-      if (
-        Number.isFinite(hr) &&
-        hr > 0 &&
-        Number.isFinite(timeDelta) &&
-        timeDelta > 0
-      ) {
-        usableIntervals++;
-        const hrFraction = (hr - hrRest) / hrReserve;
-
-        if (hrFraction > 0) {
-          // TRIMP formula
-          trimp += timeDelta * hrFraction * y * Math.exp(k * hrFraction);
-          totalHr += hr;
-          validPoints++;
-        }
-      }
-    }
-
-    if (!usableIntervals || !Number.isFinite(trimp)) {
-      throw new BadRequestException('No usable heart-rate intervals for TRIMP');
-    }
-    const avgHr = validPoints > 0 ? totalHr / validPoints : 0;
-
-    return {
-      value: trimp,
-      metadata: {
-        calculationType: 'TRIMP',
-        duration: stream.time[stream.time.length - 1],
-        avgHr,
-        hrMax,
-        hrRest,
-        hrReserve,
       },
     };
   }
@@ -803,26 +737,63 @@ export class TrainingLoadService {
         const { hrMax, hrRest, hrMaxSource } =
           await this.resolveTrimpHeartRates(athlete.athleteId, activity.sport);
 
-        // Uncompress stream
-        if (!activity.stream) {
-          throw new Error('Activity stream not available');
+        // Default to 'male' coefficients if gender is not set or 'OTHER'
+        const gender = athlete.user.gender === 'FEMALE' ? 'female' : 'male';
+
+        const stream = activity.stream
+          ? uncompressActivityStream(
+              activity.stream as CompressedActivityStream,
+            )
+          : null;
+
+        let trimp;
+        if (stream?.heartrate?.length && stream.time?.length) {
+          // A stream without a single positive heart rate is unusable: do
+          // not store it as zero load.
+          if (
+            stream.heartrate.length !== stream.time.length ||
+            stream.time.length < 2 ||
+            !stream.heartrate.some((hr) => Number.isFinite(hr) && hr > 0)
+          ) {
+            throw new BadRequestException(
+              'No usable heart-rate intervals for TRIMP',
+            );
+          }
+          trimp = calculateTrimpFromStream(stream, hrMax, hrRest, gender);
+        } else if (activity.averageHeartrate && activity.movingTime) {
+          // No HR stream (manual entry, import without streams)
+          trimp = calculateTrimpFromAverage(
+            activity.averageHeartrate,
+            activity.movingTime,
+            hrMax,
+            hrRest,
+            gender,
+          );
+        } else {
+          throw new Error('Heart rate data not available for this activity');
         }
 
-        const stream = uncompressActivityStream(
-          activity.stream as CompressedActivityStream,
-        );
-
-        // Convert gender to 'male' | 'female' for TRIMP calculation
-        // Default to 'male' if not set or 'OTHER'
-        const gender = athlete.user.gender === 'FEMALE' ? 'female' : 'male';
-        result = this.calculateTRIMP(stream, hrMax, hrRest, gender);
-        result.metadata.hrMaxSource = hrMaxSource;
-        result.metadata.inputSignature = this.trimpSignature(
-          event.startDate,
-          activity.stream,
-          { hrMax, hrRest, hrMaxSource },
-          athlete.user.gender,
-        );
+        result = {
+          value: trimp.value,
+          metadata: {
+            calculationType: 'TRIMP',
+            duration: trimp.duration,
+            avgHr: trimp.avgHr,
+            hrMax,
+            hrRest,
+            hrReserve: hrMax - hrRest,
+            hrMaxSource,
+            inputSignature: this.trimpSignature(
+              event.startDate,
+              activity.stream ?? {
+                averageHeartrate: activity.averageHeartrate,
+                movingTime: activity.movingTime,
+              },
+              { hrMax, hrRest, hrMaxSource },
+              athlete.user.gender,
+            ),
+          },
+        };
         break;
       }
 
@@ -941,7 +912,7 @@ export class TrainingLoadService {
     const dailyLoads = new Map<string, { load: number; count: number }>();
 
     for (const entry of entries) {
-      const dateKey = entry.date.toISOString().split('T')[0];
+      const dateKey = toUtcDateKey(entry.date);
       const existing = dailyLoads.get(dateKey) || { load: 0, count: 0 };
       dailyLoads.set(dateKey, {
         load: existing.load + entry.value,
@@ -1006,8 +977,7 @@ export class TrainingLoadService {
     }
 
     // Get last 42 days of data for CTL calculation
-    const startDate = new Date(targetDate);
-    startDate.setDate(startDate.getDate() - 42);
+    const startDate = addUtcDays(targetDate, -42);
 
     const trimpRefresh =
       calculationType === 'TRIMP'
@@ -1030,18 +1000,17 @@ export class TrainingLoadService {
     // Create a map of dates with loads for quick lookup
     const loadMap = new Map<string, number>();
     dailyLoads.forEach((day) => {
-      const dateKey = day.date.toISOString().split('T')[0];
+      const dateKey = toUtcDateKey(day.date);
       loadMap.set(dateKey, day.load);
     });
 
     // Generate ALL days from startDate to targetDate (including days without activity)
     const allDays: Array<{ date: Date; load: number }> = [];
     const dailyLoadLookup = new Map<string, number>();
-    const currentDate = new Date(startDate);
-    currentDate.setHours(0, 0, 0, 0);
+    const currentDate = startOfUtcDay(startDate);
 
     while (currentDate <= targetDate) {
-      const dateKey = currentDate.toISOString().split('T')[0];
+      const dateKey = toUtcDateKey(currentDate);
       const load = loadMap.get(dateKey) || 0; // 0 load for rest days
 
       const dayEntry = {
@@ -1052,7 +1021,7 @@ export class TrainingLoadService {
       allDays.push(dayEntry);
       dailyLoadLookup.set(dateKey, load);
 
-      currentDate.setDate(currentDate.getDate() + 1);
+      currentDate.setUTCDate(currentDate.getUTCDate() + 1);
     }
 
     // Calculate exponentially weighted moving averages using ALL days (including rest days)
@@ -1082,8 +1051,7 @@ export class TrainingLoadService {
     }
 
     // Calculate recommended load range using ACWR-informed ramp logic
-    const normalizedTargetDate = new Date(targetDate);
-    normalizedTargetDate.setHours(0, 0, 0, 0);
+    const normalizedTargetDate = startOfUtcDay(targetDate);
 
     const weeklyLoads = this.getRecentWeeklyLoads(
       dailyLoadLookup,
@@ -1173,8 +1141,7 @@ export class TrainingLoadService {
     }
 
     // Get data starting 42 days before startDate for proper CTL calculation
-    const extendedStartDate = new Date(startDate);
-    extendedStartDate.setDate(extendedStartDate.getDate() - 42);
+    const extendedStartDate = addUtcDays(startDate, -42);
 
     const dailyLoads = await this.getTrainingLoadByPeriod(
       user,
@@ -1187,17 +1154,16 @@ export class TrainingLoadService {
     // Create a map of dates with loads for quick lookup
     const loadMap = new Map<string, number>();
     dailyLoads.forEach((day) => {
-      const dateKey = day.date.toISOString().split('T')[0];
+      const dateKey = toUtcDateKey(day.date);
       loadMap.set(dateKey, day.load);
     });
 
     // Generate ALL days from extendedStartDate to endDate (including days without activity)
     const allDays: Array<{ date: Date; load: number }> = [];
-    const currentDate = new Date(extendedStartDate);
-    currentDate.setHours(0, 0, 0, 0);
+    const currentDate = startOfUtcDay(extendedStartDate);
 
     while (currentDate <= endDate) {
-      const dateKey = currentDate.toISOString().split('T')[0];
+      const dateKey = toUtcDateKey(currentDate);
       const load = loadMap.get(dateKey) || 0; // 0 load for rest days
 
       allDays.push({
@@ -1205,7 +1171,7 @@ export class TrainingLoadService {
         load,
       });
 
-      currentDate.setDate(currentDate.getDate() + 1);
+      currentDate.setUTCDate(currentDate.getUTCDate() + 1);
     }
 
     if (allDays.length === 0) {
@@ -1285,13 +1251,11 @@ export class TrainingLoadService {
       targetAthleteId = athlete.athleteId;
     }
 
-    const normalizedStart = this.getWeekStart(startDate);
-    const normalizedEnd = this.addDays(this.getWeekStart(endDate), 6);
-    normalizedStart.setUTCHours(0, 0, 0, 0);
+    const normalizedStart = getUtcWeekStart(startDate);
+    const normalizedEnd = addUtcDays(getUtcWeekStart(endDate), 6);
     normalizedEnd.setUTCHours(23, 59, 59, 999);
 
-    const extendedStart = this.addDays(normalizedStart, -42);
-    extendedStart.setUTCHours(0, 0, 0, 0);
+    const extendedStart = addUtcDays(normalizedStart, -42);
 
     const weekSummaries = new Map<
       string,
@@ -1306,10 +1270,10 @@ export class TrainingLoadService {
     for (
       let cursor = new Date(extendedStart);
       cursor <= normalizedEnd;
-      cursor = this.addDays(cursor, 7)
+      cursor = addUtcDays(cursor, 7)
     ) {
       const weekStart = new Date(cursor);
-      const weekEnd = this.addDays(weekStart, 6);
+      const weekEnd = addUtcDays(weekStart, 6);
       weekSummaries.set(weekStart.toISOString(), {
         weekStart,
         weekEnd,
@@ -1347,12 +1311,12 @@ export class TrainingLoadService {
       });
 
       for (const entry of entries) {
-        const weekStart = this.getWeekStart(entry.date);
+        const weekStart = getUtcWeekStart(entry.date);
         const weekKey = weekStart.toISOString();
         const summary =
           weekSummaries.get(weekKey) ||
           (() => {
-            const weekEnd = this.addDays(weekStart, 6);
+            const weekEnd = addUtcDays(weekStart, 6);
             const placeholder = { weekStart, weekEnd, actual: 0, estimated: 0 };
             weekSummaries.set(weekKey, placeholder);
             return placeholder;
@@ -1393,12 +1357,12 @@ export class TrainingLoadService {
       }
 
       const eventDate = new Date(training.event.startDate);
-      const weekStart = this.getWeekStart(eventDate);
+      const weekStart = getUtcWeekStart(eventDate);
       const weekKey = weekStart.toISOString();
       const summary =
         weekSummaries.get(weekKey) ||
         (() => {
-          const weekEnd = this.addDays(weekStart, 6);
+          const weekEnd = addUtcDays(weekStart, 6);
           const placeholder = { weekStart, weekEnd, actual: 0, estimated: 0 };
           weekSummaries.set(weekKey, placeholder);
           return placeholder;
@@ -1449,11 +1413,7 @@ export class TrainingLoadService {
       const acwrResult = this.calculateACWRFromWeeklyLoads(weeklyLoadsForACWR);
       let acwr: number | undefined;
       let acwrStatus:
-        | 'safe'
-        | 'optimal'
-        | 'moderate_risk'
-        | 'high_risk'
-        | undefined;
+        'safe' | 'optimal' | 'moderate_risk' | 'high_risk' | undefined;
 
       if (acwrResult) {
         acwr = acwrResult.acwr;
@@ -1485,8 +1445,8 @@ export class TrainingLoadService {
       if (targetIndex < sortedSummaries.length) {
         recommendations[targetIndex] = recommendedRange;
       } else {
-        const nextWeekStart = this.addDays(sortedSummaries[index].weekStart, 7);
-        const nextWeekEnd = this.addDays(sortedSummaries[index].weekEnd, 7);
+        const nextWeekStart = addUtcDays(sortedSummaries[index].weekStart, 7);
+        const nextWeekEnd = addUtcDays(sortedSummaries[index].weekEnd, 7);
         projectedFutureWeek = {
           weekStart: nextWeekStart,
           weekEnd: nextWeekEnd,
@@ -1605,21 +1565,5 @@ export class TrainingLoadService {
     }
 
     return { processed, errors, heartRateReferences: [...references.values()] };
-  }
-
-  private getWeekStart(date: Date): Date {
-    const source = new Date(date);
-    const utcDate = new Date(
-      Date.UTC(source.getFullYear(), source.getMonth(), source.getDate()),
-    );
-    const day = (utcDate.getUTCDay() + 6) % 7;
-    utcDate.setUTCDate(utcDate.getUTCDate() - day);
-    return utcDate;
-  }
-
-  private addDays(date: Date, days: number): Date {
-    const next = new Date(date);
-    next.setUTCDate(next.getUTCDate() + days);
-    return next;
   }
 }

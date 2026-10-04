@@ -109,7 +109,7 @@ export class TrainingLoadListener {
       }
 
       // Use the same metric/zone resolution as manual recalculation.
-      if (activity.stream) {
+      if (activity.stream || activity.averageHeartrate) {
         try {
           await this.trainingLoadService.calculateActivityLoad(
             authUser,

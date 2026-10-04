@@ -19,6 +19,7 @@ import {
 } from 'src/common/constants/training-formulas.constants';
 
 export const trimpEstimationAgent = new Agent({
+  id: 'trimp-estimation',
   name: 'trimp-estimation',
   description:
     'Estimates TRIMP (sTRIMP) training load for planned training sessions based on workout structure, athlete metrics, and training zones.',

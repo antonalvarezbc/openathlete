@@ -13,6 +13,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ApiHeader, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 
 import { ApiEnvSchemaType, SubscriptionPlan } from '@openathlete/shared';
 
@@ -26,6 +27,7 @@ import {
 } from '../services/subscription.service';
 
 @ApiTags('Subscription')
+@SkipThrottle()
 @Controller('subscription/webhook')
 export class StripeWebhookController {
   private readonly logger = new Logger(StripeWebhookController.name);

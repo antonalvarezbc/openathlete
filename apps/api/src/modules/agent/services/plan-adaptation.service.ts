@@ -536,6 +536,9 @@ export class PlanAdaptationService {
     try {
       result = await planAdaptationAgent.generate(prompt, {
         structuredOutput: { schema: planAdaptationProposalSchema },
+        // OpenAI strict outputs reject optional fields and repeat blocks;
+        // Mastra still validates the answer against the zod schema.
+        providerOptions: { openai: { strictJsonSchema: false } },
       });
     } catch (error) {
       if (

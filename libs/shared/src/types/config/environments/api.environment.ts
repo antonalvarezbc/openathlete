@@ -3,6 +3,12 @@ import { z } from 'zod';
 import { ENV } from '../environment.enum';
 import { NODE_ENV } from '../node-environment.enum';
 
+// Secrets that were shipped as defaults in docker-compose.yml. Instances
+// must not run with them since they are public.
+const PUBLIC_JWT_SECRETS = [
+  'dev-jwt-secret-key-change-in-production-min-32-chars-long',
+];
+
 /**
  * Environment variable validation schema for the API application.
  * This schema ensures all required environment variables are present and valid
@@ -88,6 +94,10 @@ export const ApiEnvSchema = z
         32,
         'JWT_SECRET_KEY must be at least 32 characters long for security',
       )
+      .refine((value) => !PUBLIC_JWT_SECRETS.includes(value), {
+        message:
+          'JWT_SECRET_KEY is a publicly known default: anyone could forge sessions. Generate one with `openssl rand -base64 48`',
+      })
       .describe('Secret key used to sign and verify JWT tokens'),
 
     // Database
@@ -117,6 +127,13 @@ export const ApiEnvSchema = z
       .string()
       .optional()
       .describe('Comma-separated list of allowed CORS origins'),
+
+    TRUST_PROXY: z
+      .string()
+      .optional()
+      .describe(
+        'Express "trust proxy" setting: a hop count or comma-separated addresses/presets. Defaults to private-network proxies',
+      ),
 
     // Strava OAuth (optional)
     STRAVA_CLIENT_ID: z
@@ -310,10 +327,6 @@ export const ApiEnvSchema = z
       .describe(
         'AI model for post-activity feedback agent (e.g., openai/gpt-5.1, google/gemini-3-pro-preview)',
       ),
-    AI_MODEL_QNA: z
-      .string()
-      .optional()
-      .describe('AI model for QnA agent (e.g., gpt-4o)'),
     AI_MODEL_TRIMP_ESTIMATION: z
       .string()
       .optional()

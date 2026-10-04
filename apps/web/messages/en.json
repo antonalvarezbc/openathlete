@@ -309,6 +309,7 @@
   "error_updating_password": "Error updating password",
   "enter_new_password": "Enter your new password and we will update it for you.",
   "new_password": "New password",
+  "password_length_requirement": "Password must be between {min} and {max} characters",
   "update_password": "Update password",
   "account_updated_successfully": "Account updated successfully",
   "update_profile_information": "Update your profile information below",

@@ -132,7 +132,8 @@ export class MetricController {
     @JwtUser() user: AuthUser,
     @Body(new ZodValidationPipe(createMetricDtoSchema))
     dto: CreateMetricDto,
-    @Query('athleteId', ParseIntPipe) athleteId?: Athlete['athleteId'],
+    @Query('athleteId', new ParseIntPipe({ optional: true }))
+    athleteId?: Athlete['athleteId'],
   ) {
     return this.metricService.createMetric(user, dto, athleteId);
   }
@@ -216,7 +217,8 @@ export class MetricController {
     @Param('id', ParseIntPipe) id: number,
     @Body(new ZodValidationPipe(updateMetricDtoSchema))
     dto: UpdateMetricDto,
-    @Query('athleteId', ParseIntPipe) athleteId?: Athlete['athleteId'],
+    @Query('athleteId', new ParseIntPipe({ optional: true }))
+    athleteId?: Athlete['athleteId'],
   ) {
     return this.metricService.updateMetric(user, id, dto, athleteId);
   }
@@ -269,7 +271,8 @@ export class MetricController {
   deleteMetric(
     @JwtUser() user: AuthUser,
     @Param('id', ParseIntPipe) id: number,
-    @Query('athleteId', ParseIntPipe) athleteId?: Athlete['athleteId'],
+    @Query('athleteId', new ParseIntPipe({ optional: true }))
+    athleteId?: Athlete['athleteId'],
   ) {
     return this.metricService.deleteMetric(user, id, athleteId);
   }
@@ -332,7 +335,8 @@ export class MetricController {
   getMetrics(
     @JwtUser() user: AuthUser,
     @Query('type') type?: string,
-    @Query('athleteId', ParseIntPipe) athleteId?: Athlete['athleteId'],
+    @Query('athleteId', new ParseIntPipe({ optional: true }))
+    athleteId?: Athlete['athleteId'],
   ) {
     return this.metricService.getMetrics(user, type as MetricType, athleteId);
   }
@@ -407,7 +411,8 @@ export class MetricController {
   })
   getLatestMetrics(
     @JwtUser() user: AuthUser,
-    @Query('athleteId', ParseIntPipe) athleteId?: Athlete['athleteId'],
+    @Query('athleteId', new ParseIntPipe({ optional: true }))
+    athleteId?: Athlete['athleteId'],
   ) {
     return this.metricService.getLatestMetrics(user, athleteId);
   }
@@ -469,7 +474,8 @@ export class MetricController {
   getMetricHistory(
     @JwtUser() user: AuthUser,
     @Param('type') type: string,
-    @Query('athleteId', ParseIntPipe) athleteId?: Athlete['athleteId'],
+    @Query('athleteId', new ParseIntPipe({ optional: true }))
+    athleteId?: Athlete['athleteId'],
   ) {
     return this.metricService.getMetricHistory(
       user,

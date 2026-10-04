@@ -1,4 +1,3 @@
-import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 
 import {
@@ -10,11 +9,7 @@ import { ConfigService } from '@nestjs/config';
 
 import { ApiEnvSchemaType } from '@openathlete/shared';
 
-type ServiceAccountJson = {
-  project_id?: string;
-  client_email?: string;
-  private_key?: string;
-};
+import { getFirebaseApp } from 'src/common/firebase/firebase-app';
 
 export type VerifiedFirebaseIdToken = {
   uid: string;
@@ -30,42 +25,24 @@ export class FirebaseAuthService {
   ) {}
 
   private getFirebaseAuth() {
-    if (getApps().length === 0) {
-      const raw = this.configService.get('FIREBASE_SERVICE_ACCOUNT_JSON');
-      if (!raw) {
-        throw new InternalServerErrorException(
-          'Firebase Auth is not configured (missing FIREBASE_SERVICE_ACCOUNT_JSON)',
-        );
-      }
-
-      let parsed: ServiceAccountJson;
-      try {
-        parsed = JSON.parse(raw) as ServiceAccountJson;
-      } catch {
-        throw new InternalServerErrorException(
-          'Invalid FIREBASE_SERVICE_ACCOUNT_JSON (must be valid JSON)',
-        );
-      }
-
-      const clientEmail = parsed.client_email;
-      const privateKey = parsed.private_key?.replace(/\\n/g, '\n');
-
-      if (!clientEmail || !privateKey) {
-        throw new InternalServerErrorException(
-          'Invalid FIREBASE_SERVICE_ACCOUNT_JSON (missing client_email/private_key)',
-        );
-      }
-
-      initializeApp({
-        credential: cert({
-          projectId: parsed.project_id,
-          clientEmail,
-          privateKey,
-        }),
-      });
+    let app;
+    try {
+      app = getFirebaseApp(
+        this.configService.get('FIREBASE_SERVICE_ACCOUNT_JSON'),
+      );
+    } catch (error) {
+      throw new InternalServerErrorException(
+        error instanceof Error ? error.message : String(error),
+      );
     }
 
-    return getAuth();
+    if (!app) {
+      throw new InternalServerErrorException(
+        'Firebase Auth is not configured (missing FIREBASE_SERVICE_ACCOUNT_JSON)',
+      );
+    }
+
+    return getAuth(app);
   }
 
   async verifyIdToken(idToken: string): Promise<VerifiedFirebaseIdToken> {

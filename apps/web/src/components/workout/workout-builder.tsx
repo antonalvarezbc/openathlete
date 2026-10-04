@@ -30,8 +30,7 @@ interface WorkoutBuilderProps {
 }
 
 type DialogState =
-  | { type: 'none' }
-  | { type: 'step'; editing?: Partial<WorkoutStepDto> };
+  { type: 'none' } | { type: 'step'; editing?: Partial<WorkoutStepDto> };
 
 export function WorkoutBuilder({
   workout,

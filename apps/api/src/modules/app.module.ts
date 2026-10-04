@@ -2,11 +2,12 @@ import { SentryGlobalFilter, SentryModule } from '@sentry/nestjs/setup';
 
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
-import { ApiEnvSchema } from '@openathlete/shared';
-
+import { validateEnv } from 'src/common/config/validate-env';
+import { DEFAULT_RATE_LIMIT } from 'src/common/security/rate-limits';
 import {
   ActivityFeedbackExtractionListener,
   ActivityFeedbackListener,
@@ -16,7 +17,6 @@ import {
   WorkoutSyncListener,
 } from 'src/listeners';
 
-import { omitBlankEnv } from '../common/utils/env.util';
 import { AgentModule } from './agent/agent.module';
 import { AppController } from './app.controller';
 import { AuthModule } from './auth';
@@ -34,25 +34,14 @@ import { SubscriptionModule } from './subscription';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      validate: (config) => {
-        const result = ApiEnvSchema.safeParse(omitBlankEnv(config));
-        if (!result.success) {
-          const errors = result.error.errors.map((err) => {
-            const path = err.path.join('.');
-            return `  - ${path}: ${err.message}`;
-          });
-          throw new Error(
-            `Environment validation failed:\n${errors.join('\n')}\n\nPlease check your .env file and ensure all required variables are set.`,
-          );
-        }
-        return result.data;
-      },
+      validate: validateEnv,
       validationOptions: {
         allowUnknown: false,
         abortEarly: false,
       },
     }),
     SentryModule.forRoot(),
+    ThrottlerModule.forRoot(DEFAULT_RATE_LIMIT),
     AuthModule,
     CoreModule,
     AgentModule,
@@ -70,6 +59,10 @@ import { SubscriptionModule } from './subscription';
     {
       provide: APP_FILTER,
       useClass: SentryGlobalFilter,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
     },
     PrismaService,
     NotificationListener,

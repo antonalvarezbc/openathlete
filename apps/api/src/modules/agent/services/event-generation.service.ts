@@ -1,13 +1,10 @@
 import { Injectable } from '@nestjs/common';
 
-import { trainingEventSchema } from '@openathlete/shared';
-
 import { eventGenerationAgent } from 'src/mastra/agents';
 import {
   AiMemoryService,
   aiMemoryPromptSection,
 } from 'src/modules/ai-memory/ai-memory.service';
-import { TrainingLoadService } from 'src/modules/core/services/training-load.service';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
 import {
@@ -16,12 +13,12 @@ import {
   buildWorkoutTargetsInstructions,
   buildZonesContext,
   convertWorkoutPaceTargetsToMs,
-  createRuntimeContext,
   createZoneIdMap,
   fetchAthleteMetrics,
   fetchAthleteZones,
   formatZonesByType,
   getLatestMetrics,
+  trainingEventOutputOptions,
   validateNoNestedRepeatBlocks,
   validateWorkoutZoneTargets,
   withRetry,
@@ -31,7 +28,6 @@ import {
 export class EventGenerationService {
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly trainingLoadService: TrainingLoadService,
     private readonly memory: AiMemoryService,
   ) {}
 
@@ -66,21 +62,13 @@ CRITICAL REQUIREMENTS:
 
 ${buildWorkoutTargetsInstructions()}`;
 
-    const runtimeContext = createRuntimeContext(
-      this.prismaService,
-      athleteId,
-      this.trainingLoadService,
-    );
-
     const zoneIdMap = createZoneIdMap(zones);
 
     const response = await withRetry(async () => {
-      const result = await eventGenerationAgent.generate(fullPrompt, {
-        runtimeContext,
-        structuredOutput: {
-          schema: trainingEventSchema,
-        },
-      });
+      const result = await eventGenerationAgent.generate(
+        fullPrompt,
+        trainingEventOutputOptions,
+      );
 
       if (!result.object) {
         throw new Error(

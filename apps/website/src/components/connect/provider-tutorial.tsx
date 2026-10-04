@@ -39,10 +39,7 @@ const itemVariants = {
 
 const getStepMessages = (provider: Provider, step: number) => {
   const key = provider.toLowerCase() as
-    | 'garmin'
-    | 'strava'
-    | 'suunto'
-    | 'polar';
+    'garmin' | 'strava' | 'suunto' | 'polar';
   return {
     title: (
       m[

@@ -103,13 +103,18 @@ export function MessagesPage() {
   // Auto-create first thread if none exist
   useEffect(() => {
     if (
+      currentUser &&
       threads &&
       threads.length === 0 &&
       !isLoading &&
       !createMessageThreadMutation.isPending
     ) {
+      // The API requires the creator to be a participant
       createMessageThreadMutation.mutate(
-        { title: m.chatbot_new_conversation(), participantUserIds: [] },
+        {
+          title: m.chatbot_new_conversation(),
+          participantUserIds: [currentUser.userId],
+        },
         {
           onSuccess: (newThread) => {
             posthog?.capture(AnalyticsEvent.messages_thread_created, {
@@ -122,7 +127,7 @@ export function MessagesPage() {
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [threads, isLoading]);
+  }, [threads, isLoading, currentUser]);
 
   useEffect(() => {
     if (!isMobile && threads && threads.length > 0 && !activeId) {

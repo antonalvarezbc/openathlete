@@ -261,48 +261,35 @@ Make sure you have `docker` & `docker compose` installed on the server / system.
 
 1. Clone the repository:
 
-```bash
+   ```bash
    git clone https://github.com/openathleteorg/openathlete.git
-cd openathlete
+   cd openathlete
    ```
 
-2. Prepare your configuration: Copy `.env.example` files and update them:
+2. Create your configuration from the template. `docker compose` reads `.env` at the repository root:
 
    ```bash
-   cp apps/api/.env.example apps/api/.env
-cp apps/web/.env.example apps/web/.env
+   cp .env.example .env
    ```
 
-   Update the appropriate values in your `.env` files, then proceed.
+   Set `JWT_SECRET_KEY` and `HASH_PEPPER` (each `openssl rand -base64 48`), and the public URLs if you are not on `localhost`. Optional features stay disabled while their variables are empty.
 
-3. Start OpenAthlete via docker compose:
+3. Start OpenAthlete:
 
    ```bash
-   docker compose up -d
+   docker compose up -d --build
    ```
 
-4. Open a browser to your configured URL. The first time you run OpenAthlete, you'll need to create your first user.
+4. Open `http://localhost` (or your `APP_URL`) and create your account.
 
 #### Updating OpenAthlete
 
-1. Stop the OpenAthlete stack
+```bash
+git pull
+docker compose up -d --build
+```
 
-   ```bash
-   docker compose down
-   ```
-
-2. Pull the latest changes
-
-   ```bash
-   git pull
-   ```
-
-3. Update env vars as necessary.
-4. Re-start the OpenAthlete stack
-
-   ```bash
-   docker compose up -d
-   ```
+> Instances started before October 2026 relied on built-in secrets that are now required. Set a new `JWT_SECRET_KEY`, and keep `HASH_PEPPER=dev-pepper-change-in-production-min-32-chars` if you used the default, otherwise existing passwords stop working. See the [self-hosting guide](https://docs.openathlete.org/docs/getting-started/self-hosting).
 
 ### Manual Deployment
 

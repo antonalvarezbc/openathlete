@@ -122,13 +122,6 @@ export const POST_ACTIVITY_FEEDBACK_MODEL =
   defaultModel('google/gemini-3-pro-preview');
 
 /**
- * Model for QnA agent and the chat routing agent
- * Fallback: 'openai/gpt-4o'
- */
-export const QNA_MODEL =
-  process.env.AI_MODEL_QNA || defaultModel('openai/gpt-4o');
-
-/**
  * Model that consolidates AI memory notes into the coach–athlete summary.
  * It only runs every few notes; a small model is enough here.
  * Fallback: 'openai/gpt-4o-mini'

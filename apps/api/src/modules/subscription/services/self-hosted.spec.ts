@@ -41,9 +41,10 @@ describe('self-hosted mode', () => {
     }
   });
 
-  it('still requires Stripe in commercial mode', () => {
-    expect(() => new StripeService(config(false))).toThrow(
-      'STRIPE_SECRET_KEY is not set',
+  it('boots without a Stripe key in commercial mode, with billing disabled', async () => {
+    const stripe = new StripeService(config(false));
+    await expect(stripe.getCustomer('customer')).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
     );
   });
 

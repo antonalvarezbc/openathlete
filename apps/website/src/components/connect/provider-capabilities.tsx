@@ -35,10 +35,7 @@ const getCapabilityMessages = (
   capability: keyof typeof capabilityIcons,
 ) => {
   const key = provider.toLowerCase() as
-    | 'garmin'
-    | 'strava'
-    | 'suunto'
-    | 'polar';
+    'garmin' | 'strava' | 'suunto' | 'polar';
   const capabilityKey = capability
     .replace(/([A-Z])/g, '_$1')
     .toLowerCase()

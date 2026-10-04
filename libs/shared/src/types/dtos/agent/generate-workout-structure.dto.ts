@@ -22,9 +22,12 @@ export const generateWorkoutStructureDtoSchema = z
     instructions: z.string().trim().max(500).optional(),
   })
   .strict()
-  .refine((input) => !!(input.name || input.description || input.instructions), {
-    message: 'Describe the session or what the structure should contain',
-  });
+  .refine(
+    (input) => !!(input.name || input.description || input.instructions),
+    {
+      message: 'Describe the session or what the structure should contain',
+    },
+  );
 
 export type GenerateWorkoutStructureDto = z.infer<
   typeof generateWorkoutStructureDtoSchema

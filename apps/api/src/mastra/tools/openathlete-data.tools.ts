@@ -1,4 +1,4 @@
-import { RuntimeContext } from '@mastra/core/runtime-context';
+import { RequestContext } from '@mastra/core/request-context';
 import { createTool } from '@mastra/core/tools';
 
 import { AI_TOOLS } from '../../modules/ai-tools/ai-tools.definitions';
@@ -8,9 +8,9 @@ import type { AuthUser } from '../../modules/auth/decorators/user.decorator';
 export const AI_TOOLS_SERVICE_KEY = 'aiToolsService';
 export const AI_TOOLS_USER_KEY = 'aiToolsUser';
 
-/** Runtime context that lets data tools act as the requesting user. */
-export function aiToolsRuntimeContext(service: AiToolsService, user: AuthUser) {
-  const context = new RuntimeContext();
+/** Request context that lets data tools act as the requesting user. */
+export function aiToolsRequestContext(service: AiToolsService, user: AuthUser) {
+  const context = new RequestContext();
   context.set(AI_TOOLS_SERVICE_KEY, service);
   context.set(AI_TOOLS_USER_KEY, user);
   return context;
@@ -18,7 +18,7 @@ export function aiToolsRuntimeContext(service: AiToolsService, user: AuthUser) {
 
 /**
  * The shared read-only data tools as Mastra tools. Access is checked by
- * AiToolsService for the user in the runtime context; errors are returned to
+ * AiToolsService for the user in the request context; errors are returned to
  * the model as data so it can adjust instead of failing the answer.
  */
 export const openAthleteDataTools = Object.fromEntries(
@@ -28,16 +28,14 @@ export const openAthleteDataTools = Object.fromEntries(
       id: tool.name,
       description: tool.description,
       inputSchema: tool.input,
-      execute: async ({ context, runtimeContext }) => {
-        const service = runtimeContext.get(AI_TOOLS_SERVICE_KEY) as
-          | AiToolsService
-          | undefined;
-        const user = runtimeContext.get(AI_TOOLS_USER_KEY) as
-          | AuthUser
-          | undefined;
+      execute: async (input, { requestContext }) => {
+        const service = requestContext?.get(AI_TOOLS_SERVICE_KEY) as
+          AiToolsService | undefined;
+        const user = requestContext?.get(AI_TOOLS_USER_KEY) as
+          AuthUser | undefined;
         if (!service || !user) return { error: 'Data tools are unavailable' };
         try {
-          return await service.run(user, tool.name, context);
+          return await service.run(user, tool.name, input);
         } catch (error) {
           return {
             error:

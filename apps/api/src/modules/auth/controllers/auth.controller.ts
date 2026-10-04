@@ -8,6 +8,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import {
   AuthResponseDto,
@@ -18,6 +19,8 @@ import {
   loginDtoSchema,
   refreshTokenDtoSchema,
 } from '@openathlete/shared';
+
+import { RATE_LIMITS } from 'src/common/security/rate-limits';
 
 import { AuthService, UserService } from '../services';
 import { InvitationService } from '../services/invitation.service';
@@ -31,6 +34,7 @@ export class AuthController {
     private invitationService: InvitationService,
   ) {}
 
+  @Throttle(RATE_LIMITS.login)
   @Post('login')
   @ApiOperation({
     summary: 'Authenticate user with email and password',
@@ -87,6 +91,7 @@ export class AuthController {
     return await this.authService.login(credentials);
   }
 
+  @Throttle(RATE_LIMITS.login)
   @Post('firebase')
   @ApiOperation({
     summary: 'Authenticate user with Firebase OAuth (ID token exchange)',
@@ -99,6 +104,7 @@ export class AuthController {
     return await this.authService.loginWithFirebase(body);
   }
 
+  @Throttle(RATE_LIMITS.tokenRefresh)
   @Post('refresh-token')
   @ApiOperation({
     summary: 'Refresh access token using refresh token',
@@ -151,6 +157,7 @@ export class AuthController {
     return this.authService.refresh(body.refreshToken);
   }
 
+  @Throttle(RATE_LIMITS.accountLookup)
   @Get('email-exists')
   @ApiOperation({
     summary: 'Check if an email address is already registered',
@@ -179,6 +186,7 @@ export class AuthController {
     });
   }
 
+  @Throttle(RATE_LIMITS.accountLookup)
   @Get('invitation')
   @ApiOperation({
     summary: 'Verify invitation token validity',

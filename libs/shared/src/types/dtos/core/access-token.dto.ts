@@ -21,7 +21,9 @@ export interface AccessTokenDto {
 }
 
 /** Returned once, at creation. */
-export interface CreatedAccessTokenDto
-  extends Omit<AccessTokenDto, 'lastUsedAt'> {
+export interface CreatedAccessTokenDto extends Omit<
+  AccessTokenDto,
+  'lastUsedAt'
+> {
   token: string;
 }

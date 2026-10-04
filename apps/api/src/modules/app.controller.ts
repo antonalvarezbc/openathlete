@@ -1,11 +1,13 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 
 @ApiTags('App')
 @Controller()
 export class AppController {
   constructor() {}
 
+  @SkipThrottle()
   @Get('health')
   @ApiOperation({
     summary: 'Health check endpoint',

@@ -147,6 +147,7 @@ export class ActivityAnalysisService {
           JSON.stringify(data),
           {
             structuredOutput: { schema: activityAnalysisResultSchema },
+            providerOptions: { openai: { strictJsonSchema: false } },
             maxSteps: 1,
             abortSignal: AbortSignal.timeout(120_000),
           },
@@ -235,8 +236,7 @@ export function activityAnalysisNote(
   analysis: ActivityAnalysisResult,
 ): string {
   const activity = context.activity as
-    | { name?: string; startDate?: string; sport?: string }
-    | undefined;
+    { name?: string; startDate?: string; sport?: string } | undefined;
   const label = [
     activity?.startDate?.slice(0, 10),
     activity?.sport,

@@ -31,6 +31,7 @@ import {
 } from '@openathlete/shared';
 
 import { Language } from 'src/common/constants/languages.constant';
+import { maskEmail } from 'src/common/utils/mask-email';
 import { SendEmailEvent } from 'src/events';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
@@ -292,7 +293,7 @@ export class UserService {
     });
     if (!areCredentialsValid) {
       this.logger.log(
-        `Invalid credentials for user${email ? ` with email ${email}` : ''}`,
+        `Invalid credentials for user${email ? ` ${maskEmail(email)}` : ''}`,
       );
       throw new UnauthorizedException();
     }
@@ -303,8 +304,12 @@ export class UserService {
   public passwordResetRequest = async (body: PasswordResetRequestDto) => {
     const user = await this.findOne({ email: body.email });
     if (!user) {
-      this.logger.log(`User with email ${body.email} not found`);
-      throw new UnauthorizedException();
+      // Answer exactly as for an existing account so this endpoint cannot
+      // be used to find out which emails are registered
+      this.logger.log(
+        `Password reset requested for unknown email ${maskEmail(body.email)}`,
+      );
+      return;
     }
 
     const token = await this.tokenService.createToken(
@@ -465,7 +470,9 @@ export class UserService {
           await this.invitationService.createInvitation(user.userId, email);
         } catch (error) {
           // Log but don't fail the entire onboarding if one invitation fails
-          this.logger.warn(`Failed to invite athlete ${email}: ${error}`);
+          this.logger.warn(
+            `Failed to invite athlete ${maskEmail(email)}: ${error}`,
+          );
         }
       }
     }

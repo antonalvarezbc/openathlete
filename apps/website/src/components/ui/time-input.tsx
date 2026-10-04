@@ -3,8 +3,10 @@
 import { cn } from '@/utils/shadcn';
 import * as React from 'react';
 
-interface TimeInputProps
-  extends Omit<React.ComponentProps<'input'>, 'type' | 'value' | 'onChange'> {
+interface TimeInputProps extends Omit<
+  React.ComponentProps<'input'>,
+  'type' | 'value' | 'onChange'
+> {
   value: string;
   onChange: (value: string) => void;
 }

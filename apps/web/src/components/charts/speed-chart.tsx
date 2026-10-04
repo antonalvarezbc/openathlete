@@ -73,7 +73,7 @@ export function SpeedChart({
       };
     });
 
-    for (let start = 0; start < rawData.length; ) {
+    for (let start = 0; start < rawData.length;) {
       if (rawData[start].speed === null) {
         start++;
         continue;

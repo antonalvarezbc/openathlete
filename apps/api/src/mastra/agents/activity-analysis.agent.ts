@@ -5,6 +5,7 @@ import { AI_MEMORY_INSTRUCTIONS } from './ai-memory-instructions';
 
 export const ACTIVITY_ANALYSIS_PROMPT_VERSION = '2';
 export const activityAnalysisAgent = new Agent({
+  id: 'coach-activity-analysis',
   name: 'coach-activity-analysis',
   model: EVENT_MODIFICATION_MODEL,
   instructions: `You analyze a completed activity for its coach. You have no tools and cannot change

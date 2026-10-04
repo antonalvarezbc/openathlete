@@ -78,7 +78,7 @@ import { useSharedDnd } from './contexts/shared-dnd-context';
 import { CycleDetailsDialog } from './cycle-details.dialog';
 import { CalendarContextType, SummaryType } from './types/calendar-context';
 import { COLORED_BY } from './types/filter';
-import { getWeekEnd, getWeekKey, getWeekStart } from './utils/week';
+import { getUtcWeekKey, getWeekEnd, getWeekStart } from './utils/week';
 
 interface P {
   events?: Event[];
@@ -171,7 +171,7 @@ export function Calendar({
 
     const start = getWeekStart(weekRangeStart);
     const end = getWeekEnd(weekRangeEnd);
-    end.setHours(23, 59, 59, 999);
+    end.setUTCHours(23, 59, 59, 999);
 
     return { start, end };
   }, [weekRangeStart, weekRangeEnd]);
@@ -201,7 +201,7 @@ export function Calendar({
     return weeklyLoadSummary.reduce(
       (acc, summary) => ({
         ...acc,
-        [getWeekKey(summary.weekStart)]: summary,
+        [getUtcWeekKey(summary.weekStart)]: summary,
       }),
       {} as CalendarContextType['weeklyLoadSummary'],
     );
@@ -571,8 +571,7 @@ export function Calendar({
 
         // Get the template from the drag data for optimistic update
         const activeData = e.active.data.current as
-          | { type: string; template?: EventTemplate }
-          | undefined;
+          { type: string; template?: EventTemplate } | undefined;
         const template = activeData?.template;
 
         // Calculate start and end dates based on the template's default duration

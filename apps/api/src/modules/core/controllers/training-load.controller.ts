@@ -228,7 +228,8 @@ export class TrainingLoadController {
     @Query('calculationType') calculationType: TrainingLoadCalculationType,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
-    @Query('athleteId', ParseIntPipe) athleteId?: Athlete['athleteId'],
+    @Query('athleteId', new ParseIntPipe({ optional: true }))
+    athleteId?: Athlete['athleteId'],
   ): Promise<DailyTrainingLoad[]> {
     return this.trainingLoadService.getTrainingLoadByPeriod(
       user,
@@ -352,7 +353,8 @@ export class TrainingLoadController {
     @JwtUser() user: AuthUser,
     @Query('calculationType') calculationType: TrainingLoadCalculationType,
     @Query('targetDate') targetDate?: string,
-    @Query('athleteId', ParseIntPipe) athleteId?: Athlete['athleteId'],
+    @Query('athleteId', new ParseIntPipe({ optional: true }))
+    athleteId?: Athlete['athleteId'],
   ): Promise<TrainingLoadMetrics> {
     const date = targetDate ? new Date(targetDate) : new Date();
     return this.trainingLoadService.getTrainingLoadMetrics(
@@ -462,7 +464,8 @@ export class TrainingLoadController {
     @Query('calculationType') calculationType: TrainingLoadCalculationType,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
-    @Query('athleteId', ParseIntPipe) athleteId?: Athlete['athleteId'],
+    @Query('athleteId', new ParseIntPipe({ optional: true }))
+    athleteId?: Athlete['athleteId'],
   ) {
     const history = await this.trainingLoadService.getTrainingLoadHistory(
       user,
@@ -607,7 +610,8 @@ export class TrainingLoadController {
     @JwtUser() user: AuthUser,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
-    @Query('athleteId', ParseIntPipe) athleteId?: Athlete['athleteId'],
+    @Query('athleteId', new ParseIntPipe({ optional: true }))
+    athleteId?: Athlete['athleteId'],
   ) {
     if (!startDate || !endDate) {
       throw new BadRequestException('startDate and endDate are required');

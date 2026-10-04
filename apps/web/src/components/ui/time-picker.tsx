@@ -9,8 +9,7 @@ import {
 } from '@/utils/shadcn';
 import React, { useEffect } from 'react';
 
-export interface TimePickerProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface TimePickerProps extends React.InputHTMLAttributes<HTMLInputElement> {
   picker: TimePickerType;
   date: Date | undefined;
   setDate: (date: Date | undefined) => void;

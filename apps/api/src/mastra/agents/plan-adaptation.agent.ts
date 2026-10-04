@@ -4,6 +4,7 @@ import { EVENT_MODIFICATION_MODEL } from '../../common/constants/ai-models.const
 import { AI_MEMORY_INSTRUCTIONS } from './ai-memory-instructions';
 
 export const planAdaptationAgent = new Agent({
+  id: 'plan-adaptation',
   name: 'plan-adaptation',
   model: EVENT_MODIFICATION_MODEL,
   instructions: `You propose changes to existing training sessions for a coach to review.

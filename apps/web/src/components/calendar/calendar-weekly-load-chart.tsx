@@ -27,7 +27,7 @@ import {
 
 import { CalendarWeekLoadSummary } from '@openathlete/shared';
 
-import { getWeekEnd, getWeekKey, getWeekStart } from './utils/week';
+import { getWeekKey } from './utils/week';
 
 interface CalendarWeeklyLoadChartProps {
   weeks: Date[][];
@@ -53,9 +53,9 @@ export function CalendarWeeklyLoadChart({
   isLoading,
   hasScheduledActivities,
 }: CalendarWeeklyLoadChartProps) {
-  const dateLocale = getDateFnsLocale(getLocale());
   const targetMonth = displayedMonth.getMonth();
   const targetYear = displayedMonth.getFullYear();
+  const dateFnsLocale = getDateFnsLocale(getLocale());
 
   const chartData = useMemo<ChartWeekRow[]>(() => {
     if (!weeks?.length) {
@@ -72,8 +72,8 @@ export function CalendarWeeklyLoadChart({
         ),
       )
       .map((week) => {
-        const weekStart = getWeekStart(week[0]);
-        const key = getWeekKey(weekStart);
+        // `week` holds local calendar days, Monday to Sunday.
+        const key = getWeekKey(week[0]);
 
         if (seen.has(key)) {
           return null;
@@ -92,11 +92,10 @@ export function CalendarWeeklyLoadChart({
           summary?.estimatedLoad ??
           0;
 
-        const weekEnd = getWeekEnd(weekStart);
-        const label = `${format(weekStart, 'dd MMM', { locale: dateLocale })} → ${format(
-          weekEnd,
+        const label = `${format(week[0], 'dd MMM', { locale: dateFnsLocale })} → ${format(
+          week[week.length - 1],
           'dd MMM',
-          { locale: dateLocale },
+          { locale: dateFnsLocale },
         )}`;
 
         return {
@@ -109,7 +108,7 @@ export function CalendarWeeklyLoadChart({
         };
       })
       .filter((week): week is ChartWeekRow => Boolean(week));
-  }, [weeks, weeklyLoadSummary, targetMonth, targetYear, dateLocale]);
+  }, [weeks, weeklyLoadSummary, targetMonth, targetYear, dateFnsLocale]);
 
   if (!hasScheduledActivities || !weeks?.length) {
     return null;
@@ -164,8 +163,7 @@ export function CalendarWeeklyLoadChart({
                         return '';
                       }
                       const datum = payload[0]?.payload as
-                        | ChartWeekRow
-                        | undefined;
+                        ChartWeekRow | undefined;
                       if (!datum) {
                         return '';
                       }

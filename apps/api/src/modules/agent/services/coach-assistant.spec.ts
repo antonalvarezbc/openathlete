@@ -24,7 +24,7 @@ jest.mock('../../ai-tools/ai-tools.service', () => ({
   AiToolsService: class {},
 }));
 jest.mock('../../../mastra/tools/openathlete-data.tools', () => ({
-  aiToolsRuntimeContext: jest.fn(() => 'runtime-context'),
+  aiToolsRequestContext: jest.fn(() => 'request-context'),
 }));
 jest.mock('../../../mastra/agents/plan-adaptation.agent', () => ({
   planAdaptationAgent: { generate: jest.fn() },
@@ -143,7 +143,7 @@ test('answers with fresh authorized context and bounded conversation, without wr
   expect(result.reply).toBe('Faltan las sensaciones de hoy.');
   // Data tools run as the requesting user, with a bounded number of steps.
   expect(generate.mock.calls[0][1]).toEqual({
-    runtimeContext: 'runtime-context',
+    requestContext: 'request-context',
     maxSteps: 6,
   });
   expect(JSON.parse(generate.mock.calls[0][0])).toMatchObject({

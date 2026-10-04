@@ -9,3 +9,4 @@ export * from './password-reset.dto';
 export * from './create-event-template.dto';
 
 export * from './account-mode.dto';
+export * from './password';

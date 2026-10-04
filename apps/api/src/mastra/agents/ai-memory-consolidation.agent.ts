@@ -3,6 +3,7 @@ import { Agent } from '@mastra/core/agent';
 import { AI_MEMORY_MODEL } from '../../common/constants/ai-models.constant';
 
 export const aiMemoryConsolidationAgent = new Agent({
+  id: 'ai-memory-consolidation',
   name: 'ai-memory-consolidation',
   model: AI_MEMORY_MODEL,
   instructions: `You maintain a coach's private, compact memory about one athlete. The input is JSON with

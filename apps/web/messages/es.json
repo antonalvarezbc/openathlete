@@ -309,6 +309,7 @@
   "error_updating_password": "No se ha podido actualizar la contraseña",
   "enter_new_password": "Introduce la nueva contraseña para actualizarla.",
   "new_password": "Nueva contraseña",
+  "password_length_requirement": "La contraseña debe tener entre {min} y {max} caracteres",
   "update_password": "Actualizar contraseña",
   "account_updated_successfully": "Cuenta actualizada",
   "update_profile_information": "Actualiza los datos de tu perfil",

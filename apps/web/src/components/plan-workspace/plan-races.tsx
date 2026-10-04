@@ -176,8 +176,7 @@ export function PlanRaces({
                 setBusy(true);
                 setError('');
                 const priority = String(form.get('priority')) as
-                  | 'TARGET'
-                  | 'PREPARATORY';
+                  'TARGET' | 'PREPARATORY';
                 const number = (name: string) =>
                   form.get(name) ? Number(form.get(name)) : null;
                 try {

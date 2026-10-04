@@ -1,21 +1,32 @@
 name: 'Setup environment'
-description: 'Setup Node.js, pnpm and install dependencies'
+description: 'Setup Node.js and pnpm, install dependencies and generate build prerequisites'
 
 runs:
   using: 'composite'
   steps:
     - name: Setup pnpm
       uses: pnpm/action-setup@v4
-      with:
-        version: 9.15.9
 
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v5
       with:
-        node-version: '22.14.0'
+        node-version-file: '.nvmrc'
         cache: 'pnpm'
 
     - name: Install dependencies
       run: pnpm install --frozen-lockfile
       shell: bash
 
+    - name: Generate Prisma client
+      run: pnpm database run db:generate
+      shell: bash
+
+    - name: Build shared library
+      run: pnpm shared build
+      shell: bash
+
+    - name: Generate Paraglide messages
+      run: |
+        pnpm web exec paraglide-js compile --project ./project.inlang --outdir ./src/paraglide
+        pnpm website translate
+      shell: bash

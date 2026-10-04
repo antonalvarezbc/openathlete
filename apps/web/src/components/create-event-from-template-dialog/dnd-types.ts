@@ -67,9 +67,7 @@ export type DraggableData = DraggableTemplateData | DraggableFolderData;
  * Union type for all droppable data
  */
 export type DroppableData =
-  | DroppableFolderData
-  | DroppableRootData
-  | DroppableFolderContentData;
+  DroppableFolderData | DroppableRootData | DroppableFolderContentData;
 
 /**
  * Generate a unique ID for a draggable template
