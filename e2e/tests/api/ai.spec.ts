@@ -27,7 +27,7 @@ async function generateEvent(request: APIRequestContext, accessToken: string) {
 }
 
 test('AI features are off until the user sets them up', async ({ request }) => {
-  const athlete = await createAthlete(request);
+  const athlete = await createAthlete(request, { selfCoached: true });
 
   const access = await request.get(`${API_URL}/ai/access`, {
     headers: apiHeaders(undefined, athlete.accessToken),
@@ -68,7 +68,7 @@ test('lists providers, with custom endpoints on this instance', async ({
 });
 
 test('generates a workout on the user’s own AI key', async ({ request }) => {
-  const athlete = await createAthlete(request);
+  const athlete = await createAthlete(request, { selfCoached: true });
   const headers = apiHeaders(undefined, athlete.accessToken);
   const { aiCredentialId } = await addFakeLlmKey(request, athlete.accessToken);
 
@@ -124,7 +124,7 @@ test('never returns stored keys', async ({ request }) => {
 });
 
 test('reports a key the provider rejects', async ({ request }) => {
-  const athlete = await createAthlete(request);
+  const athlete = await createAthlete(request, { selfCoached: true });
   const headers = apiHeaders(undefined, athlete.accessToken);
   const { aiCredentialId } = await addFakeLlmKey(
     request,

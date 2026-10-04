@@ -48,7 +48,7 @@ test('leads to the AI settings from an AI action without a key', async ({
   page,
   request,
 }) => {
-  const athlete = await createAthlete(request);
+  const athlete = await createAthlete(request, { selfCoached: true });
   await signIn(page, athlete);
 
   await page.goto('/dashboard/calendar');

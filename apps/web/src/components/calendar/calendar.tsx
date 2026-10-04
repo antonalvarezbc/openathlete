@@ -893,11 +893,14 @@ export function Calendar({
                   setEventDetailsOpened(null);
                 }}
               />
-              <CreateEventFromTemplateDialog
-                open={createEventFromTemplateDialog !== null}
-                onClose={() => setCreateEventFromTemplateDialog(null)}
-                date={createEventFromTemplateDialog || undefined}
-              />
+              {/* Templates are for coaches: mounting it fetches them */}
+              {roles?.includes('COACH') && (
+                <CreateEventFromTemplateDialog
+                  open={createEventFromTemplateDialog !== null}
+                  onClose={() => setCreateEventFromTemplateDialog(null)}
+                  date={createEventFromTemplateDialog || undefined}
+                />
+              )}
               <CreateCycleDialog
                 key={`create-cycle-${createCycleDialog?.startDate?.toDateString()}`}
                 open={createCycleDialog !== null}

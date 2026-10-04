@@ -43,9 +43,14 @@ export async function login(
   };
 }
 
-/** Signs up a new user and completes the athlete onboarding. */
+/**
+ * Signs up a new user and completes the athlete onboarding. With
+ * `selfCoached`, the account is athlete and coach of its own profile: in this
+ * fork planning (AI generation, templates) is reserved for coaches.
+ */
 export async function createAthlete(
   request: APIRequestContext,
+  { selfCoached = false }: { selfCoached?: boolean } = {},
 ): Promise<TestAthlete> {
   const ip = randomClientIp();
   const email = `e2e-${randomUUID()}@example.com`;
@@ -66,7 +71,13 @@ export async function createAthlete(
 
   const onboarding = await request.post(`${API_URL}/user/complete-onboarding`, {
     headers: apiHeaders(ip, accessToken),
-    data: { roles: ['ATHLETE'], gender: 'MALE', hrMax: 190, hrRest: 50 },
+    data: {
+      roles: selfCoached ? ['ATHLETE', 'COACH'] : ['ATHLETE'],
+      ...(selfCoached ? { coachSelf: true } : {}),
+      gender: 'MALE',
+      hrMax: 190,
+      hrRest: 50,
+    },
   });
   expect(onboarding.status(), await onboarding.text()).toBe(201);
 
