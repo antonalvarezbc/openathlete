@@ -6,6 +6,7 @@ import { PrismaService } from '../../prisma/services/prisma.service';
 import '../../subscription';
 import { EventGenerationService } from '../services/event-generation.service';
 import { EventModificationService } from '../services/event-modification.service';
+import { WorkoutParserService } from '../services/workout-parser.service';
 import { AIFeaturesController } from './ai-features.controller';
 
 jest.mock('../services/event-generation.service', () => ({
@@ -14,35 +15,23 @@ jest.mock('../services/event-generation.service', () => ({
 jest.mock('../services/event-modification.service', () => ({
   EventModificationService: class {},
 }));
+jest.mock('../services/workout-parser.service', () => ({
+  WorkoutParserService: class {},
+}));
 
 const coach = { userId: 3, roles: ['COACH'] } as AuthUser;
+const steps = [
+  { stepType: 'WARMUP', durationType: 'TIME', durationValue: 900 },
+];
 
 function setup() {
-  const generation = {
-    generateTrainingEvent: jest.fn().mockResolvedValue({
-      name: 'Ignored name',
-      sport: 'RUNNING',
-      workout: {
-        steps: [
-          { stepType: 'WARMUP', durationType: 'TIME', durationValue: 900 },
-          {
-            stepType: 'REPEAT',
-            repeatBlock: {
-              repetitions: 6,
-              childSteps: [
-                {
-                  stepType: 'INTERVAL_ACTIVE',
-                  durationType: 'DISTANCE',
-                  durationValue: 1000,
-                  targets: [{ targetType: 'ZONE', targetValue: 28 }],
-                },
-              ],
-            },
-          },
-        ],
-      },
-    }),
+  const parser = {
+    parse: jest.fn().mockResolvedValue(steps),
+    parseSession: jest
+      .fn()
+      .mockResolvedValue({ steps, name: 'Series', sport: 'RUNNING' }),
   };
+  const generation = { generateTrainingEvent: jest.fn() };
   const prisma = {
     coachAthlete: { findFirst: jest.fn().mockResolvedValue({ id: 1 }) },
   };
@@ -50,65 +39,73 @@ function setup() {
     generation as unknown as EventGenerationService,
     {} as EventModificationService,
     prisma as unknown as PrismaService,
+    parser as unknown as WorkoutParserService,
   );
-  return { controller, generation, prisma };
+  return { controller, parser, generation, prisma };
 }
 
 describe('POST agent/ai/events/structure', () => {
-  it('returns only the steps, built from the session being edited', async () => {
-    const { controller, generation } = setup();
+  it('converts the written workout with the parser, not the session generator', async () => {
+    const { controller, parser, generation } = setup();
     const result = await controller.generateWorkoutStructure(coach, {
       athleteId: 7,
       sport: SPORT_TYPE.RUNNING,
-      name: 'Series 6x1000',
-      description: 'At 10 km pace',
-      goalDuration: 3600,
-      instructions: '90 s recovery',
+      name: 'Series',
+      description: 'Old description',
+      instructions: "15' calentar + 3x8' RPE 6-7",
     });
+    expect(result).toEqual({ steps });
+    expect(parser.parse).toHaveBeenCalledWith({
+      text: "15' calentar + 3x8' RPE 6-7",
+      sport: SPORT_TYPE.RUNNING,
+      athleteId: 7,
+    });
+    expect(generation.generateTrainingEvent).not.toHaveBeenCalled();
+  });
 
-    expect(result).toEqual({
-      steps: [
-        expect.objectContaining({
-          stepType: 'WARMUP',
-          durationValue: 900,
-          targets: [],
-        }),
-        expect.objectContaining({
-          stepType: 'REPEAT',
-          repeatBlock: {
-            repetitions: 6,
-            childSteps: [
-              expect.objectContaining({
-                stepType: 'INTERVAL_ACTIVE',
-                targets: [
-                  expect.objectContaining({
-                    targetType: 'ZONE',
-                    targetValue: 28,
-                  }),
-                ],
-              }),
-            ],
-          },
-        }),
-      ],
+  it('uses the description, then the name, when no text is given', async () => {
+    const { controller, parser } = setup();
+    await controller.generateWorkoutStructure(coach, {
+      athleteId: 7,
+      sport: SPORT_TYPE.RUNNING,
+      name: 'Rodaje',
+      description: "45' suave",
     });
-    const [prompt, athleteId, userId, memoryNote] =
-      generation.generateTrainingEvent.mock.calls[0];
-    expect(athleteId).toBe(7);
-    expect(userId).toBe(3);
-    expect(prompt).toContain('Keep the sport RUNNING');
-    expect(prompt).toContain('Session name: Series 6x1000');
-    expect(prompt).toContain('Session description: At 10 km pace');
-    expect(prompt).toContain('duration 60 min');
-    expect(prompt).toContain('Structure requested by the coach: 90 s recovery');
-    // The coach memory keeps a short note, not the composed prompt.
-    expect(memoryNote).toBe(
-      'Built the workout structure of RUNNING session "Series 6x1000": 90 s recovery',
-    );
+    expect(parser.parse.mock.calls[0][0].text).toBe("45' suave");
+    await controller.generateWorkoutStructure(coach, {
+      athleteId: 7,
+      sport: SPORT_TYPE.RUNNING,
+      name: "Rodaje 45'",
+    });
+    expect(parser.parse.mock.calls[1][0].text).toBe("Rodaje 45'");
+  });
+
+  it('works without an athlete for templates', async () => {
+    const { controller, parser, prisma } = setup();
+    await controller.generateWorkoutStructure(coach, {
+      sport: SPORT_TYPE.CYCLING,
+      instructions: "4x5' a 250 W",
+    });
+    expect(parser.parse.mock.calls[0][0].athleteId).toBeUndefined();
+    expect(prisma.coachAthlete.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('also names a new session when no sport is sent', async () => {
+    const { controller, parser } = setup();
+    const result = await controller.generateWorkoutStructure(coach, {
+      athleteId: 7,
+      instructions: "3x8' a 4:35/km",
+    });
+    expect(result).toEqual({ steps, name: 'Series', sport: 'RUNNING' });
+    expect(parser.parseSession).toHaveBeenCalledWith({
+      text: "3x8' a 4:35/km",
+      athleteId: 7,
+    });
+    expect(parser.parse).not.toHaveBeenCalled();
   });
 
   it('refuses athletes the coach is not linked to', async () => {
-    const { controller, generation, prisma } = setup();
+    const { controller, parser, prisma } = setup();
     prisma.coachAthlete.findFirst.mockResolvedValue(null);
     await expect(
       controller.generateWorkoutStructure(coach, {
@@ -117,6 +114,6 @@ describe('POST agent/ai/events/structure', () => {
         name: 'x',
       }),
     ).rejects.toThrow();
-    expect(generation.generateTrainingEvent).not.toHaveBeenCalled();
+    expect(parser.parse).not.toHaveBeenCalled();
   });
 });

@@ -130,6 +130,17 @@ export const AI_MEMORY_MODEL =
   process.env.AI_MODEL_MEMORY || defaultModel('openai/gpt-4o-mini');
 
 /**
+ * Model that turns a workout written in plain words into structured steps.
+ * A short, well-defined task: a small model keeps it cheap and fast.
+ * Fallback: 'openai/gpt-5-mini', or Claude Haiku with AI_PROVIDER=anthropic
+ */
+export const WORKOUT_PARSER_MODEL =
+  process.env.AI_MODEL_WORKOUT_PARSER ||
+  (AI_PROVIDER === 'anthropic'
+    ? 'anthropic/claude-haiku-4-5'
+    : 'openai/gpt-5-mini');
+
+/**
  * Model for TRIMP estimation agent
  * Fallback: 'openai/gpt-5.1'
  */

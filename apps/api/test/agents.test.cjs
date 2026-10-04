@@ -13,10 +13,16 @@ process.env.MASTRA_TELEMETRY_DISABLED = '1';
 const {
   eventGenerationAgent,
   extractRpeAgent,
+  workoutParserAgent,
 } = require('../dist/mastra/agents');
 const {
   trainingEventOutputOptions,
 } = require('../dist/modules/agent/services/event-ai-helpers');
+const {
+  parsedSessionSchema,
+  parsedWorkoutSchema,
+  parsedWorkoutToSteps,
+} = require('../dist/modules/agent/services/workout-parser');
 
 const originalFetch = globalThis.fetch;
 let requests = [];
@@ -107,4 +113,119 @@ test('training events are parsed without OpenAI strict mode', async () => {
   );
   assert.equal(result.object.workout.steps[0].durationValue, 3600);
   assert.deepEqual(result.object.workout.steps[0].targets, []);
+});
+
+test('written workouts are parsed with a small model and strict schema', async () => {
+  const rest = {
+    type: 'INTERVAL_REST',
+    duration: 'TIME',
+    value: 180,
+    note: 'trote muy suave',
+    targets: [],
+  };
+  replyWith(
+    JSON.stringify({
+      blocks: [
+        {
+          step: {
+            type: 'WARMUP',
+            duration: 'TIME',
+            value: 900,
+            note: "15-20'",
+            targets: [],
+          },
+          repeat: null,
+        },
+        {
+          step: null,
+          repeat: {
+            times: 3,
+            steps: [
+              {
+                type: 'INTERVAL_ACTIVE',
+                duration: 'TIME',
+                value: 480,
+                note: null,
+                targets: [
+                  { type: 'RPE', min: 6, max: 7, value: null, metric: null },
+                ],
+              },
+              rest,
+            ],
+          },
+        },
+        {
+          step: {
+            type: 'COOLDOWN',
+            duration: 'LAP_BUTTON',
+            value: null,
+            note: null,
+            targets: [],
+          },
+          repeat: null,
+        },
+      ],
+    }),
+  );
+
+  const result = await workoutParserAgent.generate(
+    "Sport: RUNNING\nText: 15-20' calentar + 3x8' a RPE 6-7, recuperación 3' trote muy suave + enfriar",
+    { structuredOutput: { schema: parsedWorkoutSchema } },
+  );
+
+  const { body } = requests[0];
+  assert.equal(body.model, 'gpt-5-mini');
+  // No recursion and no optional fields: OpenAI can enforce the schema.
+  assert.equal(body.text.format.type, 'json_schema');
+  assert.notEqual(body.text.format.strict, false);
+  // Small fixed part: instructions plus schema stay well below 1,500 tokens.
+  assert.ok(JSON.stringify(body).length < 6000, JSON.stringify(body).length);
+
+  const steps = parsedWorkoutToSteps(result.object);
+  assert.deepEqual(
+    steps.map((step) => step.stepType),
+    ['WARMUP', 'REPEAT', 'COOLDOWN'],
+  );
+  assert.equal(steps[1].repeatBlock.repetitions, 3);
+  assert.deepEqual(steps[1].repeatBlock.childSteps[0].targets, [
+    { targetType: 'RPE', targetValue: 7 },
+  ]);
+});
+
+test('a new session from text also gets a name and the sport, still strict', async () => {
+  replyWith(
+    JSON.stringify({
+      name: '3x8 umbral',
+      sport: 'RUNNING',
+      blocks: [
+        {
+          step: null,
+          repeat: {
+            times: 3,
+            steps: [
+              {
+                type: 'INTERVAL_ACTIVE',
+                duration: 'TIME',
+                value: 480,
+                note: null,
+                targets: [],
+              },
+            ],
+          },
+        },
+      ],
+    }),
+  );
+
+  const result = await workoutParserAgent.generate("Text: 3x8' a 4:35/km", {
+    structuredOutput: { schema: parsedSessionSchema },
+  });
+
+  const { body } = requests[0];
+  assert.notEqual(body.text.format.strict, false);
+  // The sport is free text: the schema does not list every sport.
+  assert.ok(!JSON.stringify(body.text.format.schema).includes('TRAIL_RUNNING'));
+  assert.ok(JSON.stringify(body).length < 6000, JSON.stringify(body).length);
+  assert.equal(result.object.name, '3x8 umbral');
+  assert.equal(result.object.sport, 'RUNNING');
 });

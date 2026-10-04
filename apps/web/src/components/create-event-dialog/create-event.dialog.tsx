@@ -147,7 +147,7 @@ export function CreateEventDialog({ open, onClose, ...rest }: P) {
     FeatureName.AI_GENERATION,
   );
 
-  // Athlete of the session; templates have none and get no AI structure.
+  // Athlete of the session; templates have none (AI steps then skip zones).
   const workoutAthleteId =
     edit && 'isTemplate' in rest && rest.isTemplate
       ? undefined
@@ -342,35 +342,34 @@ export function CreateEventDialog({ open, onClose, ...rest }: P) {
             isTemplate={edit && 'isTemplate' in rest && rest.isTemplate}
           />
 
-          {type === EVENT_TYPE.TRAINING && workoutAthleteId && (
-            <div className="flex justify-end">
-              <AiWorkoutStructure
-                athleteId={workoutAthleteId}
-                session={() => {
-                  const values = methods.getValues() as Record<string, unknown>;
-                  return {
-                    sport: values.sport as SPORT_TYPE,
-                    name: (values.name as string) ?? '',
-                    description: (values.description as string) ?? '',
-                    goalDuration:
-                      (values.goalDuration as number | null) ?? null,
-                    goalDistance:
-                      (values.goalDistance as number | null) ?? null,
-                  };
-                }}
-                hasSteps={workoutSteps.length > 0}
-                hasAccess={hasAIAccess}
-                onPaywall={() => setPaywallOpen(true)}
-                onSteps={setWorkoutSteps}
-              />
-            </div>
-          )}
           <WorkoutSection
             props={rest}
             type={type}
             workoutSteps={workoutSteps}
             setWorkoutSteps={setWorkoutSteps}
             sportValue={sportValue}
+            headerActions={
+              type === EVENT_TYPE.TRAINING && (
+                <AiWorkoutStructure
+                  athleteId={workoutAthleteId}
+                  session={() => {
+                    const values = methods.getValues() as Record<
+                      string,
+                      unknown
+                    >;
+                    return {
+                      sport: values.sport as SPORT_TYPE,
+                      name: (values.name as string) ?? '',
+                      description: (values.description as string) ?? '',
+                    };
+                  }}
+                  hasSteps={workoutSteps.length > 0}
+                  hasAccess={hasAIAccess}
+                  onPaywall={() => setPaywallOpen(true)}
+                  onSteps={setWorkoutSteps}
+                />
+              )
+            }
             athleteId={
               edit && 'isTemplate' in rest && rest.isTemplate
                 ? null

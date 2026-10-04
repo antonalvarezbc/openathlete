@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
 
 import type {
   CreateEventDto,
@@ -32,6 +32,8 @@ type WorkoutSectionProps = {
   setWorkoutSteps: (steps: CreateWorkoutStepDto[]) => void;
   sportValue?: SPORT_TYPE;
   athleteId?: number | null;
+  /** Controls next to the "Structured workout" heading. */
+  headerActions?: ReactNode;
 };
 
 export function WorkoutSection({
@@ -41,6 +43,7 @@ export function WorkoutSection({
   setWorkoutSteps,
   sportValue,
   athleteId,
+  headerActions,
 }: WorkoutSectionProps) {
   const edit = 'event' in props;
   const create = 'type' in props && 'date' in props;
@@ -215,6 +218,7 @@ export function WorkoutSection({
             hideActions={true}
             onStepsChange={handleStepsChange}
             sport={sportValue ?? SPORT_TYPE.RUNNING}
+            headerActions={headerActions}
           />
         </div>
       </div>

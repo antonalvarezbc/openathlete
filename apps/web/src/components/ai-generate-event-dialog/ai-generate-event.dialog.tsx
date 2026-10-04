@@ -1,9 +1,13 @@
-import { useGenerateEventMutation } from '@/api/agent';
+import {
+  useGenerateEventMutation,
+  useGenerateWorkoutStructureMutation,
+} from '@/api/agent';
 import { m } from '@/paraglide/messages';
 import {
   AnalyticsEvent,
   analyticsErrorCodeFromUnknown,
 } from '@/utils/analytics-events';
+import { writtenWorkoutEvent } from '@/utils/workout/written-workout';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { usePostHog } from 'posthog-js/react';
 import { useEffect, useRef } from 'react';
@@ -60,6 +64,9 @@ export function AIGenerateEventDialog({
   });
 
   const generateEventMutation = useGenerateEventMutation();
+  const convertMutation = useGenerateWorkoutStructureMutation();
+  const isLoading =
+    generateEventMutation.isPending || convertMutation.isPending;
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -110,19 +117,33 @@ export function AIGenerateEventDialog({
     }
   });
 
+  // The text is already the workout: a small model turns it into steps and
+  // names the session; the event dialog then opens to review it.
+  const onConvert = methods.handleSubmit(async ({ prompt }) => {
+    try {
+      const result = await convertMutation.mutateAsync({
+        athleteId,
+        instructions: prompt,
+      });
+      if (!result.steps.length) throw new Error('No steps');
+      toast.success(m.ai_structure_done());
+      onEventGenerated(
+        writtenWorkoutEvent({ text: prompt, date, athleteId, result }),
+      );
+      methods.reset();
+      onClose();
+    } catch {
+      toast.error(m.ai_structure_failed());
+    }
+  });
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent
         mobileFullscreen
-        className={`sm:max-w-2xl ${generateEventMutation.isPending ? 'overflow-visible' : ''}`}
+        className={`sm:max-w-2xl ${isLoading ? 'overflow-visible' : ''}`}
       >
-        <div
-          className={
-            generateEventMutation.isPending
-              ? 'ai-rotating-brand-border-dialog'
-              : ''
-          }
-        >
+        <div className={isLoading ? 'ai-rotating-brand-border-dialog' : ''}>
           <DialogHeader>
             <DialogTitle>{m.create_with_ai()}</DialogTitle>
             <DialogDescription>
@@ -137,20 +158,33 @@ export function AIGenerateEventDialog({
                 placeholder={m.ai_generate_event_prompt_placeholder()}
                 className="min-h-[120px]"
                 required
-                disabled={generateEventMutation.isPending}
+                disabled={isLoading}
               />
-              <div className="flex justify-end gap-2">
+              <p className="text-sm text-muted-foreground">
+                {m.ai_convert_as_written_help()}
+              </p>
+              <div className="flex flex-wrap justify-end gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={onClose}
-                  disabled={generateEventMutation.isPending}
+                  disabled={isLoading}
                 >
                   {m.cancel()}
                 </Button>
                 <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onConvert}
+                  isLoading={convertMutation.isPending}
+                  disabled={isLoading}
+                >
+                  {m.ai_convert_as_written()}
+                </Button>
+                <Button
                   type="submit"
                   isLoading={generateEventMutation.isPending}
+                  disabled={isLoading}
                 >
                   {generateEventMutation.isPending
                     ? m.generating_event()

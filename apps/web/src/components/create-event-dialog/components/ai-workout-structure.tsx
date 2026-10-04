@@ -22,7 +22,8 @@ import { SparklesIcon } from '../../ui/sparkles-icon';
 import { Textarea } from '../../ui/textarea';
 
 type Props = {
-  athleteId: number;
+  /** Missing for templates: the text is converted without athlete zones. */
+  athleteId?: number;
   /** Current form values, read when generating. */
   session: () => Omit<
     GenerateWorkoutStructureDto,
@@ -35,8 +36,9 @@ type Props = {
 };
 
 /**
- * Builds only the steps of the session being edited with AI: name, date and
- * goals stay untouched. The result fills the editor; nothing is saved.
+ * Turns a workout written in words into the steps and repeat blocks of the
+ * session being edited. The text starts as the session description; name,
+ * date and goals stay untouched. The result fills the editor; nothing is saved.
  */
 export function AiWorkoutStructure({
   athleteId,
@@ -49,6 +51,14 @@ export function AiWorkoutStructure({
   const [open, setOpen] = useState(false);
   const [instructions, setInstructions] = useState('');
   const generate = useGenerateWorkoutStructureMutation();
+
+  const openDialog = () => {
+    if (!hasAccess) return onPaywall();
+    // Start from the description unless there is unconverted text already.
+    const description = session().description?.trim() ?? '';
+    setInstructions((current) => current || description);
+    setOpen(true);
+  };
 
   const submit = () => {
     const current = session();
@@ -82,12 +92,7 @@ export function AiWorkoutStructure({
 
   return (
     <>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => (hasAccess ? setOpen(true) : onPaywall())}
-      >
+      <Button type="button" variant="outline" size="sm" onClick={openDialog}>
         <SparklesIcon className="mr-2 size-4" />
         {m.ai_structure_button()}
       </Button>
@@ -107,8 +112,8 @@ export function AiWorkoutStructure({
             <Textarea
               id="ai-structure-instructions"
               value={instructions}
-              maxLength={500}
-              rows={4}
+              maxLength={2000}
+              rows={5}
               placeholder={m.ai_structure_placeholder()}
               onChange={(event) => setInstructions(event.target.value)}
               disabled={generate.isPending}

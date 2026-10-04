@@ -16,6 +16,7 @@ import { CoachAssistantService } from './services/coach-assistant.service';
 import { EventGenerationService } from './services/event-generation.service';
 import { EventModificationService } from './services/event-modification.service';
 import { PlanAdaptationService } from './services/plan-adaptation.service';
+import { WorkoutParserService } from './services/workout-parser.service';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { PlanAdaptationService } from './services/plan-adaptation.service';
     EventGenerationService,
     EventModificationService,
     PlanAdaptationService,
+    WorkoutParserService,
     PrismaService,
   ],
   exports: [],
