@@ -19,6 +19,11 @@ import { SubscriptionService } from './services/subscription.service';
     FeatureAccessService,
     FeatureAccessGuard,
   ],
-  exports: [SubscriptionService, FeatureAccessService, FeatureAccessGuard],
+  exports: [
+    SubscriptionService,
+    StripeService,
+    FeatureAccessService,
+    FeatureAccessGuard,
+  ],
 })
 export class SubscriptionModule {}

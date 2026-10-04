@@ -10,6 +10,7 @@ import { SubscriptionModule } from '../subscription';
 import { AuthController, UserController } from './controllers';
 import { UserTypeGuard } from './guards';
 import { AuthService, CaslAbilityFactory, UserService } from './services';
+import { AccountDeletionService } from './services/account-deletion.service';
 import { AthleteInvitationService } from './services/athlete-invitation.service';
 import { CoachInvitationService } from './services/coach-invitation.service';
 import { FirebaseAuthService } from './services/firebase-auth.service';
@@ -33,6 +34,7 @@ import { JwtStrategy } from './strategies';
     AuthService,
     FirebaseAuthService,
     UserService,
+    AccountDeletionService,
     TokenService,
     AthleteInvitationService,
     CoachInvitationService,

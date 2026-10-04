@@ -45,6 +45,30 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm -r --no-bail --aggregate-output test
 
+  integration:
+    # API tests against a real, freshly migrated PostgreSQL database
+    name: Integration tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: oa
+          POSTGRES_PASSWORD: oa
+          POSTGRES_DB: oa
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U oa -d oa"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://oa:oa@localhost:5432/oa?schema=public
+      INTEGRATION_DATABASE_URL: postgresql://oa:oa@localhost:5432/oa?schema=public
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: pnpm database run db:deploy
+      - run: pnpm api test:integration
+
   docs:
     # apps/docs is a standalone pnpm project with its own lockfile
     name: Docs
