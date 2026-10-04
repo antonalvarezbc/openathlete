@@ -3,6 +3,8 @@ import { useMutation } from '@tanstack/react-query';
 import {
   CreateEventDto,
   GenerateEventResponseDto,
+  GenerateWorkoutStructureDto,
+  GenerateWorkoutStructureResponseDto,
   ModifyEventResponseDto,
 } from '@openathlete/shared';
 
@@ -27,5 +29,15 @@ export function useModifyEventMutation() {
   >({
     mutationFn: ({ prompt, eventData, athleteId }) =>
       AIFeaturesAPI.modifyEvent(prompt, eventData, athleteId),
+  });
+}
+
+export function useGenerateWorkoutStructureMutation() {
+  return useMutation<
+    GenerateWorkoutStructureResponseDto,
+    Error,
+    GenerateWorkoutStructureDto
+  >({
+    mutationFn: (body) => AIFeaturesAPI.generateWorkoutStructure(body),
   });
 }

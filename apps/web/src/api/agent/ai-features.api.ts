@@ -4,12 +4,24 @@ import {
   CreateEventDto,
   GenerateEventDto,
   GenerateEventResponseDto,
+  GenerateWorkoutStructureDto,
+  GenerateWorkoutStructureResponseDto,
   ModifyEventResponseDto,
   TrainingEvent,
   UpdateEventDto,
 } from '@openathlete/shared';
 
 export class AIFeaturesAPI {
+  static async generateWorkoutStructure(
+    body: GenerateWorkoutStructureDto,
+  ): Promise<GenerateWorkoutStructureResponseDto> {
+    const res = await client.post<GenerateWorkoutStructureResponseDto>(
+      routes.aiFeatures.workoutStructure,
+      body,
+    );
+    return res.data;
+  }
+
   static async generateEvent(
     prompt: string,
     date: Date,
