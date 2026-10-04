@@ -46,6 +46,11 @@ export class AthleteAPI {
     await client.post(routes.athlete.inviteAthlete, body);
   }
 
+  static async coachSelf(): Promise<{ created: boolean }> {
+    const res = await client.post(routes.athlete.coachSelf);
+    return res.data;
+  }
+
   static async removeAthlete(athleteId: number): Promise<void> {
     await client.delete(routes.athlete.removeAthlete(athleteId));
   }

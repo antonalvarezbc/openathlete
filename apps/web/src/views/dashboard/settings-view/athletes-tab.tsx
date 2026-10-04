@@ -1,5 +1,6 @@
 import {
   useCancelAthleteInvitationMutation,
+  useCoachSelfMutation,
   useGetMyCoachedAthletesQuery,
   useGetSentAthleteInvitationsQuery,
   useInviteAthleteMutation,
@@ -12,6 +13,7 @@ import { InviteAthleteDialog } from '@/components/invite-athlete-dialog/invite-a
 import { ActivityAlertSettings } from '@/components/messages/activity-alert-settings';
 import { PaywallDialog } from '@/components/paywall';
 import { TrainingZoneEditor } from '@/components/training-zone-editor';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -28,6 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useAuthContext, useUserRoles } from '@/contexts/auth';
 import { useAthleteLimit } from '@/hooks/use-feature-access';
 import { m } from '@/paraglide/messages';
 import { getPath } from '@/routes/paths';
@@ -54,8 +57,25 @@ export function AthletesTab() {
   const [inviteAthleteDialog, setInviteAthleteDialog] = useState(false);
   const [paywallOpen, setPaywallOpen] = useState(false);
 
+  const { user } = useAuthContext();
+  const roles = useUserRoles();
+  // A coach who is also an athlete can coach their own athlete profile.
+  const isSelf = (athleteUserId?: number) =>
+    !!user && athleteUserId === user.userId;
+  const coachesSelf = !!athletes?.some((athlete) =>
+    isSelf(athlete.user?.userId),
+  );
+  const canCoachSelf =
+    !!roles?.includes('ATHLETE') && !isLoadingAthletes && !coachesSelf;
+  const coachSelfMutation = useCoachSelfMutation({
+    onSuccess: () => toast.success(m.coach_self_added()),
+    onError: () => toast.error(m.coach_self_failed()),
+  });
+
   const { maxAthletes } = useAthleteLimit();
-  const currentAthleteCount = athletes?.length || 0;
+  // Coaching yourself does not use an athlete slot.
+  const currentAthleteCount =
+    athletes?.filter((athlete) => !isSelf(athlete.user?.userId)).length || 0;
   const canAddAthlete = useMemo(() => {
     if (maxAthletes === null) return true; // Unlimited
     return currentAthleteCount < maxAthletes;
@@ -75,6 +95,10 @@ export function AthletesTab() {
       toast.error(m.failed_to_cancel_invitation());
     },
   });
+  const deletingSelf = isSelf(
+    athletes?.find((athlete) => athlete.athleteId === deleteAthleteDialog)?.user
+      ?.userId,
+  );
   const formatDate = (date: string) =>
     new Date(date).toLocaleDateString(undefined, {
       year: 'numeric',
@@ -118,6 +142,29 @@ export function AthletesTab() {
           </Button>
         }
       >
+        {canCoachSelf && (
+          <div
+            data-coach-self
+            className="mb-4 flex flex-col gap-3 rounded-md border bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="min-w-0">
+              <p className="text-sm font-medium">{m.coach_self_title()}</p>
+              <p className="text-sm text-muted-foreground">
+                {m.coach_self_help()}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0"
+              isLoading={coachSelfMutation.isPending}
+              disabled={coachSelfMutation.isPending}
+              onClick={() => coachSelfMutation.mutate()}
+            >
+              {m.coach_self_button()}
+            </Button>
+          </div>
+        )}
         {/* One block per athlete instead of table columns, so the manual
             Garmin controls get the full width on every screen size. */}
         {!isLoadingAthletes && !athletes?.length ? (
@@ -137,8 +184,13 @@ export function AthletesTab() {
                   <li key={athlete.athleteId} className="space-y-4 p-4">
                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                       <div className="min-w-0">
-                        <p className="font-medium">
+                        <p className="flex flex-wrap items-center gap-2 font-medium">
                           {athlete.user?.firstName} {athlete.user?.lastName}
+                          {isSelf(athlete.user?.userId) && (
+                            <Badge variant="secondary">
+                              {m.coach_self_you()}
+                            </Badge>
+                          )}
                         </p>
                         <p className="break-all text-sm text-muted-foreground">
                           {athlete.user?.email}
@@ -185,7 +237,9 @@ export function AthletesTab() {
                             setDeleteAthleteDialog(athlete.athleteId);
                           }}
                         >
-                          {m.delete_()}
+                          {isSelf(athlete.user?.userId)
+                            ? m.coach_self_stop()
+                            : m.delete_()}
                         </Button>
                       </div>
                     </div>
@@ -320,8 +374,12 @@ export function AthletesTab() {
           }
           setDeleteAthleteDialog(null);
         }}
-        title={m.delete_athlete()}
-        message={m.confirm_delete_athlete()}
+        title={deletingSelf ? m.coach_self_stop() : m.delete_athlete()}
+        message={
+          deletingSelf
+            ? m.coach_self_stop_confirm()
+            : m.confirm_delete_athlete()
+        }
         isLoading={removeAthleteMutation.isPending}
       />
       <PaywallDialog

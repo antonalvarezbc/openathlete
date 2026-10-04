@@ -43,14 +43,25 @@ describe('Administrator-only mode changes', () => {
     expect(prisma.user.findMany).not.toHaveBeenCalled();
     expect(prisma.user.updateMany).not.toHaveBeenCalled();
   });
-  it('configured admin changes only modes after onboarding, without granting administrator access', async () => {
-    const prisma = {
+  const modeSetup = () => {
+    const client = {
       user: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      coachAthlete: { deleteMany: jest.fn() },
+    };
+    const prisma = {
+      ...client,
+      $transaction: jest.fn((run: (tx: typeof client) => unknown) =>
+        run(client),
+      ),
     };
     const service = new AccountAdministrationService(
       prisma as unknown as PrismaService,
       new ConfigService({ ADMIN_USER_IDS: '8' }),
     );
+    return { prisma, service };
+  };
+  it('configured admin changes only modes after onboarding, without granting administrator access', async () => {
+    const { prisma, service } = modeSetup();
     await service.change(user, 12, { roles: ['ATHLETE'] });
     expect(prisma.user.updateMany).toHaveBeenCalledWith({
       where: { userId: 12, onboardingCompleted: true },
@@ -60,6 +71,26 @@ describe('Administrator-only mode changes', () => {
     await expect(
       service.change(user, 12, { roles: ['COACH'] }),
     ).rejects.toThrow('onboarding');
+  });
+  it('ends self-coaching when the account loses one of the two roles', async () => {
+    const { prisma, service } = modeSetup();
+    for (const roles of [['ATHLETE'], ['COACH']] as const) {
+      prisma.coachAthlete.deleteMany.mockClear();
+      await service.change(user, 12, { roles: [...roles] });
+      // Only the link to the account's own athlete profile, not its athletes.
+      expect(prisma.coachAthlete.deleteMany).toHaveBeenCalledWith({
+        where: { userId: 12, athlete: { userId: 12 } },
+      });
+    }
+    prisma.coachAthlete.deleteMany.mockClear();
+    await service.change(user, 12, { roles: ['ATHLETE', 'COACH'] });
+    expect(prisma.coachAthlete.deleteMany).not.toHaveBeenCalled();
+    // A refused change (onboarding not done) touches no link.
+    prisma.user.updateMany.mockResolvedValue({ count: 0 });
+    await expect(
+      service.change(user, 12, { roles: ['ATHLETE'] }),
+    ).rejects.toThrow('onboarding');
+    expect(prisma.coachAthlete.deleteMany).not.toHaveBeenCalled();
   });
   it('rejects duplicate roles, empty modes and extra admin flags', () => {
     for (const roles of [[], ['COACH', 'COACH'], ['ADMIN']]) {
@@ -84,6 +115,11 @@ describe('First-login selection is single-use', () => {
       user: { updateMany: jest.fn().mockResolvedValue({ count }) },
       athlete: { findUnique: jest.fn().mockResolvedValue({ athleteId: 8 }) },
       athleteMetric: { upsert: jest.fn() },
+      coachAthlete: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn(),
+      },
+      $queryRaw: jest.fn(),
     };
     const prisma = { $transaction: jest.fn(async (fn) => fn(tx)) };
     const invitations = { createInvitation: jest.fn() };
@@ -120,6 +156,26 @@ describe('First-login selection is single-use', () => {
     expect(tx.athlete.findUnique).not.toHaveBeenCalled();
     expect(tx.athleteMetric.upsert).not.toHaveBeenCalled();
     expect(invitations.createInvitation).not.toHaveBeenCalled();
+  });
+  it('coaches yourself only when asked and with both roles', async () => {
+    const { service, tx } = setup();
+    await service.completeOnboarding(user, {
+      roles: ['ATHLETE', 'COACH'],
+      coachSelf: true,
+    });
+    expect(tx.coachAthlete.create).toHaveBeenCalledWith({
+      data: { userId: 8, athleteId: 8 },
+    });
+
+    for (const input of [
+      { roles: ['ATHLETE' as const, 'COACH' as const] },
+      { roles: ['COACH' as const], coachSelf: true },
+      { roles: ['ATHLETE' as const], coachSelf: true },
+    ]) {
+      const { service: other, tx: otherTx } = setup();
+      await other.completeOnboarding(user, input);
+      expect(otherTx.coachAthlete.create).not.toHaveBeenCalled();
+    }
   });
   it('does not create personal wellness metrics for a coach-only account', async () => {
     const { service, tx } = setup();

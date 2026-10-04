@@ -1600,5 +1600,14 @@
   "ai_structure_generate": "Generate structure",
   "ai_structure_done": "Structure created. Review it before saving.",
   "ai_structure_failed": "The structure could not be created. Try again or describe it differently.",
-  "ai_structure_need_text": "Add a name, a description or what the structure should contain."
+  "ai_structure_need_text": "Add a name, a description or what the structure should contain.",
+  "coach_self_title": "Coach yourself",
+  "coach_self_help": "You are also an athlete: add yourself to your athletes to plan your own training from the coach space, with the same tools as for any athlete.",
+  "coach_self_button": "Coach myself",
+  "coach_self_added": "You are now among your athletes",
+  "coach_self_failed": "You could not be added to your athletes",
+  "coach_self_you": "You",
+  "coach_self_stop": "Stop coaching myself",
+  "coach_self_stop_confirm": "You will no longer appear among your athletes. Your training data is kept.",
+  "onboarding_coach_self": "Also coach myself (I will appear among my athletes)"
 }

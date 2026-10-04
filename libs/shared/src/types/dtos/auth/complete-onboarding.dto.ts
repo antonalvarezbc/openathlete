@@ -11,6 +11,8 @@ export const completeOnboardingDtoSchema = z.object({
   hrRest: z.number().int().positive().optional(),
   coachEmail: z.string().email().optional(),
   athleteEmails: z.array(z.string().email()).optional(),
+  /** With both roles: also coach your own athlete profile. */
+  coachSelf: z.boolean().optional(),
 });
 
 export type CompleteOnboardingDto = z.infer<typeof completeOnboardingDtoSchema>;

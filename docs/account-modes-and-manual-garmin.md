@@ -15,6 +15,22 @@ Planning restrictions apply to API permissions as well as calendar controls.
 An old coach-athlete link does not grant planning rights after the coach role is removed.
 Linking a performed activity to an existing session remains available to its athlete.
 
+### Coaching yourself
+
+An ATHLETE + COACH account can also appear among its own athletes, so the coach
+space (planning workspace, coach dashboard, assistant, plan adaptation, bulk
+actions) works on its own calendar. It is a regular coach–athlete link whose
+coach is the athlete's own user, created with **Coach myself** in Settings →
+Athletes or with the opt-in checkbox of the onboarding coach step
+(`POST /athlete/coach-self`, idempotent). **Stop coaching myself** removes only
+the link; training data is kept.
+
+- It does not use an athlete slot of the coach's plan.
+- "My coaches" never lists the user themselves, and activity chat notices are
+  not sent to oneself.
+- When an administrator removes the athlete or the coach role, the link is
+  deleted in the same transaction.
+
 ## Initial choice and administrator changes
 
 The first-login role selection is saved once in a database transaction.

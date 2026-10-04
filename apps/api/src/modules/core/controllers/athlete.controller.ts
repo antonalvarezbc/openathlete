@@ -31,6 +31,7 @@ import {
 } from '@openathlete/shared';
 
 import { JwtUser, UserTypeGuard } from 'src/modules/auth';
+import { UserTypes } from 'src/modules/auth/decorators';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
 import { AthleteInvitationService } from 'src/modules/auth/services/athlete-invitation.service';
 
@@ -458,6 +459,27 @@ export class AthleteController {
     @Param('invitationId', ParseIntPipe) invitationId: number,
   ) {
     return this.athleteService.cancelCoachInvitation(user.userId, invitationId);
+  }
+
+  @UseGuards(AuthGuard('jwt'), UserTypeGuard)
+  @UserTypes(['COACH'])
+  @ApiBearerAuth()
+  @Post('coach-self')
+  @ApiOperation({
+    summary: 'Coach your own athlete profile',
+    description:
+      "For accounts that are both athlete and coach: links the user's own athlete profile to them as coach, so it appears among their athletes in the coach space. Idempotent. Remove it like any athlete, with DELETE /athlete/:athleteId.",
+  })
+  @ApiResponse({
+    status: 201,
+    description: '{ created: boolean } — false when already self-coached',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'The account is not both athlete and coach',
+  })
+  coachSelf(@JwtUser() user: AuthUser) {
+    return this.athleteService.coachSelf(user);
   }
 
   @UseGuards(AuthGuard('jwt'), UserTypeGuard)

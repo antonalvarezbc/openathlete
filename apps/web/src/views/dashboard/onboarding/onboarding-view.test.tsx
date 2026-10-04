@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OnboardingView } from './onboarding-view';
 
 const features = vi.hoisted(() => ({ manualGarminSync: false }));
+const completeOnboarding = vi.hoisted(() => vi.fn());
 const idle = vi.hoisted(() => () => ({
   mutate: () => undefined,
   isPending: false,
@@ -19,7 +20,11 @@ vi.mock('@/api/athlete', () => ({
   useGetMyCoachesQuery: () => ({ data: [] }),
 }));
 vi.mock('@/api/user', () => ({
-  useCompleteOnboardingMutation: idle,
+  useCompleteOnboardingMutation: () => ({
+    mutate: completeOnboarding,
+    isPending: false,
+    isSuccess: false,
+  }),
   useGetMeQuery: () => ({
     data: { onboardingCompleted: false },
     isLoading: false,
@@ -117,5 +122,83 @@ describe('onboarding connectors step', () => {
     expect(container.textContent).toContain('onboarding_connectors_title');
     expect(manualGarmin()).toBeNull();
     expect(skipButton()).toBeDefined();
+  });
+});
+
+describe('onboarding coach step: coaching yourself', () => {
+  let container: HTMLDivElement;
+  let root: Root;
+
+  const start = (roles: string[], step: number) => {
+    localStorage.setItem(
+      'openathlete_onboarding_data',
+      JSON.stringify({ roles, athleteEmails: [] }),
+    );
+    localStorage.setItem('openathlete_onboarding_step', String(step));
+  };
+
+  beforeEach(() => {
+    completeOnboarding.mockReset();
+    container = document.createElement('div');
+    document.body.append(container);
+    root = createRoot(container);
+  });
+
+  afterEach(() => {
+    act(() => root.unmount());
+    container.remove();
+    localStorage.clear();
+  });
+
+  const mount = () => act(async () => root.render(<OnboardingView />));
+  const checkbox = () =>
+    container.querySelector<HTMLButtonElement>('button[role="checkbox"]');
+  const find = (name: string) =>
+    [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.trim() === name,
+    );
+  // Steps animate in and out: wait for the button of the next step.
+  const press = async (name: string) => {
+    await vi.waitFor(() => expect(find(name)).toBeDefined());
+    await act(async () => find(name)!.click());
+  };
+
+  it('offers it to athletes who are also coaches, unchecked by default', async () => {
+    // welcome, role, athlete info, connectors, athlete invitations
+    start(['ATHLETE', 'COACH'], 4);
+    await mount();
+    expect(container.textContent).toContain('onboarding_coach_self');
+    expect(checkbox()!.getAttribute('aria-checked')).toBe('false');
+
+    await act(async () => checkbox()!.click());
+    expect(checkbox()!.getAttribute('aria-checked')).toBe('true');
+    await press('onboarding_next');
+    await press('onboarding_complete_continue');
+    expect(completeOnboarding).toHaveBeenCalledWith(
+      expect.objectContaining({
+        roles: ['ATHLETE', 'COACH'],
+        coachSelf: true,
+      }),
+    );
+  });
+
+  it('is not sent unless checked', async () => {
+    start(['ATHLETE', 'COACH'], 5);
+    await mount();
+    await press('onboarding_complete_continue');
+    expect(completeOnboarding).toHaveBeenCalledWith(
+      expect.objectContaining({ coachSelf: false }),
+    );
+  });
+
+  it('is not offered to coach-only accounts', async () => {
+    // welcome, role, athlete invitations
+    start(['COACH'], 2);
+    await mount();
+    expect(container.textContent).toContain(
+      'onboarding_athlete_invitations_title',
+    );
+    expect(container.textContent).not.toContain('onboarding_coach_self');
+    expect(checkbox()).toBeNull();
   });
 });
