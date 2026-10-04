@@ -1,5 +1,9 @@
 import { useLoginMutation } from '@/api/auth';
-import { FormProvider, RHFTextField } from '@/components/hook-form';
+import {
+  FormProvider,
+  RHFPasswordField,
+  RHFTextField,
+} from '@/components/hook-form';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useAuthContext } from '@/contexts/auth';
@@ -90,7 +94,11 @@ export function LoginView({ className }: React.ComponentProps<'form'>) {
               {m.forgot_your_password()}
             </Link>
           </div>
-          <RHFTextField name="password" type="password" required />
+          <RHFPasswordField
+            name="password"
+            autoComplete="current-password"
+            required
+          />
         </div>
         <Button
           type="submit"
