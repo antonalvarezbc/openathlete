@@ -1150,5 +1150,22 @@
   "ai_error_provider": "Le fournisseur d'IA n'a pas pu traiter la demande. Réessayez ou choisissez un autre modèle.",
   "pwa_install": "Installer l'application",
   "pwa_install_title": "Installer OpenAthlete",
-  "pwa_install_ios_steps": "Touchez le bouton Partager du navigateur puis choisissez « Sur l'écran d'accueil ». OpenAthlete s'ouvrira ensuite en plein écran depuis son icône, comme une application."
+  "pwa_install_ios_steps": "Touchez le bouton Partager du navigateur puis choisissez « Sur l'écran d'accueil ». OpenAthlete s'ouvrira ensuite en plein écran depuis son icône, comme une application.",
+  "consent_title": "Votre vie privée",
+  "consent_description": "Nous aimerions mesurer l'utilisation de l'application (statistiques d'usage et enregistrements de sessions masqués) pour l'améliorer. Rien n'est collecté tant que vous n'acceptez pas, et vous pouvez changer d'avis dans Paramètres > Profil.",
+  "consent_accept": "Accepter",
+  "consent_refuse": "Refuser",
+  "consent_privacy_policy": "Politique de confidentialité",
+  "consent_settings_title": "Statistiques d'usage",
+  "consent_settings_granted": "Vous autorisez les statistiques d'usage et les enregistrements de sessions.",
+  "consent_settings_denied": "Les statistiques d'usage et les enregistrements de sessions sont désactivés.",
+  "consent_settings_change": "Modifier mon choix",
+  "privacy_section_title": "Confidentialité et données",
+  "privacy_section_description": "Contrôlez ce qui est collecté et récupérez vos données.",
+  "data_export_title": "Télécharger mes données",
+  "data_export_description": "Un fichier JSON avec votre profil, vos séances, activités, métriques, les messages que vous avez écrits et vos réglages. Les mots de passe et les clés ne sont jamais inclus.",
+  "data_export_include_streams": "Inclure les flux des activités (GPS, fréquence cardiaque), fichier plus lourd",
+  "data_export_download": "Télécharger mes données",
+  "data_export_preparing": "Préparation du fichier…",
+  "data_export_failed": "L'export a échoué. Réessayez plus tard."
 }
