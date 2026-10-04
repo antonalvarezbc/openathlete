@@ -7,6 +7,7 @@ export interface TestAthlete {
   email: string;
   password: string;
   accessToken: string;
+  refreshToken: string;
 }
 
 /**
@@ -30,14 +31,16 @@ export async function login(
   email: string,
   password: string,
   ip = randomClientIp(),
-): Promise<string> {
+): Promise<{ accessToken: string; refreshToken: string }> {
   const response = await request.post(`${API_URL}/auth/login`, {
     headers: apiHeaders(ip),
     data: { email, password },
   });
   expect(response.status(), await response.text()).toBe(201);
-  const { accessToken } = (await response.json()) as { accessToken: string };
-  return accessToken;
+  return (await response.json()) as {
+    accessToken: string;
+    refreshToken: string;
+  };
 }
 
 /** Signs up a new user and completes the athlete onboarding. */
@@ -54,7 +57,12 @@ export async function createAthlete(
   });
   expect(signup.status(), await signup.text()).toBe(201);
 
-  const accessToken = await login(request, email, password, ip);
+  const { accessToken, refreshToken } = await login(
+    request,
+    email,
+    password,
+    ip,
+  );
 
   const onboarding = await request.post(`${API_URL}/user/complete-onboarding`, {
     headers: apiHeaders(ip, accessToken),
@@ -62,5 +70,5 @@ export async function createAthlete(
   });
   expect(onboarding.status(), await onboarding.text()).toBe(201);
 
-  return { email, password, accessToken };
+  return { email, password, accessToken, refreshToken };
 }
