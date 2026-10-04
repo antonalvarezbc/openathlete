@@ -3,10 +3,13 @@ import {
   useUnsetRelatedActivityMutation,
 } from '@/api/event';
 import { m } from '@/paraglide/messages';
+import { getLocale } from '@/paraglide/runtime';
+import { useMemo } from 'react';
 
 import {
   CompetitionEvent,
   EVENT_TYPE,
+  type Event,
   TrainingEvent,
   formatDistance,
 } from '@openathlete/shared';
@@ -23,6 +26,10 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { WorkoutGraph, WorkoutSummary } from '../workout';
 import { WorkoutAthleteContext } from '../workout/workout-athlete-context';
+import {
+  activityLinkCandidates,
+  isSameLocalDay,
+} from './activity-link-candidates';
 
 interface P {
   event: CompetitionEvent | TrainingEvent;
@@ -32,6 +39,34 @@ export function TrainingCompetitionDetails({ event }: P) {
   const setRelatedActivityMutation = useSetRelatedActivityMutation();
   const unsetRelatedActivityMutation = useUnsetRelatedActivityMutation();
   const { events, openEventDetails } = useCalendarContext();
+  const { sameDay, nearby } = useMemo(
+    () => activityLinkCandidates(event, events),
+    [event, events],
+  );
+  const linking =
+    unsetRelatedActivityMutation.isPending ||
+    setRelatedActivityMutation.isPending;
+  const link = (activityId: number) =>
+    setRelatedActivityMutation.mutate({ eventId: event.eventId, activityId });
+  // Time on the session's day, date and time otherwise; then the distance.
+  const activityRow = (activity: Event) => {
+    const start = new Date(activity.startDate);
+    const locale = getLocale();
+    const when = isSameLocalDay(start, new Date(event.startDate))
+      ? start.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
+      : start.toLocaleString(locale, {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+    const distance =
+      activity.type === EVENT_TYPE.ACTIVITY && activity.distance > 0
+        ? ` · ${formatDistance(activity.distance)} km`
+        : '';
+    return `${activity.name} · ${when}${distance}`;
+  };
 
   const isTraining = event.type === EVENT_TYPE.TRAINING;
   return (
@@ -79,42 +114,45 @@ export function TrainingCompetitionDetails({ event }: P) {
             </CardHeader>
             <CardContent>
               <div className="flex flex-col gap-2">
+                {/* Not linked yet: the same day's activities, one click away. */}
+                {!event.relatedActivity?.eventId && sameDay.length > 0 && (
+                  <div className="space-y-2" data-link-suggestions>
+                    <p className="text-sm text-muted-foreground">
+                      {m.related_activity_suggestions()}
+                    </p>
+                    {sameDay.slice(0, 3).map((activity) => (
+                      <Button
+                        key={activity.eventId}
+                        variant="secondary"
+                        className="h-auto min-h-10 w-full justify-between gap-3 whitespace-normal text-left"
+                        disabled={linking}
+                        onClick={() => link(activity.eventId)}
+                      >
+                        <span className="min-w-0 break-words">
+                          {activityRow(activity)}
+                        </span>
+                        <span className="shrink-0 text-xs font-medium">
+                          {m.related_activity_link()}
+                        </span>
+                      </Button>
+                    ))}
+                  </div>
+                )}
                 <div className="flex flex-col sm:flex-row gap-2">
                   <SelectEvent
                     data={events}
                     value={event.relatedActivity?.eventId}
-                    onChange={(activityId) => {
-                      setRelatedActivityMutation.mutate({
-                        eventId: event.eventId,
-                        activityId,
-                      });
-                    }}
+                    onChange={link}
                     className="flex-1 min-w-0"
-                    filter={(e, events) => {
-                      if (e.type !== EVENT_TYPE.ACTIVITY) return false;
-                      const startFilter = new Date(event.startDate);
-                      startFilter.setDate(startFilter.getDate() - 3);
-                      const endFilter = new Date(event.endDate);
-                      endFilter.setDate(endFilter.getDate() + 3);
-                      const isInRelatedActivity = events.some(
-                        (relatedEvent) =>
-                          (relatedEvent.type === EVENT_TYPE.TRAINING ||
-                            relatedEvent.type === EVENT_TYPE.COMPETITION) &&
-                          relatedEvent.relatedActivity?.eventId === e.eventId,
-                      );
-                      return (
-                        startFilter.getTime() < e.startDate.getTime() &&
-                        endFilter.getTime() > e.endDate.getTime() &&
-                        !isInRelatedActivity
-                      );
-                    }}
+                    groups={[
+                      {
+                        heading: m.related_activity_same_day(),
+                        events: sameDay,
+                      },
+                      { heading: m.related_activity_nearby(), events: nearby },
+                    ].filter((group) => group.events.length > 0)}
                     displayRow={(e) => (
-                      <div>
-                        {e.name}{' '}
-                        {e.type === EVENT_TYPE.ACTIVITY
-                          ? `(${formatDistance(e.distance)} km)`
-                          : ''}
-                      </div>
+                      <div className="min-w-0 truncate">{activityRow(e)}</div>
                     )}
                   />
                   {!!event.relatedActivity?.eventId && (
@@ -122,10 +160,7 @@ export function TrainingCompetitionDetails({ event }: P) {
                       onClick={() => {
                         unsetRelatedActivityMutation.mutate(event.eventId);
                       }}
-                      isLoading={
-                        unsetRelatedActivityMutation.isPending ||
-                        setRelatedActivityMutation.isPending
-                      }
+                      isLoading={linking}
                       className="w-full sm:w-auto flex-shrink-0"
                     >
                       {m.remove()}
