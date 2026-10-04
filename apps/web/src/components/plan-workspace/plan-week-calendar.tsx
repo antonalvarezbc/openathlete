@@ -1,16 +1,22 @@
 import { useGetMyEventsQuery } from '@/api/event';
-import { ManagedPlan } from '@/api/plan-workspace/plan-workspace.api';
 import { Calendar } from '@/components/calendar/calendar';
 import { useCallback, useMemo, useState } from 'react';
 
 interface P {
-  plan: ManagedPlan;
+  athleteId: number;
+  /** New sessions join this plan; without it they are plain calendar sessions. */
+  trainingPlanId?: number;
   weekStart: string;
   editable: boolean;
 }
 
-/** The calendar locked to week view for one plan week, inside Planning. */
-export function PlanWeekCalendar({ plan, weekStart, editable }: P) {
+/** The athlete's calendar locked to week view for one week, inside Planning. */
+export function PlanWeekCalendar({
+  athleteId,
+  trainingPlanId,
+  weekStart,
+  editable,
+}: P) {
   const initialDate = useMemo(() => new Date(weekStart), [weekStart]);
   const [displayedMonth, setDisplayedMonth] = useState(initialDate);
   const { startDate, endDate } = useMemo(() => {
@@ -29,7 +35,7 @@ export function PlanWeekCalendar({ plan, weekStart, editable }: P) {
   }, [displayedMonth]);
   const { data, isFetching } = useGetMyEventsQuery(
     true,
-    plan.athleteId,
+    athleteId,
     startDate,
     endDate,
   );
@@ -39,10 +45,10 @@ export function PlanWeekCalendar({ plan, weekStart, editable }: P) {
 
   return (
     <Calendar
-      key={`${plan.trainingPlanId}-${weekStart}`}
+      key={`${trainingPlanId ?? 'calendar'}-${weekStart}`}
       events={data}
-      athleteId={plan.athleteId}
-      trainingPlanId={plan.trainingPlanId}
+      athleteId={athleteId}
+      trainingPlanId={trainingPlanId}
       initialDate={initialDate}
       initialView="week"
       lockView

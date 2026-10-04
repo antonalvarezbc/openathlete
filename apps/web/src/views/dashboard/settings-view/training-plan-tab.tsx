@@ -8,6 +8,7 @@ import {
 } from '@/api/plan-workspace/plan-workspace.api';
 import { CoachAssistant } from '@/components/coach-assistant/coach-assistant';
 import { AthleteInjuries } from '@/components/plan-workspace/athlete-injuries';
+import { CalendarWeeks } from '@/components/plan-workspace/calendar-weeks';
 import {
   Field,
   displayDate,
@@ -16,6 +17,11 @@ import {
 import { PlanEditor } from '@/components/plan-workspace/plan-editor';
 import { PlanRaces } from '@/components/plan-workspace/plan-races';
 import { PlanWeeks } from '@/components/plan-workspace/plan-weeks';
+import {
+  PlanChoice,
+  defaultPlanChoice,
+  parsePlanChoice,
+} from '@/components/plan-workspace/planning-selection';
 import { Button } from '@/components/ui/button';
 import { SparklesIcon } from '@/components/ui/sparkles-icon';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -24,7 +30,7 @@ import { m } from '@/paraglide/messages';
 import { getLocale } from '@/paraglide/runtime';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Calendar, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { PlanAdaptationSection } from './plan-adaptation-section';
@@ -44,7 +50,8 @@ export function TrainingPlanTab() {
     (a, i, all) => all.findIndex((b) => b.athleteId === a.athleteId) === i,
   );
   const athleteId = Number(params.get('athleteId')) || 0;
-  const planId = Number(params.get('planId')) || 0;
+  // Absent until chosen, by the coach or by the default below.
+  const choice = parsePlanChoice(params.get('planId'));
   const [editor, setEditor] = useState<ManagedPlan | 'new' | null>(null);
   const client = useQueryClient();
   const plans = useQuery({
@@ -52,21 +59,36 @@ export function TrainingPlanTab() {
     queryFn: () => PlanWorkspaceAPI.list(athleteId),
     enabled: athleteId > 0,
   });
-  const plan = plans.data?.find((p) => p.trainingPlanId === planId);
+  const plan = plans.data?.find((p) => p.trainingPlanId === choice);
+  // A plan that no longer exists falls back to the calendar.
+  const calendarMode = !!athleteId && !!plans.data && choice !== null && !plan;
   const editable = plan && ['DRAFT', 'ACTIVE'].includes(plan.status);
   const calendarPath =
     athleteId === own?.athleteId
       ? '/dashboard/calendar'
       : `/dashboard/calendar/${athleteId}`;
-  const change = (athlete: number, id = 0) => {
+  const change = (athlete: number, next?: PlanChoice) => {
     setEditor(null);
     setParams((previous) => {
       previous.set('athleteId', String(athlete));
-      if (id) previous.set('planId', String(id));
+      if (next !== undefined) previous.set('planId', String(next));
       else previous.delete('planId');
       return previous;
     });
   };
+  // Opening an athlete needs no plan choice: their active plan, else the
+  // calendar. A choice the coach made is kept.
+  useEffect(() => {
+    if (!athleteId || choice !== null || !plans.data) return;
+    const next = defaultPlanChoice(plans.data);
+    setParams(
+      (previous) => {
+        previous.set('planId', String(next));
+        return previous;
+      },
+      { replace: true },
+    );
+  }, [athleteId, choice, plans.data, setParams]);
   const refresh = async () => {
     await Promise.all([
       client.invalidateQueries({ queryKey: ['managed-plans', athleteId] }),
@@ -110,11 +132,14 @@ export function TrainingPlanTab() {
         <Field label={m.training_plan_settings()}>
           <select
             className={selectClass}
+            name="plan"
             disabled={!athleteId || plans.isLoading}
-            value={plan?.trainingPlanId ?? ''}
-            onChange={(e) => change(athleteId, Number(e.target.value))}
+            value={plan?.trainingPlanId ?? 'calendar'}
+            onChange={(e) =>
+              change(athleteId, parsePlanChoice(e.target.value) ?? 'calendar')
+            }
           >
-            <option value="">{m.adaptation_choose_plan()}</option>
+            <option value="calendar">{m.workspace_calendar_option()}</option>
             {plans.data?.map((p) => (
               <option key={p.trainingPlanId} value={p.trainingPlanId}>
                 {p.name} · {displayDate(p.startDate)}
@@ -154,6 +179,25 @@ export function TrainingPlanTab() {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="plan" className="space-y-6 pt-4">
+          {calendarMode && (
+            <section
+              className="space-y-4 rounded-xl border p-4 sm:p-6"
+              data-planning-calendar
+            >
+              <div>
+                <h3 className="text-lg font-semibold">
+                  {m.workspace_calendar_option()}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {m.workspace_calendar_mode_help()}
+                </p>
+              </div>
+              <CalendarWeeks
+                athleteId={athleteId}
+                calendarPath={calendarPath}
+              />
+            </section>
+          )}
           {plan && (
             <>
               <section className="space-y-4 rounded-xl border p-4 sm:p-6">
@@ -211,7 +255,7 @@ export function TrainingPlanTab() {
           {!!athleteId && (
             <AthleteInjuries key={athleteId} athleteId={athleteId} />
           )}
-          {plan && (
+          {(plan || calendarMode) && (
             <details
               id="plan-adaptation"
               className="rounded-xl border p-4 sm:p-6"
@@ -223,11 +267,11 @@ export function TrainingPlanTab() {
               </summary>
               <div className="mt-4">
                 <PlanAdaptationSection
-                  key={`${athleteId}-${plan.trainingPlanId}`}
+                  key={`${athleteId}-${plan?.trainingPlanId ?? 'calendar'}`}
                   selection={{
                     athleteId,
-                    planId: plan.trainingPlanId,
-                    startDate: plan.startDate,
+                    planId: plan?.trainingPlanId,
+                    startDate: plan?.startDate ?? new Date().toISOString(),
                   }}
                 />
               </div>
@@ -252,11 +296,11 @@ export function TrainingPlanTab() {
           </section>
         </TabsContent>
         <TabsContent value="assistant" className="pt-4">
-          {plan ? (
+          {plan || calendarMode ? (
             <CoachAssistant
-              key={`${athleteId}-${plan.trainingPlanId}-${getLocale()}`}
+              key={`${athleteId}-${plan?.trainingPlanId ?? 'calendar'}-${getLocale()}`}
               athleteId={athleteId}
-              planId={plan.trainingPlanId}
+              planId={plan?.trainingPlanId}
               onAdapt={() => {
                 setAdaptOpen(true);
                 setParams((previous) => {

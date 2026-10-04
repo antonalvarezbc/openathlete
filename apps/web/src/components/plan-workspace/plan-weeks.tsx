@@ -110,7 +110,8 @@ export function PlanWeeks({ plan, editable, calendarPath }: P) {
       </div>
       {selected && (
         <PlanWeekCalendar
-          plan={plan}
+          athleteId={plan.athleteId}
+          trainingPlanId={plan.trainingPlanId}
           weekStart={selected.startDate}
           editable={editable}
         />
