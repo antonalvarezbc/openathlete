@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { AiModule } from '../ai';
 import { AuthModule } from '../auth';
 import { CoreModule } from '../core/core.module';
 import { PrismaService } from '../prisma/services/prisma.service';
@@ -10,7 +11,13 @@ import { EventGenerationService } from './services/event-generation.service';
 import { EventModificationService } from './services/event-modification.service';
 
 @Module({
-  imports: [AuthModule, CoreModule, SubscriptionModule, WebSocketModule],
+  imports: [
+    AiModule,
+    AuthModule,
+    CoreModule,
+    SubscriptionModule,
+    WebSocketModule,
+  ],
   controllers: [AIFeaturesController],
   providers: [EventGenerationService, EventModificationService, PrismaService],
   exports: [],

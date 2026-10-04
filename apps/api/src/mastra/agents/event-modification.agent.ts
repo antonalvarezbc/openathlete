@@ -1,8 +1,6 @@
-import { Agent } from '@mastra/core/agent';
+import type { AgentSpec } from 'src/modules/ai';
 
-import { EVENT_MODIFICATION_MODEL } from 'src/common/constants/ai-models.constant';
-
-export const eventModificationAgent = new Agent({
+export const eventModificationAgent: AgentSpec = {
   id: 'event-modification',
   name: 'event-modification',
   description:
@@ -226,5 +224,4 @@ CRITICAL RULES:
 - Count the steps in the current event and make sure you return at least that many (unless explicitly asked to remove some)
 
 REMEMBER: This is a FULL UPDATE. Return the COMPLETE event with ALL workout steps, not just the first few!`,
-  model: EVENT_MODIFICATION_MODEL,
-});
+};

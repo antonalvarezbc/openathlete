@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 
+import { AiTask, trainingEventSchema } from '@openathlete/shared';
+
 import { eventGenerationAgent } from 'src/mastra/agents';
+import { AiModelResolverService, AiService } from 'src/modules/ai';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
 import {
@@ -14,7 +17,6 @@ import {
   fetchAthleteZones,
   formatZonesByType,
   getLatestMetrics,
-  trainingEventOutputOptions,
   validateNoNestedRepeatBlocks,
   validateWorkoutZoneTargets,
   withRetry,
@@ -22,11 +24,16 @@ import {
 
 @Injectable()
 export class EventGenerationService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly aiModelResolver: AiModelResolverService,
+    private readonly aiService: AiService,
+  ) {}
 
   async generateTrainingEvent(
     prompt: string,
     athleteId: number,
+    userId: number,
   ): Promise<TrainingEventSchema> {
     const zones = await fetchAthleteZones(this.prismaService, athleteId);
     const metrics = await fetchAthleteMetrics(this.prismaService, athleteId);
@@ -53,34 +60,28 @@ ${buildWorkoutTargetsInstructions()}`;
 
     const zoneIdMap = createZoneIdMap(zones);
 
-    const response = await withRetry(async () => {
-      const result = await eventGenerationAgent.generate(
+    // Resolved once: a missing key fails fast, before any retry
+    const model = await this.aiModelResolver.resolveForUser(
+      AiTask.EVENT_GENERATION,
+      userId,
+    );
+
+    return withRetry(async () => {
+      const event = await this.aiService.generateObject(
+        eventGenerationAgent,
+        model,
         fullPrompt,
-        trainingEventOutputOptions,
+        trainingEventSchema,
       );
 
-      if (!result.object) {
-        throw new Error(
-          'Failed to generate event: no structured output received',
-        );
+      // Invalid structures are retried with a new generation
+      if (event.workout) {
+        validateNoNestedRepeatBlocks(event.workout);
+        validateWorkoutZoneTargets(event.workout, zoneIdMap, zones);
+        convertWorkoutPaceTargetsToMs(event.workout);
       }
 
-      // Validate the generated event - if validation fails, retry
-      if (result.object.workout) {
-        validateNoNestedRepeatBlocks(result.object.workout);
-        validateWorkoutZoneTargets(result.object.workout, zoneIdMap, zones);
-        convertWorkoutPaceTargetsToMs(result.object.workout);
-      }
-
-      return result;
+      return event;
     });
-
-    if (!response.object) {
-      throw new Error(
-        'Failed to generate event: no structured output received',
-      );
-    }
-
-    return response.object;
   }
 }

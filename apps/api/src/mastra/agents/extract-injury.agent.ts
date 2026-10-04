@@ -1,8 +1,6 @@
-import { Agent } from '@mastra/core/agent';
+import type { AgentSpec } from 'src/modules/ai';
 
-import { EXTRACT_INJURY_MODEL } from 'src/common/constants/ai-models.constant';
-
-export const extractInjuryAgent = new Agent({
+export const extractInjuryAgent: AgentSpec = {
   id: 'extract-injury',
   name: 'extract-injury',
   description:
@@ -58,5 +56,4 @@ CRITICAL:
 - Be conservative: only extract if clearly injury/pain related
 - Location must be specific body part, not vague terms
 - Pain score must be between 0.0 and 1.0`,
-  model: EXTRACT_INJURY_MODEL,
-});
+};

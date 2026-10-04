@@ -9,21 +9,10 @@ import {
   trainingEventSchema,
 } from '@openathlete/shared';
 
+import { isRetryableAiError } from 'src/modules/ai/ai.errors';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
 export type TrainingEventSchema = z.infer<typeof trainingEventSchema>;
-
-/**
- * Generate options for agents that return a training event.
- *
- * OpenAI strict structured outputs reject this schema (recursive repeat
- * blocks, optional fields), so the JSON schema is only a guide for the model
- * and Mastra validates the response against the zod schema.
- */
-export const trainingEventOutputOptions = {
-  structuredOutput: { schema: trainingEventSchema },
-  providerOptions: { openai: { strictJsonSchema: false } },
-};
 
 // Types for zones and metrics
 type Zone = {
@@ -482,6 +471,8 @@ export async function withRetry<T>(
       return await fn();
     } catch (error) {
       lastError = error;
+
+      if (!isRetryableAiError(error)) break;
 
       // Don't retry on the last attempt
       if (attempt < maxRetries - 1) {

@@ -1,0 +1,80 @@
+// ============================================================================
+// AI settings (bring your own key)
+// ============================================================================
+// Users connect their own AI provider keys and choose the model used by each
+// AI feature. Without a key of their own, features fall back to the instance
+// keys when their plan (or the instance policy) includes hosted AI.
+// ============================================================================
+
+/// AI feature a model can be chosen for. DEFAULT applies to every feature
+/// without a specific choice.
+enum AiTask {
+  DEFAULT
+  EVENT_GENERATION
+  EVENT_MODIFICATION
+  POST_ACTIVITY_QUESTIONS
+  FEEDBACK_EXTRACTION
+  TRAINING_LOAD_ESTIMATION
+
+  @@map("ai_task")
+}
+
+/// A user's API key for an AI provider.
+model AiCredential {
+  // primary key
+  aiCredentialId Int @id @default(autoincrement()) @map("ai_credential_id")
+
+  // fields
+  /// Provider id from the model registry (e.g. "openai", "anthropic"), or
+  /// "custom" for an OpenAI-compatible endpoint
+  provider        String
+  /// Name shown in the settings
+  label           String
+  /// API key encrypted with AES-256-GCM, never returned to clients
+  encryptedApiKey String    @map("encrypted_api_key")
+  /// Last characters of the key, to recognise it in the settings
+  apiKeyHint      String    @map("api_key_hint")
+  /// Base URL of a custom OpenAI-compatible endpoint
+  baseUrl         String?   @map("base_url")
+  /// Last provider error (rejected key, exhausted quota...)
+  lastError       String?   @map("last_error")
+  lastErrorAt     DateTime? @map("last_error_at")
+  lastUsedAt      DateTime? @map("last_used_at")
+
+  // relationships
+  user             User                @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  userId           Int                 @map("user_id")
+  modelPreferences AiModelPreference[]
+
+  // timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("ai_credential")
+}
+
+/// The model a user picked for an AI feature, with the key it runs on.
+model AiModelPreference {
+  // primary key
+  aiModelPreferenceId Int @id @default(autoincrement()) @map("ai_model_preference_id")
+
+  // fields
+  task    AiTask
+  /// Model id at the credential's provider (e.g. "gpt-5.1")
+  modelId String @map("model_id")
+
+  // relationships
+  user           User         @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  userId         Int          @map("user_id")
+  credential     AiCredential @relation(fields: [aiCredentialId], references: [aiCredentialId], onDelete: Cascade)
+  aiCredentialId Int          @map("ai_credential_id")
+
+  // timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, task])
+  @@index([aiCredentialId])
+  @@map("ai_model_preference")
+}

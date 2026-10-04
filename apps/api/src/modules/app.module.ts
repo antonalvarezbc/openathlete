@@ -18,6 +18,7 @@ import {
 } from 'src/listeners';
 
 import { AgentModule } from './agent/agent.module';
+import { AiModule } from './ai';
 import { AppController } from './app.controller';
 import { AuthModule } from './auth';
 import { CalendarModule } from './calendar/calendar.module';
@@ -45,6 +46,7 @@ import { SubscriptionModule } from './subscription';
     AuthModule,
     CoreModule,
     AgentModule,
+    AiModule,
     MessagesModule,
     CalendarModule,
     EventEmitterModule.forRoot(),

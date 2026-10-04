@@ -1,6 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 
-import { AuthModule } from '../auth';
+import { AuthModule } from '../auth/auth.module';
 import { PrismaService } from '../prisma/services/prisma.service';
 import { StripeWebhookController } from './controllers/stripe-webhook.controller';
 import { SubscriptionController } from './controllers/subscription.controller';

@@ -127,10 +127,13 @@ describe('AccountDeletionService (PostgreSQL)', () => {
     await service.deleteAccount(DELETED_USER_ID);
 
     // Only the coach's own data is left: their user and athlete profile,
-    // and the direct conversation with the message they wrote
+    // their AI key and model choice, and the direct conversation with the
+    // message they wrote
     expect(await rowCounts()).toEqual({
       user: 1,
       athlete: 1,
+      ai_credential: 1,
+      ai_model_preference: 1,
       message_thread: 1,
       message_thread_participant: 1,
       message: 1,

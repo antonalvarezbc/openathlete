@@ -3,11 +3,14 @@ import { OnEvent } from '@nestjs/event-emitter';
 
 import { AthleteInjury, Prisma } from '@openathlete/database';
 import { InputJsonValue } from '@openathlete/database/generated/client/runtime/library';
-import { FeatureName } from '@openathlete/shared';
+import { AiTask } from '@openathlete/shared';
 
 import { Language } from 'src/common/constants/languages.constant';
 import { ActivityImportedEvent } from 'src/events';
-import { postActivityFeedbackAgent } from 'src/mastra/agents';
+import {
+  feedbackQuestionsOutputSchema,
+  postActivityFeedbackAgent,
+} from 'src/mastra/agents';
 import {
   buildMetricsContext,
   buildZonesContext,
@@ -16,8 +19,8 @@ import {
   formatZonesByType,
   getLatestMetrics,
 } from 'src/modules/agent/services/event-ai-helpers';
+import { AiModelResolverService, AiService } from 'src/modules/ai';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
-import { FeatureAccessService } from 'src/modules/subscription';
 
 @Injectable()
 export class ActivityFeedbackListener {
@@ -25,7 +28,8 @@ export class ActivityFeedbackListener {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly featureAccessService: FeatureAccessService,
+    private readonly aiModelResolver: AiModelResolverService,
+    private readonly aiService: AiService,
   ) {}
 
   @OnEvent(ActivityImportedEvent.SLUG, { async: true })
@@ -79,15 +83,14 @@ export class ActivityFeedbackListener {
       const athleteId = activity.event.athleteId;
       const userLanguage = activity.event.athlete.user?.language ?? Language.FR;
 
-      const hasAIAccess =
-        await this.featureAccessService.canAccessFeatureForAthlete(
-          athleteId,
-          FeatureName.AI_RPE_QUESTIONS,
-        );
+      const model = await this.aiModelResolver.tryResolveForAthlete(
+        AiTask.POST_ACTIVITY_QUESTIONS,
+        athleteId,
+      );
 
-      if (!hasAIAccess) {
+      if (!model) {
         this.logger.debug(
-          `Athlete ${athleteId} and their coaches do not have access to AI RPE questions feature, skipping question generation`,
+          `Neither athlete ${athleteId} nor their coaches have AI for feedback questions, skipping question generation`,
         );
         return;
       }
@@ -208,43 +211,21 @@ export class ActivityFeedbackListener {
         `Use ${({ French: 'tu', Italian: 'tu', Spanish: 'tú', English: 'you' } as Record<string, string>)[targetLanguage]} form, direct and friendly coaching style.`,
       ].join('\n');
 
-      const response = await postActivityFeedbackAgent.generate(context);
+      const { questions } = await this.aiService.generateObject(
+        postActivityFeedbackAgent,
+        model,
+        context,
+        feedbackQuestionsOutputSchema,
+      );
 
-      if (!response.text) {
-        this.logger.warn(
-          `Post-activity feedback agent returned empty response for activity ${eventActivityId}`,
-        );
-        return;
-      }
-
-      let parsed: {
-        questions?: Array<{
-          text: string;
-          qcmOptions?: Array<{ label: string }>;
-        }>;
-      };
-
-      try {
-        const jsonMatch = response.text.match(/\{[\s\S]*\}/);
-        parsed = JSON.parse(
-          jsonMatch ? jsonMatch[0] : response.text,
-        ) as typeof parsed;
-      } catch (error) {
-        this.logger.error(
-          `Failed to parse post-activity feedback agent response for activity ${eventActivityId}: ${response.text}`,
-          error instanceof Error ? error.stack : undefined,
-        );
-        return;
-      }
-
-      if (!parsed.questions || parsed.questions.length === 0) {
+      if (questions.length === 0) {
         this.logger.warn(
           `No questions returned by post-activity feedback agent for activity ${eventActivityId}`,
         );
         return;
       }
 
-      const questionsToCreate = parsed.questions.slice(0, 4);
+      const questionsToCreate = questions.slice(0, 4);
 
       await this.prisma.$transaction(
         questionsToCreate.map((question) =>

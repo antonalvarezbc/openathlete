@@ -5,6 +5,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 
 import { ApiEnvSchemaType } from '@openathlete/shared';
 
+import { AiModule } from '../ai/ai.module';
 import { CalendarModule } from '../calendar/calendar.module';
 import { CoreModule } from '../core';
 import { PrismaService } from '../prisma/services/prisma.service';
@@ -120,6 +121,7 @@ function parseRedisUrl(redisUrl: string): {
 
 @Module({
   imports: [
+    AiModule,
     ConfigModule,
     EventEmitterModule,
     forwardRef(() => CoreModule),

@@ -1,11 +1,20 @@
-import { Job } from 'bullmq';
+import { Job, UnrecoverableError } from 'bullmq';
 
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Inject, Logger, Optional, forwardRef } from '@nestjs/common';
 
-import { TrainingZone, mapPrismaWorkoutToDto } from '@openathlete/shared';
+import {
+  AiTask,
+  TrainingZone,
+  mapPrismaWorkoutToDto,
+} from '@openathlete/shared';
 
-import { trimpEstimationAgent } from 'src/mastra/agents';
+import {
+  trimpEstimationAgent,
+  trimpEstimationOutputSchema,
+} from 'src/mastra/agents';
+import { AiModelResolverService, AiService } from 'src/modules/ai';
+import { isRetryableAiError } from 'src/modules/ai/ai.errors';
 
 import {
   fetchAthleteMetrics,
@@ -24,24 +33,16 @@ import {
   formatGoalSummary,
 } from '../utils/training-load-prompt.helpers';
 
-interface TrimpEstimationResult {
-  duration_min: number;
-  hr_avg: number;
-  delta: number;
-  trimp: number;
-  assumptions: string[];
-  confidence: number;
-  explanation: string;
-}
-
 @Processor('training-load-estimation', {
-  concurrency: 2, // Max 2 concurrent jobs to avoid OpenAI rate limits
+  concurrency: 2, // Limits concurrent calls on users' AI keys
 })
 export class TrainingLoadEstimationProcessor extends WorkerHost {
   private readonly logger = new Logger(TrainingLoadEstimationProcessor.name);
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly aiModelResolver: AiModelResolverService,
+    private readonly aiService: AiService,
     @Optional()
     @Inject(forwardRef(() => CalendarWebSocketService))
     private readonly calendarWebSocketService?: CalendarWebSocketService,
@@ -56,6 +57,17 @@ export class TrainingLoadEstimationProcessor extends WorkerHost {
       this.logger.log(
         `Processing training load estimation for event ${eventId} (training ${eventTrainingId})...`,
       );
+
+      // Keys may have been removed since the job was scheduled
+      const model = await this.aiModelResolver.tryResolveForAthlete(
+        AiTask.TRAINING_LOAD_ESTIMATION,
+        athleteId,
+      );
+      if (!model) {
+        throw new UnrecoverableError(
+          'No AI model available for training load estimation',
+        );
+      }
 
       // Fetch event with workout and athlete data
       const event = await this.prisma.event.findUnique({
@@ -164,35 +176,22 @@ export class TrainingLoadEstimationProcessor extends WorkerHost {
         workoutStructure,
       ].join('\n');
 
-      const response = await trimpEstimationAgent.generate(prompt);
-
-      if (!response.text) {
-        throw new Error('Agent returned no response');
-      }
-
-      // Parse JSON response
-      let result: TrimpEstimationResult;
+      let result;
       try {
-        // Try to extract JSON from the response (might have markdown code blocks)
-        const jsonMatch = response.text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          result = JSON.parse(jsonMatch[0]) as TrimpEstimationResult;
-        } else {
-          throw new Error('No JSON found in response');
+        result = await this.aiService.generateObject(
+          trimpEstimationAgent,
+          model,
+          prompt,
+          trimpEstimationOutputSchema,
+        );
+      } catch (error) {
+        // Job attempts only make sense for invalid answers
+        if (!isRetryableAiError(error)) {
+          throw new UnrecoverableError(
+            error instanceof Error ? error.message : String(error),
+          );
         }
-      } catch (parseError) {
-        this.logger.error(
-          `Failed to parse agent response: ${response.text}`,
-          parseError instanceof Error ? parseError.stack : undefined,
-        );
-        throw new Error(
-          `Failed to parse TRIMP estimation result: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
-        );
-      }
-
-      // Validate result
-      if (typeof result.trimp !== 'number' || Number.isNaN(result.trimp)) {
-        throw new Error(`Invalid TRIMP value in result: ${result.trimp}`);
+        throw error;
       }
 
       // Save estimated_load to event_training

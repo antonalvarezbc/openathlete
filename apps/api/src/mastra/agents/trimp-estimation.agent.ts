@@ -1,6 +1,3 @@
-import { Agent } from '@mastra/core/agent';
-
-import { TRIMP_ESTIMATION_MODEL } from 'src/common/constants/ai-models.constant';
 import {
   DEFAULT_FTP_CYCLING,
   DEFAULT_FTP_RUNNING,
@@ -17,8 +14,9 @@ import {
   TRIMP_COEFFICIENT_K_MALE,
   TRIMP_COEFFICIENT_Y_MALE,
 } from 'src/common/constants/training-formulas.constants';
+import type { AgentSpec } from 'src/modules/ai';
 
-export const trimpEstimationAgent = new Agent({
+export const trimpEstimationAgent: AgentSpec = {
   id: 'trimp-estimation',
   name: 'trimp-estimation',
   description:
@@ -107,5 +105,4 @@ OUTPUT (JSON only):
   "confidence": float,
   "explanation": string
 }`,
-  model: TRIMP_ESTIMATION_MODEL,
-});
+};

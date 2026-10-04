@@ -1,8 +1,6 @@
-import { Agent } from '@mastra/core/agent';
+import type { AgentSpec } from 'src/modules/ai';
 
-import { POST_ACTIVITY_FEEDBACK_MODEL } from 'src/common/constants/ai-models.constant';
-
-export const postActivityFeedbackAgent = new Agent({
+export const postActivityFeedbackAgent: AgentSpec = {
   id: 'post-activity-feedback',
   name: 'post-activity-feedback',
   description:
@@ -68,5 +66,4 @@ CRITICAL:
 - MAX 4 questions.
 - Tailor each question to the provided context; do NOT ask generic questions.
 - Respect the language requirement specified in the context.`,
-  model: POST_ACTIVITY_FEEDBACK_MODEL,
-});
+};

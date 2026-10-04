@@ -1,8 +1,14 @@
 import { Injectable } from '@nestjs/common';
 
-import { WorkoutStepDto, WorkoutStepTarget } from '@openathlete/shared';
+import {
+  AiTask,
+  WorkoutStepDto,
+  WorkoutStepTarget,
+  trainingEventSchema,
+} from '@openathlete/shared';
 
 import { eventModificationAgent } from 'src/mastra/agents';
+import { AiModelResolverService, AiService } from 'src/modules/ai';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
 import {
@@ -17,7 +23,6 @@ import {
   fetchAthleteZones,
   formatZonesByType,
   getLatestMetrics,
-  trainingEventOutputOptions,
   validateNoNestedRepeatBlocks,
   validateWorkoutZoneTargets,
   withRetry,
@@ -25,12 +30,17 @@ import {
 
 @Injectable()
 export class EventModificationService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly aiModelResolver: AiModelResolverService,
+    private readonly aiService: AiService,
+  ) {}
 
   async modifyTrainingEvent(
     prompt: string,
     athleteId: number,
     eventData: TrainingEventSchema,
+    userId: number,
   ): Promise<TrainingEventSchema> {
     const workoutForPrompt = eventData.workout
       ? (JSON.parse(
@@ -172,32 +182,28 @@ IMPORTANT: This is a FULL UPDATE. Return the complete event structure with all f
 
     const zoneIdMap = createZoneIdMap(zones);
 
-    const response = await withRetry(async () => {
-      const result = await eventModificationAgent.generate(
+    // Resolved once: a missing key fails fast, before any retry
+    const model = await this.aiModelResolver.resolveForUser(
+      AiTask.EVENT_MODIFICATION,
+      userId,
+    );
+
+    return withRetry(async () => {
+      const event = await this.aiService.generateObject(
+        eventModificationAgent,
+        model,
         fullPrompt,
-        trainingEventOutputOptions,
+        trainingEventSchema,
       );
 
-      if (!result.object) {
-        throw new Error(
-          'Failed to modify event: no structured output received',
-        );
+      // Invalid structures are retried with a new generation
+      if (event.workout) {
+        validateNoNestedRepeatBlocks(event.workout);
+        validateWorkoutZoneTargets(event.workout, zoneIdMap, zones);
+        convertWorkoutPaceTargetsToMs(event.workout);
       }
 
-      // Validate the modified event - if validation fails, retry
-      if (result.object.workout) {
-        validateNoNestedRepeatBlocks(result.object.workout);
-        validateWorkoutZoneTargets(result.object.workout, zoneIdMap, zones);
-        convertWorkoutPaceTargetsToMs(result.object.workout);
-      }
-
-      return result;
+      return event;
     });
-
-    if (!response.object) {
-      throw new Error('Failed to modify event: no structured output received');
-    }
-
-    return response.object;
   }
 }

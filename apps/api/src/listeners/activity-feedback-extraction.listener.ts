@@ -1,24 +1,30 @@
-import { openai } from '@ai-sdk/openai';
-
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 
-import { Prisma } from '@openathlete/database';
+import { AiTask } from '@openathlete/shared';
 
 import { ActivityFeedbackCompletedEvent } from 'src/events';
-import { extractInjuryAgent, extractRpeAgent } from 'src/mastra/agents';
+import {
+  extractInjuryAgent,
+  extractRpeAgent,
+  injuriesOutputSchema,
+  rpeOutputSchema,
+} from 'src/mastra/agents';
+import { AiModelResolverService, AiService } from 'src/modules/ai';
+import { isRetryableAiError } from 'src/modules/ai/ai.errors';
 import { CalendarWebSocketService } from 'src/modules/calendar/services/calendar-websocket.service';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
 @Injectable()
 export class ActivityFeedbackExtractionListener {
   private readonly logger = new Logger(ActivityFeedbackExtractionListener.name);
-  private readonly embedder = openai.embedding('text-embedding-3-small');
   private readonly MAX_RETRIES = 3;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly calendarWebSocketService: CalendarWebSocketService,
+    private readonly aiModelResolver: AiModelResolverService,
+    private readonly aiService: AiService,
   ) {}
 
   @OnEvent(ActivityFeedbackCompletedEvent.SLUG, { async: true })
@@ -91,6 +97,17 @@ export class ActivityFeedbackExtractionListener {
         return;
       }
 
+      const model = await this.aiModelResolver.tryResolveForAthlete(
+        AiTask.FEEDBACK_EXTRACTION,
+        athleteId,
+      );
+      if (!model) {
+        this.logger.debug(
+          `Neither athlete ${athleteId} nor their coaches have AI for feedback analysis, skipping extraction`,
+        );
+        return;
+      }
+
       // Fetch recent injury logs (last 2 weeks)
       const twoWeeksAgo = new Date();
       twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
@@ -130,101 +147,33 @@ export class ActivityFeedbackExtractionListener {
         recentInjuriesContext,
       ].join('\n');
 
-      // Extract injuries with retry
-      const injuries = await this.retryWithBackoff(async () => {
-        const response = await extractInjuryAgent.generate(injuryContext);
-        if (!response.text) {
-          throw new Error('Empty response from injury extraction agent');
-        }
-        const jsonMatch = response.text.match(/\{[\s\S]*\}/);
-        const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : response.text) as {
-          injuries?: Array<{
-            location: string;
-            painScore: number;
-            context: string;
-            status: string;
-          }>;
-        };
-        return parsed.injuries || [];
-      }, 'injury extraction');
+      const { injuries } = await this.retryWithBackoff(
+        () =>
+          this.aiService.generateObject(
+            extractInjuryAgent,
+            model,
+            injuryContext,
+            injuriesOutputSchema,
+          ),
+        'injury extraction',
+      );
 
-      // Extract RPE with retry
-      const rpeResult = await this.retryWithBackoff(async () => {
-        const response = await extractRpeAgent.generate(feedbackText);
-        if (!response.text) {
-          throw new Error('Empty response from RPE extraction agent');
-        }
-        const jsonMatch = response.text.match(/\{[\s\S]*\}/);
-        const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : response.text) as {
-          extractedRpe?: number | null;
-        };
-        return parsed.extractedRpe ?? null;
-      }, 'RPE extraction');
-
-      // Create embeddings with retry
-      const embedding = await this.retryWithBackoff(async () => {
-        const result = await this.embedder.doEmbed({
-          values: [feedbackText],
-        });
-
-        // doEmbed returns an object with embeddings property
-        // Structure: { embeddings: number[][] }
-        if (!result || typeof result !== 'object') {
-          throw new Error(
-            `Invalid embedding result: ${JSON.stringify(result)}`,
-          );
-        }
-
-        if ('embeddings' in result && Array.isArray(result.embeddings)) {
-          const embeddings = result.embeddings as number[][];
-          if (embeddings.length === 0 || !Array.isArray(embeddings[0])) {
-            throw new Error(
-              `Invalid embeddings array: ${JSON.stringify(embeddings)}`,
-            );
-          }
-          return embeddings[0];
-        }
-
-        // Fallback: check if result is directly an array
-        if (
-          Array.isArray(result) &&
-          result.length > 0 &&
-          Array.isArray(result[0])
-        ) {
-          return result[0];
-        }
-
-        throw new Error(
-          `Unexpected embedding result structure: ${JSON.stringify(result)}`,
-        );
-      }, 'embedding creation');
-
-      if (!embedding || !Array.isArray(embedding)) {
-        this.logger.error(
-          `Invalid embedding format: ${JSON.stringify(embedding)}`,
-        );
-        throw new Error(
-          `Invalid embedding format: expected array, got ${typeof embedding}`,
-        );
-      }
+      const { extractedRpe: rpeResult } = await this.retryWithBackoff(
+        () =>
+          this.aiService.generateObject(
+            extractRpeAgent,
+            model,
+            feedbackText,
+            rpeOutputSchema,
+          ),
+        'RPE extraction',
+      );
 
       // Store everything in a transaction
       await this.prisma.$transaction(async (tx) => {
         // Store injuries
         if (injuries.length > 0) {
           for (const injury of injuries) {
-            // Validate status
-            const validStatuses = [
-              'WORSENING',
-              'IMPROVING',
-              'STABLE',
-              'RESOLVED',
-            ];
-            const status = validStatuses.includes(injury.status)
-              ? (injury.status as
-                  'WORSENING' | 'IMPROVING' | 'STABLE' | 'RESOLVED')
-              : 'STABLE';
-
             await tx.athleteInjury.create({
               data: {
                 athleteId: athleteId,
@@ -232,7 +181,7 @@ export class ActivityFeedbackExtractionListener {
                 location: injury.location,
                 painScore: Math.max(0, Math.min(1, injury.painScore)),
                 context: injury.context,
-                status: status,
+                status: injury.status,
               },
             });
           }
@@ -241,8 +190,8 @@ export class ActivityFeedbackExtractionListener {
           );
         }
 
-        // Update RPE if extracted
-        if (rpeResult !== null && rpeResult >= 0 && rpeResult <= 1) {
+        // Update RPE if extracted (the schema bounds it to 0-1)
+        if (rpeResult !== null) {
           await tx.eventActivity.update({
             where: { eventActivityId: eventActivityId },
             data: { rpe: rpeResult },
@@ -255,27 +204,6 @@ export class ActivityFeedbackExtractionListener {
           this.calendarWebSocketService.notifyActivityProcessed(
             eventId,
             athleteId,
-          );
-        }
-
-        if (embedding && Array.isArray(embedding) && embedding.length > 0) {
-          const embeddingVector = `[${embedding.join(',')}]`;
-
-          await tx.$executeRaw(
-            Prisma.sql`
-            INSERT INTO activity_feedback_embedding (event_activity_id, text_content, embedding, created_at, updated_at)
-            VALUES (${eventActivityId}, ${feedbackText}, ${Prisma.raw(`${embeddingVector}::vector`)}, NOW(), NOW())
-            ON CONFLICT (event_activity_id) 
-            DO UPDATE SET 
-              text_content = EXCLUDED.text_content,
-              embedding = EXCLUDED.embedding,
-              updated_at = NOW()
-            `,
-          );
-          this.logger.log(`✓ Stored embedding for activity ${eventActivityId}`);
-        } else {
-          this.logger.warn(
-            `Skipping embedding storage for activity ${eventActivityId}: invalid embedding format`,
           );
         }
       });
@@ -303,6 +231,7 @@ export class ActivityFeedbackExtractionListener {
         return await fn();
       } catch (error) {
         lastError = error;
+        if (!isRetryableAiError(error)) break;
         if (attempt < retries) {
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000); // Exponential backoff, max 10s
           this.logger.warn(

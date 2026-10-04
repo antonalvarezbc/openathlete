@@ -31,8 +31,9 @@ import {
   createCheckoutSessionDtoSchema,
 } from '@openathlete/shared';
 
-import { JwtUser, UserTypeGuard } from '../../auth';
+import { JwtUser } from '../../auth/decorators/user.decorator';
 import { AuthUser } from '../../auth/decorators/user.decorator';
+import { UserTypeGuard } from '../../auth/guards/user-type.guard';
 import { FeatureAccessService } from '../services/feature-access.service';
 import { StripeService } from '../services/stripe.service';
 import { SubscriptionService } from '../services/subscription.service';
@@ -482,7 +483,7 @@ export class SubscriptionController {
   @ApiOperation({
     summary: 'Check athlete feature access',
     description:
-      'Checks if a specific athlete has access to a given feature. Access is granted if either the athlete themselves or any of their coaches has an active subscription that includes the feature. Currently supported features: AI_GENERATION (AI event generation) and AI_RPE_QUESTIONS (AI RPE questions). This endpoint is useful for paywall checks and feature gating.',
+      "Checks whether the athlete or one of their coaches has a plan including a feature (AI_GENERATION, AI_RPE_QUESTIONS: hosted AI on the instance keys). Whether an AI feature can actually run, including on users' own keys, is given by GET /ai/access.",
   })
   @ApiParam({
     name: 'athleteId',

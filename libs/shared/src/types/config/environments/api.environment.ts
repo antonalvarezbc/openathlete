@@ -232,7 +232,37 @@ export const ApiEnvSchema = z
       .optional()
       .describe('Google Generative AI API key (optional)'),
 
-    // AI Model Configuration (optional, uses defaults if not provided)
+    // Instance AI keys (above, and any provider's standard variable such as
+    // ANTHROPIC_API_KEY) are "hosted AI". Users can always use their own keys.
+    AI_HOSTED_ACCESS: z
+      .enum(['subscribers', 'everyone', 'none'])
+      .optional()
+      .describe(
+        'Who may use the instance AI keys: subscribers (paid plan with AI), everyone, or none. Default: subscribers when Stripe is configured, everyone otherwise',
+      ),
+
+    AI_ALLOW_CUSTOM_ENDPOINTS: z
+      .enum(['true', 'false'])
+      .optional()
+      .transform((val) => (val === undefined ? undefined : val === 'true'))
+      .describe(
+        'Let users add OpenAI-compatible endpoints by URL (Ollama, vLLM...) and providers on local URLs. The server calls these URLs, so keep it off on public instances. Default: on without Stripe, off with Stripe',
+      ),
+
+    // Models used with the instance keys, as provider/model. Users with their
+    // own keys pick their models in the settings.
+    AI_MODEL_DEFAULT: z
+      .string()
+      .optional()
+      .describe(
+        'Instance model for every AI feature without its own variable (e.g. openai/gpt-5.1, anthropic/claude-sonnet-4-5)',
+      ),
+    AI_MODEL_FEEDBACK_EXTRACTION: z
+      .string()
+      .optional()
+      .describe(
+        'Instance model extracting RPE and injuries from athlete feedback',
+      ),
     AI_MODEL_EVENT_GENERATION: z
       .string()
       .optional()
@@ -246,11 +276,11 @@ export const ApiEnvSchema = z
     AI_MODEL_EXTRACT_INJURY: z
       .string()
       .optional()
-      .describe('AI model for injury extraction agent (e.g., gpt-4o, gpt-5.1)'),
+      .describe('Deprecated: use AI_MODEL_FEEDBACK_EXTRACTION'),
     AI_MODEL_EXTRACT_RPE: z
       .string()
       .optional()
-      .describe('AI model for RPE extraction agent (e.g., gpt-4o, gpt-5.1)'),
+      .describe('Deprecated: use AI_MODEL_FEEDBACK_EXTRACTION'),
     AI_MODEL_POST_ACTIVITY_FEEDBACK: z
       .string()
       .optional()

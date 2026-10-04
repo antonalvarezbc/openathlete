@@ -1,8 +1,6 @@
-import { Agent } from '@mastra/core/agent';
+import type { AgentSpec } from 'src/modules/ai';
 
-import { EXTRACT_RPE_MODEL } from 'src/common/constants/ai-models.constant';
-
-export const extractRpeAgent = new Agent({
+export const extractRpeAgent: AgentSpec = {
   id: 'extract-rpe',
   name: 'extract-rpe',
   description:
@@ -60,5 +58,4 @@ CRITICAL:
 - Be conservative: only extract if clearly RPE-related
 - Value must be between 0.0 and 1.0
 - Do NOT hallucinate RPE from vague descriptions`,
-  model: EXTRACT_RPE_MODEL,
-});
+};
