@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
+import { BulkWorkoutSelectButton } from './bulk-workout-select-button';
 import { CalendarViewToggle } from './calendar-view-toggle';
 import { useTemplateLibrarySidebar } from './contexts/template-library-sidebar-context';
 import { useCalendarContext } from './hooks/use-calendar-context';
@@ -127,8 +128,8 @@ export function CalendarHeader() {
       </div>
       <div className="flex flex-col gap-2 md:flex-row md:flex-wrap">
         <CalendarViewToggle />
-        {/* Filters row */}
-        <div className="flex gap-2">
+        {/* Coach tools and filters row */}
+        <div className="flex flex-wrap gap-2">
           {roles?.includes('COACH') && (
             <Button
               variant={open ? 'default' : 'outline'}
@@ -139,6 +140,7 @@ export function CalendarHeader() {
               {m.template_library()}
             </Button>
           )}
+          <BulkWorkoutSelectButton iconOnlyOnMobile />
           <Select
             value={coloredBy || ''}
             onValueChange={(c) => {
