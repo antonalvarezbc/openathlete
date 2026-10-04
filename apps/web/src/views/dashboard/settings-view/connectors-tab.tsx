@@ -43,6 +43,7 @@ import {
   ConnectorProvider,
   ProviderPreferencesDto,
   getProviderSyncCapabilities,
+  isFullImportInProgress,
 } from '@openathlete/shared';
 
 import { SettingsSection } from './settings-section';
@@ -297,8 +298,8 @@ export function ConnectorsTab() {
                 const fullImportCompleted =
                   providerDetails?.fullImportCompletedAt != null;
                 const fullImportInProgress =
-                  providerDetails?.fullImportRequestedAt != null &&
-                  !providerDetails.fullImportCompletedAt;
+                  providerDetails != null &&
+                  isFullImportInProgress(providerDetails);
 
                 return (
                   <Card key={provider}>

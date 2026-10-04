@@ -65,10 +65,12 @@ Leave a variable empty to disable the feature:
 | AI session generation and feedback | `OPENAI_API_KEY` |
 | Transactional email (password reset, invitations) | `BREVO_API_KEY`, `BREVO_FROM_EMAIL` |
 | Device sync | `STRAVA_*`, `GARMIN_*`, `POLAR_*`, `SUUNTO_*` |
-| Background activity import | `ENABLE_ACTIVITY_IMPORT`, `ENABLE_ACTIVITY_PROCESSING` |
+| AI load estimation of planned sessions | `ENABLE_TRAINING_LOAD_ESTIMATION` (with `OPENAI_API_KEY`) |
 | Billing | `STRIPE_*` (not needed for self-hosting) |
 
 Every API variable is documented in `apps/api/.env.example`.
+
+Activities from connected devices, including historical imports, are fetched by background jobs that run inside the API container (`ENABLE_ACTIVITY_IMPORT` and `ENABLE_ACTIVITY_PROCESSING`, both on by default). To run them in a separate worker instead, start a second API container with these two variables set to `true` and `SKIP_MIGRATIONS=true`, and set them to `false` on the API.
 
 ### HTTPS and reverse proxies
 

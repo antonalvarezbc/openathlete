@@ -268,7 +268,8 @@ export class StravaProviderService
         account,
         async (accessToken) => {
           const response = await axios.get<StravaSummaryActivity[]>(
-            `https://www.strava.com/api/v3/athlete/activities?page=${page}`,
+            // 200 is the largest page Strava allows: 7x fewer rate-limited calls
+            `https://www.strava.com/api/v3/athlete/activities?page=${page}&per_page=200`,
             {
               headers: {
                 Authorization: `Bearer ${accessToken}`,

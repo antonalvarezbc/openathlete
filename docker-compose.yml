@@ -110,9 +110,9 @@ services:
       # Firebase (optional)
       FIREBASE_FUNCTIONS_URL: ${FIREBASE_FUNCTIONS_URL:-}
       
-      # Feature flags
-      ENABLE_ACTIVITY_IMPORT: ${ENABLE_ACTIVITY_IMPORT:-false}
-      ENABLE_ACTIVITY_PROCESSING: ${ENABLE_ACTIVITY_PROCESSING:-false}
+      # Background jobs (device sync needs import and processing)
+      ENABLE_ACTIVITY_IMPORT: ${ENABLE_ACTIVITY_IMPORT:-true}
+      ENABLE_ACTIVITY_PROCESSING: ${ENABLE_ACTIVITY_PROCESSING:-true}
       ENABLE_TRAINING_LOAD_ESTIMATION: ${ENABLE_TRAINING_LOAD_ESTIMATION:-false}
       
       # Monitoring (optional)

@@ -21,8 +21,8 @@ export interface GetOAuthUriResponse {
 export interface ImportAllActivitiesResponse {
   success: boolean;
   message?: string;
-  queuedActivities?: number;
-  backfillRequested?: boolean;
+  // The import runs in the background; follow it through fullImportCompletedAt
+  queued?: boolean;
 }
 
 export class ProviderAPI {

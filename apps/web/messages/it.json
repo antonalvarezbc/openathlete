@@ -692,7 +692,7 @@
   "full_import_in_progress": "Importazione in corso...",
   "full_import_completed": "Importazione storica già completata.",
   "full_import_disabled": "Abilita l'importazione delle sessioni per attivare questa funzione.",
-  "full_import_started": "Importazione storica richiesta per {provider}.",
+  "full_import_started": "Importazione dello storico {provider} avviata. Le tue attività compariranno progressivamente nei prossimi minuti.",
   "full_import_failed": "Impossibile avviare l'importazione storica per {provider}",
   "connected_and_syncing": "Connesso e in sincronizzazione",
   "not_connected": "Non connesso",

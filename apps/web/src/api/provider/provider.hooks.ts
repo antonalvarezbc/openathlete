@@ -6,7 +6,11 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 
-import { ConnectorProvider, ProviderPreferencesDto } from '@openathlete/shared';
+import {
+  ConnectorProvider,
+  ProviderPreferencesDto,
+  isFullImportInProgress,
+} from '@openathlete/shared';
 
 import { ConnectedProvider, ProviderAPI } from './provider.api';
 import { providerKeys } from './provider.keys';
@@ -70,6 +74,11 @@ export const useGetConnectedProvidersQuery = (
     ...opt,
     queryKey: [providerKeys.getConnected],
     queryFn: ProviderAPI.getConnectedProviders,
+    // Historical imports run in the background: follow them until done
+    refetchInterval: (query) =>
+      query.state.data?.some((provider) => isFullImportInProgress(provider))
+        ? 15_000
+        : false,
   });
 };
 

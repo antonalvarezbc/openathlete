@@ -8,6 +8,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   Logger,
   Param,
   Patch,
@@ -15,6 +16,7 @@ import {
   Req,
   Res,
   UseGuards,
+  forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
@@ -34,19 +36,20 @@ import type { ApiEnvSchemaType } from '@openathlete/shared';
 import {
   ProviderPreferencesDto,
   getProviderSyncCapabilities,
+  isFullImportInProgress,
   providerPreferencesSchema,
 } from '@openathlete/shared';
 
 import { JwtUser, UserTypeGuard } from 'src/modules/auth';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
+import { QueueService } from 'src/modules/queue/queue.service';
 
 import {
   GarminHealthPingPayload,
   PolarWebhookPayload,
   SuuntoWebhookPayload,
 } from '../../core/types/connector';
-import { FullImportResult } from '../base/base-provider.service';
 import { CorosProviderService, SuuntoProviderService } from '../providers';
 import { GarminProviderService } from '../providers/garmin.provider.service';
 import { PolarProviderService } from '../providers/polar.provider.service';
@@ -69,6 +72,8 @@ export class ProviderOAuthController {
     private readonly corosProviderService: CorosProviderService,
     private readonly polarProviderService: PolarProviderService,
     private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => QueueService))
+    private readonly queueService: QueueService,
   ) {}
 
   private async getAthleteForUser(user: AuthUser) {
@@ -628,7 +633,7 @@ export class ProviderOAuthController {
   @ApiOperation({
     summary: 'Trigger full historical activity import',
     description:
-      'Initiates a full historical import of all activities from a connected provider. The import is queued and processed asynchronously. Only providers that support full import (Strava, Garmin, Polar, Suunto) can use this endpoint. Activity import must be enabled for the provider. If a full import is already in progress, the request will be rejected. If a full import was already completed, returns success without re-importing. Some providers may request a backfill, in which case the import completion date is set to null until backfill completes.',
+      'Queues a full historical import of all activities from a connected provider and returns immediately: the worker lists the history and imports activities progressively, and fullImportCompletedAt is set once every activity is queued. Only providers that support full import (Strava, Garmin, Polar, Suunto) can use this endpoint. Activity import must be enabled for the provider. If a full import is already in progress (requested less than 24 hours ago), the request is rejected. If a full import was already completed, returns success without re-importing. Some providers may request a backfill, in which case the import completion date is set to null until backfill completes.',
   })
   @ApiParam({
     name: 'provider',
@@ -644,16 +649,11 @@ export class ProviderOAuthController {
       type: 'object',
       properties: {
         success: { type: 'boolean', example: true },
-        queuedActivities: {
-          type: 'number',
-          description: 'Number of activities queued for import',
-          example: 150,
-        },
-        backfillRequested: {
+        queued: {
           type: 'boolean',
           description:
-            'Whether a backfill was requested (import will complete later)',
-          example: false,
+            'The import was queued; the worker lists the history and imports activities progressively',
+          example: true,
         },
         message: {
           type: 'string',
@@ -707,77 +707,28 @@ export class ProviderOAuthController {
       return { success: true, message: 'Full import already completed' };
     }
 
-    if (account.fullImportRequestedAt && !account.fullImportCompletedAt) {
+    if (isFullImportInProgress(account)) {
       throw new BadRequestException(
         'A historical import is already in progress',
       );
     }
 
-    const now = new Date();
-
+    // Listing the whole history can take minutes: the worker does it
     await this.prisma.providerAccount.update({
-      where: {
-        providerAccountId: account.providerAccountId,
-      },
-      data: {
-        fullImportRequestedAt: now,
-        fullImportCompletedAt: null,
-      },
+      where: { providerAccountId: account.providerAccountId },
+      data: { fullImportRequestedAt: new Date(), fullImportCompletedAt: null },
     });
-
     try {
-      let importResult: FullImportResult | null = null;
-      switch (providerEnum) {
-        case ConnectorProvider.STRAVA:
-          importResult =
-            await this.stravaProviderService.queueFullImport(account);
-          break;
-        case ConnectorProvider.GARMIN:
-          importResult =
-            await this.garminProviderService.queueFullImport(account);
-          break;
-        case ConnectorProvider.POLAR:
-          importResult =
-            await this.polarProviderService.queueFullImport(account);
-          break;
-        case ConnectorProvider.SUUNTO:
-          importResult =
-            await this.suuntoProviderService.queueFullImport(account);
-          break;
-        default:
-          throw new BadRequestException(
-            `Historical import is not available for ${provider}`,
-          );
-      }
-
-      await this.prisma.providerAccount.update({
-        where: {
-          providerAccountId: account.providerAccountId,
-        },
-        data: {
-          fullImportCompletedAt:
-            importResult?.backfillRequested === true ? null : new Date(),
-        },
-      });
-
-      const queuedCount = importResult?.queuedActivities ?? 0;
-
-      return {
-        success: true,
-        queuedActivities: queuedCount,
-        backfillRequested: importResult?.backfillRequested ?? false,
-      };
+      await this.queueService.addFullImportJob(account.providerAccountId);
     } catch (error) {
       await this.prisma.providerAccount.update({
-        where: {
-          providerAccountId: account.providerAccountId,
-        },
-        data: {
-          fullImportRequestedAt: null,
-        },
+        where: { providerAccountId: account.providerAccountId },
+        data: { fullImportRequestedAt: null },
       });
       throw error;
     }
+
+    return { success: true, queued: true };
   }
 
   /**
