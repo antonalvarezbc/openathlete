@@ -405,3 +405,83 @@ describe('Manual FIT ownership and persistence', () => {
     });
   });
 });
+
+describe('Manual GPX import', () => {
+  // Three synthetic points, one minute apart, ~111 m apart.
+  const gpxFile = (type = 'running', name = 'run.gpx') => {
+    const points = [0, 1, 2]
+      .map(
+        (i) =>
+          `<trkpt lat="${43 + i * 0.001}" lon="-8"><ele>${10 + i * 5}</ele><time>2020-01-02T09:0${i}:00Z</time></trkpt>`,
+      )
+      .join('');
+    const buffer = Buffer.from(
+      `<?xml version="1.0"?><gpx version="1.1" creator="t" xmlns="http://www.topografix.com/GPX/1/1"><trk><type>${type}</type><trkseg>${points}</trkseg></trk></gpx>`,
+    );
+    return { originalname: name, buffer, size: buffer.length };
+  };
+
+  test('stores a GPX like a FIT file, with its own source and sport', async () => {
+    const { db, queue, service } = setup();
+    const result = await service.importGpx(athlete, gpxFile(), 'Rodaje');
+    const data = db.event.create.mock.calls[0][0].data;
+    expect(data).toMatchObject({
+      athleteId: 4,
+      type: 'ACTIVITY',
+      name: 'Rodaje',
+      startDate: new Date('2020-01-02T09:00:00Z'),
+      endDate: new Date('2020-01-02T09:02:00Z'),
+    });
+    expect(data.activity.create).toMatchObject({
+      sport: 'RUNNING',
+      provider: null,
+      movingTime: 120,
+      elevationGain: 10,
+    });
+    expect(data.activity.create.distance).toBeGreaterThan(200);
+    expect(data.activity.create.externalId).toMatch(
+      /^gpx-manual:4:[a-f0-9]{64}$/,
+    );
+    expect(data.activity.create.segments.create).toEqual([]);
+    expect(queue.addActivityProcessingJob).toHaveBeenCalledWith(80, 90, true);
+    expect(result).toMatchObject({ eventId: 90, warnings: [] });
+  });
+
+  test('uses the sport the athlete chose', async () => {
+    const { db, service } = setup();
+    await service.importGpx(athlete, gpxFile(), 'Rodaje', 'HIKING' as never);
+    expect(db.event.create.mock.calls[0][0].data.activity.create.sport).toBe(
+      'HIKING',
+    );
+  });
+
+  test('applies the same ownership, file and duplicate rules', async () => {
+    const { db, service } = setup();
+    await expect(
+      service.importGpx(athlete, gpxFile('running', 'run.fit'), 'Rodaje'),
+    ).rejects.toThrow('GPX_INVALID');
+    await expect(
+      service.importGpx(
+        athlete,
+        { ...gpxFile(), size: MAX_MANUAL_FIT_BYTES + 1 },
+        'Rodaje',
+      ),
+    ).rejects.toBeInstanceOf(PayloadTooLargeException);
+    await expect(
+      service.importGpx({ ...athlete, roles: ['COACH'] }, gpxFile(), 'Rodaje'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    db.event.findFirst.mockResolvedValue({ eventId: 42 });
+    await expect(
+      service.importGpx(athlete, gpxFile(), 'Rodaje'),
+    ).rejects.toThrow('FIT_DUPLICATE_TIME');
+    expect(db.event.create).not.toHaveBeenCalled();
+  });
+
+  test('is off with manual file import', async () => {
+    const { db, service } = setup(false);
+    await expect(
+      service.importGpx(athlete, gpxFile(), 'Rodaje'),
+    ).rejects.toThrow('MANUAL_FIT_IMPORT_DISABLED');
+    expect(db.athlete.findUnique).not.toHaveBeenCalled();
+  });
+});

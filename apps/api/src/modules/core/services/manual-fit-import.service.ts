@@ -11,8 +11,12 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
-import { Prisma } from '@openathlete/database';
-import { CompressedActivityStream, isValidGpsPoint } from '@openathlete/shared';
+import { Athlete, Prisma } from '@openathlete/database';
+import {
+  CompressedActivityStream,
+  SPORT_TYPE,
+  isValidGpsPoint,
+} from '@openathlete/shared';
 
 import { CoachActivityNoticeEvent } from '../../../events/coach-activity-notice.event';
 import { AuthUser } from '../../auth/decorators/user.decorator';
@@ -24,6 +28,7 @@ import {
   MAX_MANUAL_FIT_BYTES,
   prepareManualFit,
 } from '../helpers/manual-fit-import';
+import { prepareManualGpx } from '../helpers/manual-gpx-import';
 import { FitParserStrategy } from '../helpers/strategies/fit-parser.strategy';
 
 export type ManualFitFile = {
@@ -31,6 +36,9 @@ export type ManualFitFile = {
   size: number;
   buffer: Buffer;
 };
+
+type PreparedActivity =
+  ReturnType<typeof prepareManualFit> | ReturnType<typeof prepareManualGpx>;
 
 @Injectable()
 export class ManualFitImportService {
@@ -41,23 +49,57 @@ export class ManualFitImportService {
     @Optional() private readonly emitter?: EventEmitter2,
   ) {}
 
-  async import(user: AuthUser, file: ManualFitFile | undefined, name: string) {
+  /** The importing user's own athlete profile. */
+  private async ownAthlete(user: AuthUser) {
     assertManualFitImportEnabled(this.config);
     if (!user.roles?.includes('ATHLETE')) throw new ForbiddenException();
     const athlete = await this.prisma.athlete.findUnique({
       where: { userId: user.userId },
     });
     if (!athlete) throw new ForbiddenException();
+    return athlete;
+  }
+
+  private checkFile(
+    file: ManualFitFile | undefined,
+    extension: '.fit' | '.gpx',
+    invalid: string,
+  ): asserts file is ManualFitFile {
     if (
       !file?.buffer?.length ||
-      !file.originalname.toLowerCase().endsWith('.fit')
+      !file.originalname.toLowerCase().endsWith(extension)
     )
-      throw new BadRequestException('FIT_INVALID');
+      throw new BadRequestException(invalid);
     if (
       file.size > MAX_MANUAL_FIT_BYTES ||
       file.buffer.length > MAX_MANUAL_FIT_BYTES
     )
       throw new PayloadTooLargeException('FIT_LIMIT');
+  }
+
+  /**
+   * A recorded GPX activity. GPX does not say the sport reliably, so the
+   * athlete can choose it; otherwise the track's type is used when known.
+   */
+  async importGpx(
+    user: AuthUser,
+    file: ManualFitFile | undefined,
+    name: string,
+    sport?: SPORT_TYPE,
+  ) {
+    const athlete = await this.ownAthlete(user);
+    this.checkFile(file, '.gpx', 'GPX_INVALID');
+    return this.save(
+      athlete,
+      prepareManualGpx(file.buffer, sport),
+      `gpx-manual:${athlete.athleteId}:${createHash('sha256').update(file.buffer).digest('hex')}`,
+      name,
+    );
+  }
+
+  async import(user: AuthUser, file: ManualFitFile | undefined, name: string) {
+    const athlete = await this.ownAthlete(user);
+    this.checkFile(file, '.fit', 'FIT_INVALID');
     let fit: ReturnType<typeof prepareManualFit>;
     try {
       fit = prepareManualFit(
@@ -69,7 +111,25 @@ export class ManualFitImportService {
       if (error instanceof BadRequestException) throw error;
       throw new BadRequestException('FIT_INVALID');
     }
-    const externalId = `fit-manual:${athlete.athleteId}:${createHash('sha256').update(file.buffer).digest('hex')}`;
+    return this.save(
+      athlete,
+      fit,
+      `fit-manual:${athlete.athleteId}:${createHash('sha256').update(file.buffer).digest('hex')}`,
+      name,
+    );
+  }
+
+  /**
+   * Stores a prepared file once: the same file again restores only missing
+   * GPS, another activity with the same start is refused, and new activities
+   * go through the normal processing pipeline without AI feedback.
+   */
+  private async save(
+    athlete: Athlete,
+    fit: PreparedActivity,
+    externalId: string,
+    name: string,
+  ) {
     const findExisting = () =>
       this.prisma.eventActivity.findUnique({
         where: { externalId },
