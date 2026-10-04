@@ -1,14 +1,23 @@
 import client, { routes } from '@/utils/axios';
 
-import { CoachDashboardResponseDto } from '@openathlete/shared';
+import { CoachOverviewResponseDto } from '@openathlete/shared';
 
 export class CoachAPI {
-  static async getDashboard(
-    start?: Date,
-    end?: Date,
-  ): Promise<CoachDashboardResponseDto> {
-    const res = await client.get(
-      routes.coach.dashboard(start?.toISOString(), end?.toISOString()),
+  /** The coach's local day boundaries; see `overviewRange`. */
+  static async getOverview(range: {
+    from: Date;
+    today: Date;
+    until: Date;
+  }): Promise<CoachOverviewResponseDto> {
+    const res = await client.get<CoachOverviewResponseDto>(
+      routes.coach.overview,
+      {
+        params: {
+          from: range.from.toISOString(),
+          today: range.today.toISOString(),
+          until: range.until.toISOString(),
+        },
+      },
     );
     return res.data;
   }

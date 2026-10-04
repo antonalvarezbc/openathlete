@@ -3,7 +3,7 @@ import { useSpaceContext } from '@/contexts/space';
 import { m } from '@/paraglide/messages';
 import { getPath } from '@/routes/paths';
 import { cn } from '@/utils/shadcn';
-import { Calendar, MessageCircle, User } from 'lucide-react';
+import { Calendar, LayoutDashboard, MessageCircle, User } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 interface NavItem {
@@ -15,6 +15,16 @@ interface NavItem {
 export function MobileNavbar() {
   const { space } = useSpaceContext();
   const navItems: NavItem[] = [
+    // Coaches land on their dashboard.
+    ...(space === 'COACH'
+      ? [
+          {
+            label: m.dashboard(),
+            icon: LayoutDashboard,
+            path: getPath(['dashboard', 'coach']),
+          },
+        ]
+      : []),
     {
       label: space === 'COACH' ? m.coach_planning() : m.calendar(),
       icon: Calendar,
@@ -40,7 +50,12 @@ export function MobileNavbar() {
       className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <div className="grid grid-cols-3">
+      <div
+        className={cn(
+          'grid',
+          navItems.length > 3 ? 'grid-cols-4' : 'grid-cols-3',
+        )}
+      >
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           const Icon = item.icon;

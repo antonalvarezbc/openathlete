@@ -160,8 +160,7 @@ export const routes = {
       }`,
   },
   coach: {
-    dashboard: (start?: string, end?: string) =>
-      `/coach/dashboard${start && end ? `?start=${start}&end=${end}` : ''}`,
+    overview: '/coach/overview',
     getPendingInvitations: '/coach/invitations/pending',
     acceptInvitation: (invitationId: number) =>
       `/coach/invitations/${invitationId}/accept`,

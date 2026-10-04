@@ -1,3 +1,5 @@
+import { ZodValidationPipe } from 'nestjs-zod';
+
 import {
   Controller,
   Get,
@@ -18,8 +20,13 @@ import {
 } from '@nestjs/swagger';
 
 import { InvitationStatus } from '@openathlete/database';
+import {
+  CoachOverviewQueryDto,
+  coachOverviewQuerySchema,
+} from '@openathlete/shared';
 
 import { JwtUser, UserTypeGuard } from 'src/modules/auth';
+import { UserTypes } from 'src/modules/auth/decorators/user-type.decorator';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
 import { CoachInvitationService } from 'src/modules/auth/services/coach-invitation.service';
 
@@ -32,6 +39,25 @@ export class CoachController {
     private readonly coachService: CoachService,
     private coachInvitationService: CoachInvitationService,
   ) {}
+
+  @UseGuards(AuthGuard('jwt'), UserTypeGuard)
+  @UserTypes(['COACH'])
+  @ApiBearerAuth()
+  @Get('overview')
+  @ApiOperation({
+    summary: 'How coached athletes follow their plan',
+    description:
+      "Landing data of the coach space. `from`, `today` and `until` are the coach's local day boundaries (ISO 8601): sessions from `from` to `today` are due, and one is done when it has a linked activity. Per athlete: due/done sessions and compliance, planned and completed time of sessions with a goal duration, the latest missed sessions, today's sessions, sessions from tomorrow to `until`, activities linked to no session, the latest activity and injuries not resolved. At most 120 days.",
+  })
+  @ApiResponse({ status: 400, description: 'Invalid day boundaries' })
+  @ApiResponse({ status: 403, description: 'The user is not a coach' })
+  getOverview(
+    @JwtUser() user: AuthUser,
+    @Query(new ZodValidationPipe(coachOverviewQuerySchema))
+    query: CoachOverviewQueryDto,
+  ) {
+    return this.coachService.getCoachOverview(user, query);
+  }
 
   @UseGuards(AuthGuard('jwt'), UserTypeGuard)
   @ApiBearerAuth()

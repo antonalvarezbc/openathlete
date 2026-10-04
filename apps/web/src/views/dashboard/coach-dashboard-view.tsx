@@ -1,254 +1,366 @@
-import { useCoachDashboardQuery } from '@/api/coach';
+import { useCoachOverviewQuery } from '@/api/coach';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { m } from '@/paraglide/messages';
+import { getLocale } from '@/paraglide/runtime';
 import { getPath } from '@/routes/paths';
+import { cn } from '@/utils/shadcn';
 import { Calendar } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-function formatSeconds(totalSeconds: number): string {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
+import type { CoachOverviewAthleteDto } from '@openathlete/shared';
+
+import {
+  type AttentionReason,
+  OVERVIEW_PERIODS,
+  type OverviewPeriod,
+  byCompliance,
+  fullName,
+  needsAttention,
+  overviewRange,
+  teamSummary,
+} from './coach-home/coach-overview';
+
+const percentText = (value: number) =>
+  new Intl.NumberFormat(getLocale(), {
+    style: 'percent',
+    maximumFractionDigits: 0,
+  }).format(value / 100);
+
+const shortDate = (iso: string) =>
+  new Date(iso).toLocaleDateString(getLocale(), {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+
+/** "today", "yesterday", "3 days ago"… in the user's language. */
+function daysAgo(iso: string, now: Date) {
+  const start = (date: Date) =>
+    new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const days = Math.round((start(now) - start(new Date(iso))) / 86_400_000);
+  return new Intl.RelativeTimeFormat(getLocale(), { numeric: 'auto' }).format(
+    -days,
+    'day',
+  );
 }
 
-function formatMeters(meters: number): string {
-  if (!meters) return '0 km';
-  const km = meters / 1000;
-  return km % 1 === 0 ? `${km} km` : `${km.toFixed(1)} km`;
+const complianceColor = (percent: number) =>
+  percent >= 80
+    ? 'bg-emerald-500'
+    : percent >= 50
+      ? 'bg-amber-500'
+      : 'bg-red-500';
+
+function reasonText(reason: AttentionReason) {
+  switch (reason.kind) {
+    case 'injury':
+      return m.coach_home_reason_injury({ count: reason.count });
+    case 'missed':
+      return `${m.coach_home_reason_missed({ count: reason.count })} · ${reason.sessions
+        .map((session) => `${session.name} (${shortDate(session.startDate)})`)
+        .join(', ')}`;
+    case 'low_compliance':
+      return m.coach_home_reason_low_compliance({
+        percent: percentText(reason.percent),
+      });
+    case 'inactive':
+      return reason.days === null
+        ? m.coach_home_reason_never_active()
+        : m.coach_home_reason_inactive({ days: reason.days });
+    case 'no_plan':
+      return m.coach_home_reason_no_plan();
+    case 'unlinked':
+      return m.coach_home_reason_unlinked({ count: reason.count });
+  }
 }
 
-function HeaderText({
-  children,
-  className,
+function Stat({
+  label,
+  value,
+  hint,
 }: {
-  children: React.ReactNode;
-  className?: string;
+  label: string;
+  value: string;
+  hint: string;
 }) {
   return (
-    <span
-      className={`whitespace-nowrap text-sm font-medium ${className ?? ''}`}
-    >
-      {children}
+    <Card className="gap-1 py-4">
+      <CardHeader className="px-4">
+        <CardDescription>{label}</CardDescription>
+        <CardTitle className="text-3xl tabular-nums">{value}</CardTitle>
+      </CardHeader>
+      <CardContent className="px-4 text-sm text-muted-foreground">
+        {hint}
+      </CardContent>
+    </Card>
+  );
+}
+
+function AthleteName({ athlete }: { athlete: CoachOverviewAthleteDto }) {
+  return (
+    <span className="flex flex-wrap items-center gap-2 font-medium">
+      {fullName(athlete)}
+      {athlete.isSelf && (
+        <Badge variant="secondary">{m.coach_self_you()}</Badge>
+      )}
     </span>
   );
 }
 
-type PeriodType = 'week' | 'month' | 'year';
-
-function getPeriodDates(period: PeriodType): { start: Date; end: Date } {
-  const end = new Date();
-  end.setHours(23, 59, 59, 999);
-  const start = new Date();
-
-  switch (period) {
-    case 'week':
-      start.setDate(end.getDate() - 6); // Last 7 days
-      break;
-    case 'month':
-      start.setMonth(end.getMonth() - 1);
-      break;
-    case 'year':
-      start.setFullYear(end.getFullYear() - 1);
-      break;
-  }
-
-  start.setHours(0, 0, 0, 0);
-  return { start, end };
-}
-
+/**
+ * Coach landing page: how the athletes follow their plan, who needs
+ * attention and what is planned today, with a link to each calendar.
+ */
 export function CoachDashboardView() {
   const nav = useNavigate();
-  const [period, setPeriod] = useState<PeriodType>('week');
-  const { start, end } = getPeriodDates(period);
-  const { data, isLoading } = useCoachDashboardQuery(start, end);
+  const [period, setPeriod] = useState<OverviewPeriod>(7);
+  const now = useMemo(() => new Date(), []);
+  const range = useMemo(() => overviewRange(period, now), [period, now]);
+  const { data, isLoading, isError } = useCoachOverviewQuery(range);
+  const athletes = data?.athletes ?? [];
+  const summary = teamSummary(athletes);
+  const attention = needsAttention(athletes, now);
+  const openCalendar = (athleteId: number) =>
+    nav(getPath(['dashboard', 'calendar']) + `/${athleteId}`);
+  const calendarButton = (athlete: CoachOverviewAthleteDto) => (
+    <Button
+      variant="outline"
+      size="sm"
+      className="shrink-0"
+      onClick={() => openCalendar(athlete.athleteId)}
+    >
+      <Calendar className="size-4" />
+      {m.view_calendar()}
+    </Button>
+  );
 
   return (
-    <div className="px-0 pt-6 h-full flex flex-col min-h-0 min-w-0">
-      <div className="mb-6 px-6 flex flex-wrap gap-3 items-start justify-between">
+    <main className="w-full min-w-0 space-y-6 p-4 md:p-8">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">{m.coach_dashboard()}</h1>
-          <p className="text-muted-foreground">{m.coach_dashboard_title()}</p>
+          <p className="text-muted-foreground">{m.coach_home_subtitle()}</p>
         </div>
-        <Select
-          value={period}
-          onValueChange={(value) => setPeriod(value as PeriodType)}
+        <div
+          role="group"
+          aria-label={m.coach_home_period()}
+          className="inline-flex rounded-md border p-0.5"
         >
-          <SelectTrigger className="w-[140px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="week">{m.week()}</SelectItem>
-            <SelectItem value="month">{m.month()}</SelectItem>
-            <SelectItem value="year">{m.year()}</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="border-t rounded-none bg-background flex-1 min-h-0 min-w-0 flex flex-col relative">
-        <div className="absolute left-[239px] top-0 bottom-0 w-4 pointer-events-none bg-gradient-to-r from-black/6 to-transparent dark:from-white/10 z-[45] border-l" />
-        <div className="flex-1 min-h-0 min-w-0 overflow-x-auto relative">
-          <div className="relative min-w-[1560px] flex flex-col h-full">
-            <div className="sticky top-0 z-[25] bg-background grid grid-cols-[240px_200px_140px_140px_140px_140px_140px_140px_140px_140px] border-b shrink-0">
-              <div className="sticky left-0 z-[35] bg-background border-r pl-4 pr-2 h-10 flex items-center font-medium">
-                <HeaderText>{m.name()}</HeaderText>
-              </div>
-              <div className="pl-6 pr-2 h-10 flex items-center bg-background">
-                <HeaderText>{m.email()}</HeaderText>
-              </div>
-              <div className="px-2 h-10 flex items-center justify-center bg-background">
-                <HeaderText>{m.planned_sessions()}</HeaderText>
-              </div>
-              <div className="px-2 h-10 flex items-center justify-center bg-background">
-                <HeaderText>{m.completed_sessions()}</HeaderText>
-              </div>
-              <div className="px-2 h-10 flex items-center justify-center bg-background">
-                <HeaderText>{m.planned_time()}</HeaderText>
-              </div>
-              <div className="px-2 h-10 flex items-center justify-center bg-background">
-                <HeaderText>{m.completed_time()}</HeaderText>
-              </div>
-              <div className="px-2 h-10 flex items-center justify-center bg-background">
-                <HeaderText>{m.completed_distance()}</HeaderText>
-              </div>
-              <div className="px-2 h-10 flex items-center justify-center bg-background">
-                <HeaderText>{m.compliance()}</HeaderText>
-              </div>
-              <div className="px-2 h-10 flex items-center justify-center bg-background">
-                <HeaderText>{m.last_activity()}</HeaderText>
-              </div>
-              <div className="px-2 h-10 flex items-center justify-center bg-background">
-                <HeaderText>{m.actions()}</HeaderText>
-              </div>
-            </div>
-
-            <div className="flex-1 min-h-0">
-              <div className="grid grid-cols-[240px_200px_140px_140px_140px_140px_140px_140px_140px_140px]">
-                {isLoading && (
-                  <>
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <div key={i} className="contents">
-                        <div className="sticky left-0 z-[30] bg-background border-r border-b pl-4 pr-2 h-[57px] flex items-center">
-                          <Skeleton className="h-4 w-24" />
-                        </div>
-                        {Array.from({ length: 9 }).map((_, j) => (
-                          <div
-                            key={j}
-                            className="pl-6 pr-2 h-[57px] flex items-center border-b bg-background"
-                          >
-                            <Skeleton className="h-4 w-20" />
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </>
-                )}
-
-                {!isLoading &&
-                  data?.athletes?.map((row) => {
-                    const compliance = row.compliancePercent;
-                    const badgeClass =
-                      compliance >= 80
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
-                        : compliance >= 50
-                          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300'
-                          : 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300';
-                    return (
-                      <div key={row.athleteId} className="contents group">
-                        <div className="sticky left-0 z-[30] bg-background border-r border-b pl-4 pr-2 h-[57px] flex items-center font-medium group-hover:bg-accent">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm">
-                              {row.firstName} {row.lastName}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() =>
-                                nav(
-                                  getPath(['dashboard', 'calendar']) +
-                                    `/${row.athleteId}`,
-                                )
-                              }
-                              title={m.view_calendar()}
-                            >
-                              <Calendar className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="pl-6 pr-2 h-[57px] flex items-center text-muted-foreground border-b group-hover:bg-muted/40 bg-background">
-                          <span className="text-sm">{row.email}</span>
-                        </div>
-                        <div className="px-2 h-[57px] flex items-center justify-center border-b group-hover:bg-muted/40 bg-background">
-                          <span className="text-sm">{row.plannedSessions}</span>
-                        </div>
-                        <div className="px-2 h-[57px] flex items-center justify-center border-b group-hover:bg-muted/40 bg-background">
-                          <span className="text-sm">
-                            {row.completedSessions}
-                          </span>
-                        </div>
-                        <div className="px-2 h-[57px] flex items-center justify-center border-b group-hover:bg-muted/40 bg-background">
-                          <span className="text-sm">
-                            {formatSeconds(row.plannedTime)}
-                          </span>
-                        </div>
-                        <div className="px-2 h-[57px] flex items-center justify-center border-b group-hover:bg-muted/40 bg-background">
-                          <span className="text-sm">
-                            {formatSeconds(row.completedTime)}
-                          </span>
-                        </div>
-                        <div className="px-2 h-[57px] flex items-center justify-center border-b group-hover:bg-muted/40 bg-background">
-                          <span className="text-sm">
-                            {formatMeters(row.completedDistance)}
-                          </span>
-                        </div>
-                        <div className="px-2 h-[57px] flex items-center justify-center border-b group-hover:bg-muted/40 bg-background">
-                          <Badge className={badgeClass}>
-                            {row.compliancePercent}
-                            {m.percent_symbol()}
-                          </Badge>
-                        </div>
-                        <div className="px-2 h-[57px] flex items-center justify-center text-muted-foreground border-b group-hover:bg-muted/40 bg-background">
-                          <span className="text-sm">
-                            {row.lastActivityAt
-                              ? new Date(
-                                  row.lastActivityAt,
-                                ).toLocaleDateString()
-                              : '-'}
-                          </span>
-                        </div>
-                        <div className="px-2 h-[57px] flex items-center justify-center border-b group-hover:bg-muted/40 bg-background">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              nav(
-                                getPath(['dashboard', 'metrics']) +
-                                  `/${row.athleteId}`,
-                              )
-                            }
-                          >
-                            {m.metrics()}
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            </div>
-          </div>
+          {OVERVIEW_PERIODS.map((days) => (
+            <Button
+              key={days}
+              size="sm"
+              variant={period === days ? 'secondary' : 'ghost'}
+              aria-pressed={period === days}
+              onClick={() => setPeriod(days)}
+            >
+              {m.coach_home_last_days({ days })}
+            </Button>
+          ))}
         </div>
       </div>
-    </div>
+
+      {isError && (
+        <p role="alert" className="text-sm text-destructive">
+          {m.coach_home_failed()}
+        </p>
+      )}
+
+      {isLoading ? (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton key={index} className="h-28" />
+          ))}
+        </div>
+      ) : !athletes.length && !isError ? (
+        <Card>
+          <CardContent className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">
+              {m.no_coached_athletes()}
+            </p>
+            <Button
+              onClick={() =>
+                nav(`${getPath(['dashboard', 'settings'])}?tab=athletes`)
+              }
+            >
+              {m.invite_athlete()}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : athletes.length ? (
+        <>
+          <section
+            aria-label={m.coach_dashboard_title()}
+            className="grid grid-cols-2 gap-4 lg:grid-cols-3"
+          >
+            <Stat
+              label={m.coach_home_team_compliance()}
+              value={
+                summary.compliancePercent === null
+                  ? '—'
+                  : percentText(summary.compliancePercent)
+              }
+              hint={m.coach_home_sessions_done({
+                done: summary.done,
+                due: summary.due,
+              })}
+            />
+            <Stat
+              label={m.coach_home_today()}
+              value={`${summary.todayDone}/${summary.todayPlanned}`}
+              hint={m.coach_home_today_hint()}
+            />
+            <Stat
+              label={m.coach_home_attention()}
+              value={`${attention.length}/${athletes.length}`}
+              hint={m.coach_home_attention_hint()}
+            />
+          </section>
+
+          <Card data-attention>
+            <CardHeader>
+              <CardTitle>{m.coach_home_attention()}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {attention.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  {m.coach_home_all_good()}
+                </p>
+              ) : (
+                <ul className="divide-y">
+                  {attention.map(({ athlete, reasons }) => (
+                    <li
+                      key={athlete.athleteId}
+                      data-athlete={athlete.athleteId}
+                      className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:justify-between"
+                    >
+                      <div className="min-w-0 space-y-1">
+                        <AthleteName athlete={athlete} />
+                        <ul className="space-y-0.5 text-sm">
+                          {reasons.map((reason) => (
+                            <li
+                              key={reason.kind}
+                              data-reason={reason.kind}
+                              className={cn(
+                                'break-words',
+                                reason.kind === 'unlinked'
+                                  ? 'text-muted-foreground'
+                                  : 'text-amber-700 dark:text-amber-300',
+                              )}
+                            >
+                              {reasonText(reason)}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      {calendarButton(athlete)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card data-compliance>
+            <CardHeader>
+              <CardTitle>{m.coach_home_compliance_title()}</CardTitle>
+              <CardDescription>
+                {m.coach_home_compliance_help()}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="divide-y">
+                {byCompliance(athletes).map((athlete) => (
+                  <li
+                    key={athlete.athleteId}
+                    data-athlete={athlete.athleteId}
+                    className="grid gap-3 py-3 first:pt-0 last:pb-0 md:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_auto] md:items-center"
+                  >
+                    <AthleteName athlete={athlete} />
+                    <div className="min-w-0 space-y-1.5">
+                      {athlete.compliancePercent === null ? (
+                        <p className="text-sm text-muted-foreground">
+                          {m.coach_home_no_due()}
+                        </p>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <div
+                            role="progressbar"
+                            aria-label={m.compliance()}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-valuenow={athlete.compliancePercent}
+                            className="h-2 flex-1 overflow-hidden rounded-full bg-muted"
+                          >
+                            <div
+                              className={cn(
+                                'h-full rounded-full',
+                                complianceColor(athlete.compliancePercent),
+                              )}
+                              style={{
+                                width: `${Math.min(athlete.compliancePercent, 100)}%`,
+                              }}
+                            />
+                          </div>
+                          <span className="w-12 text-right text-sm font-medium tabular-nums">
+                            {percentText(athlete.compliancePercent)}
+                          </span>
+                        </div>
+                      )}
+                      <p className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                        {athlete.due > 0 && (
+                          <span>
+                            {m.coach_home_sessions_done({
+                              done: athlete.done,
+                              due: athlete.due,
+                            })}
+                          </span>
+                        )}
+                        {athlete.timePercent !== null && (
+                          <span>
+                            {m.coach_home_time({
+                              percent: percentText(athlete.timePercent),
+                            })}
+                          </span>
+                        )}
+                        {athlete.todayPlanned > 0 && (
+                          <span>
+                            {m.coach_home_today_status({
+                              done: athlete.todayDone,
+                              planned: athlete.todayPlanned,
+                            })}
+                          </span>
+                        )}
+                        <span>
+                          {m.coach_home_upcoming({ count: athlete.upcoming })}
+                        </span>
+                        <span>
+                          {m.coach_home_last_activity({
+                            when: athlete.lastActivityAt
+                              ? daysAgo(athlete.lastActivityAt, now)
+                              : m.coach_home_never(),
+                          })}
+                        </span>
+                      </p>
+                    </div>
+                    {calendarButton(athlete)}
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </>
+      ) : null}
+    </main>
   );
 }

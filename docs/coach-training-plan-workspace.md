@@ -2,12 +2,11 @@
 
 ## User flow
 
-**Planning** is the initial screen for the coach space at `/dashboard/planning`.
-It replaces the coach dashboard in navigation and is separate from account
-settings. Switching to the coach space opens Planning; the athlete space still
-opens its calendar. Saved `/dashboard/coach` and
-`/dashboard/settings?tab=training_plan` links redirect to Planning, preserving
-selected athlete and plan parameters.
+**Planning** is at `/dashboard/planning`, second in the coach navigation after
+the [coach dashboard](coach-dashboard.md), which is the initial screen of the
+coach space. It is separate from account settings. Saved `/dashboard/coach`
+links with query parameters and `/dashboard/settings?tab=training_plan` links
+redirect to Planning, preserving selected athlete and plan parameters.
 
 1. Select a coached athlete (or yourself if your account has both roles).
 2. Create a plan with a name, objective, description and inclusive dates.

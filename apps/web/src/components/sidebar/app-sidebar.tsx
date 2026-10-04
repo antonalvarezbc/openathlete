@@ -22,6 +22,7 @@ import {
   Activity,
   Calendar,
   CogIcon,
+  LayoutDashboard,
   MedalIcon,
   MessageCircle,
   PieChart,
@@ -54,6 +55,12 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
     if (space === 'COACH') {
       type SidebarItem = Parameters<typeof NavMain>[0]['items'][number];
       const baseItems: SidebarItem[] = [
+        {
+          title: m.dashboard(),
+          url: getPath(['dashboard', 'coach']),
+          icon: LayoutDashboard,
+          spaces: ['COACH'] as UserRole[],
+        },
         {
           title: m.coach_planning(),
           url: getPath(['dashboard', 'planning']),
