@@ -1,3 +1,4 @@
+import { useAiTaskAvailable } from '@/api/ai-settings';
 import { CalendarAPI } from '@/api/calendar/calendar.api';
 import { useGetMyCyclesQuery, useUpdateCycleMutation } from '@/api/cycle';
 import { cycleKeys } from '@/api/cycle/cycle.keys';
@@ -16,7 +17,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Loader } from '@/components/ui/loader';
-import { useFeatureAccess } from '@/hooks/use-feature-access';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { type PageAction, useSetPageActions } from '@/hooks/use-page-actions';
 import { m } from '@/paraglide/messages';
@@ -40,15 +40,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import {
+  AiTask,
   CreateEventDto,
   Cycle,
   EVENT_TYPE,
   Event,
   EventTemplate,
-  FeatureName,
 } from '@openathlete/shared';
 
 import { AIGenerateEventDialog } from '../ai-generate-event-dialog/ai-generate-event.dialog';
+import { AiSetupDialog } from '../ai-settings';
 import { CreateCycleDialog } from '../create-cycle-dialog';
 import { CreateEventDialog } from '../create-event-dialog';
 import { CreateEventFromTemplateDialog } from '../create-event-from-template-dialog/create-event-from-template.dialog';
@@ -86,9 +87,10 @@ export function Calendar({
   const [planningDate, setPlanningDate] = useState(() => new Date());
   const calendarData = useCalendarData({ events });
   const { data: cycles } = useGetMyCyclesQuery(undefined, athleteId);
-  const { hasAccess: hasAIAccess } = useFeatureAccess(
-    FeatureName.AI_GENERATION,
+  const { available: hasAIAccess } = useAiTaskAvailable(
+    AiTask.EVENT_GENERATION,
   );
+  const [aiSetupOpen, setAiSetupOpen] = useState(false);
   const weekRangeStart = calendarData.displayedWeeks[0]?.[0];
   const weekRangeEnd =
     calendarData.displayedWeeks[calendarData.displayedWeeks.length - 1]?.[6];
@@ -579,13 +581,15 @@ export function Calendar({
       },
     ];
 
-    if (hasAIAccess) {
-      actions.splice(2, 0, {
-        label: m.create_with_ai(),
-        icon: Sparkles,
-        onClick: () => setAIGenerateEventDialog(planningDate),
-      });
-    }
+    // Shown without AI too: it leads to the AI settings
+    actions.splice(2, 0, {
+      label: m.create_with_ai(),
+      icon: Sparkles,
+      onClick: () =>
+        hasAIAccess
+          ? setAIGenerateEventDialog(planningDate)
+          : setAiSetupOpen(true),
+    });
 
     return actions;
   }, [isMobile, allowCreate, hasAIAccess, planningDate]);
@@ -728,6 +732,11 @@ export function Calendar({
               date={createEventDialog?.date}
               type={createEventDialog?.type}
               prefilledData={createEventDialog?.prefilledData}
+            />
+            <AiSetupDialog
+              open={aiSetupOpen}
+              onOpenChange={setAiSetupOpen}
+              analyticsSource="calendar_mobile"
             />
             <AIGenerateEventDialog
               open={aiGenerateEventDialog !== null}

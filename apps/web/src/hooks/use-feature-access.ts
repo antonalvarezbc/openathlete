@@ -2,11 +2,9 @@ import { useCurrentSubscription } from '@/api/subscription';
 import { useMemo } from 'react';
 
 import {
-  FeatureName,
   PLAN_CONFIGS,
   SubscriptionPlan,
   SubscriptionStatus,
-  planHasAIFeatures,
 } from '@openathlete/shared';
 
 /**
@@ -17,41 +15,6 @@ function isSubscriptionActive(status: SubscriptionStatus): boolean {
     status === SubscriptionStatus.ACTIVE ||
     status === SubscriptionStatus.TRIALING
   );
-}
-
-/**
- * Hook to check if user has access to a specific feature
- */
-export function useFeatureAccess(featureName: FeatureName) {
-  const { data: subscription, isLoading } = useCurrentSubscription();
-
-  const hasAccess = useMemo(() => {
-    if (!subscription) {
-      return false;
-    }
-
-    // Check if subscription is active (active or trialing)
-    if (!isSubscriptionActive(subscription.status as SubscriptionStatus)) {
-      return false;
-    }
-
-    const plan = subscription.plan as SubscriptionPlan;
-
-    switch (featureName) {
-      case FeatureName.AI_GENERATION:
-      case FeatureName.AI_RPE_QUESTIONS:
-        return planHasAIFeatures(plan);
-      default:
-        return false;
-    }
-  }, [subscription, featureName]);
-
-  return {
-    hasAccess,
-    isLoading,
-    plan: subscription?.plan as SubscriptionPlan | undefined,
-    subscription,
-  };
 }
 
 /**

@@ -1,5 +1,6 @@
 import { useGenerateEventMutation, useModifyEventMutation } from '@/api/agent';
 import { m } from '@/paraglide/messages';
+import { aiErrorMessage } from '@/utils/ai-errors';
 import {
   AnalyticsEvent,
   analyticsErrorCodeFromUnknown,
@@ -132,9 +133,9 @@ export function AIModifyEventDialog({
         ...(durationMs !== undefined ? { duration_ms: durationMs } : {}),
       });
       if (isCreateMode) {
-        toast.error(m.failed_to_generate_event());
+        toast.error(aiErrorMessage(err) ?? m.failed_to_generate_event());
       } else {
-        toast.error(m.failed_to_modify_event());
+        toast.error(aiErrorMessage(err) ?? m.failed_to_modify_event());
       }
     }
   });

@@ -5,7 +5,6 @@ import {
   CreateCheckoutSessionDto,
   CurrentSubscriptionDto,
   CustomerPortalResponseDto,
-  FeatureName,
   InvoiceDto,
 } from '@openathlete/shared';
 
@@ -54,16 +53,6 @@ export class SubscriptionAPI {
       {
         params: returnUrl ? { returnUrl } : undefined,
       },
-    );
-    return res.data;
-  }
-
-  static async getAthleteFeatureAccess(
-    athleteId: number,
-    featureName: FeatureName,
-  ): Promise<{ hasAccess: boolean }> {
-    const res = await client.get<{ hasAccess: boolean }>(
-      routes.subscription.getAthleteFeatureAccess(athleteId, featureName),
     );
     return res.data;
   }

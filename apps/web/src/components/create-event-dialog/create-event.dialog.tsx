@@ -1,12 +1,12 @@
+import { useAiAccessQuery } from '@/api/ai-settings';
 import { SparklesIcon } from '@/components/ui/sparkles-icon';
-import { useFeatureAccess } from '@/hooks/use-feature-access';
 import { m } from '@/paraglide/messages';
 import { eventTypeLabelMap } from '@/utils/label-map/core';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
-import { FeatureName } from '@openathlete/shared';
+import { AiTask } from '@openathlete/shared';
 import type {
   CreateEventDto,
   CreateWorkoutStepDto,
@@ -16,10 +16,10 @@ import type {
 } from '@openathlete/shared';
 import { EVENT_TYPE } from '@openathlete/shared';
 
+import { AiSetupDialog } from '../ai-settings';
 import { useCalendarContext } from '../calendar/hooks/use-calendar-context';
 import { FormProvider } from '../hook-form';
 import { RHFCheckbox } from '../hook-form/rhf-checkbox';
-import { PaywallDialog } from '../paywall';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { AIModifyEventDialog } from './components/ai-modify-event-dialog';
@@ -138,16 +138,18 @@ export function CreateEventDialog({ open, onClose, ...rest }: P) {
 
   // AI modification/generation dialog state
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
-  const [paywallOpen, setPaywallOpen] = useState(false);
-
-  // Check AI feature access
-  const { hasAccess: hasAIAccess } = useFeatureAccess(
-    FeatureName.AI_GENERATION,
-  );
+  const [aiSetupOpen, setAiSetupOpen] = useState(false);
 
   // Determine if we're in create mode (empty form)
   const formName = watch('name');
   const isCreateMode = !formName || formName.trim() === '';
+
+  // AI generates an empty event, or modifies a filled one
+  const { data: aiAccess } = useAiAccessQuery();
+  const hasAIAccess =
+    aiAccess?.tasks[
+      isCreateMode ? AiTask.EVENT_GENERATION : AiTask.EVENT_MODIFICATION
+    ].available ?? false;
 
   // Handle event generation (for create mode)
   const handleEventGenerated = (generatedEvent: CreateEventDto) => {
@@ -300,7 +302,7 @@ export function CreateEventDialog({ open, onClose, ...rest }: P) {
                     if (hasAIAccess) {
                       setAiDialogOpen(true);
                     } else {
-                      setPaywallOpen(true);
+                      setAiSetupOpen(true);
                     }
                   }}
                   variant="outline"
@@ -367,10 +369,9 @@ export function CreateEventDialog({ open, onClose, ...rest }: P) {
           onEventModified={handleEventModified}
         />
       )}
-      <PaywallDialog
-        open={paywallOpen}
-        onOpenChange={setPaywallOpen}
-        reason="ai-feature"
+      <AiSetupDialog
+        open={aiSetupOpen}
+        onOpenChange={setAiSetupOpen}
         analyticsSource="event_dialog"
       />
     </Dialog>

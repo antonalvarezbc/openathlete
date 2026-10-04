@@ -1,5 +1,5 @@
-import { useAthleteFeatureAccess } from '@/api/subscription';
-import { PaywallDialog } from '@/components/paywall';
+import { useAiAccessQuery } from '@/api/ai-settings';
+import { AiSetupDialog } from '@/components/ai-settings';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +10,7 @@ import { useState } from 'react';
 import {
   ActivityEvent,
   ActivityFeedbackQuestion,
-  FeatureName,
+  AiTask,
 } from '@openathlete/shared';
 
 interface P {
@@ -23,14 +23,13 @@ export function ActivityFeedbackDisplayCard({ event }: P) {
     (q: ActivityFeedbackQuestion) =>
       q.answerText !== null && q.answerText !== '',
   );
-  const { data: featureAccess } = useAthleteFeatureAccess(
-    event.athleteId ?? undefined,
-    FeatureName.AI_RPE_QUESTIONS,
-  );
-  const [paywallOpen, setPaywallOpen] = useState(false);
+  // Questions run on the athlete's or a coach's AI key, or hosted AI
+  const { data: aiAccess } = useAiAccessQuery(event.athleteId ?? undefined);
+  const [aiSetupOpen, setAiSetupOpen] = useState(false);
 
-  // Check if athlete or coach has access and no questions were generated
-  const hasNoAccess = featureAccess?.hasAccess === false;
+  // No AI for the athlete and no questions were generated
+  const hasNoAccess =
+    aiAccess?.tasks[AiTask.POST_ACTIVITY_QUESTIONS].available === false;
   const hasNoQuestions = questions.length === 0;
   const showPaywallAlert = hasNoAccess && hasNoQuestions;
 
@@ -44,16 +43,16 @@ export function ActivityFeedbackDisplayCard({ event }: P) {
           {showPaywallAlert && (
             <Alert className="mb-4">
               <SparklesIcon className="h-4 w-4" />
-              <AlertTitle>{m.rpe_questions_paywall_title()}</AlertTitle>
+              <AlertTitle>{m.ai_feedback_questions_off_title()}</AlertTitle>
               <AlertDescription className="mt-2 flex flex-col gap-3">
-                <span>{m.rpe_questions_paywall_description()}</span>
+                <span>{m.ai_feedback_questions_off_description()}</span>
                 <Button
                   variant="outline"
                   size="sm"
                   className="w-fit"
-                  onClick={() => setPaywallOpen(true)}
+                  onClick={() => setAiSetupOpen(true)}
                 >
-                  {m.upgrade_now()}
+                  {m.ai_setup_title()}
                 </Button>
               </AlertDescription>
             </Alert>
@@ -92,10 +91,9 @@ export function ActivityFeedbackDisplayCard({ event }: P) {
           )}
         </CardContent>
       </Card>
-      <PaywallDialog
-        open={paywallOpen}
-        onOpenChange={setPaywallOpen}
-        reason="ai-feature"
+      <AiSetupDialog
+        open={aiSetupOpen}
+        onOpenChange={setAiSetupOpen}
         analyticsSource="activity_feedback_display"
       />
     </>

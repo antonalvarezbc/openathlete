@@ -6,6 +6,7 @@ import { isPaymentDisabled } from '@/utils/capacitor';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
+import { AiTab } from './ai/ai-tab';
 import { AthletesTab } from './athletes-tab';
 import { CoachesTab } from './coaches-tab';
 import { ConnectorsTab } from './connectors-tab';
@@ -26,6 +27,7 @@ export function SettingsView() {
     'profile',
     'equipment',
     'training_zones',
+    'ai',
     ...(roles?.includes('COACH') ? ['athletes'] : []),
     ...(roles?.includes('ATHLETE') ? ['coaches'] : []),
     'invitations',
@@ -37,6 +39,7 @@ export function SettingsView() {
     profile: m.profile(),
     equipment: m.equipment(),
     training_zones: m.training_zones(),
+    ai: m.ai_settings_tab(),
     athletes: m.athletes(),
     coaches: m.coaches(),
     invitations: m.invitations(),
@@ -85,6 +88,7 @@ export function SettingsView() {
             <TabsTrigger value="training_zones">
               {m.training_zones()}
             </TabsTrigger>
+            <TabsTrigger value="ai">{m.ai_settings_tab()}</TabsTrigger>
             {roles?.includes('COACH') && (
               <TabsTrigger value="athletes">{m.athletes()}</TabsTrigger>
             )}
@@ -109,6 +113,9 @@ export function SettingsView() {
         </TabsContent>
         <TabsContent value="training_zones" className="mt-6">
           <TrainingZonesTab />
+        </TabsContent>
+        <TabsContent value="ai" className="mt-6">
+          <AiTab />
         </TabsContent>
         <TabsContent value="athletes" className="mt-6">
           <AthletesTab />
