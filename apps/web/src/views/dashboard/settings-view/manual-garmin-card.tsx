@@ -1,11 +1,12 @@
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useSpaceContext } from '@/contexts/space';
 import { m } from '@/paraglide/messages';
 import { getLocale } from '@/paraglide/runtime';
@@ -139,6 +140,7 @@ export function ManualGarminCard({
   const [code, setCode] = useState('');
   const [mfa, setMfa] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  const [open, setOpen] = useState(false);
   const [now, setNow] = useState(Date.now);
   const finishedRun = useRef<string | undefined>(undefined);
   const cache = useQueryClient();
@@ -284,8 +286,47 @@ export function ManualGarminCard({
     activeBackfill ||
     backfill.isPending ||
     login.isPending;
+  const canLogin =
+    !compact && configure && space === 'ATHLETE' && data.canConfigure;
+  const attention =
+    !!(error || data.error) || (remoteBlocked && !!data.remoteBlockedUntil);
   const Container = compact ? 'section' : Card;
   const Content = compact ? 'div' : CardContent;
+  // The card only shows the state; everything else lives in the dialog.
+  const summary = (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="min-w-0 text-sm">
+        <p className="font-medium">
+          {data.connected
+            ? m.garmin_manual_connected()
+            : m.garmin_manual_not_connected()}
+          {attention && (
+            <span className="ml-2 text-amber-700 dark:text-amber-300">
+              · {m.garmin_manual_attention()}
+            </span>
+          )}
+        </p>
+        <p className="text-muted-foreground">
+          {busy
+            ? m.garmin_manual_running()
+            : m.garmin_manual_last_success({
+                date: data.lastSuccess
+                  ? formatDate(data.lastSuccess)
+                  : m.garmin_manual_never(),
+              })}
+        </p>
+      </div>
+      <Button
+        variant="outline"
+        className="min-h-11"
+        onClick={() => setOpen(true)}
+      >
+        {m.garmin_manual_open()}
+      </Button>
+    </div>
+  );
+  const section = 'space-y-2 border-t pt-4';
+  const heading = 'text-sm font-semibold';
   return (
     <Container
       className={compact ? 'rounded-md border bg-muted/30 p-3' : undefined}
@@ -297,249 +338,290 @@ export function ManualGarminCard({
       {!compact && (
         <CardHeader>
           <CardTitle>{m.garmin_manual_title()}</CardTitle>
-          <CardDescription>
-            {m.garmin_manual_description({ athleteId: String(data.athleteId) })}
-          </CardDescription>
         </CardHeader>
       )}
-      <Content className="min-w-0 space-y-4 break-words">
-        {!compact && configure && space === 'ATHLETE' && data.canConfigure && (
-          <div className="space-y-3">
-            <Button
-              variant="outline"
-              onClick={() => setShowLogin(!showLogin)}
-              disabled={busy || remoteBlocked || mfa}
-            >
-              {m.garmin_login_setup()}
-            </Button>
-            {showLogin && (
-              <form
-                className="space-y-3 max-w-md"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  if (!busy && (!remoteBlocked || mfa)) login.mutate();
-                }}
-              >
-                <p className="text-sm">{m.garmin_login_help()}</p>
-                {mfa ? (
-                  <label className="block">
-                    {m.garmin_login_code()}
-                    <input
-                      className="w-full border rounded p-2"
-                      value={code}
-                      onChange={(event) => setCode(event.target.value)}
-                      disabled={busy}
-                      required
-                      inputMode="numeric"
-                      autoComplete="one-time-code"
-                    />
-                  </label>
-                ) : (
-                  <>
-                    <label className="block">
-                      {m.email()}
-                      <input
-                        className="w-full border rounded p-2"
-                        type="email"
-                        autoComplete="username"
-                        value={email}
-                        onChange={(event) => setEmail(event.target.value)}
-                        disabled={busy || remoteBlocked}
-                        required
-                      />
-                    </label>
-                    <label className="block">
-                      {m.password()}
-                      <input
-                        className="w-full border rounded p-2"
-                        type="password"
-                        autoComplete="current-password"
-                        value={password}
-                        onChange={(event) => setPassword(event.target.value)}
-                        disabled={busy || remoteBlocked}
-                        required
-                      />
-                    </label>
-                  </>
-                )}
-                <Button
-                  type="submit"
-                  disabled={busy || (remoteBlocked && !mfa)}
-                >
-                  {m.connect()}
-                </Button>
-              </form>
-            )}
-          </div>
-        )}
-        {!data.connected && <p>{m.garmin_login_needed()}</p>}
-        <div className="space-y-2">
-          <Button
-            className="h-auto min-h-11 max-w-full whitespace-normal text-left"
-            disabled={
-              !data.connected || busy || mfa || remoteBlocked || syncCoolingDown
-            }
-            onClick={() => sync.mutate()}
-          >
-            {sync.isPending || data.running
-              ? m.garmin_manual_running()
-              : m.garmin_manual_button()}
-          </Button>
-          <p className="text-sm text-muted-foreground">
-            {m.garmin_manual_summary_help()}
-          </p>
-          <p className="text-sm">
-            {m.garmin_manual_last_success({
-              date: data.lastSuccess
-                ? formatDate(data.lastSuccess)
-                : m.garmin_manual_never(),
-            })}
-          </p>
-          {syncCoolingDown &&
-            !data.running &&
-            !sync.isPending &&
-            !remoteBlocked && (
-              <p className="text-sm">
-                {m.garmin_manual_available_at({
-                  date: formatDate(new Date(syncAllowedAt).toISOString()),
-                })}
-              </p>
-            )}
-          {data.result && (
-            <p className="text-sm">
-              {m.garmin_manual_result({
-                imported: data.result.imported,
-                updated: data.result.updated ?? 0,
-                skipped: data.result.skipped,
-                metrics: data.result.metrics,
+      <Content className="min-w-0">{summary}</Content>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent
+          mobileFullscreen
+          className="max-h-[90dvh] overflow-y-auto sm:max-w-xl"
+        >
+          <DialogHeader>
+            <DialogTitle>{m.garmin_manual_title()}</DialogTitle>
+            <DialogDescription>
+              {m.garmin_manual_description({
+                athleteId: String(data.athleteId),
               })}
-            </p>
-          )}
-          {data.result?.warnings.includes('ActivityOwnedByAnotherAthlete') && (
-            <p
-              role="alert"
-              className="text-sm text-amber-700 dark:text-amber-300"
-            >
-              {m.garmin_manual_owned_elsewhere()}
-            </p>
-          )}
-          {data.result?.warnings.includes('ActivityHistoryIncomplete') && (
-            <p
-              role="alert"
-              className="text-sm text-amber-700 dark:text-amber-300"
-            >
-              {m.garmin_manual_history_incomplete()}
-            </p>
-          )}
-          {!!data.result?.warnings.length && (
-            <p role="status" className="text-sm">
-              {m.garmin_manual_warnings()}
-            </p>
-          )}
-        </div>
-        <div className="space-y-2 border-t pt-3">
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              className="h-auto min-h-11 max-w-full whitespace-normal text-left"
-              disabled={!data.connected || busy || mfa || remoteBlocked}
-              onClick={() => backfill.mutate()}
-            >
-              {activeBackfill || backfill.isPending
-                ? m.garmin_backfill_running()
-                : m.garmin_backfill_button()}
-            </Button>
-            {activeBackfill && (
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-w-0 space-y-4 break-words">
+            <div className="space-y-2">
+              <h4 className={heading}>{m.garmin_manual_account()}</h4>
+              <p className="text-sm">
+                {data.connected
+                  ? m.garmin_manual_connected()
+                  : m.garmin_manual_not_connected()}
+              </p>
+              {canLogin && (
+                <div className="space-y-3">
+                  {data.connected && (
+                    <p className="text-sm text-muted-foreground">
+                      {m.garmin_login_reconnect_help()}
+                    </p>
+                  )}
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowLogin(!showLogin)}
+                    disabled={busy || remoteBlocked || mfa}
+                  >
+                    {data.connected
+                      ? m.garmin_login_reconnect()
+                      : m.garmin_login_setup()}
+                  </Button>
+                  {showLogin && (
+                    <form
+                      className="space-y-3 max-w-md"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        if (!busy && (!remoteBlocked || mfa)) login.mutate();
+                      }}
+                    >
+                      <p className="text-sm">{m.garmin_login_help()}</p>
+                      {mfa ? (
+                        <label className="block">
+                          {m.garmin_login_code()}
+                          <input
+                            className="w-full border rounded p-2"
+                            value={code}
+                            onChange={(event) => setCode(event.target.value)}
+                            disabled={busy}
+                            required
+                            inputMode="numeric"
+                            autoComplete="one-time-code"
+                          />
+                        </label>
+                      ) : (
+                        <>
+                          <label className="block">
+                            {m.email()}
+                            <input
+                              className="w-full border rounded p-2"
+                              type="email"
+                              autoComplete="username"
+                              value={email}
+                              onChange={(event) => setEmail(event.target.value)}
+                              disabled={busy || remoteBlocked}
+                              required
+                            />
+                          </label>
+                          <label className="block">
+                            {m.password()}
+                            <input
+                              className="w-full border rounded p-2"
+                              type="password"
+                              autoComplete="current-password"
+                              value={password}
+                              onChange={(event) =>
+                                setPassword(event.target.value)
+                              }
+                              disabled={busy || remoteBlocked}
+                              required
+                            />
+                          </label>
+                        </>
+                      )}
+                      <Button
+                        type="submit"
+                        disabled={busy || (remoteBlocked && !mfa)}
+                      >
+                        {m.connect()}
+                      </Button>
+                    </form>
+                  )}
+                </div>
+              )}
+              {!data.connected && !canLogin && (
+                <p className="text-sm">{m.garmin_login_needed()}</p>
+              )}
+            </div>
+            <div className={section}>
+              <h4 className={heading}>{m.garmin_manual_sync_section()}</h4>
               <Button
-                variant="outline"
-                className="min-h-11"
+                className="h-auto min-h-11 max-w-full whitespace-normal text-left"
                 disabled={
-                  stopBackfill.isPending || data.backfill?.status === 'STOPPING'
+                  !data.connected ||
+                  busy ||
+                  mfa ||
+                  remoteBlocked ||
+                  syncCoolingDown
                 }
-                onClick={() => stopBackfill.mutate()}
+                onClick={() => sync.mutate()}
               >
-                {m.garmin_backfill_stop()}
+                {sync.isPending || data.running
+                  ? m.garmin_manual_running()
+                  : m.garmin_manual_button()}
               </Button>
-            )}
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {m.garmin_backfill_help()}
-          </p>
-          {data.backfillPending !== undefined && (
-            <p className="text-sm">
-              {m.garmin_backfill_pending({ count: data.backfillPending })}
-            </p>
-          )}
-          {data.backfill && (
-            <div
-              className="space-y-2"
-              role="status"
-              aria-live="polite"
-              aria-atomic="true"
-            >
-              <p className="text-sm font-medium">
-                {backfillMessage(data.backfill)}
-              </p>
-              <progress
-                className="block h-2 w-full accent-primary"
-                aria-label={m.garmin_backfill_progress_label()}
-                max={Math.max(data.backfill.total, 1)}
-                value={Math.min(data.backfill.checked, data.backfill.total)}
-              />
-              <p className="text-sm">
-                {m.garmin_backfill_progress({
-                  checked: data.backfill.checked,
-                  total: data.backfill.total,
-                  updated: data.backfill.updated,
-                  remaining: data.backfill.remaining,
-                })}
+              <p className="text-sm text-muted-foreground">
+                {m.garmin_manual_summary_help()}
               </p>
               <p className="text-sm">
-                {m.garmin_backfill_sources({
-                  cached: data.backfill.cached,
-                  downloaded: data.backfill.downloaded,
+                {m.garmin_manual_last_success({
+                  date: data.lastSuccess
+                    ? formatDate(data.lastSuccess)
+                    : m.garmin_manual_never(),
                 })}
               </p>
-              {activeBackfill &&
-                data.backfill.nextRequestAt &&
-                Date.parse(data.backfill.nextRequestAt) > now && (
+              {syncCoolingDown &&
+                !data.running &&
+                !sync.isPending &&
+                !remoteBlocked && (
                   <p className="text-sm">
-                    {m.garmin_backfill_next_request({
-                      date: formatDate(data.backfill.nextRequestAt),
+                    {m.garmin_manual_available_at({
+                      date: formatDate(new Date(syncAllowedAt).toISOString()),
                     })}
                   </p>
                 )}
-              {!!data.backfill.failed.length && (
+              {data.result && (
                 <p className="text-sm">
-                  {m.garmin_manual_fit_failed_ids({
-                    ids: data.backfill.failed.join(', '),
+                  {m.garmin_manual_result({
+                    imported: data.result.imported,
+                    updated: data.result.updated ?? 0,
+                    skipped: data.result.skipped,
+                    metrics: data.result.metrics,
                   })}
                 </p>
               )}
-              {!!data.backfill.incompatible.length && (
-                <p className="text-sm">
-                  {m.garmin_manual_fit_incompatible({
-                    ids: data.backfill.incompatible.join(', '),
-                  })}
+              {data.result?.warnings.includes(
+                'ActivityOwnedByAnotherAthlete',
+              ) && (
+                <p
+                  role="alert"
+                  className="text-sm text-amber-700 dark:text-amber-300"
+                >
+                  {m.garmin_manual_owned_elsewhere()}
+                </p>
+              )}
+              {data.result?.warnings.includes('ActivityHistoryIncomplete') && (
+                <p
+                  role="alert"
+                  className="text-sm text-amber-700 dark:text-amber-300"
+                >
+                  {m.garmin_manual_history_incomplete()}
+                </p>
+              )}
+              {!!data.result?.warnings.length && (
+                <p role="status" className="text-sm">
+                  {m.garmin_manual_warnings()}
                 </p>
               )}
             </div>
-          )}
-        </div>
-        {remoteBlocked && data.remoteBlockedUntil && (
-          <p role="status" className="text-sm">
-            {m.garmin_backfill_blocked_until({
-              date: formatDate(data.remoteBlockedUntil),
-            })}
-          </p>
-        )}
-        {status.isError && (
-          <p role="alert">{m.garmin_manual_status_failed()}</p>
-        )}
-        {(error || data.error) && (
-          <p role="alert">{error || garminErrorText(data.error)}</p>
-        )}
-      </Content>
+            <div className={section}>
+              <h4 className={heading}>{m.garmin_backfill_section()}</h4>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  className="h-auto min-h-11 max-w-full whitespace-normal text-left"
+                  disabled={!data.connected || busy || mfa || remoteBlocked}
+                  onClick={() => backfill.mutate()}
+                >
+                  {activeBackfill || backfill.isPending
+                    ? m.garmin_backfill_running()
+                    : m.garmin_backfill_button()}
+                </Button>
+                {activeBackfill && (
+                  <Button
+                    variant="outline"
+                    className="min-h-11"
+                    disabled={
+                      stopBackfill.isPending ||
+                      data.backfill?.status === 'STOPPING'
+                    }
+                    onClick={() => stopBackfill.mutate()}
+                  >
+                    {m.garmin_backfill_stop()}
+                  </Button>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {m.garmin_backfill_help()}
+              </p>
+              {data.backfillPending !== undefined && (
+                <p className="text-sm">
+                  {m.garmin_backfill_pending({ count: data.backfillPending })}
+                </p>
+              )}
+              {data.backfill && (
+                <div
+                  className="space-y-2"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  <p className="text-sm font-medium">
+                    {backfillMessage(data.backfill)}
+                  </p>
+                  <progress
+                    className="block h-2 w-full accent-primary"
+                    aria-label={m.garmin_backfill_progress_label()}
+                    max={Math.max(data.backfill.total, 1)}
+                    value={Math.min(data.backfill.checked, data.backfill.total)}
+                  />
+                  <p className="text-sm">
+                    {m.garmin_backfill_progress({
+                      checked: data.backfill.checked,
+                      total: data.backfill.total,
+                      updated: data.backfill.updated,
+                      remaining: data.backfill.remaining,
+                    })}
+                  </p>
+                  <p className="text-sm">
+                    {m.garmin_backfill_sources({
+                      cached: data.backfill.cached,
+                      downloaded: data.backfill.downloaded,
+                    })}
+                  </p>
+                  {activeBackfill &&
+                    data.backfill.nextRequestAt &&
+                    Date.parse(data.backfill.nextRequestAt) > now && (
+                      <p className="text-sm">
+                        {m.garmin_backfill_next_request({
+                          date: formatDate(data.backfill.nextRequestAt),
+                        })}
+                      </p>
+                    )}
+                  {!!data.backfill.failed.length && (
+                    <p className="text-sm">
+                      {m.garmin_manual_fit_failed_ids({
+                        ids: data.backfill.failed.join(', '),
+                      })}
+                    </p>
+                  )}
+                  {!!data.backfill.incompatible.length && (
+                    <p className="text-sm">
+                      {m.garmin_manual_fit_incompatible({
+                        ids: data.backfill.incompatible.join(', '),
+                      })}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+            {remoteBlocked && data.remoteBlockedUntil && (
+              <p role="status" className="text-sm">
+                {m.garmin_backfill_blocked_until({
+                  date: formatDate(data.remoteBlockedUntil),
+                })}
+              </p>
+            )}
+            {status.isError && (
+              <p role="alert">{m.garmin_manual_status_failed()}</p>
+            )}
+            {(error || data.error) && (
+              <p role="alert">{error || garminErrorText(data.error)}</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Container>
   );
 }
