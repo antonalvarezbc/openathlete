@@ -16,7 +16,10 @@ jest.mock('@garmin/fitsdk', () =>
 describe('Manual FIT multipart upload', () => {
   let app: INestApplication;
   let origin: string;
-  const service = { import: jest.fn().mockResolvedValue({ eventId: 90 }) };
+  const service = {
+    import: jest.fn().mockResolvedValue({ eventId: 90 }),
+    importGpx: jest.fn().mockResolvedValue({ eventId: 91 }),
+  };
   beforeAll(async () => {
     const module = await Test.createTestingModule({
       controllers: [ManualFitImportController],
@@ -41,6 +44,7 @@ describe('Manual FIT multipart upload', () => {
   });
   beforeEach(() => {
     service.import.mockClear();
+    service.importGpx.mockClear();
   });
   const form = () => {
     const data = new FormData();
@@ -72,5 +76,37 @@ describe('Manual FIT multipart upload', () => {
     });
     expect(response.status).toBe(400);
     expect(service.import).not.toHaveBeenCalled();
+  });
+  test('accepts a GPX with an optional sport', async () => {
+    const gpx = (sport?: string) => {
+      const data = new FormData();
+      data.append('file', new Blob(['<gpx/>']), 'run.gpx');
+      data.append('name', 'Morning run');
+      if (sport) data.append('sport', sport);
+      return data;
+    };
+    let response = await fetch(origin + '/activity-import/gpx', {
+      method: 'POST',
+      body: gpx('TRAIL_RUNNING'),
+    });
+    expect(response.status).toBe(201);
+    expect(service.importGpx).toHaveBeenCalledWith(
+      { userId: 4 },
+      expect.objectContaining({ originalname: 'run.gpx' }),
+      'Morning run',
+      'TRAIL_RUNNING',
+    );
+    response = await fetch(origin + '/activity-import/gpx', {
+      method: 'POST',
+      body: gpx(),
+    });
+    expect(response.status).toBe(201);
+    expect(service.importGpx.mock.calls[1][3]).toBeUndefined();
+    response = await fetch(origin + '/activity-import/gpx', {
+      method: 'POST',
+      body: gpx('QUIDDITCH'),
+    });
+    expect(response.status).toBe(400);
+    expect(service.importGpx).toHaveBeenCalledTimes(2);
   });
 });
