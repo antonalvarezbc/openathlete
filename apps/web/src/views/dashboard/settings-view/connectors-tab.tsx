@@ -530,9 +530,8 @@ export function ConnectorsTab() {
                 );
               })}
         </div>
+        {manualGarminSync && <ManualGarminCard display="button" configure />}
       </SettingsSection>
-
-      {manualGarminSync && <ManualGarminCard configure />}
 
       {manualFitImport &&
         space === 'ATHLETE' &&

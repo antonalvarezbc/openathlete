@@ -134,12 +134,18 @@ function formatDate(value: string) {
 export function ManualGarminCard({
   athleteId,
   configure = false,
-  compact = false,
+  display = 'card',
+  size = 'default',
   onboarding = false,
 }: {
   athleteId?: number;
   configure?: boolean;
-  compact?: boolean;
+  /**
+   * `card` explains the connector (onboarding); `button` is a single button,
+   * with the state beside the name, that opens the dialog (settings).
+   */
+  display?: 'card' | 'button';
+  size?: 'default' | 'sm';
   /**
    * Shown in the onboarding connectors step: explains what the connector is
    * and lets the account owner sign in whatever the stored space is, since
@@ -153,6 +159,8 @@ export function ManualGarminCard({
   const [code, setCode] = useState('');
   const [mfa, setMfa] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  // Signed in again in this visit: older login errors no longer apply.
+  const [reconnected, setReconnected] = useState(false);
   const [open, setOpen] = useState(false);
   const [now, setNow] = useState(Date.now);
   const finishedRun = useRef<string | undefined>(undefined);
@@ -273,6 +281,7 @@ export function ManualGarminCard({
       if (reply.connected) {
         setShowLogin(false);
         setEmail('');
+        setReconnected(true);
       }
       await status.refetch();
     },
@@ -299,188 +308,151 @@ export function ManualGarminCard({
     activeBackfill ||
     backfill.isPending ||
     login.isPending;
+  // Only the owner signs in (the API checks it again): in the athlete space,
+  // during onboarding, or from their own row of the athletes list when they
+  // coach themselves.
   const canLogin =
-    !compact &&
     configure &&
-    (onboarding || space === 'ATHLETE') &&
-    data.canConfigure;
-  // Nothing else to do before connecting: go straight to the sign-in form.
+    !!data.canConfigure &&
+    (onboarding || space === 'ATHLETE' || athleteId !== undefined);
+  // Nothing else to do before connecting: the dialog is the sign-in form.
   const connectFirst = canLogin && !data.connected;
   const attention =
     !!(error || data.error) || (remoteBlocked && !!data.remoteBlockedUntil);
-  const Container = compact ? 'section' : Card;
-  const Content = compact ? 'div' : CardContent;
-  // The card only shows the state; everything else lives in the dialog.
-  const summary = (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="min-w-0 text-sm">
-        <p className="font-medium">
-          {data.connected
-            ? m.garmin_manual_connected()
-            : m.garmin_manual_not_connected()}
-          {attention && (
-            <span className="ml-2 text-amber-700 dark:text-amber-300">
-              · {m.garmin_manual_attention()}
-            </span>
-          )}
-        </p>
-        <p className="text-muted-foreground">
-          {busy
-            ? m.garmin_manual_running()
-            : m.garmin_manual_last_success({
-                date: data.lastSuccess
-                  ? formatDate(data.lastSuccess)
-                  : m.garmin_manual_never(),
-              })}
-        </p>
-      </div>
-      <Button
-        variant="outline"
-        className="min-h-11"
-        onClick={() => {
-          if (connectFirst) setShowLogin(true);
-          setOpen(true);
-        }}
-      >
-        {connectFirst ? m.connect() : m.garmin_manual_open()}
-      </Button>
-    </div>
-  );
-  const section = 'space-y-2 border-t pt-4';
+  // A session Garmin no longer accepts: signing in again stands out.
+  const loginTrouble =
+    !reconnected &&
+    (data.error === 'GARMIN_LOGIN_REQUIRED' ||
+      (data.backfill?.reason === 'AUTH' && !activeBackfill));
+  const stateText = busy
+    ? m.garmin_manual_running()
+    : attention
+      ? m.garmin_manual_attention()
+      : data.connected
+        ? m.garmin_manual_connected()
+        : m.garmin_manual_not_connected();
+  const dotColor = attention
+    ? 'bg-amber-500'
+    : data.connected
+      ? 'bg-emerald-500'
+      : 'bg-muted-foreground/50';
+  const openDialog = () => setOpen(true);
+  const section = 'space-y-2 border-t pt-4 first:border-t-0 first:pt-0';
   const heading = 'text-sm font-semibold';
-  return (
-    <Container
-      className={compact ? 'rounded-md border bg-muted/30 p-3' : undefined}
-      aria-label={compact ? m.garmin_manual_title() : undefined}
+
+  const loginForm = (
+    <form
+      className="space-y-3 max-w-md"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!busy && (!remoteBlocked || mfa)) login.mutate();
+      }}
     >
-      {compact && (
-        <h3 className="mb-3 text-sm font-medium">{m.garmin_manual_title()}</h3>
+      <p className="text-sm">{m.garmin_login_help()}</p>
+      {mfa ? (
+        <label className="block">
+          {m.garmin_login_code()}
+          <input
+            className="w-full border rounded p-2"
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+            disabled={busy}
+            required
+            inputMode="numeric"
+            autoComplete="one-time-code"
+          />
+        </label>
+      ) : (
+        <>
+          <label className="block">
+            {m.email()}
+            <input
+              className="w-full border rounded p-2"
+              type="email"
+              autoComplete="username"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              disabled={busy || remoteBlocked}
+              required
+            />
+          </label>
+          <label className="block">
+            {m.password()}
+            <input
+              className="w-full border rounded p-2"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              disabled={busy || remoteBlocked}
+              required
+            />
+          </label>
+        </>
       )}
-      {!compact && (
-        <CardHeader>
-          <CardTitle>{m.garmin_manual_title()}</CardTitle>
-          {onboarding && (
-            <CardDescription>
-              {m.garmin_manual_onboarding_help()}
-            </CardDescription>
-          )}
-        </CardHeader>
+      <Button type="submit" disabled={busy || (remoteBlocked && !mfa)}>
+        {m.connect()}
+      </Button>
+    </form>
+  );
+
+  const notices = (
+    <>
+      {remoteBlocked && data.remoteBlockedUntil && (
+        <p role="status" className="text-sm">
+          {m.garmin_backfill_blocked_until({
+            date: formatDate(data.remoteBlockedUntil),
+          })}
+        </p>
       )}
-      <Content className="min-w-0">{summary}</Content>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent
-          mobileFullscreen
-          className="max-h-[90dvh] overflow-y-auto sm:max-w-xl"
-        >
-          <DialogHeader>
-            <DialogTitle>{m.garmin_manual_title()}</DialogTitle>
-            <DialogDescription>
-              {m.garmin_manual_description({
-                athleteId: String(data.athleteId),
-              })}
-            </DialogDescription>
-          </DialogHeader>
+      {status.isError && <p role="alert">{m.garmin_manual_status_failed()}</p>}
+      {(error || data.error) && (
+        <p role="alert">{error || garminErrorText(data.error)}</p>
+      )}
+    </>
+  );
+
+  const dialog = (
+    <Dialog
+      open={open}
+      onOpenChange={(value) => {
+        setOpen(value);
+        // Changing the account stays tucked away the next time.
+        if (!value) setShowLogin(false);
+      }}
+    >
+      <DialogContent
+        mobileFullscreen
+        className="max-h-[90dvh] overflow-y-auto sm:max-w-xl"
+      >
+        <DialogHeader>
+          <DialogTitle>{m.garmin_manual_title()}</DialogTitle>
+          <DialogDescription>
+            {m.garmin_manual_description({
+              athleteId: String(data.athleteId),
+            })}
+          </DialogDescription>
+        </DialogHeader>
+        {!data.connected ? (
+          // Not connected yet: the dialog is only the way to connect.
           <div className="min-w-0 space-y-4 break-words">
-            <div className="space-y-2">
-              <h4 className={heading}>{m.garmin_manual_account()}</h4>
-              <p className="text-sm">
-                {data.connected
-                  ? m.garmin_manual_connected()
-                  : m.garmin_manual_not_connected()}
-              </p>
-              {canLogin && (
-                <div className="space-y-3">
-                  {data.connected && (
-                    <p className="text-sm text-muted-foreground">
-                      {m.garmin_login_reconnect_help()}
-                    </p>
-                  )}
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowLogin(!showLogin)}
-                    disabled={busy || remoteBlocked || mfa}
-                  >
-                    {data.connected
-                      ? m.garmin_login_reconnect()
-                      : m.garmin_login_setup()}
-                  </Button>
-                  {showLogin && (
-                    <form
-                      className="space-y-3 max-w-md"
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        if (!busy && (!remoteBlocked || mfa)) login.mutate();
-                      }}
-                    >
-                      <p className="text-sm">{m.garmin_login_help()}</p>
-                      {mfa ? (
-                        <label className="block">
-                          {m.garmin_login_code()}
-                          <input
-                            className="w-full border rounded p-2"
-                            value={code}
-                            onChange={(event) => setCode(event.target.value)}
-                            disabled={busy}
-                            required
-                            inputMode="numeric"
-                            autoComplete="one-time-code"
-                          />
-                        </label>
-                      ) : (
-                        <>
-                          <label className="block">
-                            {m.email()}
-                            <input
-                              className="w-full border rounded p-2"
-                              type="email"
-                              autoComplete="username"
-                              value={email}
-                              onChange={(event) => setEmail(event.target.value)}
-                              disabled={busy || remoteBlocked}
-                              required
-                            />
-                          </label>
-                          <label className="block">
-                            {m.password()}
-                            <input
-                              className="w-full border rounded p-2"
-                              type="password"
-                              autoComplete="current-password"
-                              value={password}
-                              onChange={(event) =>
-                                setPassword(event.target.value)
-                              }
-                              disabled={busy || remoteBlocked}
-                              required
-                            />
-                          </label>
-                        </>
-                      )}
-                      <Button
-                        type="submit"
-                        disabled={busy || (remoteBlocked && !mfa)}
-                      >
-                        {m.connect()}
-                      </Button>
-                    </form>
-                  )}
-                </div>
-              )}
-              {!data.connected && !canLogin && (
-                <p className="text-sm">{m.garmin_login_needed()}</p>
-              )}
-            </div>
+            <p className="text-sm font-medium">
+              {m.garmin_manual_not_connected()}
+            </p>
+            {canLogin ? (
+              loginForm
+            ) : (
+              <p className="text-sm">{m.garmin_login_needed()}</p>
+            )}
+            {notices}
+          </div>
+        ) : (
+          <div className="min-w-0 space-y-4 break-words">
             <div className={section}>
               <h4 className={heading}>{m.garmin_manual_sync_section()}</h4>
               <Button
                 className="h-auto min-h-11 max-w-full whitespace-normal text-left"
-                disabled={
-                  !data.connected ||
-                  busy ||
-                  mfa ||
-                  remoteBlocked ||
-                  syncCoolingDown
-                }
+                disabled={busy || mfa || remoteBlocked || syncCoolingDown}
                 onClick={() => sync.mutate()}
               >
                 {sync.isPending || data.running
@@ -547,7 +519,7 @@ export function ManualGarminCard({
                 <Button
                   variant="outline"
                   className="h-auto min-h-11 max-w-full whitespace-normal text-left"
-                  disabled={!data.connected || busy || mfa || remoteBlocked}
+                  disabled={busy || mfa || remoteBlocked}
                   onClick={() => backfill.mutate()}
                 >
                   {activeBackfill || backfill.isPending
@@ -632,22 +604,102 @@ export function ManualGarminCard({
                 </div>
               )}
             </div>
-            {remoteBlocked && data.remoteBlockedUntil && (
-              <p role="status" className="text-sm">
-                {m.garmin_backfill_blocked_until({
-                  date: formatDate(data.remoteBlockedUntil),
-                })}
-              </p>
-            )}
-            {status.isError && (
-              <p role="alert">{m.garmin_manual_status_failed()}</p>
-            )}
-            {(error || data.error) && (
-              <p role="alert">{error || garminErrorText(data.error)}</p>
+            {notices}
+            {/* Already connected: changing the account or password is
+                rarely needed, so it waits at the end as a quiet link. */}
+            {canLogin && (
+              <div className="space-y-3 border-t pt-3 text-sm text-muted-foreground">
+                <Button
+                  variant={loginTrouble ? 'outline' : 'link'}
+                  size="sm"
+                  className={
+                    loginTrouble
+                      ? undefined
+                      : 'h-auto p-0 text-muted-foreground'
+                  }
+                  aria-expanded={showLogin || mfa}
+                  onClick={() => setShowLogin(!showLogin)}
+                  disabled={busy || mfa}
+                >
+                  {m.garmin_login_change()}
+                </Button>
+                {(showLogin || mfa) && (
+                  <div className="space-y-3 text-foreground">
+                    <p className="text-sm text-muted-foreground">
+                      {m.garmin_login_reconnect_help()}
+                    </p>
+                    {loginForm}
+                  </div>
+                )}
+              </div>
             )}
           </div>
-        </DialogContent>
-      </Dialog>
-    </Container>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+
+  if (display === 'button')
+    return (
+      <>
+        <Button
+          variant="outline"
+          size={size}
+          className={`h-auto flex-wrap gap-x-2 gap-y-0 whitespace-normal text-left ${
+            size === 'sm' ? 'min-h-8' : 'min-h-11'
+          }`}
+          onClick={openDialog}
+        >
+          <span>{m.garmin_manual_title()}</span>
+          <span className="inline-flex items-center gap-1.5 text-xs font-normal text-muted-foreground">
+            <span
+              aria-hidden="true"
+              className={`size-2 rounded-full ${dotColor}`}
+            />
+            {stateText}
+          </span>
+        </Button>
+        {dialog}
+      </>
+    );
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{m.garmin_manual_title()}</CardTitle>
+        {onboarding && (
+          <CardDescription>{m.garmin_manual_onboarding_help()}</CardDescription>
+        )}
+      </CardHeader>
+      <CardContent className="min-w-0">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0 text-sm">
+            <p className="font-medium">
+              {data.connected
+                ? m.garmin_manual_connected()
+                : m.garmin_manual_not_connected()}
+              {attention && (
+                <span className="ml-2 text-amber-700 dark:text-amber-300">
+                  · {m.garmin_manual_attention()}
+                </span>
+              )}
+            </p>
+            <p className="text-muted-foreground">
+              {busy
+                ? m.garmin_manual_running()
+                : m.garmin_manual_last_success({
+                    date: data.lastSuccess
+                      ? formatDate(data.lastSuccess)
+                      : m.garmin_manual_never(),
+                  })}
+            </p>
+          </div>
+          <Button variant="outline" className="min-h-11" onClick={openDialog}>
+            {connectFirst ? m.connect() : m.garmin_manual_open()}
+          </Button>
+        </div>
+      </CardContent>
+      {dialog}
+    </Card>
   );
 }
