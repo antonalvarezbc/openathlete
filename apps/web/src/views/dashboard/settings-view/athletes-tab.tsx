@@ -165,8 +165,8 @@ export function AthletesTab() {
             </Button>
           </div>
         )}
-        {/* One block per athlete instead of table columns, so the manual
-            Garmin controls get the full width on every screen size. */}
+        {/* One block per athlete instead of table columns, so the actions
+            wrap on every screen size. */}
         {!isLoadingAthletes && !athletes?.length ? (
           <p className="text-sm text-muted-foreground">
             {m.no_coached_athletes()}
@@ -218,6 +218,14 @@ export function AthletesTab() {
                         >
                           {m.ai_memory_settings()}
                         </Button>
+                        {manualGarminSync && (
+                          <ManualGarminCard
+                            athleteId={athlete.athleteId}
+                            display="button"
+                            size="sm"
+                            configure
+                          />
+                        )}
                         <Button
                           variant="link"
                           size="sm"
@@ -243,9 +251,6 @@ export function AthletesTab() {
                         </Button>
                       </div>
                     </div>
-                    {manualGarminSync && (
-                      <ManualGarminCard athleteId={athlete.athleteId} compact />
-                    )}
                   </li>
                 ))}
           </ul>

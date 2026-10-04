@@ -23,8 +23,9 @@ vi.mock('@/contexts/auth', () => ({
   useAuthContext: () => ({ user: session.user }),
   useUserRoles: () => session.user.roles,
 }));
+const features = vi.hoisted(() => ({ manualGarminSync: false }));
 vi.mock('@/api/installation/installation.hooks', () => ({
-  useInstallationFeatures: () => ({ manualGarminSync: false }),
+  useInstallationFeatures: () => features,
 }));
 vi.mock('@/hooks/use-feature-access', () => ({
   useAthleteLimit: () => ({ maxAthletes: null }),
@@ -53,10 +54,26 @@ describe('AthletesTab: coaching yourself', () => {
 
   beforeEach(() => {
     session.user = { userId: 8, roles: ['ATHLETE', 'COACH'] };
+    features.manualGarminSync = false;
     coached = [other];
-    api.get.mockReset().mockImplementation(async (url: string) => ({
-      data: url === '/athlete/coached' ? coached : [],
-    }));
+    api.get
+      .mockReset()
+      .mockImplementation(
+        async (url: string, config?: { params?: { athleteId?: number } }) => ({
+          data:
+            url === '/athlete/coached'
+              ? coached
+              : url === '/provider/garmin-manual/status'
+                ? {
+                    enabled: true,
+                    connected: false,
+                    // Only your own athlete profile can be signed in.
+                    canConfigure: config?.params?.athleteId === me.athleteId,
+                    athleteId: config?.params?.athleteId,
+                  }
+                : [],
+        }),
+      );
     api.post.mockReset().mockImplementation(async () => {
       coached = [other, me];
       return { data: { created: true } };
@@ -130,6 +147,37 @@ describe('AthletesTab: coaching yourself', () => {
         .click(),
     );
     expect(document.body.textContent).toContain('coach_self_stop_confirm');
+  });
+
+  it("puts manual Garmin among each athlete's buttons", async () => {
+    features.manualGarminSync = true;
+    coached = [other, me];
+    await mount();
+    await vi.waitFor(() =>
+      expect(
+        container.querySelectorAll('li button[class*="min-h-8"]'),
+      ).toHaveLength(2),
+    );
+    const rows = [...container.querySelectorAll('li')];
+    const mine = rows.find((row) => row.textContent?.includes('Me Test'))!;
+    const theirs = rows.find((row) => row.textContent?.includes('Ana Test'))!;
+    const garmin = (row: Element) =>
+      [...row.querySelectorAll('button')].find((element) =>
+        element.textContent?.startsWith('garmin_manual_title'),
+      )!;
+    // Same row of actions as "Stop coaching myself", no separate block.
+    expect(garmin(mine).parentElement).toBe(
+      [...mine.querySelectorAll('button')].find(
+        (element) => element.textContent === 'coach_self_stop',
+      )!.parentElement,
+    );
+    expect(mine.querySelector('section')).toBeNull();
+    expect(garmin(theirs)).toBeDefined();
+
+    await act(async () => garmin(mine).click());
+    expect(
+      document.body.querySelector('[role="dialog"] input[type="password"]'),
+    ).not.toBeNull();
   });
 
   it('does not offer it to coach-only accounts', async () => {

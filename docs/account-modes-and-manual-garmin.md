@@ -76,20 +76,32 @@ application to enable it. It also requires `SELF_HOSTED=true` and an absolute
 `GARMIN_UNOFFICIAL_DIRECTORY` with the existing Python and session setup. A stored
 session or a configured directory alone does not enable it.
 
-With the flag unset or `false`, the athlete's manual connection card and the
-coach's manual Garmin table column disappear, and manual login/sync/backfill
+With the flag unset or `false`, the manual Garmin buttons in Settings → Connectors
+and Settings → Athletes disappear, and manual login/sync/backfill
 requests are rejected. No manual status polling is mounted by the interface.
 Previously stored activities, recovery metrics and private session files are
 preserved. Official connectors remain available. FIT uploads have their own
 independent setting, `ENABLE_MANUAL_FIT_IMPORT`, also disabled by default.
 
-- The manual connector appears after the official connectors in the athlete space,
-  and at the end of the onboarding connectors step for accounts that chose the
-  athlete role, with a short explanation and a direct **Connect** button. New
+- In Settings → Connectors, **Garmin · manual sync** is one button below the
+  official connectors, with the state beside it (connected, not connected or
+  needs attention). In Settings → Athletes, the same button sits among each
+  athlete's actions. Everything happens in the dialog it opens.
+- While not connected, the dialog only shows how to connect: the sign-in form for
+  the owner, or a note that the athlete must connect from their own account.
+- Once connected, the dialog starts with the update and FIT download actions.
+  **Change Garmin account or password** is a quiet link at the end, for a
+  changed password or the wrong account; it opens the sign-in form again and
+  closes when the dialog closes. When Garmin rejects the stored session, it
+  becomes a regular button.
+- The onboarding connectors step shows a card with a short explanation and a
+  direct **Connect** button, for accounts that chose the athlete role. New
   accounts can sign in there before they have chosen a space.
-- Only the authenticated owner with ATHLETE role can submit Garmin credentials.
-- The owner and linked users with COACH role can trigger sync.
-- Coaches have sync cards in Settings → Athletes, without credential fields.
+- Only the authenticated owner with ATHLETE role can submit Garmin credentials:
+  in the athlete space, during onboarding, or from their own row in Settings →
+  Athletes when they coach themselves. The API checks ownership again.
+- The owner and linked users with COACH role can trigger sync. For other
+  athletes, coaches see no credential fields.
 - Login is explicitly triggered; no health/activity sync occurs during login.
 - MFA is supported through a second step. Pending login processes expire after three minutes.
 - Passwords/codes pass through stdin, not command arguments, files or API logs.

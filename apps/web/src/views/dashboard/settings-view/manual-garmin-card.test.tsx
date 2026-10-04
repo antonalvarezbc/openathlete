@@ -106,7 +106,7 @@ describe('ManualGarminCard', () => {
     await click(summaryButton());
     expect(dialog()!.textContent).toContain('garmin_login_needed');
     expect(dialog()!.querySelector('input[type="password"]')).toBeNull();
-    expect(buttonNamed('garmin_login_setup')).toBeUndefined();
+    expect(buttonNamed('garmin_login_change')).toBeUndefined();
   });
 
   it('opens the sign-in form directly in the athlete space when not connected', async () => {
@@ -116,14 +116,97 @@ describe('ManualGarminCard', () => {
     expect(dialog()!.querySelector('input[type="password"]')).not.toBeNull();
   });
 
-  it('asks before showing the form again once connected', async () => {
+  it('tucks the account away at the end once connected', async () => {
     await mount('ATHLETE', { ...notConnected, connected: true });
     expect(summaryButton().textContent).toBe('garmin_manual_open');
 
     await click(summaryButton());
     expect(dialog()!.querySelector('input[type="password"]')).toBeNull();
-    await click(buttonNamed('garmin_login_reconnect')!);
+    const update = buttonNamed('garmin_manual_button')!;
+    const change = buttonNamed('garmin_login_change')!;
+    // Updating comes first; changing the account is a quiet link at the end.
+    expect(
+      update.compareDocumentPosition(change) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(change.className).toContain('underline-offset-4');
+    expect(change.getAttribute('aria-expanded')).toBe('false');
+
+    await click(change);
     expect(dialog()!.querySelector('input[type="password"]')).not.toBeNull();
+    expect(dialog()!.textContent).toContain('garmin_login_reconnect_help');
+
+    // Closed and opened again, the form is tucked away again.
+    await act(async () => {
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+      );
+    });
+    await vi.waitFor(() => expect(dialog()).toBeNull());
+    await click(summaryButton());
+    expect(dialog()!.querySelector('input[type="password"]')).toBeNull();
+  });
+
+  it('makes signing in again stand out when Garmin rejects the session', async () => {
+    await mount('ATHLETE', {
+      ...notConnected,
+      connected: true,
+      error: 'GARMIN_LOGIN_REQUIRED',
+    });
+    await click(summaryButton());
+    expect(dialog()!.textContent).toContain('garmin_backfill_auth');
+    expect(buttonNamed('garmin_login_change')!.className).not.toContain(
+      'underline-offset-4',
+    );
+  });
+
+  it('only shows how to connect while not connected', async () => {
+    await mount('ATHLETE', notConnected);
+    await click(summaryButton());
+    expect(buttonNamed('garmin_manual_button')).toBeUndefined();
+    expect(buttonNamed('garmin_backfill_button')).toBeUndefined();
+  });
+
+  describe('as a button in settings', () => {
+    it('shows the name and the state, and opens the same dialog', async () => {
+      await mount(
+        'ATHLETE',
+        { ...notConnected, connected: true, lastSuccess: undefined },
+        { display: 'button' },
+      );
+      expect(container.querySelectorAll('button')).toHaveLength(1);
+      expect(summaryButton().textContent).toBe(
+        'garmin_manual_titlegarmin_manual_connected',
+      );
+      await click(summaryButton());
+      expect(buttonNamed('garmin_manual_button')).toBeDefined();
+    });
+
+    it('lets coaches who coach themselves connect from their own row', async () => {
+      await mount(
+        'COACH',
+        { ...notConnected, athleteId: 31 },
+        { display: 'button', size: 'sm', athleteId: 31 },
+      );
+      expect(api.get).toHaveBeenCalledWith('/provider/garmin-manual/status', {
+        params: { athleteId: 31 },
+      });
+      expect(summaryButton().textContent).toContain(
+        'garmin_manual_not_connected',
+      );
+      await click(summaryButton());
+      expect(dialog()!.querySelector('input[type="password"]')).not.toBeNull();
+    });
+
+    it('never asks for credentials of another athlete', async () => {
+      await mount(
+        'COACH',
+        { ...notConnected, canConfigure: false, athleteId: 40 },
+        { display: 'button', size: 'sm', athleteId: 40 },
+      );
+      await click(summaryButton());
+      expect(dialog()!.textContent).toContain('garmin_login_needed');
+      expect(dialog()!.querySelector('input[type="password"]')).toBeNull();
+    });
   });
 
   it('renders nothing when the installation disables manual Garmin', async () => {
