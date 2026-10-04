@@ -6,6 +6,13 @@ In the coach calendar, choose **Select workouts**, mark individual sessions and
 choose **Delete selected**. Review the names and dates in the confirmation dialog
 before deleting. Cancel leaves all sessions untouched.
 
+**Select workouts** sits with the other calendar buttons: in the header, next
+to the template library and the filters (icon only on small screens), and on
+the mobile month list next to the month/week switch. It stays highlighted while
+selecting and pressing it again leaves selection mode. The bar with the count,
+**Cancel** and **Delete selected** appears below the header only while
+selecting, so the header does not move.
+
 Only planned `TRAINING` events without a linked completed activity can be
 selected. Activities, competitions and notes are excluded. The action requires
 the coach space, coach permissions and an editable calendar. Athlete-only accounts
@@ -32,13 +39,16 @@ the existing endpoint, so the failure report refers to the request result.
 
 ```sh
 node --experimental-strip-types --test scripts/tests/calendar-bulk-delete.test.mjs
+pnpm web test
 pnpm web tsc:check
 pnpm web lint
 pnpm check:locale-parity
 ```
 
 Tests cover eligibility, sequential execution, deduplication, partial failures,
-retrying only failures and empty selections. Local browser QA used four synthetic
+retrying only failures and empty selections, and the select button's states
+(hidden where unavailable, disabled without eligible sessions or while
+deleting, toggling selection mode). Local browser QA used four synthetic
 sessions on the linked QA athlete: cancellation, real deletion, an intercepted
 403 failure followed by retry, an unselected session preserved until explicitly
 selected on mobile, and absence of controls for the athlete account. All four
@@ -48,4 +58,5 @@ were needed for those fixtures.
 ## Source references
 
 - [Bulk-deletion UI](../apps/web/src/components/calendar/calendar-bulk-delete.tsx)
+- [Select button](../apps/web/src/components/calendar/bulk-workout-select-button.tsx)
 - [Deletion sequencing](../apps/web/src/components/calendar/utils/bulk-delete.ts)

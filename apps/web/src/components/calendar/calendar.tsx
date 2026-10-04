@@ -63,6 +63,7 @@ import { AIGenerateEventDialog } from '../ai-generate-event-dialog/ai-generate-e
 import { CreateCycleDialog } from '../create-cycle-dialog';
 import { CreateEventDialog } from '../create-event-dialog';
 import { CreateEventFromTemplateDialog } from '../create-event-from-template-dialog/create-event-from-template.dialog';
+import { BulkWorkoutSelectButton } from './bulk-workout-select-button';
 import { CalendarBody } from './calendar-body';
 import { CalendarBulkDelete } from './calendar-bulk-delete';
 import { CalendarEventDetailsDialog } from './calendar-event-details.dialog';
@@ -783,18 +784,25 @@ export function Calendar({
       <EventClipboardProvider>
         <EventContextMenuProvider>
           <CalendarContext.Provider value={memoizedValue}>
-            <CalendarBulkDelete>
-              {!isMobile && <CalendarHeader />}
-              {isMobile && view === 'week' && (
-                <div className="px-4">
-                  <CalendarHeader />
-                </div>
-              )}
-              {isMobile && view === 'month' && !lockView && (
-                <div className="px-4">
-                  <CalendarViewToggle />
-                </div>
-              )}
+            <CalendarBulkDelete
+              header={
+                <>
+                  {!isMobile && <CalendarHeader />}
+                  {isMobile && view === 'week' && (
+                    <div className="px-4">
+                      <CalendarHeader />
+                    </div>
+                  )}
+                  {/* The mobile month list has no header: its buttons go here. */}
+                  {isMobile && view === 'month' && (
+                    <div className="flex flex-wrap items-center gap-2 px-4 empty:hidden">
+                      <CalendarViewToggle />
+                      <BulkWorkoutSelectButton />
+                    </div>
+                  )}
+                </>
+              }
+            >
               <div className={isMobile ? 'w-full flex-1' : 'relative'}>
                 {view === 'week' ? (
                   <CalendarWeekView isLoading={isLoading} />

@@ -17,7 +17,7 @@ import { getLocale } from '@/paraglide/runtime';
 import { isCapacitor } from '@/utils/capacitor';
 import { cn } from '@/utils/shadcn';
 import { useQueryClient } from '@tanstack/react-query';
-import { ListChecks, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -30,7 +30,18 @@ import {
   deleteWorkoutsSequentially,
 } from './utils/bulk-delete';
 
-export function CalendarBulkDelete({ children }: { children: ReactNode }) {
+/**
+ * Bulk selection and deletion of planned workouts. `header` is the calendar
+ * header (it holds the select button); the selection bar appears below it
+ * only while selecting, so entering selection mode does not move the header.
+ */
+export function CalendarBulkDelete({
+  header,
+  children,
+}: {
+  header?: ReactNode;
+  children: ReactNode;
+}) {
   const { events, allowCreate, athleteId, trainingPlanId, displayedMonth } =
     useCalendarContext();
   const { space } = useSpaceContext();
@@ -92,6 +103,11 @@ export function CalendarBulkDelete({ children }: { children: ReactNode }) {
       return next;
     });
   };
+  const cancel = () => {
+    if (running.current) return;
+    setSelected(new Set());
+    setSelecting(false);
+  };
   const remove = async () => {
     if (!allowed || running.current || !selectedEvents.length) return;
     running.current = true;
@@ -137,70 +153,59 @@ export function CalendarBulkDelete({ children }: { children: ReactNode }) {
   return (
     <BulkWorkoutSelectionContext.Provider
       value={{
+        available: allowed,
         selecting: allowed && selecting,
         busy,
         selected: selectedIds,
         eligible,
         toggle,
+        start: () => setSelecting(true),
+        cancel,
       }}
     >
+      {/* The mobile bar is fixed: reserve its height at the top of the flow. */}
       {allowed && isMobile && selecting && (
         <div aria-hidden style={{ height: toolbarHeight }} />
       )}
-      {allowed && (
+      {header}
+      {allowed && selecting && (
         <div
           ref={toolbarRef}
           data-bulk-workouts-toolbar
           className={cn(
-            'z-20 flex flex-wrap items-center gap-2 border-b bg-background px-4 py-2',
-            isMobile && selecting && 'fixed inset-x-0 shadow-sm',
+            'z-20 flex flex-wrap items-center gap-2 px-4 py-2',
+            isMobile
+              ? 'fixed inset-x-0 border-b bg-background shadow-sm'
+              : 'rounded-md border bg-muted/40',
             isMobile &&
-              selecting &&
               (isCapacitor()
                 ? 'top-14'
                 : 'top-[calc(4rem+env(safe-area-inset-top))]'),
           )}
         >
-          {!selecting ? (
-            <Button
-              variant="outline"
-              className="min-h-11"
-              disabled={!eligible.size || busy}
-              onClick={() => setSelecting(true)}
-            >
-              <ListChecks className="size-4" />
-              {m.bulk_workouts_select()}
-            </Button>
-          ) : (
-            <>
-              <p className="text-sm flex-1 min-w-40" aria-live="polite">
-                {m.bulk_workouts_selected({ count: selectedEvents.length })}
-              </p>
-              <Button
-                variant="outline"
-                className="min-h-11"
-                disabled={busy}
-                onClick={() => {
-                  setSelected(new Set());
-                  setSelecting(false);
-                }}
-              >
-                {m.cancel()}
-              </Button>
-              <Button
-                variant="destructive"
-                className="min-h-11"
-                disabled={!selectedEvents.length || busy}
-                onClick={() => setConfirm(true)}
-              >
-                <Trash2 className="size-4" />
-                {m.bulk_workouts_delete()}
-              </Button>
-              <p className="w-full text-xs text-muted-foreground">
-                {m.bulk_workouts_help()}
-              </p>
-            </>
-          )}
+          <p className="text-sm flex-1 min-w-40" aria-live="polite">
+            {m.bulk_workouts_selected({ count: selectedEvents.length })}
+          </p>
+          <Button
+            variant="outline"
+            className="min-h-11"
+            disabled={busy}
+            onClick={cancel}
+          >
+            {m.cancel()}
+          </Button>
+          <Button
+            variant="destructive"
+            className="min-h-11"
+            disabled={!selectedEvents.length || busy}
+            onClick={() => setConfirm(true)}
+          >
+            <Trash2 className="size-4" />
+            {m.bulk_workouts_delete()}
+          </Button>
+          <p className="w-full text-xs text-muted-foreground">
+            {m.bulk_workouts_help()}
+          </p>
         </div>
       )}
       {children}
