@@ -317,7 +317,7 @@ describe('AiSettingsService (PostgreSQL)', () => {
     expect(listed.lastError).toBe(AiErrorCode.CREDENTIAL_REJECTED);
   });
 
-  it('describes access for an athlete to them and their coaches only', async () => {
+  it('describes access for an athlete on their own keys only', async () => {
     const key = await service.createCredential(coachUserId, {
       provider: 'openai',
       apiKey: 'sk-coach-pays-00001',
@@ -332,13 +332,9 @@ describe('AiSettingsService (PostgreSQL)', () => {
       ],
     });
 
-    // The athlete's background features run on the coach's key
+    // The coach's key never runs the athlete's features, background or not
     const access = await service.getAccess(athleteUserId, athleteId);
-    expect(access.tasks[AiTask.FEEDBACK_EXTRACTION]).toMatchObject({
-      available: true,
-      source: 'own_key',
-    });
-    // ...but what the athlete triggers needs their own access
+    expect(access.tasks[AiTask.FEEDBACK_EXTRACTION].available).toBe(false);
     expect(access.tasks[AiTask.EVENT_GENERATION].available).toBe(false);
 
     await expect(

@@ -1723,7 +1723,7 @@
   "ai_setup_open_settings": "Open AI settings",
   "ai_setup_view_plans": "View plans",
   "ai_feedback_questions_off_title": "No AI questions for this activity",
-  "ai_feedback_questions_off_description": "Add an AI key, yours or your coach's, to get questions after each activity.",
+  "ai_feedback_questions_off_description": "Add your own AI key to get questions after each activity.",
   "ai_error_not_configured": "Set up an AI provider key in Settings > AI to use this feature.",
   "ai_error_credential_rejected": "Your AI provider rejected the API key. Check it in Settings > AI.",
   "ai_error_quota_exceeded": "Your AI provider's quota is exhausted or rate limited. Try again later or check your provider account.",

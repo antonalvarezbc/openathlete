@@ -331,20 +331,33 @@ describe('AiModelResolverService', () => {
   });
 
   describe("athletes' background work", () => {
-    it("uses a coach's key when the athlete has none", async () => {
+    it("never uses a coach's key when the athlete has none", async () => {
       const { resolver } = setup({
         coaches: [2, 3],
+        subscribers: [2, 3],
+        env: { OPENAI_API_KEY: 'sk-instance' },
         preferences: [
           preference(3, AiTask.DEFAULT, 'openai', 'gpt-5-mini', 'sk-coach3'),
         ],
       });
 
-      const resolved = await resolver.tryResolveForAthlete(
-        AiTask.FEEDBACK_EXTRACTION,
-        100,
-      );
+      await expect(
+        resolver.tryResolveForAthlete(AiTask.FEEDBACK_EXTRACTION, 100),
+      ).resolves.toBeNull();
+    });
 
-      expect(resolved).toMatchObject({ userId: 3, source: 'own_key' });
+    it("runs on the athlete's own key", async () => {
+      const { resolver } = setup({
+        coaches: [2],
+        preferences: [
+          preference(1, AiTask.DEFAULT, 'openai', 'gpt-5-mini', 'sk-athlete'),
+          preference(2, AiTask.DEFAULT, 'openai', 'gpt-5-mini', 'sk-coach'),
+        ],
+      });
+
+      await expect(
+        resolver.tryResolveForAthlete(AiTask.FEEDBACK_EXTRACTION, 100),
+      ).resolves.toMatchObject({ userId: 1, source: 'own_key' });
     });
 
     it("prefers the athlete's own access", async () => {

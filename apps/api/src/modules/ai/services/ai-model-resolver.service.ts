@@ -47,8 +47,8 @@ const NO_API_KEY = 'not-needed';
  * 1. the model the user chose for the task (or their default), on their key;
  * 2. otherwise the instance keys, when their plan or the instance policy
  *    allows it (AI_HOSTED_ACCESS);
- * 3. for work done on an athlete's behalf (feedback questions, analysis,
- *    load estimation), the same for each of the athlete's coaches.
+ * Work done on an athlete's data (feedback questions, analysis, load
+ * estimation) runs on the athlete's own access only, never on a coach's key.
  */
 @Injectable()
 export class AiModelResolverService {
@@ -74,18 +74,17 @@ export class AiModelResolverService {
   }
 
   /**
-   * For background work on an athlete's data: the athlete first, then their
-   * coaches. Returns null when none of them has AI for the task.
+   * For background work on an athlete's data: the athlete's own key, or the
+   * instance keys when their plan allows it. Coaches' keys are never used.
+   * Returns null when the athlete has no AI for the task.
    */
   async tryResolveForAthlete(
     task: AiFeatureTask,
     athleteId: number,
   ): Promise<ResolvedAiModel | null> {
-    for (const userId of await this.usersForAthlete(athleteId)) {
-      const resolved = await this.tryResolveForUser(task, userId);
-      if (resolved) return resolved;
-    }
-    return null;
+    const userId = await this.athleteUserId(athleteId);
+    if (userId === null) return null;
+    return this.tryResolveForUser(task, userId);
   }
 
   async tryResolveForUser(
@@ -113,7 +112,7 @@ export class AiModelResolverService {
 
   /**
    * What each feature would run on for the user. Background features use
-   * the athlete's chain (athlete, then coaches) when an athlete is given.
+   * the athlete's own access when an athlete is given.
    */
   async describeAccess(
     userId: number,
@@ -249,21 +248,11 @@ export class AiModelResolverService {
     };
   }
 
-  private async usersForAthlete(athleteId: number): Promise<number[]> {
+  private async athleteUserId(athleteId: number): Promise<number | null> {
     const athlete = await this.prisma.athlete.findUnique({
       where: { athleteId },
-      select: {
-        userId: true,
-        coachAthletes: {
-          select: { userId: true },
-          orderBy: { createdAt: 'asc' },
-        },
-      },
+      select: { userId: true },
     });
-    if (!athlete) return [];
-    return [
-      athlete.userId,
-      ...athlete.coachAthletes.map((link) => link.userId),
-    ].filter((userId, index, all) => all.indexOf(userId) === index);
+    return athlete?.userId ?? null;
   }
 }

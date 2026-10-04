@@ -87,7 +87,7 @@ AI features (workout generation and editing, post-activity questions, feedback a
 - **Who may use the instance keys**: `AI_HOSTED_ACCESS=everyone` (default without Stripe), `subscribers` (users whose plan includes AI), or `none`.
 - **Local models**: users can add any OpenAI-compatible endpoint, such as Ollama (`http://ollama:11434/v1`), vLLM or LM Studio. This is on by default without Stripe. Set `AI_ALLOW_CUSTOM_ENDPOINTS=false` on an instance open to the public: the server calls these URLs on users' behalf.
 
-For background features (post-activity questions, feedback analysis, load estimation), an athlete without AI uses their coach's key or plan.
+Background features on an athlete's data (post-activity questions, feedback analysis, load estimation) run on the athlete's own key, or on the instance keys when their plan allows it. A coach's key is never used for an athlete.
 
 ### HTTPS and reverse proxies
 

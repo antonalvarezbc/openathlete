@@ -1723,7 +1723,7 @@
   "ai_setup_open_settings": "Ouvrir les paramètres d'IA",
   "ai_setup_view_plans": "Voir les offres",
   "ai_feedback_questions_off_title": "Pas de questions IA pour cette activité",
-  "ai_feedback_questions_off_description": "Ajoutez une clé d'IA, la vôtre ou celle de votre coach, pour recevoir des questions après chaque activité.",
+  "ai_feedback_questions_off_description": "Ajoutez votre propre clé d'IA pour recevoir des questions après chaque activité.",
   "ai_error_not_configured": "Configurez une clé de fournisseur d'IA dans Paramètres > IA pour utiliser cette fonctionnalité.",
   "ai_error_credential_rejected": "Votre fournisseur d'IA a refusé la clé API. Vérifiez-la dans Paramètres > IA.",
   "ai_error_quota_exceeded": "Le quota de votre fournisseur d'IA est épuisé ou limité. Réessayez plus tard ou vérifiez votre compte chez le fournisseur.",
