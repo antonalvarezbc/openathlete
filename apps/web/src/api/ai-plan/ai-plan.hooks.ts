@@ -1,0 +1,25 @@
+import { useMutation, useQuery } from '@tanstack/react-query';
+
+import { AiPlanRequest } from '@openathlete/shared';
+
+import { AiPlanAPI } from './ai-plan.api';
+import { aiPlanKeys } from './ai-plan.keys';
+
+export function useStartAiPlanMutation() {
+  return useMutation({
+    mutationFn: (request: AiPlanRequest) => AiPlanAPI.start(request),
+  });
+}
+
+/** Follows a draft until it is done or failed. */
+export function useAiPlanJobQuery(jobId: string | null, pollMs = 2500) {
+  return useQuery({
+    queryKey: [aiPlanKeys.job, jobId],
+    queryFn: () => AiPlanAPI.status(jobId!),
+    enabled: !!jobId,
+    refetchInterval: (query) => {
+      const state = query.state.data?.state;
+      return state === 'done' || state === 'failed' ? false : pollMs;
+    },
+  });
+}
