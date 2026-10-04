@@ -5,14 +5,15 @@ import { signIn } from '../../support/browser';
 import { trackPageProblems } from '../../support/page-health';
 
 // A fresh athlete: sign-up gave them the five default heart-rate zones in bpm,
-// and onboarding saved a maximum HR of 190 and a resting HR of 50.
+// and onboarding saved a maximum HR of 190 and a resting HR of 50. In this
+// fork only coaches edit zones, so the athlete coaches their own profile.
 test.use({ storageState: { cookies: [], origins: [] } });
 
 test('sets heart-rate zones from the heart-rate reserve', async ({
   page,
   request,
 }) => {
-  const athlete = await createAthlete(request);
+  const athlete = await createAthlete(request, { selfCoached: true });
   await signIn(page, athlete);
   const problems = trackPageProblems(page);
 
