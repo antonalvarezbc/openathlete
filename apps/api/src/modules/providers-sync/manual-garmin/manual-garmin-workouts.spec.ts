@@ -142,6 +142,13 @@ describe('mapSessionToGarminWorkout', () => {
       mapSessionToGarminWorkout({ name: 'x', sport: SportType.GOLF, steps: [] })
         .sportType.sportTypeKey,
     ).toBe('other');
+    expect(
+      mapSessionToGarminWorkout({
+        name: 'x',
+        sport: SportType.MOBILITY,
+        steps: [],
+      }).sportType,
+    ).toMatchObject({ sportTypeId: 11, sportTypeKey: 'mobility' });
   });
 });
 
