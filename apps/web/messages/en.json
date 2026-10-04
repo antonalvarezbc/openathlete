@@ -1582,6 +1582,7 @@
   "garmin_workout_failed": "Garmin did not respond correctly. Try again later.",
   "garmin_workout_delete_note": "This session is also in Garmin. Deleting it here does not remove it from Garmin: first use “Remove from Garmin” in the session details.",
   "garmin_manual_open": "Manage",
+  "garmin_manual_onboarding_help": "Unofficial connector of this installation: sign in with your Garmin account and update whenever you want. It does not need the official Garmin integration.",
   "garmin_manual_connected": "Connected",
   "garmin_manual_not_connected": "Not connected",
   "garmin_manual_attention": "Needs attention",

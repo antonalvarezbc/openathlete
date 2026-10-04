@@ -67,7 +67,10 @@ Previously stored activities, recovery metrics and private session files are
 preserved. Official connectors remain available. FIT uploads have their own
 independent setting, `ENABLE_MANUAL_FIT_IMPORT`, also disabled by default.
 
-- The manual connector appears after the official connectors in the athlete space.
+- The manual connector appears after the official connectors in the athlete space,
+  and at the end of the onboarding connectors step for accounts that chose the
+  athlete role, with a short explanation and a direct **Connect** button. New
+  accounts can sign in there before they have chosen a space.
 - Only the authenticated owner with ATHLETE role can submit Garmin credentials.
 - The owner and linked users with COACH role can trigger sync.
 - Coaches have sync cards in Settings → Athletes, without credential fields.
@@ -80,7 +83,7 @@ independent setting, `ENABLE_MANUAL_FIT_IMPORT`, also disabled by default.
 - New sessions are isolated under `GARMIN_UNOFFICIAL_DIRECTORY/accounts/<athleteId>/.private`.
   This directory is ignored by Git.
 - Sync retains the existing manual trigger, two-minute cooldown and database lock.
-- Garmin *Mobility* activities (FIT sport 86) are imported with the Mobility sport.
+- Garmin _Mobility_ activities (FIT sport 86) are imported with the Mobility sport.
   They used to be stored as Pilates; a migration corrects those with Garmin's
   default mobility name, and sync corrects any it sees again.
 - Enabling requires ENABLE_MANUAL_GARMIN_SYNC=true, SELF_HOSTED=true and an absolute GARMIN_UNOFFICIAL_DIRECTORY.

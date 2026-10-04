@@ -1,4 +1,5 @@
 import { useGetMyCoachesQuery } from '@/api/athlete';
+import { useInstallationFeatures } from '@/api/installation/installation.hooks';
 import { useCompleteOnboardingMutation, useGetMeQuery } from '@/api/user';
 import logoDarkSrc from '@/assets/logos/logo_dark.svg';
 import logoWhiteSrc from '@/assets/logos/logo_white.svg';
@@ -20,6 +21,7 @@ import { m } from '@/paraglide/messages';
 import { getPath } from '@/routes/paths';
 import { AnalyticsEvent } from '@/utils/analytics-events';
 import { cn } from '@/utils/shadcn';
+import { ManualGarminCard } from '@/views/dashboard/settings-view/manual-garmin-card';
 import { isAxiosError } from 'axios';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -133,6 +135,7 @@ export function OnboardingView() {
       }
     );
   });
+  const { manualGarminSync } = useInstallationFeatures();
   const { data: coaches } = useGetMyCoachesQuery();
   const hasCoach = (coaches?.length ?? 0) > 0;
 
@@ -593,7 +596,10 @@ export function OnboardingView() {
               showSkip
               onSkip={handleSkip}
               oauthConnectSource="onboarding"
-            />
+            >
+              {/* Unofficial Garmin sync, only where the installation enables it. */}
+              {manualGarminSync && <ManualGarminCard configure onboarding />}
+            </ConnectorsList>
           </div>
         );
 
