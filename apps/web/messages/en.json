@@ -1588,5 +1588,15 @@
   "garmin_manual_sync_section": "Recent activities and recovery",
   "garmin_backfill_section": "FIT details (GPS, sensors, laps)",
   "garmin_login_reconnect": "Reconnect Garmin",
-  "garmin_login_reconnect_help": "Use it if you changed your Garmin password, the session expired or you connected the wrong account. Activities already imported are kept."
+  "garmin_login_reconnect_help": "Use it if you changed your Garmin password, the session expired or you connected the wrong account. Activities already imported are kept.",
+  "ai_structure_button": "Structure with AI",
+  "ai_structure_title": "Create the workout structure with AI",
+  "ai_structure_help": "The AI builds the steps (warm-up, intervals, recoveries, cool-down) from the session's sport, name, description and goals, using the athlete's zones. The name, date and goals do not change.",
+  "ai_structure_label": "What should the structure contain? (optional)",
+  "ai_structure_placeholder": "e.g. 15 min warm-up, 6×1000 m at 10 km pace with 90 s recovery, 10 min cool-down",
+  "ai_structure_replace": "The current steps will be replaced.",
+  "ai_structure_generate": "Generate structure",
+  "ai_structure_done": "Structure created. Review it before saving.",
+  "ai_structure_failed": "The structure could not be created. Try again or describe it differently.",
+  "ai_structure_need_text": "Add a name, a description or what the structure should contain."
 }

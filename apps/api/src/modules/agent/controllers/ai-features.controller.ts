@@ -17,6 +17,8 @@ import {
   FeatureName,
   GenerateEventDto,
   GenerateEventResponseDto,
+  GenerateWorkoutStructureDto,
+  GenerateWorkoutStructureResponseDto,
   ModifyEventDto,
   ModifyEventResponseDto,
   UpdateEventDto,
@@ -24,6 +26,7 @@ import {
   WORKOUT_STEP_TYPE,
   WORKOUT_TARGET_TYPE,
   generateEventDtoSchema,
+  generateWorkoutStructureDtoSchema,
   modifyEventDtoSchema,
 } from '@openathlete/shared';
 
@@ -36,6 +39,59 @@ import { PrismaService } from '../../prisma/services/prisma.service';
 import { resolveAiEventAthleteId } from '../services/event-ai-helpers';
 import { EventGenerationService } from '../services/event-generation.service';
 import { EventModificationService } from '../services/event-modification.service';
+
+type GeneratedStep = NonNullable<
+  Awaited<
+    ReturnType<EventGenerationService['generateTrainingEvent']>
+  >['workout']
+>['steps'][number];
+
+/** Generated workout steps -> the editor's step format. */
+function toWorkoutSteps(steps: GeneratedStep[]): CreateWorkoutStepDto[] {
+  return steps.map((step) => {
+    const baseStep: CreateWorkoutStepDto = {
+      stepType: step.stepType,
+      name: step.name ?? null,
+      durationType: step.durationType ?? null,
+      durationValue: step.durationValue ?? null,
+      notes: step.notes ?? null,
+      targets: (step.targets || []).map((target) => ({
+        targetType: target.targetType,
+        targetMin: target.targetMin ?? null,
+        targetMax: target.targetMax ?? null,
+        targetValue: target.targetValue ?? null,
+        metricType: target.metricType ?? null,
+      })),
+    };
+
+    if (step.repeatBlock) {
+      return {
+        ...baseStep,
+        repeatBlock: {
+          repetitions: step.repeatBlock.repetitions,
+          childSteps: step.repeatBlock.childSteps.map(
+            (childStep): CreateWorkoutStepDto => ({
+              stepType: childStep.stepType,
+              name: childStep.name ?? null,
+              durationType: childStep.durationType ?? null,
+              durationValue: childStep.durationValue ?? null,
+              notes: childStep.notes ?? null,
+              targets: (childStep.targets || []).map((target) => ({
+                targetType: target.targetType,
+                targetMin: target.targetMin ?? null,
+                targetMax: target.targetMax ?? null,
+                targetValue: target.targetValue ?? null,
+                metricType: target.metricType ?? null,
+              })),
+            }),
+          ),
+        },
+      } as CreateWorkoutStepDto;
+    }
+
+    return baseStep;
+  });
+}
 
 @ApiTags('Agent')
 @UserTypes(['COACH'])
@@ -268,51 +324,7 @@ export class AIFeaturesController {
     }
 
     const transformedWorkout = generatedEvent.workout
-      ? {
-          steps: generatedEvent.workout.steps.map((step) => {
-            const baseStep: CreateWorkoutStepDto = {
-              stepType: step.stepType,
-              name: step.name ?? null,
-              durationType: step.durationType ?? null,
-              durationValue: step.durationValue ?? null,
-              notes: step.notes ?? null,
-              targets: (step.targets || []).map((target) => ({
-                targetType: target.targetType,
-                targetMin: target.targetMin ?? null,
-                targetMax: target.targetMax ?? null,
-                targetValue: target.targetValue ?? null,
-                metricType: target.metricType ?? null,
-              })),
-            };
-
-            if (step.repeatBlock) {
-              return {
-                ...baseStep,
-                repeatBlock: {
-                  repetitions: step.repeatBlock.repetitions,
-                  childSteps: step.repeatBlock.childSteps.map(
-                    (childStep): CreateWorkoutStepDto => ({
-                      stepType: childStep.stepType,
-                      name: childStep.name ?? null,
-                      durationType: childStep.durationType ?? null,
-                      durationValue: childStep.durationValue ?? null,
-                      notes: childStep.notes ?? null,
-                      targets: (childStep.targets || []).map((target) => ({
-                        targetType: target.targetType,
-                        targetMin: target.targetMin ?? null,
-                        targetMax: target.targetMax ?? null,
-                        targetValue: target.targetValue ?? null,
-                        metricType: target.metricType ?? null,
-                      })),
-                    }),
-                  ),
-                },
-              } as CreateWorkoutStepDto;
-            }
-
-            return baseStep;
-          }),
-        }
+      ? { steps: toWorkoutSteps(generatedEvent.workout.steps) }
       : undefined;
 
     const result: GenerateEventResponseDto = {
@@ -663,5 +675,49 @@ export class AIFeaturesController {
     } as UpdateEventDto;
 
     return result;
+  }
+
+  @UseGuards(AuthGuard('jwt'), UserTypeGuard, FeatureAccessGuard)
+  @RequireFeature(FeatureName.AI_GENERATION)
+  @ApiBearerAuth()
+  @Post('events/structure')
+  @ApiOperation({
+    summary: 'Generate the workout structure of a session with AI',
+    description:
+      "Returns only the steps (warm-up, intervals, recoveries, cool-down) of the session being edited, from its sport, name, description, goals and an optional request, using the athlete's zones and metrics. Nothing is saved.",
+  })
+  async generateWorkoutStructure(
+    @JwtUser() user: AuthUser,
+    @Body(new ZodValidationPipe(generateWorkoutStructureDtoSchema))
+    dto: GenerateWorkoutStructureDto,
+  ): Promise<GenerateWorkoutStructureResponseDto> {
+    const athleteId = await resolveAiEventAthleteId(
+      this.prisma,
+      user,
+      dto.athleteId,
+    );
+    const goals = [
+      dto.goalDuration && `duration ${Math.round(dto.goalDuration / 60)} min`,
+      dto.goalDistance && `distance ${(dto.goalDistance / 1000).toFixed(1)} km`,
+    ].filter(Boolean);
+    // Session text is coach data: describe the task first, then quote it.
+    const prompt = [
+      `Create only the workout structure (warm-up, main set with intervals or repeat blocks, recoveries, cool-down) of an existing ${dto.sport} session.`,
+      `Keep the sport ${dto.sport}. The session name, date and goals are already set; use them to understand what was planned.`,
+      dto.name && `Session name: ${dto.name}`,
+      dto.description && `Session description: ${dto.description}`,
+      goals.length && `Session goals: ${goals.join(', ')}`,
+      dto.instructions &&
+        `Structure requested by the coach: ${dto.instructions}`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+    const generated = await this.eventGenerationService.generateTrainingEvent(
+      prompt,
+      athleteId,
+      user.userId,
+      `Built the workout structure of ${dto.sport} session "${dto.name || 'untitled'}"${dto.instructions ? `: ${dto.instructions}` : ''}`,
+    );
+    return { steps: toWorkoutSteps(generated.workout?.steps ?? []) };
   }
 }

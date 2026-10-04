@@ -23,6 +23,7 @@ import { PaywallDialog } from '../paywall';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { AIModifyEventDialog } from './components/ai-modify-event-dialog';
+import { AiWorkoutStructure } from './components/ai-workout-structure';
 import { EventFormFields } from './components/event-form-fields';
 import { WorkoutSection } from './components/workout-section';
 import { useCurrentEventData } from './hooks/use-current-event-data';
@@ -145,6 +146,14 @@ export function CreateEventDialog({ open, onClose, ...rest }: P) {
   const { hasAccess: hasAIAccess } = useFeatureAccess(
     FeatureName.AI_GENERATION,
   );
+
+  // Athlete of the session; templates have none and get no AI structure.
+  const workoutAthleteId =
+    edit && 'isTemplate' in rest && rest.isTemplate
+      ? undefined
+      : ((edit && 'event' in rest ? rest.event?.athleteId : undefined) ??
+        athleteId ??
+        undefined);
 
   // Determine if we're in create mode (empty form)
   const formName = watch('name');
@@ -333,6 +342,29 @@ export function CreateEventDialog({ open, onClose, ...rest }: P) {
             isTemplate={edit && 'isTemplate' in rest && rest.isTemplate}
           />
 
+          {type === EVENT_TYPE.TRAINING && workoutAthleteId && (
+            <div className="flex justify-end">
+              <AiWorkoutStructure
+                athleteId={workoutAthleteId}
+                session={() => {
+                  const values = methods.getValues() as Record<string, unknown>;
+                  return {
+                    sport: values.sport as SPORT_TYPE,
+                    name: (values.name as string) ?? '',
+                    description: (values.description as string) ?? '',
+                    goalDuration:
+                      (values.goalDuration as number | null) ?? null,
+                    goalDistance:
+                      (values.goalDistance as number | null) ?? null,
+                  };
+                }}
+                hasSteps={workoutSteps.length > 0}
+                hasAccess={hasAIAccess}
+                onPaywall={() => setPaywallOpen(true)}
+                onSteps={setWorkoutSteps}
+              />
+            </div>
+          )}
           <WorkoutSection
             props={rest}
             type={type}

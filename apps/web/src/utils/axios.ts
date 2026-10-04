@@ -184,6 +184,7 @@ export const routes = {
   aiFeatures: {
     generateEvent: '/agent/ai/events/generate',
     modifyEvent: '/agent/ai/events/modify',
+    workoutStructure: '/agent/ai/events/structure',
     memory: (athleteId: number) => `/agent/ai/memory/${athleteId}`,
   },
   messages: {

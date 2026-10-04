@@ -1588,5 +1588,15 @@
   "garmin_manual_sync_section": "Activités récentes et récupération",
   "garmin_backfill_section": "Détails FIT (GPS, capteurs, tours)",
   "garmin_login_reconnect": "Reconnecter Garmin",
-  "garmin_login_reconnect_help": "Utilisez-le si vous avez changé votre mot de passe Garmin, si la session a expiré ou si vous avez connecté le mauvais compte. Les activités déjà importées sont conservées."
+  "garmin_login_reconnect_help": "Utilisez-le si vous avez changé votre mot de passe Garmin, si la session a expiré ou si vous avez connecté le mauvais compte. Les activités déjà importées sont conservées.",
+  "ai_structure_button": "Structure avec l'IA",
+  "ai_structure_title": "Créer la structure avec l'IA",
+  "ai_structure_help": "L'IA crée les étapes (échauffement, fractions, récupérations, retour au calme) à partir du sport, du nom, de la description et des objectifs de la séance, avec les zones de l'athlète. Le nom, la date et les objectifs ne changent pas.",
+  "ai_structure_label": "Que doit contenir la structure ? (facultatif)",
+  "ai_structure_placeholder": "Ex. : 15 min d'échauffement, 6×1000 m à allure 10 km avec 90 s de récupération, 10 min de retour au calme",
+  "ai_structure_replace": "Les étapes actuelles seront remplacées.",
+  "ai_structure_generate": "Générer la structure",
+  "ai_structure_done": "Structure créée. Vérifiez-la avant d'enregistrer.",
+  "ai_structure_failed": "La structure n'a pas pu être créée. Réessayez ou décrivez-la autrement.",
+  "ai_structure_need_text": "Ajoutez un nom, une description ou ce que doit contenir la structure."
 }
