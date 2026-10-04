@@ -24,6 +24,7 @@ import { connectorProviderLabelMap } from '@/utils/label-map/core/connector-prov
 import { openOAuthUrl } from '@/utils/oauth';
 import { CheckCircle2, Link2, Link2Off } from 'lucide-react';
 import { usePostHog } from 'posthog-js/react';
+import type { ReactNode } from 'react';
 import { toast } from 'sonner';
 
 import { ConnectorProvider } from '@openathlete/shared';
@@ -34,6 +35,8 @@ interface ConnectorsListProps {
   onSkip?: () => void;
   /** Where OAuth was started (for PostHog funnel). */
   oauthConnectSource?: OauthConnectSource;
+  /** Extra connector cards, listed after the official providers. */
+  children?: ReactNode;
 }
 
 const DEFAULT_SUPPORTED_PROVIDERS: ConnectorProvider[] = [
@@ -48,6 +51,7 @@ export function ConnectorsList({
   showSkip = false,
   onSkip,
   oauthConnectSource = 'settings',
+  children,
 }: ConnectorsListProps) {
   const posthog = usePostHog();
   const { data: connectedProviders = [], isLoading: isLoadingConnected } =
@@ -222,6 +226,7 @@ export function ConnectorsList({
                 </Card>
               );
             })}
+        {children}
       </div>
       {showSkip && onSkip && (
         <Button variant="ghost" onClick={onSkip} className="w-full">

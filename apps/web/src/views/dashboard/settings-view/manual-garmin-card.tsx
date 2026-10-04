@@ -1,5 +1,11 @@
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -129,10 +135,17 @@ export function ManualGarminCard({
   athleteId,
   configure = false,
   compact = false,
+  onboarding = false,
 }: {
   athleteId?: number;
   configure?: boolean;
   compact?: boolean;
+  /**
+   * Shown in the onboarding connectors step: explains what the connector is
+   * and lets the account owner sign in whatever the stored space is, since
+   * a new account has not chosen one yet.
+   */
+  onboarding?: boolean;
 }) {
   const { space } = useSpaceContext();
   const [email, setEmail] = useState('');
@@ -287,7 +300,12 @@ export function ManualGarminCard({
     backfill.isPending ||
     login.isPending;
   const canLogin =
-    !compact && configure && space === 'ATHLETE' && data.canConfigure;
+    !compact &&
+    configure &&
+    (onboarding || space === 'ATHLETE') &&
+    data.canConfigure;
+  // Nothing else to do before connecting: go straight to the sign-in form.
+  const connectFirst = canLogin && !data.connected;
   const attention =
     !!(error || data.error) || (remoteBlocked && !!data.remoteBlockedUntil);
   const Container = compact ? 'section' : Card;
@@ -319,9 +337,12 @@ export function ManualGarminCard({
       <Button
         variant="outline"
         className="min-h-11"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          if (connectFirst) setShowLogin(true);
+          setOpen(true);
+        }}
       >
-        {m.garmin_manual_open()}
+        {connectFirst ? m.connect() : m.garmin_manual_open()}
       </Button>
     </div>
   );
@@ -338,6 +359,11 @@ export function ManualGarminCard({
       {!compact && (
         <CardHeader>
           <CardTitle>{m.garmin_manual_title()}</CardTitle>
+          {onboarding && (
+            <CardDescription>
+              {m.garmin_manual_onboarding_help()}
+            </CardDescription>
+          )}
         </CardHeader>
       )}
       <Content className="min-w-0">{summary}</Content>
