@@ -15,6 +15,12 @@ const { afterEach, before, test } = require('node:test');
 process.env.OPENAI_API_KEY = 'sk-instance-openai';
 process.env.ANTHROPIC_API_KEY = 'sk-instance-anthropic';
 process.env.MASTRA_TELEMETRY_DISABLED = '1';
+// Loading the application module validates the environment (no .env in CI)
+process.env.ENV ??= 'development';
+process.env.NODE_ENV ??= 'development';
+process.env.HASH_PEPPER ??= 'test-pepper-at-least-32-characters-long';
+process.env.JWT_SECRET_KEY ??= 'test-jwt-secret-at-least-32-characters-long';
+process.env.DATABASE_URL ??= 'postgresql://test:test@localhost:5432/test';
 
 const {
   eventGenerationAgent,
