@@ -73,6 +73,7 @@ export class AccountExportService {
     write('messages', await this.messages(userId));
     write('aiAssistant', await this.aiAssistant(userId));
     write('aiSettings', await this.aiSettings(userId));
+    write('accessTokens', await this.accessTokens(userId));
 
     sink.write('"events":[');
     if (athleteId) {
@@ -115,26 +116,54 @@ export class AccountExportService {
     });
   }
 
-  /** Who coaches the user and whom they coach, by name. */
+  /**
+   * Who coaches the user and whom they coach, by name, plus what the user
+   * wrote or set as a coach. Analyses leave out their input snapshot: it is a
+   * copy of the athlete's data, not the coach's.
+   */
   private async coaching(userId: number) {
-    const [coaches, athletes] = await Promise.all([
-      this.prisma.coachAthlete.findMany({
-        where: { athlete: { userId } },
-        select: {
-          createdAt: true,
-          user: { select: { firstName: true, lastName: true } },
-        },
-      }),
-      this.prisma.coachAthlete.findMany({
-        where: { userId },
-        select: {
-          createdAt: true,
-          athlete: {
-            select: { user: { select: { firstName: true, lastName: true } } },
+    const [coaches, athletes, alertSettings, activityAnalyses] =
+      await Promise.all([
+        this.prisma.coachAthlete.findMany({
+          where: { athlete: { userId } },
+          select: {
+            createdAt: true,
+            user: { select: { firstName: true, lastName: true } },
           },
-        },
-      }),
-    ]);
+        }),
+        this.prisma.coachAthlete.findMany({
+          where: { userId },
+          select: {
+            createdAt: true,
+            athlete: {
+              select: { user: { select: { firstName: true, lastName: true } } },
+            },
+          },
+        }),
+        this.prisma.coachActivityAlertSettings.findMany({
+          where: { coachUserId: userId },
+          select: {
+            athleteId: true,
+            notifyComments: true,
+            notifyRpe: true,
+            notifyNewActivities: true,
+          },
+        }),
+        this.prisma.coachActivityAnalysis.findMany({
+          where: { coachUserId: userId },
+          select: {
+            eventActivityId: true,
+            coachContext: true,
+            language: true,
+            analysis: true,
+            feedbackDraft: true,
+            model: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+          orderBy: { createdAt: 'asc' },
+        }),
+      ]);
     return {
       coaches: coaches.map(({ user, createdAt }) => ({
         ...user,
@@ -144,7 +173,24 @@ export class AccountExportService {
         ...athlete.user,
         since: createdAt,
       })),
+      alertSettings,
+      activityAnalyses,
     };
+  }
+
+  /** Which access tokens exist, never their hash. */
+  private async accessTokens(userId: number) {
+    return this.prisma.personalAccessToken.findMany({
+      where: { userId },
+      select: {
+        name: true,
+        prefix: true,
+        createdAt: true,
+        lastUsedAt: true,
+        expiresAt: true,
+        revokedAt: true,
+      },
+    });
   }
 
   private async templates(userId: number) {

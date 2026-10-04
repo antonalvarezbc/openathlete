@@ -32,12 +32,15 @@ const EXPORTED_TABLES = [
   'athlete_injury',
   'athlete_metric',
   'athlete_settings',
+  'coach_activity_alert_settings',
+  'coach_activity_analysis',
   'coach_athlete',
   'cycle',
   'equipment',
   'event',
   'event_template',
   'message',
+  'personal_access_token',
   'provider_account',
   'record',
   'subscription',
@@ -46,6 +49,7 @@ const EXPORTED_TABLES = [
   'training_zone',
 ];
 const NOT_EXPORTED_TABLES = {
+  activity_chat_notice: 'automated alerts about athletes, with delivery keys',
   athlete_invitation: 'pending invitations sent to other people',
   coach_invitation: 'pending invitations, also other people’s data',
   event_template_folder: 'exported with each template, by name',
@@ -186,6 +190,7 @@ describe('AccountExportService (PostgreSQL)', () => {
       '"accessToken"',
       '"refreshToken"',
       '"encryptedApiKey"',
+      '"tokenHash"',
       'v1:a:b:c',
     ]) {
       expect(text).not.toContain(secret);
