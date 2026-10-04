@@ -268,6 +268,83 @@ describe('Applying reviewed dates', () => {
     );
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
   });
+
+  test('adds a session to the calendar without a plan week', async () => {
+    const tx = { event: { create: jest.fn() } };
+    const prisma = { $transaction: jest.fn(async (callback) => callback(tx)) };
+    const memory = disabledAiMemory();
+    const addNote = jest.spyOn(memory, 'addNote');
+    const service = new PlanAdaptationService(
+      prisma as unknown as PrismaService,
+      memory,
+    );
+    jest.spyOn(service, 'context').mockResolvedValue({
+      contextVersion: 'a'.repeat(64),
+      data: {
+        sessions: [],
+        injuries: [],
+        zones: [],
+        surroundingCalendar: [],
+        availableWeeks: [
+          {
+            trainingWeekId: null,
+            startDate: '2030-10-21T00:00:00Z',
+            endDate: '2030-10-28T00:00:00Z',
+          },
+        ],
+      },
+    } as unknown as Awaited<ReturnType<typeof service.context>>);
+    await service.apply(user, {
+      request: {
+        ...request,
+        planId: undefined,
+        scope: 'WEEK',
+        allowNewSessions: true,
+        maxNewSessions: 1,
+        newSessionMinutes: 30,
+        newSessionMaxRpe: 4,
+      },
+      contextVersion: 'a'.repeat(64),
+      confirmed: true,
+      proposal: {
+        summary: 'Easy spin',
+        warnings: [],
+        sessions: [],
+        newSessions: [
+          {
+            trainingWeekId: null,
+            startDate: '2030-10-23T07:00:00Z',
+            reason: 'Recovered',
+            name: 'Easy spin',
+            sport: SPORT_TYPE.CYCLING,
+            description: '',
+            goalDuration: 1800,
+            goalRpe: 3,
+            workout: {
+              steps: [
+                {
+                  stepType: 'STEADY' as never,
+                  name: null,
+                  notes: null,
+                  durationType: 'TIME' as never,
+                  durationValue: 1800,
+                  targets: [],
+                  repeatBlock: null,
+                },
+              ],
+            },
+          },
+        ],
+      },
+    });
+    expect(tx.event.create.mock.calls[0][0].data).toMatchObject({
+      athleteId: 4,
+      trainingWeekId: null,
+      type: 'TRAINING',
+      name: 'Easy spin',
+    });
+    expect(addNote.mock.calls[0][3]).toMatch(/^Applied calendar adaptation/);
+  });
 });
 
 describe('Refining proposals without calendar writes', () => {

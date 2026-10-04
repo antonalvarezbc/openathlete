@@ -81,7 +81,8 @@ function StructuredPreview({
 export function PlanAdaptationSection({
   selection,
 }: {
-  selection?: { athleteId: number; planId: number; startDate: string };
+  /** Without planId, the athlete's calendar is adapted on its own. */
+  selection?: { athleteId: number; planId?: number; startDate: string };
 } = {}) {
   const { data: own } = useGetMyAthleteQuery();
   const { data: coached = [] } = useGetMyCoachedAthletesQuery();
@@ -97,7 +98,7 @@ export function PlanAdaptationSection({
     newSessionMinutes: 60,
     newSessionMaxRpe: 4,
     athleteId: selection?.athleteId ?? 0,
-    planId: selection?.planId ?? 0,
+    planId: selection?.planId,
     scope: 'NEXT_SESSION',
     weekStart:
       selection && dateInput(selection.startDate) > monday()
@@ -252,7 +253,7 @@ export function PlanAdaptationSection({
               onChange={(event) =>
                 updateRequest({
                   athleteId: Number(event.target.value),
-                  planId: 0,
+                  planId: undefined,
                 })
               }
             >
@@ -275,9 +276,9 @@ export function PlanAdaptationSection({
               className="block w-full border rounded p-2"
               aria-label={m.training_plan_settings()}
               disabled={!!selection}
-              value={request.planId || ''}
+              value={request.planId ?? ''}
               onChange={(event) => {
-                const planId = Number(event.target.value);
+                const planId = Number(event.target.value) || undefined;
                 const plan = plans.data?.find(
                   (item) => item.trainingPlanId === planId,
                 );
@@ -289,7 +290,7 @@ export function PlanAdaptationSection({
                 });
               }}
             >
-              <option value="">{m.adaptation_choose_plan()}</option>
+              <option value="">{m.workspace_calendar_option()}</option>
               {plans.data?.map((plan) => (
                 <option key={plan.trainingPlanId} value={plan.trainingPlanId}>
                   {plan.name}

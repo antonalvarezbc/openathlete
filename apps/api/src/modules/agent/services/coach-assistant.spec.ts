@@ -92,7 +92,7 @@ test('consultation works without pending sessions while adaptation still rejects
   const { question: _question, history: _history, ...selection } = input;
   const context = await service.context(user, selection);
   expect(context.data.sessions).toEqual([]);
-  expect(context.data.plan.goal).toBe('Finish a trail race');
+  expect(context.data.plan?.goal).toBe('Finish a trail race');
   expect(context.data.allowIncrease).toBe(false);
   expect(db.$transaction).not.toHaveBeenCalled();
   await expect(
@@ -106,6 +106,19 @@ test('consultation works without pending sessions while adaptation still rejects
     }),
   ).rejects.toThrow();
   expect(coachAssistantAgent.generate).not.toHaveBeenCalled();
+});
+test('answers from the calendar when no plan is selected', async () => {
+  const { service, db } = setup();
+  const {
+    question: _question,
+    history: _history,
+    planId: _planId,
+    ...selection
+  } = input;
+  const context = await service.context(user, selection);
+  expect(db.trainingPlan.findFirst).not.toHaveBeenCalled();
+  expect(context.data.plan).toBeNull();
+  expect(context.data.metrics).toHaveLength(1);
 });
 test('rejects athlete-only users and unlinked athletes before invoking AI', async () => {
   const { service, db } = setup();

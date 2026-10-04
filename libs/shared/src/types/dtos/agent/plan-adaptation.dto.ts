@@ -12,7 +12,8 @@ import { importPlanBodyDtoSchema } from '../seo/import-plan.dto';
 export const planAdaptationRequestSchema = z
   .object({
     athleteId: z.number().int().positive(),
-    planId: z.number().int().positive(),
+    /** Without a plan, the athlete's calendar is adapted on its own. */
+    planId: z.number().int().positive().optional(),
     language: z.enum(['es', 'en', 'fr', 'it']).optional(),
     allowRedistribution: z.boolean().optional(),
     allowNewSessions: z.boolean().optional(),
@@ -112,7 +113,8 @@ export const adaptationNewSessionSchema = adaptationSessionSchema
     goalRpe: true,
   })
   .extend({
-    trainingWeekId: z.number().int().positive(),
+    /** Null when no plan is selected: the session is not tied to a plan week. */
+    trainingWeekId: z.number().int().positive().nullable(),
     startDate: z.string().datetime({ offset: true }),
     goalDuration: z.number().int().positive().max(36000),
     goalRpe: z.number().min(1).max(10),

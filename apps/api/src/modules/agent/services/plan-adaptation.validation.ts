@@ -203,7 +203,7 @@ export function validateAdaptation(
         start + session.goalDuration * 1000 > new Date(week.endDate).getTime()
       )
         fail(
-          'New session must belong to an available future week of this plan',
+          'New session must belong to an available future week of this plan or period',
           'ADAPTATION_DATE',
         );
     }

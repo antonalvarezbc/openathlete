@@ -26,7 +26,8 @@ export function CoachAssistant({
   onAdapt,
 }: {
   athleteId: number;
-  planId: number;
+  /** Without a plan, the assistant works from the athlete's calendar. */
+  planId?: number;
   onAdapt: () => void;
 }) {
   const [weekStart, setWeekStart] = useState(dateInput());
