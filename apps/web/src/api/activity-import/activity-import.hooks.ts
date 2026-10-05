@@ -48,3 +48,19 @@ export function useImportGpxMutation() {
     onSuccess: (result) => refreshImported(queryClient, result),
   });
 }
+
+export function useImportTcxMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      file,
+      name,
+      sport,
+    }: {
+      file: File;
+      name: string;
+      sport?: SPORT_TYPE;
+    }) => ActivityImportAPI.importTcx(file, name, sport),
+    onSuccess: (result) => refreshImported(queryClient, result),
+  });
+}

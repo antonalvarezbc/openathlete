@@ -1,6 +1,7 @@
 import {
   useImportFitMutation,
   useImportGpxMutation,
+  useImportTcxMutation,
 } from '@/api/activity-import';
 import { EventDetails } from '@/components/event-details/event-details';
 import { Button } from '@/components/ui/button';
@@ -28,9 +29,11 @@ import {
 } from '@openathlete/shared';
 
 import {
+  ActivityFileKind,
   activityFileKind,
   fileActivityName,
   gpxTrackName,
+  tcxActivityName,
 } from './activity-file';
 
 type FileResult = {
@@ -39,15 +42,20 @@ type FileResult = {
   error?: string;
 };
 
-const isGpx = (file: File) => activityFileKind(file.name) === 'gpx';
+const kindOf = (file: File) => activityFileKind(file.name);
+/** GPX and TCX do not always name the sport, so the athlete can. */
+const takesSport = (file: File) => kindOf(file) !== 'fit';
 
 const nameFromFile = (file: File) =>
   fileActivityName(file.name) || file.name.slice(0, 100);
 
-/** The track name a GPX stores, else the file name. */
+/** The name a GPX track or TCX activity stores, else the file name. */
 async function suggestedName(file: File) {
-  if (!isGpx(file)) return nameFromFile(file);
-  return gpxTrackName(await file.text().catch(() => '')) || nameFromFile(file);
+  const kind = kindOf(file);
+  if (kind === 'fit') return nameFromFile(file);
+  const xml = await file.text().catch(() => '');
+  const stored = kind === 'gpx' ? gpxTrackName(xml) : tcxActivityName(xml);
+  return stored || nameFromFile(file);
 }
 
 const isActivityFile = (file: File) =>
@@ -55,20 +63,38 @@ const isActivityFile = (file: File) =>
   file.size > 0 &&
   file.size <= MAX_ACTIVITY_FILE_BYTES;
 
-function errorText(failure: unknown, gpx: boolean) {
+function errorText(failure: unknown, kind: ActivityFileKind | null) {
   const status = isAxiosError(failure) ? failure.response?.status : undefined;
   const code = isAxiosError(failure)
     ? failure.response?.data?.message
     : undefined;
-  if (status === 413 || code === 'FIT_LIMIT' || code === 'GPX_LIMIT')
+  if (
+    status === 413 ||
+    code === 'FIT_LIMIT' ||
+    code === 'GPX_LIMIT' ||
+    code === 'TCX_LIMIT'
+  )
     return m.fit_import_limit();
-  if (code === 'FIT_MULTISPORT_UNSUPPORTED') return m.fit_import_multisport();
-  if (code === 'FIT_DUPLICATE_TIME' || code === 'GPX_DUPLICATE_TIME')
+  if (
+    code === 'FIT_MULTISPORT_UNSUPPORTED' ||
+    code === 'TCX_MULTISPORT_UNSUPPORTED'
+  )
+    return m.fit_import_multisport();
+  if (
+    code === 'FIT_DUPLICATE_TIME' ||
+    code === 'GPX_DUPLICATE_TIME' ||
+    code === 'TCX_DUPLICATE_TIME'
+  )
     return m.fit_import_duplicate_time();
   if (code === 'GPX_NO_TIME') return m.gpx_import_no_time();
+  if (code === 'TCX_NO_TIME') return m.tcx_import_no_time();
   if (status === 403) return m.fit_import_forbidden();
   if (status === 400)
-    return gpx ? m.gpx_import_invalid() : m.fit_import_invalid();
+    return kind === 'gpx'
+      ? m.gpx_import_invalid()
+      : kind === 'tcx'
+        ? m.tcx_import_invalid()
+        : m.fit_import_invalid();
   return m.fit_import_failed();
 }
 
@@ -76,30 +102,35 @@ function warningText(warning: ActivityImportWarning) {
   switch (warning) {
     case 'FIT_INCOMPLETE_CHANNELS':
     case 'GPX_INCOMPLETE_CHANNELS':
+    case 'TCX_INCOMPLETE_CHANNELS':
       return m.fit_import_incomplete();
     case 'FIT_NO_STREAM':
+    case 'TCX_NO_STREAM':
       return m.fit_import_no_stream();
     case 'FIT_MISSING_SUMMARY':
       return m.fit_import_missing_summary();
     case 'GPX_NO_GPS':
       return m.gpx_import_no_gps();
+    case 'TCX_NO_GPS':
+      return m.tcx_import_no_gps();
     case 'FIT_UNKNOWN_SPORT':
     case 'GPX_UNKNOWN_SPORT':
+    case 'TCX_UNKNOWN_SPORT':
       return m.fit_import_unknown_sport();
   }
 }
 
 /**
- * Imports FIT and GPX files of recorded activities into the athlete's
+ * Imports FIT, GPX and TCX files of recorded activities into the athlete's
  * calendar, one request per file. A single file can be renamed; several are
- * named after their GPX track or their file. Each file is checked on its
+ * named after the name their GPX or TCX stores, or their file. Each file is checked on its
  * own: one failure does not stop the others.
  */
 export function ImportFitDialog() {
   const [open, setOpen] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [name, setName] = useState('');
-  // GPX only: '' keeps the sport each file states.
+  // GPX and TCX only: '' keeps the sport each file states.
   const [sport, setSport] = useState<SPORT_TYPE | ''>('');
   const chosenFiles = useRef<File[]>([]);
   const [skipped, setSkipped] = useState<string[]>([]);
@@ -110,6 +141,7 @@ export function ImportFitDialog() {
   const [viewEventId, setViewEventId] = useState<number | null>(null);
   const importFit = useImportFitMutation();
   const importGpx = useImportGpxMutation();
+  const importTcx = useImportTcxMutation();
   const single = files.length === 1;
   const sports = Object.entries(sportTypeLabelMap).sort(([, a], [, b]) =>
     a.localeCompare(b, getLocale()),
@@ -135,18 +167,20 @@ export function ImportFitDialog() {
     for (const [index, file] of files.entries()) {
       try {
         const fileName = single ? name.trim() : await suggestedName(file);
-        const result = isGpx(file)
-          ? await importGpx.mutateAsync({
-              file,
-              name: fileName,
-              sport: sport || undefined,
-            })
-          : await importFit.mutateAsync({ file, name: fileName });
+        const kind = kindOf(file);
+        const result =
+          kind === 'fit'
+            ? await importFit.mutateAsync({ file, name: fileName })
+            : await (kind === 'gpx' ? importGpx : importTcx).mutateAsync({
+                file,
+                name: fileName,
+                sport: sport || undefined,
+              });
         done.push({ fileName: file.name, result });
       } catch (failure) {
         done.push({
           fileName: file.name,
-          error: errorText(failure, isGpx(file)),
+          error: errorText(failure, kindOf(file)),
         });
       }
       setProgress(index + 1);
@@ -255,7 +289,7 @@ export function ImportFitDialog() {
                 <span>{m.fit_import_file()}</span>
                 <Input
                   type="file"
-                  accept=".fit,.gpx,application/vnd.garmin.fit,application/fit,application/gpx+xml"
+                  accept=".fit,.gpx,.tcx,application/vnd.garmin.fit,application/fit,application/gpx+xml,application/vnd.garmin.tcx+xml"
                   multiple
                   required
                   disabled={busy}
@@ -272,7 +306,7 @@ export function ImportFitDialog() {
                     setSport('');
                     const only = valid.length === 1 ? valid[0] : undefined;
                     setName(only ? nameFromFile(only) : '');
-                    if (!only || !isGpx(only)) return;
+                    if (!only || kindOf(only) === 'fit') return;
                     // Suggest the track name, unless other files were
                     // chosen meanwhile.
                     const suggested = await suggestedName(only);
@@ -280,7 +314,7 @@ export function ImportFitDialog() {
                   }}
                 />
               </label>
-              {files.some(isGpx) && (
+              {files.some(takesSport) && (
                 <label className="block space-y-2 text-sm font-medium">
                   <span>{m.sport()}</span>
                   <select
