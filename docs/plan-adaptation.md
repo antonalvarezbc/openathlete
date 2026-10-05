@@ -2,7 +2,7 @@
 
 Open **Coach → Planning → Review and adapt with AI** (`/dashboard/planning`).
 
-1. Select an athlete and an existing plan. Normally it needs future, uncompleted
+1. Select an athlete and a plan, or use the calendar without a plan. Normally it needs future, uncompleted
    sessions. A future week already belonging to the plan can also receive new
    sessions when adding sessions is explicitly enabled, even if it is empty.
 2. Choose **Next session** or **Rest of the week**. For the latter, choose the
@@ -18,7 +18,7 @@ Open **Coach → Planning → Review and adapt with AI** (`/dashboard/planning`)
 
 Context preview and generation do not write to the calendar. Only acceptance
 saves changes. Completed activities, past sessions, competitions and sessions
-outside the selected plan cannot be modified. At most 28 existing sessions can
+outside the eligible next-session/seven-day scope cannot be modified. At most 28 existing sessions can
 be adapted in one request.
 
 Dates stay fixed by default. **Allow redistributing sessions between days**
@@ -75,6 +75,14 @@ fully interpret intensity, sport changes or free-text instructions. The coach
 must review each proposal. A single HRV reading never automatically authorizes
 an increase.
 
+## Load and recovery workflow
+
+The [shared planning evidence](ai-planning-workflow.md) adds dated recovery
+comparisons against a personal baseline, stored load coverage, RPE/answers and
+linked planned-versus-actual activity summaries. Inspect it before generation.
+You can also transfer your current state and latest question from the assistant
+into the next-session or week adaptation form. Permissions start disabled.
+
 ## Context sent to the model
 
 - Selected plan name, description, goal and dates.
@@ -83,12 +91,12 @@ an increase.
   Eligible descriptions/workouts are in `sessions.original`; surrounding entries
   also include descriptions, workouts, plan/week and an `editable` flag.
   Inclusion in context does not authorize editing an ineligible entry.
-- Up to 100 activities from the last 28 days: duration, distance, elevation gain,
+- Up to 200 activities from the last 42 days: duration, distance, elevation gain,
   average HR, RPE converted to 0–10, descriptions and stored load entries kept
   separate by calculation method.
 - Up to 10 comments per activity, only from threads the requester participates
   in; date and text limited to 1,500 characters. Descriptions are limited to 3,000.
-- Dated metrics from those 28 days: average overnight HRV, highest overnight
+- Dated metrics from those 42 days: average overnight HRV, highest overnight
   five-minute HRV, resting HR, sleep duration/score, average stress, Body Battery
   charged/drained, RMSSD, maximum HR and VO₂ max, using their existing units.
 - Training zones, unresolved recorded injuries, current state, feedback and coach

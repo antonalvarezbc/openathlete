@@ -45,6 +45,8 @@ explicitly; they are not evidence that a live provider currently works.
 
 ### AI and feedback
 
+- [AI planning workflow and load/recovery evidence](ai-planning-workflow.md)
+
 - [Plan adaptation and proposal review](plan-adaptation.md)
 - [Read-only coach AI assistant](coach-ai-assistant.md)
 - [Written workouts to structured steps](written-workout-conversion.md)

@@ -11,6 +11,8 @@ import {
 } from '@/api/plan-adaptation/plan-adaptation.api';
 import { SeoPlanAPI } from '@/api/seo-plan';
 import { trainingLoadKeys } from '@/api/training-load/training-load.keys';
+import { PlanningEvidenceSummary } from '@/components/ai-plan/planning-evidence';
+import type { AdaptationHandoff } from '@/components/coach-assistant/adaptation-handoff';
 import { dateInput } from '@/components/plan-workspace/helpers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -81,7 +83,9 @@ function StructuredPreview({
 
 export function PlanAdaptationSection({
   selection,
+  handoff,
 }: {
+  handoff?: AdaptationHandoff;
   /** Without planId, the athlete's calendar is adapted on its own. */
   selection?: { athleteId: number; planId?: number; startDate: string };
 } = {}) {
@@ -100,15 +104,16 @@ export function PlanAdaptationSection({
     newSessionMaxRpe: 4,
     athleteId: selection?.athleteId ?? 0,
     planId: selection?.planId,
-    scope: 'NEXT_SESSION',
+    scope: handoff?.scope ?? 'NEXT_SESSION',
     weekStart:
-      selection && dateInput(selection.startDate) > monday()
+      handoff?.weekStart ??
+      (selection && dateInput(selection.startDate) > monday()
         ? dateInput(selection.startDate)
-        : monday(),
+        : monday()),
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     readiness: 'UNKNOWN',
-    currentState: '',
-    instructions: '',
+    currentState: handoff?.currentState ?? '',
+    instructions: handoff?.instructions ?? '',
     allowIncrease: false,
     maxIncreasePercent: 10,
   });
@@ -482,6 +487,11 @@ export function PlanAdaptationSection({
         <p className="text-sm text-muted-foreground">
           {m.adaptation_limit_help()}
         </p>
+        {handoff && (
+          <p role="status" className="text-sm text-muted-foreground">
+            {m.planning_handoff_review()}
+          </p>
+        )}
         <Button
           variant="outline"
           disabled={!planAdaptationRequestSchema.safeParse(request).success}
@@ -502,6 +512,7 @@ export function PlanAdaptationSection({
         {context && (
           <div className="space-y-3">
             <p>{m.adaptation_context_help()}</p>
+            <PlanningEvidenceSummary evidence={context.data.evidence} />
             <details>
               <summary>{m.adaptation_context_details()}</summary>
               <pre className="text-xs whitespace-pre-wrap break-words max-h-96 overflow-auto">

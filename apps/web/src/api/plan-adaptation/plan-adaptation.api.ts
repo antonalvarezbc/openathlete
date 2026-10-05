@@ -5,6 +5,7 @@ import {
   ApplyPlanAdaptation,
   PlanAdaptationProposal,
   PlanAdaptationRequest,
+  PlanningEvidence,
   RefinePlanAdaptation,
 } from '@openathlete/shared';
 
@@ -12,6 +13,7 @@ export interface AdaptationContextResponse {
   contextVersion: string;
   data: {
     asOf: string;
+    evidence?: PlanningEvidence;
     sessions: Array<{
       startDate: string;
       endDate: string;

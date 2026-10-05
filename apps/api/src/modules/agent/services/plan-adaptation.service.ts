@@ -33,6 +33,11 @@ import { PrismaService } from '../../prisma/services/prisma.service';
 import { adaptationWeek } from './adaptation-dates';
 import { describeZoneSports } from './event-ai-helpers';
 import { validateAdaptation } from './plan-adaptation.validation';
+import {
+  PLANNING_HISTORY_LIMIT,
+  buildPlanningEvidence,
+  planningActivitySelect,
+} from './planning-evidence';
 
 const workoutInclude = {
   steps: {
@@ -324,7 +329,8 @@ export class PlanAdaptationService {
         code: 'ADAPTATION_NO_WEEK',
         message: 'No future plan week in the selected period',
       });
-    const historyStart = new Date(now.getTime() - 28 * 86400000);
+    const historyStart = new Date(now.toISOString().slice(0, 10));
+    historyStart.setUTCDate(historyStart.getUTCDate() - 41);
     const [history, metrics, injuries, zones, calendar] = await Promise.all([
       db.event.findMany({
         where: {
@@ -333,13 +339,14 @@ export class PlanAdaptationService {
           startDate: { gte: historyStart, lte: now },
         },
         orderBy: [{ startDate: 'desc' }, { eventId: 'asc' }],
-        take: 100,
+        take: PLANNING_HISTORY_LIMIT + 1,
         select: {
           eventId: true,
           name: true,
           startDate: true,
           activity: {
             select: {
+              ...planningActivitySelect,
               sport: true,
               distance: true,
               movingTime: true,
@@ -409,6 +416,12 @@ export class PlanAdaptationService {
         orderBy: [{ startDate: 'asc' }, { eventId: 'asc' }],
       }),
     ]);
+    const evidence = buildPlanningEvidence(
+      history.slice(0, PLANNING_HISTORY_LIMIT),
+      metrics,
+      now,
+      history.length > PLANNING_HISTORY_LIMIT,
+    );
     const contextVersion = createHash('sha256')
       .update(
         JSON.stringify({
@@ -422,6 +435,7 @@ export class PlanAdaptationService {
           zones,
           calendar,
           availableWeeks,
+          evidence,
         }),
       )
       .digest('hex');
@@ -470,9 +484,10 @@ export class PlanAdaptationService {
         ).toISOString(),
       })),
       asOf: now.toISOString(),
-      historyWindowDays: 28,
-      historyLimit: 100,
-      historyMayBeTruncated: history.length === 100,
+      evidence,
+      historyWindowDays: 42,
+      historyLimit: PLANNING_HISTORY_LIMIT,
+      historyMayBeTruncated: history.length > PLANNING_HISTORY_LIMIT,
       plan,
       currentState: request.currentState,
       readiness: request.readiness,
@@ -482,7 +497,7 @@ export class PlanAdaptationService {
       scope: request.scope,
       timeZone: request.timeZone,
       sessions,
-      activities: history.map((event) => ({
+      activities: history.slice(0, PLANNING_HISTORY_LIMIT).map((event) => ({
         date: event.startDate,
         sport: event.activity?.sport,
         durationSeconds: event.activity?.movingTime,
@@ -549,7 +564,7 @@ export class PlanAdaptationService {
         'Credentials and API keys',
         'GPS/raw activity streams',
         'General private conversations',
-        'Metrics older than 28 days',
+        'Metrics older than 42 days',
         'Unstored subjective variables',
       ],
     };

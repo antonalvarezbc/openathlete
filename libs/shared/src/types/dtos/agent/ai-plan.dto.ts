@@ -4,6 +4,7 @@ import { METRIC_TYPE, SPORT_TYPE } from '../../misc';
 import { AiAccessSource } from '../ai/ai-settings.dto';
 import { CreateWorkoutStepDto } from '../core/workout.dto';
 import { SEOPlanData } from '../seo/seo-plan.dto';
+import type { PlanningEvidence } from './planning-evidence.dto';
 
 /** Plans longer than this are built in several blocks. */
 export const AI_PLAN_MAX_WEEKS = 24;
@@ -226,6 +227,7 @@ export interface AiPlanRaceContext {
 
 /** The athlete part of the AI's input, exactly as it is sent. */
 export interface AiPlanAthleteContext {
+  evidence?: PlanningEvidence;
   recentWeeklyMinutes: number | null;
   weeklyHistoryNewestFirst: Array<{ minutes: number; sessions: number }>;
   minutesBySportLast8Weeks: Record<string, number>;

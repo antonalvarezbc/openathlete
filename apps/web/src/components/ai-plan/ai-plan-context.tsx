@@ -10,6 +10,8 @@ import {
   TRAINING_ZONE_TYPE,
 } from '@openathlete/shared';
 
+import { PlanningEvidenceSummary } from './planning-evidence';
+
 const injuryStatus: Record<string, () => string> = {
   WORSENING: m.injury_status_worsening,
   IMPROVING: m.injury_status_improving,
@@ -126,6 +128,7 @@ export function AiPlanContextSummary({
           </Row>
         </dl>
       )}
+      <PlanningEvidenceSummary evidence={athlete?.evidence} />
     </section>
   );
 }

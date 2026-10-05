@@ -129,6 +129,71 @@ function setup(
 }
 
 describe('Adapting the real calendar', () => {
+  test('versions recovery evidence and refreshes it without a model call', async () => {
+    const { db, context } = setup();
+    const first = await context();
+    expect(first.data.evidence.recent.minutes).toBeNull();
+    expect((await context()).contextVersion).toBe(first.contextVersion);
+    db.athleteMetric.findMany.mockResolvedValue([
+      { type: 'HR_REST', value: 65, date: new Date('2030-10-21T00:00:00Z') },
+    ] as never);
+    const updated = await context();
+    expect(updated.contextVersion).not.toBe(first.contextVersion);
+    expect(
+      updated.data.evidence.recovery.find((m) => m.type === 'HR_REST'),
+    ).toMatchObject({
+      latestValue: 65,
+      latestDate: '2030-10-21',
+      status: 'INSUFFICIENT',
+    });
+  });
+
+  test('includes linked prescription and athlete answers in the versioned context', async () => {
+    const { db, context } = setup();
+    let answer = 'Heavy legs';
+    db.event.findMany.mockImplementation(async ({ where }) =>
+      where.type === 'TRAINING'
+        ? [session(9, 22, planWeek)]
+        : where.type === 'ACTIVITY'
+          ? ([
+              {
+                eventId: 55,
+                name: 'Trail run',
+                startDate: new Date('2030-10-20T09:00:00Z'),
+                activity: {
+                  sport: 'TRAIL_RUNNING',
+                  movingTime: 5400,
+                  distance: 10000,
+                  elevationGain: 700,
+                  rpe: 0.8,
+                  description: '',
+                  averageHeartrate: 145,
+                  trainingLoadEntries: [],
+                  messageThread: null,
+                  feedbackSkipped: false,
+                  feedbackQuestions: [
+                    { questionText: 'How did it feel?', answerText: answer },
+                  ],
+                  relatedTraining: {
+                    goalDuration: 3600,
+                    goalDistance: 8000,
+                    goalElevationGain: 500,
+                    goalRpe: 0.4,
+                  },
+                },
+              },
+            ] as never)
+          : [],
+    );
+    const first = await context();
+    expect(first.data.evidence.comparisons[0].minutes.changePercent).toBe(50);
+    expect(first.data.evidence.feedback[0].answers[0].answer).toBe(
+      'Heavy legs',
+    );
+    answer = 'Recovered';
+    expect((await context()).contextVersion).not.toBe(first.contextVersion);
+  });
+
   test('takes every upcoming session, linked to a plan week or not', async () => {
     const { db, context } = setup();
     const { data } = await context();

@@ -3,16 +3,19 @@
 ## Use
 
 Open the Coach planning workspace (`/dashboard/planning`) and choose **AI
-assistant** (`?tab=assistant`). Select an athlete and an existing training plan.
+assistant** (`?tab=assistant`). Select an athlete and a training plan, or work from the calendar without a plan.
 
 - Choose the first day of the seven-day calendar period and optionally describe
   current feelings/circumstances.
 - **Review athlete context** fetches application data without calling an LLM.
 - **Send question** fetches fresh context, rechecks access and sends the question,
   context and recent conversation to the existing configured AI provider.
-- **Review and adapt with AI** opens the existing adaptation section. It does not
-  generate or apply a proposal automatically, and does not transfer the conversation.
-  Copy any decisions you want to use before leaving the assistant tab.
+- **Adapt next session** / **Adapt this week** opens adaptation with the selected
+  period, current state and the coach's last question. Review those inputs and set
+  the permissions there. Assistant answers and approvals are not transferred;
+  no proposal is generated or applied automatically.
+- The [shared evidence summary](ai-planning-workflow.md) shows load coverage,
+  personal recovery comparisons and linked planned-versus-actual activities.
 
 Conversation state is held only in the browser component, with up to eight
 question/answer pairs. It resets on leaving the tab, changing athlete/plan/language,
@@ -28,9 +31,9 @@ add an external AI client connection or an autonomous planning agent.
 It reuses the adaptation context: selected plan and goal, calendar descriptions
 and structured workouts, recent activities and stored load entries/RPE/accessible
 activity comments, the existing recovery-metric allowlist, unresolved injuries
-and training zones. Recent activity/metric history covers 28 days, with at most
-100 activities. Missing data remains missing. This version requires a plan;
-it is not a complete athlete profile or an unrestricted history browser.
+and training zones. Recent activity/metric history covers 42 days, with at most
+200 activities. Missing data remains missing. A plan is optional. Additional
+history can be read through the existing authorized data tools.
 
 Read-only consultation allows a week with no pending sessions. Adaptation's
 existing requirement and validation limits remain the default. Upcoming sessions
@@ -46,8 +49,9 @@ contain personal information; users can inspect context before sending a questio
 - Shared DTOs: `libs/shared/src/types/dtos/agent/coach-assistant.dto.ts`.
 - Controller: `POST /agent/ai/coach-assistant/context` and `/chat`.
 - `CoachAssistantService` uses `PlanAdaptationService.context` in consultation mode.
-- `coachAssistantAgent` uses the existing `EVENT_MODIFICATION_MODEL` configuration,
-  has no tools and returns text. No additional AI environment variables are needed.
+- `coachAssistantAgent` resolves the requesting coach's PLAN_ADAPTATION model
+  through `AiModelResolverService` and runs through `AiService`, with usage
+  accounting. It has the existing read-only data tools and returns text.
 - `CoachAssistant` lives in the existing Coach planning workspace alongside the
   plan tab; both share the athlete and plan selectors.
 
@@ -63,7 +67,8 @@ are rendered as Markdown without raw HTML, images or active links.
 
 Applying changes remains a separate, explicit action in the existing adaptation
 workflow, with its current schema validation and context-version check. The chat
-itself has no database write or provider-sync operations.
+itself cannot write calendar events or sync providers. If enabled, the existing
+coach–athlete AI memory may record a bounded note after a reply.
 
 ## Verification
 

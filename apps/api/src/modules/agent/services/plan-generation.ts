@@ -10,6 +10,8 @@ import {
   SPORT_TYPE,
 } from '@openathlete/shared';
 
+import { PLANNING_EVIDENCE_INSTRUCTIONS } from '../../../mastra/agents/planning-evidence-instructions';
+
 /*
  * The model writes the plan in a compact shape that strict structured
  * outputs accept (every field required, no recursion); it is then turned
@@ -70,7 +72,8 @@ export type AiPlanOutput = z.infer<typeof aiPlanOutputSchema>;
 const rule = (key: keyof typeof AI_PLAN_RULES) =>
   `${key} (default ${AI_PLAN_RULES[key].default}, allowed ${AI_PLAN_RULES[key].min}-${AI_PLAN_RULES[key].max})`;
 
-export const PLAN_GENERATION_INSTRUCTIONS = `You design a periodized endurance training plan for a coach to review.
+export const PLAN_GENERATION_INSTRUCTIONS = `${PLANNING_EVIDENCE_INSTRUCTIONS}
+You design a periodized endurance training plan for a coach to review.
 You have no tools: nothing you write is saved until the coach reviews and applies it.
 Input: request (the coach's goal and limits), schedule, athlete (recent training, metrics, zones,
 injuries, upcoming races) and, when revising, revision.
