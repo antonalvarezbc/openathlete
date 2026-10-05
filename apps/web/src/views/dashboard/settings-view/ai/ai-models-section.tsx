@@ -7,6 +7,7 @@ import {
 } from '@/api/ai-settings';
 import {
   aiProviderName,
+  aiTaskDescription,
   aiTaskLabel,
 } from '@/components/ai-settings/ai-labels';
 import { ModelInput } from '@/components/ai-settings/model-input';
@@ -106,6 +107,9 @@ export function AiModelsSection() {
       >
         <div className="min-w-0">
           <p className="text-sm font-medium">{aiTaskLabel(task)}</p>
+          <p className="text-xs text-muted-foreground">
+            {aiTaskDescription(task)}
+          </p>
           {effective && (
             <p className="truncate text-xs text-muted-foreground">
               {effective.available ? (

@@ -1,4 +1,4 @@
-import { AiTask, CUSTOM_AI_PROVIDER } from '@openathlete/shared';
+import { AiFeatureTask, AiTask, CUSTOM_AI_PROVIDER } from '@openathlete/shared';
 
 import { AiNotConfiguredException } from '../ai.errors';
 import { AiCredentialCipher } from './ai-credential-cipher';
@@ -432,6 +432,99 @@ describe('AiModelResolverService', () => {
         hostedAccess: false,
         upgradeUnlocksHosted: false,
       });
+    });
+  });
+
+  describe('coach features', () => {
+    const coachTasks: AiFeatureTask[] = [
+      AiTask.PLAN_GENERATION,
+      AiTask.PLAN_ADAPTATION,
+      AiTask.ACTIVITY_ANALYSIS,
+      AiTask.WORKOUT_PARSER,
+      AiTask.AI_MEMORY,
+    ];
+
+    it.each(coachTasks)(
+      "%s runs on the coach's model for it, else their default",
+      async (task) => {
+        const { resolver } = setup({
+          preferences: [
+            preference(3, AiTask.DEFAULT, 'openai', 'gpt-5.1', 'sk-default'),
+            preference(3, task, 'anthropic', 'claude-opus-5-5', 'sk-ant-coach'),
+          ],
+          // Instance keys exist: own keys still come first
+          hostedAccess: 'everyone',
+          env: { OPENAI_API_KEY: 'sk-instance' },
+        });
+        await expect(resolver.resolveForUser(task, 3)).resolves.toMatchObject({
+          task,
+          source: 'own_key',
+          userId: 3,
+          config: {
+            id: 'anthropic/claude-opus-5-5',
+            apiKey: 'sk-ant-coach',
+          },
+        });
+
+        const defaultOnly = setup({
+          preferences: [
+            preference(3, AiTask.DEFAULT, 'openai', 'gpt-5.1', 'sk-default'),
+          ],
+        });
+        await expect(
+          defaultOnly.resolver.resolveForUser(task, 3),
+        ).resolves.toMatchObject({
+          source: 'own_key',
+          config: { id: 'openai/gpt-5.1', apiKey: 'sk-default' },
+        });
+      },
+    );
+
+    it.each(coachTasks)(
+      '%s uses the instance keys only when the coach may',
+      async (task) => {
+        const env = {
+          OPENAI_API_KEY: 'sk-instance',
+          ANTHROPIC_API_KEY: 'sk-ant-instance',
+        };
+        const allowed = setup({ subscribers: [3], env });
+        await expect(
+          allowed.resolver.resolveForUser(task, 3),
+        ).resolves.toMatchObject({ source: 'hosted', credentialId: null });
+
+        const denied = setup({ subscribers: [], env });
+        await expect(
+          denied.resolver.resolveForUser(task, 3),
+        ).rejects.toBeInstanceOf(AiNotConfiguredException);
+
+        const off = setup({ hostedAccess: 'none', subscribers: [3], env });
+        await expect(off.resolver.tryResolveForUser(task, 3)).resolves.toBe(
+          null,
+        );
+      },
+    );
+
+    it('lists the coach features with what each would run on', async () => {
+      const { resolver } = setup({
+        preferences: [
+          preference(
+            3,
+            AiTask.PLAN_GENERATION,
+            'anthropic',
+            'claude-opus-5-5',
+            'sk-ant-coach',
+          ),
+        ],
+      });
+      const access = await resolver.describeAccess(3);
+      expect(access.tasks[AiTask.PLAN_GENERATION]).toMatchObject({
+        available: true,
+        source: 'own_key',
+        modelId: 'claude-opus-5-5',
+      });
+      for (const task of coachTasks.slice(1))
+        expect(access.tasks[task].available).toBe(false);
+      expect(JSON.stringify(access)).not.toContain('sk-ant-coach');
     });
   });
 });
