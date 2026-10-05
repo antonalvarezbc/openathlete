@@ -241,13 +241,13 @@ export const ApiEnvSchema = z
         'Who may use the instance AI keys: subscribers (paid plan with AI), everyone, or none. Default: subscribers when Stripe is configured, everyone otherwise',
       ),
 
-    AI_HOSTED_MONTHLY_TOKENS: z
+    AI_HOSTED_MONTHLY_BUDGET_USD: z
       .string()
-      .regex(/^\d+$/, 'AI_HOSTED_MONTHLY_TOKENS must be a whole number')
+      .regex(/^\d+(\.\d+)?$/, 'AI_HOSTED_MONTHLY_BUDGET_USD must be a number')
       .optional()
       .transform((val) => (val === undefined ? undefined : Number(val)))
       .describe(
-        'Tokens (input + output) each user may use per month on the instance AI keys. Unset: no limit',
+        "What each user may spend per month on the instance AI keys, in US dollars at the providers' prices (e.g. 3). Unset: no limit",
       ),
 
     AI_ALLOW_CUSTOM_ENDPOINTS: z
@@ -294,7 +294,7 @@ export const ApiEnvSchema = z
       .string()
       .optional()
       .describe(
-        'AI model for post-activity feedback agent (e.g., google/gemini-2.0-flash-exp, google/gemini-3-pro-preview)',
+        'AI model for post-activity feedback questions (e.g. google/gemini-2.5-flash)',
       ),
     AI_MODEL_TRIMP_ESTIMATION: z
       .string()

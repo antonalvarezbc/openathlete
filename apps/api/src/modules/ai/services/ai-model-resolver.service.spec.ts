@@ -106,7 +106,7 @@ function setup({
     describe: jest.fn().mockResolvedValue({
       hostedTokens: 0,
       ownKeyTokens: 0,
-      hostedLimit: null,
+      hostedBudgetUsed: null,
       resetsAt: '2026-11-01T00:00:00.000Z',
     }),
   };
@@ -262,7 +262,7 @@ describe('AiModelResolverService', () => {
       expect(resolved).toMatchObject({
         source: 'hosted',
         credentialId: null,
-        config: { id: 'openai/gpt-5.1', apiKey: 'sk-instance' },
+        config: { id: 'openai/gpt-5.6-luna', apiKey: 'sk-instance' },
       });
     });
 
@@ -299,10 +299,10 @@ describe('AiModelResolverService', () => {
     });
 
     it("is unavailable when the instance lacks the model provider's key", async () => {
-      // Feedback questions default to Google
+      // Every feature defaults to an OpenAI model
       const { resolver } = setup({
         hostedAccess: 'everyone',
-        env: { OPENAI_API_KEY: 'sk-instance' },
+        env: { GOOGLE_API_KEY: 'g-instance' },
       });
 
       await expect(
@@ -313,13 +313,16 @@ describe('AiModelResolverService', () => {
     it('accepts any of the variable names of a provider key', async () => {
       const { resolver } = setup({
         hostedAccess: 'everyone',
-        env: { GOOGLE_GENERATIVE_AI_API_KEY: 'g-instance' },
+        env: {
+          AI_MODEL_POST_ACTIVITY_FEEDBACK: 'google/gemini-2.5-flash',
+          GOOGLE_GENERATIVE_AI_API_KEY: 'g-instance',
+        },
       });
 
       await expect(
         resolver.resolveForUser(AiTask.POST_ACTIVITY_QUESTIONS, 1),
       ).resolves.toMatchObject({
-        config: { id: 'google/gemini-3-pro-preview', apiKey: 'g-instance' },
+        config: { id: 'google/gemini-2.5-flash', apiKey: 'g-instance' },
       });
     });
 

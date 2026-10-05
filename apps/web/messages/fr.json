@@ -1073,7 +1073,7 @@
   "ai_hosted_included_description": "Les fonctionnalités sans clé de votre part utilisent les clés d'IA de cette instance.",
   "ai_usage_title": "Utilisation ce mois-ci",
   "ai_usage_included": "IA incluse",
-  "ai_usage_tokens_of": "{used} tokens sur {limit}",
+  "ai_usage_percent_used": "{percent} % utilisés",
   "ai_usage_resets": "Renouvelée le {date}.",
   "ai_usage_exhausted": "Épuisée. Les fonctionnalités sans clé de votre part sont en pause jusqu'au {date}.",
   "ai_usage_own_keys": "{tokens} tokens sur vos propres clés, facturés par votre fournisseur.",

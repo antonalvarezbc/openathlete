@@ -12,8 +12,8 @@ vi.mock('@/paraglide/messages', () => ({
   m: {
     ai_usage_title: () => 'Usage this month',
     ai_usage_included: () => 'Included AI',
-    ai_usage_tokens_of: ({ used, limit }: { used: string; limit: string }) =>
-      `${used} of ${limit} tokens`,
+    ai_usage_percent_used: ({ percent }: { percent: number }) =>
+      `${percent}% used`,
     ai_usage_resets: ({ date }: { date: string }) => `Renews on ${date}.`,
     ai_usage_exhausted: ({ date }: { date: string }) =>
       `Used up until ${date}.`,
@@ -49,7 +49,7 @@ function access(overrides: Partial<AiAccessDto> = {}): AiAccessDto {
     usage: {
       hostedTokens: 250_000,
       ownKeyTokens: 0,
-      hostedLimit: 1_000_000,
+      hostedBudgetUsed: 0.25,
       resetsAt: '2026-11-01T00:00:00.000Z',
     },
     ...overrides,
@@ -77,7 +77,7 @@ describe('AiUsageSection', () => {
   it('shows the included allowance and when it renews', () => {
     render(access());
 
-    expect(container.textContent).toContain('250K of 1M tokens');
+    expect(container.textContent).toContain('25% used');
     expect(container.textContent).toContain('Renews on November 1.');
     expect(
       container
@@ -90,7 +90,7 @@ describe('AiUsageSection', () => {
     render(
       access({
         hostedQuotaExhausted: true,
-        usage: { ...access().usage, hostedTokens: 1_200_000 },
+        usage: { ...access().usage, hostedBudgetUsed: 1 },
       }),
     );
 
@@ -106,7 +106,11 @@ describe('AiUsageSection', () => {
     render(
       access({
         hostedAccess: false,
-        usage: { ...access().usage, hostedLimit: null, ownKeyTokens: 42_000 },
+        usage: {
+          ...access().usage,
+          hostedBudgetUsed: null,
+          ownKeyTokens: 42_000,
+        },
       }),
     );
 
@@ -115,7 +119,7 @@ describe('AiUsageSection', () => {
   });
 
   it('stays hidden with nothing to show', () => {
-    render(access({ usage: { ...access().usage, hostedLimit: null } }));
+    render(access({ usage: { ...access().usage, hostedBudgetUsed: null } }));
 
     expect(container.textContent).toBe('');
   });

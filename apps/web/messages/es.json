@@ -1073,7 +1073,7 @@
   "ai_hosted_included_description": "Las funciones sin una clave tuya usan las claves de IA de esta instancia.",
   "ai_usage_title": "Uso este mes",
   "ai_usage_included": "IA incluida",
-  "ai_usage_tokens_of": "{used} de {limit} tokens",
+  "ai_usage_percent_used": "{percent} % usado",
   "ai_usage_resets": "Se renueva el {date}.",
   "ai_usage_exhausted": "Agotada. Las funciones sin una clave tuya están en pausa hasta el {date}.",
   "ai_usage_own_keys": "{tokens} tokens en tus propias claves, facturados por tu proveedor.",

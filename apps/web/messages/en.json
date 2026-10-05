@@ -1073,7 +1073,7 @@
   "ai_hosted_included_description": "Features without a key of yours run on this instance's AI keys.",
   "ai_usage_title": "Usage this month",
   "ai_usage_included": "Included AI",
-  "ai_usage_tokens_of": "{used} of {limit} tokens",
+  "ai_usage_percent_used": "{percent}% used",
   "ai_usage_resets": "Renews on {date}.",
   "ai_usage_exhausted": "Used up. Features without a key of yours are paused until {date}.",
   "ai_usage_own_keys": "{tokens} tokens on your own keys, billed by your provider.",
