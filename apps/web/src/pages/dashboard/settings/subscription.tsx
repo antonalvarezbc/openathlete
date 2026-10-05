@@ -7,7 +7,7 @@ import {
   useResumeSubscription,
 } from '@/api/subscription';
 import { IOSPaymentBlockDialog } from '@/components/payment/ios-payment-block-dialog';
-import { PlanCard } from '@/components/paywall/plan-card';
+import { SupporterOffer } from '@/components/paywall/supporter-offer';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -16,13 +16,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { m } from '@/paraglide/messages';
-import {
-  AnalyticsEvent,
-  analyticsErrorCodeFromUnknown,
-} from '@/utils/analytics-events';
+import { AnalyticsEvent } from '@/utils/analytics-events';
 import { isPaymentDisabled } from '@/utils/capacitor';
+import { supporterPriceLabel } from '@/utils/supporter';
 import { format } from 'date-fns';
 import { Download, ExternalLink, FileText } from 'lucide-react';
 import { usePostHog } from 'posthog-js/react';
@@ -30,19 +27,11 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 import {
-  PLAN_CONFIGS,
+  BillingInterval,
+  FREE_PLAN_MAX_ATHLETES,
   SubscriptionPlan,
   SubscriptionStatus,
 } from '@openathlete/shared';
-
-const planNameMap: Record<SubscriptionPlan, string> = {
-  [SubscriptionPlan.FREE]: m.plan_free_name(),
-  [SubscriptionPlan.ATHLETE_PRO]: m.plan_athlete_pro_name(),
-  [SubscriptionPlan.COACH_PRO]: m.plan_coach_pro_name(),
-  [SubscriptionPlan.COACH_ULTRA]: m.plan_coach_ultra_name(),
-  [SubscriptionPlan.CLUB_PRO]: m.plan_club_pro_name(),
-  [SubscriptionPlan.CLUB_ULTRA]: m.plan_club_ultra_name(),
-};
 
 const subscriptionStatusMap: Record<SubscriptionStatus, string> = {
   [SubscriptionStatus.ACTIVE]: m.subscription_status_active(),
@@ -62,11 +51,6 @@ const invoiceStatusMap: Record<string, string> = {
   void: m.invoice_status_void(),
   uncollectible: m.invoice_status_uncollectible(),
 };
-
-// Group plans by category (paid plans only)
-const ATHLETE_PLANS = [SubscriptionPlan.ATHLETE_PRO];
-const COACH_PLANS = [SubscriptionPlan.COACH_PRO, SubscriptionPlan.COACH_ULTRA];
-const CLUB_PLANS = [SubscriptionPlan.CLUB_PRO, SubscriptionPlan.CLUB_ULTRA];
 
 function isSubscriptionActive(status: SubscriptionStatus): boolean {
   return (
@@ -91,12 +75,6 @@ function BillingSettingsPage() {
   const posthog = usePostHog();
 
   const [isLoadingPortal, setIsLoadingPortal] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(
-    null,
-  );
-  const [activeTab, setActiveTab] = useState<'athlete' | 'coach' | 'club'>(
-    'athlete',
-  );
   const [showIOSPaymentBlock, setShowIOSPaymentBlock] = useState(false);
 
   const handleManageBilling = async () => {
@@ -165,138 +143,61 @@ function BillingSettingsPage() {
   }
 
   const plan = subscription.plan as SubscriptionPlan;
-  const planConfig = PLAN_CONFIGS[plan];
   const status = subscription.status as SubscriptionStatus;
+  const interval = subscription.billingInterval;
 
-  // UX rule: if subscription is "active" but user is on FREE, treat as no subscription
-  const shouldShowPurchaseOnly =
-    plan === SubscriptionPlan.FREE && isSubscriptionActive(status);
-
-  const handleUpgrade = async (nextPlan: SubscriptionPlan) => {
-    // Check if payments are disabled (iOS)
-    if (isPaymentDisabled()) {
-      setShowIOSPaymentBlock(true);
-      return;
-    }
-
-    setSelectedPlan(nextPlan);
-    try {
-      const successUrl = `${window.location.origin}/dashboard/settings?tab=subscription&success=true`;
-      const cancelUrl = `${window.location.origin}/dashboard/settings?tab=subscription&canceled=true`;
-
-      const { url } = await createCheckout.mutateAsync({
-        plan: nextPlan,
-        successUrl,
-        cancelUrl,
-      });
-
-      posthog?.capture('subscription_upgrade_initiated', { plan: nextPlan });
-      window.location.href = url;
-    } catch (error) {
-      posthog?.capture(AnalyticsEvent.subscription_checkout_failed, {
-        plan: nextPlan,
-        source: 'subscription_settings',
-        error_code: analyticsErrorCodeFromUnknown(error),
-      });
-      toast.error(m.subscription_checkout_error());
-    }
-  };
-
-  if (shouldShowPurchaseOnly) {
+  // A lapsed Supporter subscription leaves the free plan
+  if (plan === SubscriptionPlan.FREE || !isSubscriptionActive(status)) {
     return (
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>{m.subscription_purchase_title()}</CardTitle>
+            <CardTitle>{m.subscription_free_title()}</CardTitle>
             <CardDescription>
-              {m.subscription_purchase_description()}
+              {m.subscription_free_description({
+                count: FREE_PLAN_MAX_ATHLETES,
+              })}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs
-              value={activeTab}
-              onValueChange={(v) => setActiveTab(v as typeof activeTab)}
-            >
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="athlete">
-                  {m.paywall_tab_athlete()}
-                </TabsTrigger>
-                <TabsTrigger value="coach">{m.paywall_tab_coach()}</TabsTrigger>
-                <TabsTrigger value="club">{m.paywall_tab_club()}</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="athlete" className="mt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {ATHLETE_PLANS.map((p) => {
-                    const config = PLAN_CONFIGS[p];
-                    return (
-                      <PlanCard
-                        key={config.plan}
-                        plan={config}
-                        onSelect={() => handleUpgrade(config.plan)}
-                        isLoading={
-                          createCheckout.isPending &&
-                          selectedPlan === config.plan
-                        }
-                        isCurrentPlan={false}
-                      />
-                    );
-                  })}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="coach" className="mt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {COACH_PLANS.map((p) => {
-                    const config = PLAN_CONFIGS[p];
-                    return (
-                      <PlanCard
-                        key={config.plan}
-                        plan={config}
-                        onSelect={() => handleUpgrade(config.plan)}
-                        isLoading={
-                          createCheckout.isPending &&
-                          selectedPlan === config.plan
-                        }
-                        isCurrentPlan={false}
-                      />
-                    );
-                  })}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="club" className="mt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {CLUB_PLANS.map((p) => {
-                    const config = PLAN_CONFIGS[p];
-                    return (
-                      <PlanCard
-                        key={config.plan}
-                        plan={config}
-                        onSelect={() => handleUpgrade(config.plan)}
-                        isLoading={
-                          createCheckout.isPending &&
-                          selectedPlan === config.plan
-                        }
-                        isCurrentPlan={false}
-                      />
-                    );
-                  })}
-                </div>
-              </TabsContent>
-            </Tabs>
+            <SupporterOffer
+              analyticsSource="subscription_settings"
+              className="max-w-xl"
+            />
           </CardContent>
         </Card>
       </div>
     );
   }
 
+  const otherInterval =
+    interval === BillingInterval.YEAR
+      ? BillingInterval.MONTH
+      : BillingInterval.YEAR;
+
+  const handleSwitchInterval = async () => {
+    const settingsUrl = `${window.location.origin}/dashboard/settings?tab=subscription`;
+    try {
+      await createCheckout.mutateAsync({
+        interval: otherInterval,
+        successUrl: settingsUrl,
+        cancelUrl: settingsUrl,
+      });
+      posthog?.capture('subscription_interval_changed', {
+        interval: otherInterval,
+      });
+      toast.success(m.subscription_switch_success());
+    } catch {
+      toast.error(m.subscription_checkout_error());
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>{m.subscription_current()}</CardTitle>
-          <CardDescription>{m.subscription_current()}</CardDescription>
+          <CardDescription>{m.subscription_supporter_thanks()}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -305,9 +206,8 @@ function BillingSettingsPage() {
                 {m.subscription_plan()}
               </div>
               <div className="text-lg font-semibold">
-                {planNameMap[plan]} - €
-                {planConfig.price.toFixed(2).replace('.', ',')}
-                {m.plan_price_per_month()}
+                {m.plan_supporter_name()}
+                {interval && ` · ${supporterPriceLabel(interval)}`}
               </div>
             </div>
             <div>
@@ -360,6 +260,22 @@ function BillingSettingsPage() {
                 className="w-full sm:w-auto"
               >
                 {m.subscription_cancel()}
+              </Button>
+            )}
+            {interval && !subscription.cancelAtPeriodEnd && (
+              <Button
+                variant="outline"
+                onClick={handleSwitchInterval}
+                disabled={createCheckout.isPending}
+                className="w-full sm:w-auto"
+              >
+                {otherInterval === BillingInterval.YEAR
+                  ? m.subscription_switch_to_yearly({
+                      price: supporterPriceLabel(BillingInterval.YEAR),
+                    })
+                  : m.subscription_switch_to_monthly({
+                      price: supporterPriceLabel(BillingInterval.MONTH),
+                    })}
               </Button>
             )}
             <Button

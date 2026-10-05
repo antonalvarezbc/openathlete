@@ -106,6 +106,8 @@ model AiUsage {
   source       AiKeySource
   inputTokens  Int         @default(0) @map("input_tokens")
   outputTokens Int         @default(0) @map("output_tokens")
+  /// Cost on the instance keys, in millionths of a US dollar
+  costMicroUsd Int         @default(0) @map("cost_micro_usd")
   calls        Int         @default(0)
 
   // relationships

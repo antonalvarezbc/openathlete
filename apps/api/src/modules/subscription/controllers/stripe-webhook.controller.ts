@@ -15,7 +15,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ApiHeader, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 
-import { ApiEnvSchemaType, SubscriptionPlan } from '@openathlete/shared';
+import { ApiEnvSchemaType } from '@openathlete/shared';
 
 import { SendEmailEvent } from 'src/events';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
@@ -47,8 +47,8 @@ export class StripeWebhookController {
     description:
       "Receives and processes webhook events from Stripe. This endpoint verifies the webhook signature using the Stripe webhook secret to ensure the request is authentic and hasn't been tampered with. The raw request body is required for signature verification. After verification, the event is processed based on its type:\n\n" +
       '**Handled Events:**\n' +
-      '- `checkout.session.completed`: Creates a subscription in the database after a successful Stripe checkout. Extracts user ID from customer metadata, validates the plan, creates the subscription record with all billing period information, and sends a subscription confirmation email to the user.\n' +
-      "- `customer.subscription.updated`: Updates the subscription status, plan, billing periods, trial end date, and cancellation status. The plan is extracted from the subscription's price ID (source of truth) rather than metadata.\n" +
+      '- `checkout.session.completed`: Records the Supporter subscription after a successful Stripe checkout (user ID from the customer metadata, billing interval and periods from Stripe) and sends a confirmation email.\n' +
+      '- `customer.subscription.updated`: Updates the subscription status, billing interval, billing periods and cancellation status.\n' +
       '- `customer.subscription.deleted`: Marks the subscription as canceled when Stripe deletes it. Updates the subscription status to canceled.\n' +
       '- `invoice.paid`: Logs payment confirmation.\n\n' +
       '**Security:** The endpoint verifies the Stripe signature header to ensure requests are authentic. Invalid signatures are rejected and logged. The endpoint returns 200 OK to acknowledge receipt, even if the event type is unhandled, to prevent Stripe from retrying the webhook.',
@@ -153,25 +153,6 @@ export class StripeWebhookController {
       return;
     }
 
-    const planString = session.metadata?.plan;
-    if (!planString) {
-      this.logger.error(
-        `Missing plan in checkout session metadata: ${session.id}`,
-      );
-      return;
-    }
-
-    // Validate that plan is a valid SubscriptionPlan
-    const validPlans = Object.values(SubscriptionPlan);
-    if (!validPlans.includes(planString as SubscriptionPlan)) {
-      this.logger.error(
-        `Invalid plan in checkout session metadata: ${planString}`,
-      );
-      return;
-    }
-
-    const plan = planString as SubscriptionPlan;
-
     // Get user ID from customer metadata
     const customer =
       await this.stripeService['stripe'].customers.retrieve(customerId);
@@ -199,7 +180,6 @@ export class StripeWebhookController {
         numericUserId,
         customerId,
         subscriptionId,
-        plan,
       );
     } catch (e) {
       if (e instanceof SubscriptionUserMissingError) {
@@ -211,9 +191,7 @@ export class StripeWebhookController {
       throw e;
     }
 
-    this.logger.log(
-      `Subscription created for user ${userId} with plan ${plan}`,
-    );
+    this.logger.log(`Supporter subscription created for user ${userId}`);
 
     const user = await this.prisma.user.findUnique({
       where: { userId: numericUserId },
@@ -228,7 +206,6 @@ export class StripeWebhookController {
           type: 'subscription-confirmation',
           to: user.email,
           params: {
-            plan,
             name: user.firstName || undefined,
             subscription_settings_url: `${appUrl}/dashboard/settings?tab=subscription`,
           },

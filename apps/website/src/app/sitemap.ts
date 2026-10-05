@@ -74,7 +74,11 @@ function getRouteMetadata(path: string): {
   }
 
   // Legal pages
-  if (path === '/privacy-policy' || path === '/legal-notice') {
+  if (
+    path === '/privacy-policy' ||
+    path === '/legal-notice' ||
+    path === '/terms-of-sale'
+  ) {
     return { priority: 0.5, changeFrequency: 'monthly' };
   }
 

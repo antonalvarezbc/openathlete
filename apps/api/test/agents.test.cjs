@@ -702,8 +702,9 @@ test('without keys of their own, users get the instance models and keys of AI_PR
 
 test('on the OpenAI defaults, plans get the same token limit and portable output', () => {
   const { plan, parser, planModel, parserModel } = providerRequests({});
-  assert.equal(planModel.modelId, 'gpt-5.1');
-  assert.equal(parserModel.modelId, 'gpt-5-mini');
+  // Upstream runs hosted AI on one small model for every feature
+  assert.equal(planModel.modelId, 'gpt-5.6-luna');
+  assert.equal(parserModel.modelId, 'gpt-5.6-luna');
   assert.equal(plan.length, 1);
   assert.equal(plan[0].key, 'Bearer sk-instance-openai');
   const body = plan[0].body;

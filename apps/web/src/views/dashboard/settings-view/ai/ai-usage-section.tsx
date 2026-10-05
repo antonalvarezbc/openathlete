@@ -11,7 +11,7 @@ import { AiAccessDto } from '@openathlete/shared';
  */
 export function AiUsageSection({ access }: { access: AiAccessDto }) {
   const { usage, hostedAccess, hostedQuotaExhausted } = access;
-  const showAllowance = hostedAccess && usage.hostedLimit !== null;
+  const showAllowance = hostedAccess && usage.hostedBudgetUsed !== null;
   if (!showAllowance && usage.ownKeyTokens === 0) return null;
 
   const locale = getDateLocale(getLocale());
@@ -22,23 +22,17 @@ export function AiUsageSection({ access }: { access: AiAccessDto }) {
     month: 'long',
     timeZone: 'UTC',
   });
-  const percent =
-    usage.hostedLimit && usage.hostedLimit > 0
-      ? Math.min(100, (usage.hostedTokens / usage.hostedLimit) * 100)
-      : 100;
+  const percent = Math.round((usage.hostedBudgetUsed ?? 0) * 100);
 
   return (
     <section className="space-y-3 rounded-lg border p-4">
       <h3 className="font-medium">{m.ai_usage_title()}</h3>
-      {showAllowance && usage.hostedLimit !== null && (
+      {showAllowance && (
         <div className="space-y-2">
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
             <span>{m.ai_usage_included()}</span>
             <span className="text-muted-foreground">
-              {m.ai_usage_tokens_of({
-                used: tokens(usage.hostedTokens),
-                limit: tokens(usage.hostedLimit),
-              })}
+              {m.ai_usage_percent_used({ percent })}
             </span>
           </div>
           <div
@@ -46,7 +40,7 @@ export function AiUsageSection({ access }: { access: AiAccessDto }) {
             aria-label={m.ai_usage_included()}
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-valuenow={Math.round(percent)}
+            aria-valuenow={percent}
             className="h-2 overflow-hidden rounded-full bg-muted"
           >
             <div

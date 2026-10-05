@@ -12,8 +12,10 @@ model Subscription {
   subscriptionId Int @id @default(autoincrement()) @map("subscription_id")
 
   // fields
-  /// Subscription plan: FREE, ATHLETE_PRO, COACH_PRO, COACH_ULTRA, CLUB_PRO, or CLUB_ULTRA
+  /// Subscription plan: FREE or SUPPORTER
   plan                 SubscriptionPlan
+  /// Billing interval of a Supporter subscription
+  billingInterval      BillingInterval?   @map("billing_interval")
   /// Subscription status: active, canceled, past_due, trialing, incomplete, incomplete_expired, or unpaid
   status               SubscriptionStatus @default(active)
   /// Stripe customer ID

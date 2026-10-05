@@ -26,8 +26,12 @@ export function SettingsView() {
   const isAthlete = space === 'ATHLETE' && !!roles?.includes('ATHLETE');
   const isCoach = !!roles?.includes('COACH');
   const { data: subscription } = useCurrentSubscription();
-  const billingEnabled =
-    !!subscription && !subscription.selfHosted && !isPaymentDisabled();
+  // Nothing to subscribe to on instances without billing (or in this fork's
+  // self-hosted mode), nor on iOS
+  const showSubscription =
+    Boolean(subscription?.billingEnabled) &&
+    !subscription?.selfHosted &&
+    !isPaymentDisabled();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(tabParam || 'connectors');
@@ -37,7 +41,7 @@ export function SettingsView() {
     ...(user?.isAdmin ? ['administration'] : []),
     'invitations',
     'contribute',
-    ...(billingEnabled ? ['subscription'] : []),
+    ...(showSubscription ? ['subscription'] : []),
     ...(isAthlete
       ? ['connectors', 'equipment', 'training_zones', 'coaches']
       : []),
@@ -123,7 +127,7 @@ export function SettingsView() {
               <TabsTrigger value="coaches">{m.coaches()}</TabsTrigger>
             )}
             <TabsTrigger value="invitations">{m.invitations()}</TabsTrigger>
-            {billingEnabled && (
+            {showSubscription && (
               <TabsTrigger value="subscription">{m.subscription()}</TabsTrigger>
             )}
             <TabsTrigger value="contribute">{m.contribute()}</TabsTrigger>
@@ -168,7 +172,7 @@ export function SettingsView() {
         <TabsContent value="invitations" className="mt-6">
           <InvitationsTab />
         </TabsContent>
-        {billingEnabled && (
+        {showSubscription && (
           <TabsContent value="subscription" className="mt-6">
             <SubscriptionSettingsPage />
           </TabsContent>

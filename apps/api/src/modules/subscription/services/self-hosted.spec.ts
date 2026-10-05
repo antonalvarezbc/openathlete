@@ -84,12 +84,12 @@ describe('self-hosted mode', () => {
     lookup.mockResolvedValue({ plan: 'FREE', status: 'active' } as never);
     expect(await service.hasAIFeaturesAccess(7)).toBe(false);
     lookup.mockResolvedValue({
-      plan: 'ATHLETE_PRO',
+      plan: 'SUPPORTER',
       status: 'active',
     } as never);
     expect(await service.hasAIFeaturesAccess(7)).toBe(true);
     lookup.mockResolvedValue({
-      plan: 'ATHLETE_PRO',
+      plan: 'SUPPORTER',
       status: 'canceled',
     } as never);
     expect(await service.hasAIFeaturesAccess(7)).toBe(false);

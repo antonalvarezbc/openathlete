@@ -150,8 +150,8 @@ export interface AiUsageDto {
   hostedTokens: number;
   /** On the user's own keys, billed to them by their provider */
   ownKeyTokens: number;
-  /** Monthly allowance on the instance keys; null when unlimited */
-  hostedLimit: number | null;
+  /** Share of the monthly AI budget used, from 0 to 1; null when unlimited */
+  hostedBudgetUsed: number | null;
   /** Start of next month (UTC), when the count starts again */
   resetsAt: string;
 }

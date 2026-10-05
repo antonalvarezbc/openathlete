@@ -37,11 +37,7 @@ import { SubscriptionPlan } from '@openathlete/shared';
 
 const planNameMap: Record<SubscriptionPlan, string> = {
   [SubscriptionPlan.FREE]: m.plan_free_name(),
-  [SubscriptionPlan.ATHLETE_PRO]: m.plan_athlete_pro_name(),
-  [SubscriptionPlan.COACH_PRO]: m.plan_coach_pro_name(),
-  [SubscriptionPlan.COACH_ULTRA]: m.plan_coach_ultra_name(),
-  [SubscriptionPlan.CLUB_PRO]: m.plan_club_pro_name(),
-  [SubscriptionPlan.CLUB_ULTRA]: m.plan_club_ultra_name(),
+  [SubscriptionPlan.SUPPORTER]: m.plan_supporter_name(),
 };
 
 export function NavUser() {
@@ -70,7 +66,9 @@ export function NavUser() {
     `${user.firstName?.charAt(0) ?? ''}${user.lastName?.charAt(0) ?? ''}`.toUpperCase();
   const currentPlan = subscription?.plan as SubscriptionPlan | undefined;
   const planName =
-    currentPlan && !subscription?.selfHosted ? planNameMap[currentPlan] : null;
+    currentPlan && subscription?.billingEnabled && !subscription?.selfHosted
+      ? planNameMap[currentPlan]
+      : null;
   return (
     <SidebarMenu>
       <SidebarMenuItem>

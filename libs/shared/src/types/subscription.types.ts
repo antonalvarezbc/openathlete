@@ -1,15 +1,19 @@
 import { z } from 'zod';
 
 /**
- * Subscription plans available in the system
+ * Subscription plans. Everyone gets the full app for free; Supporter funds
+ * the project and adds AI on the instance keys and unlimited coached
+ * athletes.
  */
 export enum SubscriptionPlan {
   FREE = 'FREE',
-  ATHLETE_PRO = 'ATHLETE_PRO',
-  COACH_PRO = 'COACH_PRO',
-  COACH_ULTRA = 'COACH_ULTRA',
-  CLUB_PRO = 'CLUB_PRO',
-  CLUB_ULTRA = 'CLUB_ULTRA',
+  SUPPORTER = 'SUPPORTER',
+}
+
+/** How often a Supporter subscription is billed. */
+export enum BillingInterval {
+  MONTH = 'month',
+  YEAR = 'year',
 }
 
 /**
@@ -30,12 +34,22 @@ export enum SubscriptionStatus {
  */
 export interface PlanConfig {
   plan: SubscriptionPlan;
-  name: string;
-  price: number; // Price in euros (TTC)
-  maxAthletes: number | null; // null = unlimited
+  /** Price in euros (VAT included) per billing interval; null when free */
+  prices: Record<BillingInterval, number> | null;
+  /** Athletes a user may coach; null = unlimited */
+  maxAthletes: number | null;
+  /** AI features on the instance keys, within the monthly AI budget */
   hasAIFeatures: boolean;
-  description: string;
 }
+
+/**
+ * Version (date) of the terms of sale on the website. Change it with the
+ * terms: each new subscription records the version its customer accepted.
+ */
+export const TERMS_OF_SALE_VERSION = '2026-10-05';
+
+/** Athletes a free account may coach on an instance with billing. */
+export const FREE_PLAN_MAX_ATHLETES = 5;
 
 /**
  * Plan configurations mapping
@@ -43,51 +57,15 @@ export interface PlanConfig {
 export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
   [SubscriptionPlan.FREE]: {
     plan: SubscriptionPlan.FREE,
-    name: 'Free',
-    price: 0,
-    maxAthletes: 3,
+    prices: null,
+    maxAthletes: FREE_PLAN_MAX_ATHLETES,
     hasAIFeatures: false,
-    description: 'Plan gratuit avec fonctionnalités de base',
   },
-  [SubscriptionPlan.ATHLETE_PRO]: {
-    plan: SubscriptionPlan.ATHLETE_PRO,
-    name: 'Athlete Pro',
-    price: 5.99,
-    maxAthletes: 0, // 0 = cannot coach athletes
+  [SubscriptionPlan.SUPPORTER]: {
+    plan: SubscriptionPlan.SUPPORTER,
+    prices: { [BillingInterval.MONTH]: 5, [BillingInterval.YEAR]: 50 },
+    maxAthletes: null,
     hasAIFeatures: true,
-    description: 'Accès aux fonctionnalités IA pour les athlètes',
-  },
-  [SubscriptionPlan.COACH_PRO]: {
-    plan: SubscriptionPlan.COACH_PRO,
-    name: 'Coach Pro',
-    price: 19.99,
-    maxAthletes: 20,
-    hasAIFeatures: true,
-    description: "Jusqu'à 20 athlètes + fonctionnalités IA",
-  },
-  [SubscriptionPlan.COACH_ULTRA]: {
-    plan: SubscriptionPlan.COACH_ULTRA,
-    name: 'Coach Ultra',
-    price: 39.99,
-    maxAthletes: null, // unlimited
-    hasAIFeatures: true,
-    description: 'Athlètes illimités + fonctionnalités IA',
-  },
-  [SubscriptionPlan.CLUB_PRO]: {
-    plan: SubscriptionPlan.CLUB_PRO,
-    name: 'Club Pro',
-    price: 49.99,
-    maxAthletes: 80,
-    hasAIFeatures: true,
-    description: "Jusqu'à 80 licenciés + fonctionnalités IA",
-  },
-  [SubscriptionPlan.CLUB_ULTRA]: {
-    plan: SubscriptionPlan.CLUB_ULTRA,
-    name: 'Club Ultra',
-    price: 89.99,
-    maxAthletes: null, // unlimited
-    hasAIFeatures: true,
-    description: 'Licenciés illimités + fonctionnalités IA',
   },
 };
 
@@ -124,6 +102,8 @@ export enum FeatureName {
  * Zod schema for subscription plan
  */
 export const subscriptionPlanSchema = z.nativeEnum(SubscriptionPlan);
+
+export const billingIntervalSchema = z.nativeEnum(BillingInterval);
 
 /**
  * Zod schema for subscription status

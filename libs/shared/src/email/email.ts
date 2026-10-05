@@ -1,5 +1,3 @@
-import type { SubscriptionPlan } from '../types/subscription.types';
-
 export type EmailLanguage = 'FR' | 'EN' | 'IT' | 'ES';
 
 const emailSubjects: {
@@ -25,10 +23,10 @@ const emailSubjects: {
     IT: 'Benvenuto su OpenAthlete',
   },
   'subscription-confirmation': {
-    ES: 'Confirmación de tu suscripción a OpenAthlete',
-    FR: 'Confirmation de votre abonnement OpenAthlete',
-    EN: 'Your OpenAthlete subscription is confirmed',
-    IT: 'Il tuo abbonamento OpenAthlete è confermato',
+    ES: 'Gracias por apoyar OpenAthlete',
+    FR: 'Merci de soutenir OpenAthlete',
+    EN: 'Thank you for supporting OpenAthlete',
+    IT: 'Grazie per sostenere OpenAthlete',
   },
   'athlete-invitation': {
     ES: 'Invitación para unirte a OpenAthlete',
@@ -74,7 +72,6 @@ export const emailLibrary = {
   'subscription-confirmation': {
     defaultSubject: emailSubjects['subscription-confirmation'],
     props: {} as {
-      plan: SubscriptionPlan;
       name?: string;
       subscription_settings_url: string;
     },

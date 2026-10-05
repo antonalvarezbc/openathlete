@@ -1,9 +1,11 @@
 import { ZodValidationPipe } from 'nestjs-zod';
 
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
+  NotFoundException,
   Param,
   Post,
   Query,
@@ -54,7 +56,7 @@ export class SubscriptionController {
   @ApiOperation({
     summary: 'Get current subscription',
     description:
-      "Retrieves the authenticated user's current subscription information. If no subscription exists, creates a default FREE subscription. Returns subscription details including plan, status, billing period dates, trial information, and cancellation status.",
+      "The authenticated user's plan (FREE or SUPPORTER), with its status, billing interval and period, cancellation status, how many athletes the user may coach, and whether this instance sells subscriptions. Creates a FREE subscription the first time.",
   })
   @ApiResponse({
     status: 200,
@@ -70,8 +72,25 @@ export class SubscriptionController {
         plan: {
           type: 'string',
           enum: Object.values(SubscriptionPlan),
-          example: 'COACH_PRO',
-          description: 'Subscription plan name',
+          example: 'SUPPORTER',
+          description: 'Subscription plan',
+        },
+        billingInterval: {
+          type: 'string',
+          enum: ['month', 'year'],
+          nullable: true,
+          description: 'Billing interval of a Supporter subscription',
+        },
+        maxAthletes: {
+          type: 'number',
+          nullable: true,
+          example: 5,
+          description: 'Athletes the user may coach; null when unlimited',
+        },
+        billingEnabled: {
+          type: 'boolean',
+          description:
+            'Whether this instance sells subscriptions (false on self-hosted instances without Stripe)',
         },
         status: {
           type: 'string',
@@ -107,7 +126,15 @@ export class SubscriptionController {
             'Whether the subscription is scheduled to cancel at the end of the current period',
         },
       },
-      required: ['subscriptionId', 'plan', 'status', 'cancelAtPeriodEnd'],
+      required: [
+        'subscriptionId',
+        'plan',
+        'status',
+        'cancelAtPeriodEnd',
+        'billingInterval',
+        'maxAthletes',
+        'billingEnabled',
+      ],
     },
   })
   @ApiResponse({
@@ -130,25 +157,37 @@ export class SubscriptionController {
       currentPeriodEnd: subscription.currentPeriodEnd,
       trialEnd: subscription.trialEnd,
       cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+      billingInterval:
+        subscription.billingInterval as CurrentSubscriptionDto['billingInterval'],
+      maxAthletes: await this.subscriptionService.getMaxAthletesForUser(
+        user.userId,
+      ),
+      billingEnabled: this.stripeService.billingEnabled,
     };
   }
 
   @Post('checkout')
   @ApiOperation({
-    summary: 'Create or update subscription checkout session',
+    summary: 'Become a Supporter, or change the billing interval',
     description:
-      "Creates a Stripe checkout session for a new subscription or updates an existing active subscription. If the user already has an active or trialing subscription with Stripe, the plan is updated immediately (with proration) and the success URL is returned. Otherwise, a new Stripe checkout session is created. For new paid subscriptions, a 15-day trial is automatically applied if the customer hasn't used a trial before. The checkout session includes metadata about the plan for webhook processing.",
+      'Creates a Stripe checkout session for the Supporter subscription, billed monthly or yearly (no trial). Subscribing requires acceptTerms: the terms of sale and an immediate start within the withdrawal period; the accepted version is stored on the Stripe subscription. A user who is already a Supporter switches interval immediately, with proration, and gets the success URL back.',
   })
   @ApiBody({
     description: 'Checkout session creation data',
     schema: {
       type: 'object',
       properties: {
-        plan: {
+        interval: {
           type: 'string',
-          enum: Object.values(SubscriptionPlan),
-          example: 'COACH_PRO',
-          description: 'Subscription plan to subscribe to',
+          enum: ['month', 'year'],
+          example: 'year',
+          description: 'Billing interval of the Supporter subscription',
+        },
+        acceptTerms: {
+          type: 'boolean',
+          enum: [true],
+          description:
+            'Required to subscribe: accepts the terms of sale and asks for an immediate start',
         },
         successUrl: {
           type: 'string',
@@ -165,7 +204,7 @@ export class SubscriptionController {
           description: 'URL to redirect to if checkout is canceled',
         },
       },
-      required: ['plan', 'successUrl', 'cancelUrl'],
+      required: ['interval', 'successUrl', 'cancelUrl'],
     },
   })
   @ApiResponse({
@@ -195,7 +234,8 @@ export class SubscriptionController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Bad request - invalid plan or price ID not found',
+    description:
+      'Bad request - invalid interval, or TERMS_NOT_ACCEPTED when subscribing without accepting the terms of sale',
   })
   @ApiResponse({
     status: 401,
@@ -210,57 +250,48 @@ export class SubscriptionController {
     @Body(new ZodValidationPipe(createCheckoutSessionDtoSchema))
     dto: CreateCheckoutSessionDto,
   ) {
-    // Get user email
+    // A Supporter switching between monthly and yearly billing
+    const currentSubscription =
+      await this.subscriptionService.getCurrentSubscription(user.userId);
+    if (
+      currentSubscription?.stripeSubscriptionId &&
+      (currentSubscription.status === SubscriptionStatus.active ||
+        currentSubscription.status === SubscriptionStatus.trialing)
+    ) {
+      const updatedSubscription =
+        await this.stripeService.changeBillingInterval(
+          currentSubscription.stripeSubscriptionId,
+          dto.interval,
+        );
+      await this.subscriptionService.updateSubscriptionFromWebhook(
+        updatedSubscription,
+      );
+      // No checkout needed: back to the app
+      return { sessionId: null, url: dto.successUrl };
+    }
+
+    if (!dto.acceptTerms) {
+      throw new BadRequestException('TERMS_NOT_ACCEPTED');
+    }
+
     const userRecord = await this.subscriptionService['prisma'].user.findUnique(
       {
         where: { userId: user.userId },
         select: { email: true },
       },
     );
-
     if (!userRecord) {
-      throw new Error('User not found');
+      throw new NotFoundException('User not found');
     }
-
-    // Get or create Stripe customer
     const customer = await this.stripeService.getOrCreateCustomer(
       user.userId,
       userRecord.email,
     );
 
-    // Check if user has an active subscription
-    const currentSubscription =
-      await this.subscriptionService.getCurrentSubscription(user.userId);
-
-    // If user has an active subscription with Stripe, update it instead of creating a new one
-    if (
-      currentSubscription?.stripeSubscriptionId &&
-      (currentSubscription.status === SubscriptionStatus.active ||
-        currentSubscription.status === SubscriptionStatus.trialing)
-    ) {
-      // Update existing subscription
-      const updatedSubscription =
-        await this.stripeService.updateSubscriptionPlan(
-          currentSubscription.stripeSubscriptionId,
-          dto.plan,
-        );
-
-      // Update subscription in database
-      await this.subscriptionService.updateSubscriptionFromWebhook(
-        updatedSubscription,
-      );
-
-      // Return success URL since we don't need to redirect to Stripe
-      return {
-        sessionId: null,
-        url: dto.successUrl,
-      };
-    }
-
     // Create checkout session for new subscription
     const session = await this.stripeService.createCheckoutSession(
       customer.id,
-      dto.plan,
+      dto.interval,
       dto.successUrl,
       dto.cancelUrl,
     );

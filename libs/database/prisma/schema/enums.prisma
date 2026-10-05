@@ -397,13 +397,16 @@ enum InjuryStatus {
 
 enum SubscriptionPlan {
   FREE
-  ATHLETE_PRO
-  COACH_PRO
-  COACH_ULTRA
-  CLUB_PRO
-  CLUB_ULTRA
+  SUPPORTER
 
   @@map("subscription_plan")
+}
+
+enum BillingInterval {
+  month
+  year
+
+  @@map("billing_interval")
 }
 
 enum SubscriptionStatus {

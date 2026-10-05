@@ -13,6 +13,9 @@ const GITHUB_SETUP_URL = `${GITHUB_REPO_URL}#getting-started`;
 
 export function Pricing() {
   const signupUrl = `${APP_URL}/auth/create-account`;
+  // After sign-up and onboarding (or straight away when signed in), the
+  // app opens the Supporter offer
+  const supporterUrl = `${signupUrl}?returnTo=${encodeURIComponent('/dashboard/settings?tab=subscription')}`;
 
   return (
     <Section id="pricing" surface="soft">
@@ -51,33 +54,32 @@ export function Pricing() {
             ctaExternal
           />
           <PricingCard
-            name={m.landing_pricing_solo_name()}
-            price={m.landing_pricing_solo_price()}
-            priceLabel={m.landing_pricing_solo_period()}
+            name={m.landing_pricing_free_name()}
+            price={m.landing_pricing_free_price()}
             perks={[
-              m.landing_pricing_solo_perk_1(),
-              m.landing_pricing_solo_perk_2(),
-              m.landing_pricing_solo_perk_3(),
-              m.landing_pricing_solo_perk_4(),
+              m.landing_pricing_free_perk_1(),
+              m.landing_pricing_free_perk_2(),
+              m.landing_pricing_free_perk_3(),
+              m.landing_pricing_free_perk_4(),
             ]}
-            highlighted
-            badge={m.landing_pricing_popular_badge()}
-            ctaLabel={m.landing_pricing_start_free_trial()}
+            ctaLabel={m.landing_pricing_free_cta()}
             ctaHref={signupUrl}
           />
           <PricingCard
-            name={m.landing_pricing_coach_cloud_name()}
-            price={m.landing_pricing_coach_cloud_price()}
-            priceLabel={m.landing_pricing_coach_cloud_period()}
+            name={m.landing_pricing_supporter_name()}
+            price={m.landing_pricing_supporter_price()}
+            priceLabel={m.landing_pricing_supporter_period()}
             perks={[
-              m.landing_pricing_coach_cloud_perk_1(),
-              m.landing_pricing_coach_cloud_perk_2(),
-              m.landing_pricing_coach_cloud_perk_3(),
-              m.landing_pricing_coach_cloud_perk_4(),
-              m.landing_pricing_coach_cloud_perk_5(),
+              m.landing_pricing_supporter_perk_1(),
+              m.landing_pricing_supporter_perk_2(),
+              m.landing_pricing_supporter_perk_3(),
+              m.landing_pricing_supporter_perk_4(),
+              m.landing_pricing_supporter_perk_5(),
             ]}
-            ctaLabel={m.landing_pricing_start_free_trial()}
-            ctaHref={signupUrl}
+            highlighted
+            badge={m.landing_pricing_popular_badge()}
+            ctaLabel={m.landing_pricing_supporter_cta()}
+            ctaHref={supporterUrl}
           />
         </div>
       </Container>

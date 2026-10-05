@@ -187,6 +187,14 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link
+                  href={getLocalizedPath('/terms-of-sale')}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {m.footer_terms_of_sale()}
+                </Link>
+              </li>
+              <li>
                 <a
                   href="mailto:contact@openathlete.org"
                   className="text-muted-foreground hover:text-foreground transition-colors"

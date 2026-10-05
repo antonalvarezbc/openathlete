@@ -71,8 +71,8 @@ OpenAthlete is a different proposition: comparable tracking and analysis in an o
 | **Transparent algorithms** | ✅ Code audit | ❌ Black box | ❌ Black box | ⚠️ Partial |
 | **Full data export** | ✅ Native | ⚠️ Limited | ⚠️ Limited | ✅ |
 | **CTL/ATL/TSB tracking** | ✅ | ✅ | ❌ | ✅ |
-| **AI session generation** | ✅ Optional | ⚠️ Premium | ❌ | ❌ |
-| **Price** | 12€/mo or 99€/yr | $19.99/mo | $11.99/mo | Free (donation) |
+| **AI session generation** | ✅ Your key, or included for Supporters | ⚠️ Premium | ❌ | ❌ |
+| **Price** | Free, or 5€/mo (50€/yr) as a Supporter | $19.99/mo | $11.99/mo | Free (donation) |
 
 ## Recognition
 
@@ -369,11 +369,11 @@ For a complete list of environment variables, see the `.env.example` files in ea
 
 > OpenAthlete is built by one developer in Grenoble, supported by the community. There are three ways to help the project thrive:
 >
-> - **Subscribe to OpenAthlete Cloud** — The simplest way to support development while getting a managed, zero-config experience. See [openathlete.org](https://openathlete.org).
+> - **Become a Supporter on OpenAthlete Cloud** — The Cloud is free; the Supporter subscription (5€/month or 50€/year) funds development and adds unlimited coached athletes and AI included every month. See [openathlete.org](https://openathlete.org).
 > - **Become a Patreon supporter** — Recurring support without using the cloud. [patreon.com/OpenAthlete](https://patreon.com/OpenAthlete).
 > - **Contribute code or feedback** — Star the repo, open issues, send PRs, join the [Discord](https://discord.gg/j4PP6tDwuP).
 >
-> Self-hosting is fully supported and always free. The Cloud version funds the project's long-term sustainability.
+> Self-hosting is fully supported and always free, with no limits. Supporters fund the project's long-term sustainability.
 
 <!-- ROADMAP -->
 

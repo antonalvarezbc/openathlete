@@ -50,8 +50,8 @@ const NO_API_KEY = 'not-needed';
  * Decides which model and key run an AI feature:
  * 1. the model the user chose for the task (or their default), on their key;
  * 2. otherwise the instance keys, when their plan or the instance policy
- *    allows it (AI_HOSTED_ACCESS) and their monthly allowance is not used
- *    up (AI_HOSTED_MONTHLY_TOKENS);
+ *    allows it (AI_HOSTED_ACCESS) and their monthly budget is not used up
+ *    (AI_HOSTED_MONTHLY_BUDGET_USD);
  * Work done on an athlete's data (feedback questions, analysis, load
  * estimation) runs on the athlete's own access only, never on a coach's key.
  */

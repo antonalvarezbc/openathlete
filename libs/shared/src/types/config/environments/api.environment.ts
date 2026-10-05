@@ -275,13 +275,13 @@ export const ApiEnvSchema = z
         'Who may use the instance AI keys: subscribers (paid plan with AI), everyone, or none. Default: subscribers when Stripe is configured, everyone otherwise',
       ),
 
-    AI_HOSTED_MONTHLY_TOKENS: z
+    AI_HOSTED_MONTHLY_BUDGET_USD: z
       .string()
-      .regex(/^\d+$/, 'AI_HOSTED_MONTHLY_TOKENS must be a whole number')
+      .regex(/^\d+(\.\d+)?$/, 'AI_HOSTED_MONTHLY_BUDGET_USD must be a number')
       .optional()
       .transform((val) => (val === undefined ? undefined : Number(val)))
       .describe(
-        'Tokens (input + output) each user may use per month on the instance AI keys. Unset: no limit',
+        "What each user may spend per month on the instance AI keys, in US dollars at the providers' prices (e.g. 3). Unset: no limit",
       ),
 
     AI_ALLOW_CUSTOM_ENDPOINTS: z
@@ -367,7 +367,7 @@ export const ApiEnvSchema = z
       .string()
       .optional()
       .describe(
-        'AI model for post-activity feedback agent (e.g., openai/gpt-5.1, google/gemini-3-pro-preview)',
+        'AI model for post-activity feedback questions (e.g. google/gemini-2.5-flash)',
       ),
     AI_MODEL_TRIMP_ESTIMATION: z
       .string()
@@ -388,12 +388,15 @@ export const ApiEnvSchema = z
       .optional()
       .describe('Stripe secret key for payment processing (optional)'),
 
-    STRIPE_PRICE_IDS: z
+    STRIPE_PRICE_SUPPORTER_MONTHLY: z
       .string()
       .optional()
-      .describe(
-        'JSON string of Stripe price IDs mapped to subscription plans (optional)',
-      ),
+      .describe('Stripe price ID of the monthly Supporter subscription'),
+
+    STRIPE_PRICE_SUPPORTER_YEARLY: z
+      .string()
+      .optional()
+      .describe('Stripe price ID of the yearly Supporter subscription'),
 
     STRIPE_WEBHOOK_SECRET: z
       .string()

@@ -1,100 +1,67 @@
-import {
-  EmailLanguage,
-  SubscriptionPlan,
-  getPlanConfig,
-} from '@openathlete/shared';
+import { EmailLanguage } from '@openathlete/shared';
 
 import { Language } from 'src/common/constants/languages.constant';
 
 import { button, h1, note, p } from '../core/blocks';
 import { layout } from '../core/layout';
 
-const frPlanLabel: Record<SubscriptionPlan, string> = {
-  [SubscriptionPlan.FREE]: 'Gratuit',
-  [SubscriptionPlan.ATHLETE_PRO]: 'Athlete Pro',
-  [SubscriptionPlan.COACH_PRO]: 'Coach Pro',
-  [SubscriptionPlan.COACH_ULTRA]: 'Coach Ultra',
-  [SubscriptionPlan.CLUB_PRO]: 'Club Pro',
-  [SubscriptionPlan.CLUB_ULTRA]: 'Club Ultra',
-};
-
-const itPlanLabel: Record<SubscriptionPlan, string> = {
-  [SubscriptionPlan.FREE]: 'Gratuito',
-  [SubscriptionPlan.ATHLETE_PRO]: 'Athlete Pro',
-  [SubscriptionPlan.COACH_PRO]: 'Coach Pro',
-  [SubscriptionPlan.COACH_ULTRA]: 'Coach Ultra',
-  [SubscriptionPlan.CLUB_PRO]: 'Club Pro',
-  [SubscriptionPlan.CLUB_ULTRA]: 'Club Ultra',
-};
-
-function planLabel(plan: SubscriptionPlan, language: EmailLanguage): string {
-  if (language === Language.EN) {
-    return getPlanConfig(plan).name;
-  }
-  if (language === Language.ES) {
-    return plan === SubscriptionPlan.FREE
-      ? 'Gratuito'
-      : getPlanConfig(plan).name;
-  }
-  if (language === Language.IT) {
-    return itPlanLabel[plan];
-  }
-  return frPlanLabel[plan];
-}
-
 const translations = {
   ES: {
-    title: 'Tu suscripción está confirmada',
-    preview: 'Gracias por suscribirte',
+    title: 'Gracias por apoyar OpenAthlete',
+    preview: 'Ya eres Supporter',
     greeting: (name?: string) =>
       name
-        ? `Hola, ${name}. Gracias por suscribirte a OpenAthlete.`
-        : 'Gracias por suscribirte a OpenAthlete.',
-    planLine: (label: string) => `Plan: ${label}.`,
+        ? `Hola, ${name}. Gracias por apoyar OpenAthlete.`
+        : 'Gracias por apoyar OpenAthlete.',
+    perks:
+      'Como Supporter, tienes atletas ilimitados y la IA incluida cada mes, sin necesidad de clave propia.',
     description:
-      'Ya tienes acceso a todas las funciones de tu plan. Puedes gestionar la facturación, los métodos de pago y la suscripción en cualquier momento.',
+      'Tu apoyo financia el desarrollo de un proyecto abierto e independiente. Puedes gestionar la facturación o cancelar en cualquier momento.',
     buttonLabel: 'Gestionar suscripción',
     helpNote:
       'Si tienes preguntas, responde a este correo y te contestaremos pronto.',
   },
   FR: {
-    title: 'Votre abonnement est confirmé',
-    preview: 'Merci pour votre confiance',
+    title: 'Merci de soutenir OpenAthlete',
+    preview: 'Vous êtes Supporter',
     greeting: (name?: string) =>
       name
-        ? `Bonjour ${name}, votre souscription à OpenAthlete est bien enregistrée.`
-        : 'Votre souscription à OpenAthlete est bien enregistrée.',
-    planLine: (label: string) => `Formule souscrite : ${label}.`,
+        ? `Bonjour ${name}, merci de soutenir OpenAthlete.`
+        : 'Merci de soutenir OpenAthlete.',
+    perks:
+      "En tant que Supporter, vous coachez autant d'athlètes que vous voulez et l'IA est incluse chaque mois, sans clé à fournir.",
     description:
-      'Vous avez désormais accès aux fonctionnalités incluses dans votre formule. Vous pouvez gérer votre facturation, vos moyens de paiement et votre abonnement à tout moment.',
+      'Votre soutien finance le développement d’un projet ouvert et indépendant. Vous pouvez gérer votre facturation ou résilier à tout moment.',
     buttonLabel: 'Gérer mon abonnement',
     helpNote:
       'Une question ? Répondez simplement à cet email et nous vous répondrons rapidement.',
   },
   EN: {
-    title: 'Your subscription is confirmed',
-    preview: 'Thanks for subscribing',
+    title: 'Thank you for supporting OpenAthlete',
+    preview: 'You are now a Supporter',
     greeting: (name?: string) =>
       name
-        ? `Hi ${name}, thank you for subscribing to OpenAthlete.`
-        : 'Thank you for subscribing to OpenAthlete.',
-    planLine: (label: string) => `Plan: ${label}.`,
+        ? `Hi ${name}, thank you for supporting OpenAthlete.`
+        : 'Thank you for supporting OpenAthlete.',
+    perks:
+      'As a Supporter, you can coach as many athletes as you like, and AI is included every month, without a key of your own.',
     description:
-      'You now have access to everything included in your plan. You can manage billing, payment methods, and your subscription at any time.',
+      'Your support funds an open and independent project. You can manage billing or cancel at any time.',
     buttonLabel: 'Manage subscription',
     helpNote:
       'Questions? Reply to this email and we will get back to you shortly.',
   },
   IT: {
-    title: 'Il tuo abbonamento è confermato',
-    preview: 'Grazie per la tua fiducia',
+    title: 'Grazie per sostenere OpenAthlete',
+    preview: 'Ora sei Supporter',
     greeting: (name?: string) =>
       name
-        ? `Ciao ${name}, la tua iscrizione a OpenAthlete è stata registrata correttamente.`
-        : 'La tua iscrizione a OpenAthlete è stata registrata correttamente.',
-    planLine: (label: string) => `Piano sottoscritto: ${label}.`,
+        ? `Ciao ${name}, grazie per sostenere OpenAthlete.`
+        : 'Grazie per sostenere OpenAthlete.',
+    perks:
+      'Come Supporter, puoi allenare tutti gli atleti che vuoi e l’IA è inclusa ogni mese, senza una tua chiave.',
     description:
-      'Hai ora accesso a tutte le funzionalità incluse nel tuo piano. Puoi gestire la fatturazione, i metodi di pagamento e il tuo abbonamento in qualsiasi momento.',
+      'Il tuo sostegno finanzia lo sviluppo di un progetto aperto e indipendente. Puoi gestire la fatturazione o disdire in qualsiasi momento.',
     buttonLabel: 'Gestisci il mio abbonamento',
     helpNote:
       'Hai domande? Rispondi a questa email e ti risponderemo il prima possibile.',
@@ -102,25 +69,22 @@ const translations = {
 } as const;
 
 export function buildSubscriptionConfirmationEmail({
-  plan,
   name,
   subscription_settings_url,
   language = Language.FR,
 }: {
-  plan: SubscriptionPlan;
   name?: string;
   subscription_settings_url: string;
   language?: EmailLanguage;
 }) {
   const t = translations[language];
-  const label = planLabel(plan, language);
   const title = t.title;
   const preview = t.preview;
 
   const content = [
     h1(title),
     p(t.greeting(name)),
-    p(t.planLine(label)),
+    p(t.perks),
     p(t.description),
     button({
       href: subscription_settings_url,

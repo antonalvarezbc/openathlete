@@ -3,6 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { AiKeySource } from '@openathlete/database';
 import { AiAccessSource, AiFeatureTask, AiUsageDto } from '@openathlete/shared';
 
+import { hostedCallCostMicroUsd } from 'src/common/constants/ai-models.constant';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
 import { AiPolicyService } from './ai-policy.service';
@@ -13,11 +14,13 @@ export interface TokenUsage {
   outputTokens?: number;
 }
 
-/** The call a usage belongs to: who paid, for which feature, with which key. */
+/** The call a usage belongs to: who paid, for which feature, on which model. */
 export interface AiUsageOwner {
   userId: number;
   task: AiFeatureTask;
   source: AiAccessSource;
+  provider: string;
+  modelId: string;
 }
 
 const KEY_SOURCES: Record<AiAccessSource, AiKeySource> = {
@@ -39,11 +42,13 @@ const tokens = (value: number | undefined) =>
 
 /**
  * Counts the tokens of every AI call per user and month, and enforces the
- * monthly allowance on the instance keys (AI_HOSTED_MONTHLY_TOKENS).
+ * monthly budget on the instance keys (AI_HOSTED_MONTHLY_BUDGET_USD): calls
+ * on the instance keys are charged at their model's price, since output
+ * tokens cost several times more than input ones.
  *
- * The allowance is checked before a call and counted after it, so calls
+ * The budget is checked before a call and charged after it, so calls
  * running at the same time can each go a little over: one call's worth at
- * most, which is fine for a monthly allowance.
+ * most, a few hundredths of a cent with the default model.
  */
 @Injectable()
 export class AiUsageService {
@@ -62,6 +67,15 @@ export class AiUsageService {
   ): Promise<void> {
     const inputTokens = tokens(usage?.inputTokens);
     const outputTokens = tokens(usage?.outputTokens);
+    // Own keys are billed to the user by their provider
+    const costMicroUsd =
+      owner.source === 'hosted'
+        ? hostedCallCostMicroUsd(
+            `${owner.provider}/${owner.modelId}`,
+            inputTokens,
+            outputTokens,
+          )
+        : 0;
     const key = {
       userId: owner.userId,
       month: monthStart(now),
@@ -71,10 +85,11 @@ export class AiUsageService {
     try {
       await this.prisma.aiUsage.upsert({
         where: { userId_month_task_source: key },
-        create: { ...key, inputTokens, outputTokens, calls: 1 },
+        create: { ...key, inputTokens, outputTokens, costMicroUsd, calls: 1 },
         update: {
           inputTokens: { increment: inputTokens },
           outputTokens: { increment: outputTokens },
+          costMicroUsd: { increment: costMicroUsd },
           calls: { increment: 1 },
         },
       });
@@ -87,25 +102,40 @@ export class AiUsageService {
 
   /** Whether the user may still run calls on the instance keys this month. */
   async hasHostedAllowanceLeft(userId: number, now = new Date()) {
-    const limit = this.policy.hostedMonthlyTokens;
-    if (limit === undefined) return true;
-    const { hostedTokens } = await this.monthTotals(userId, now);
-    return hostedTokens < limit;
+    const budget = this.budgetMicroUsd();
+    if (budget === undefined) return true;
+    const { hostedCostMicroUsd } = await this.monthTotals(userId, now);
+    return hostedCostMicroUsd < budget;
   }
 
   async describe(userId: number, now = new Date()): Promise<AiUsageDto> {
+    const { hostedCostMicroUsd, ...totals } = await this.monthTotals(
+      userId,
+      now,
+    );
+    const budget = this.budgetMicroUsd();
     return {
-      ...(await this.monthTotals(userId, now)),
-      hostedLimit: this.policy.hostedMonthlyTokens ?? null,
+      ...totals,
+      hostedBudgetUsed:
+        budget === undefined
+          ? null
+          : budget > 0
+            ? Math.min(1, hostedCostMicroUsd / budget)
+            : 1,
       resetsAt: monthStart(now, 1).toISOString(),
     };
+  }
+
+  private budgetMicroUsd(): number | undefined {
+    const budget = this.policy.hostedMonthlyBudgetUsd;
+    return budget === undefined ? undefined : Math.round(budget * 1_000_000);
   }
 
   private async monthTotals(userId: number, now: Date) {
     const rows = await this.prisma.aiUsage.groupBy({
       by: ['source'],
       where: { userId, month: monthStart(now) },
-      _sum: { inputTokens: true, outputTokens: true },
+      _sum: { inputTokens: true, outputTokens: true, costMicroUsd: true },
     });
     const total = (source: AiKeySource) => {
       const row = rows.find((item) => item.source === source);
@@ -114,6 +144,9 @@ export class AiUsageService {
     return {
       hostedTokens: total(AiKeySource.HOSTED),
       ownKeyTokens: total(AiKeySource.OWN_KEY),
+      hostedCostMicroUsd:
+        rows.find((item) => item.source === AiKeySource.HOSTED)?._sum
+          .costMicroUsd ?? 0,
     };
   }
 }

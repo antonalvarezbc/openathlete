@@ -58,9 +58,7 @@ export function PricingCard({
     ctaLabel ??
     (isContact
       ? m.landing_pricing_contact_us()
-      : isFree
-        ? m.landing_pricing_get_started()
-        : m.landing_pricing_start_free_trial());
+      : m.landing_pricing_get_started());
 
   return (
     <Card

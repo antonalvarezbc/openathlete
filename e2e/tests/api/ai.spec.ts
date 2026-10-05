@@ -108,10 +108,14 @@ test('generates a workout on the user’s own AI key', async ({ request }) => {
   // Counted for the user's information, never against an allowance
   const after = await request.get(`${API_URL}/ai/access`, { headers });
   const { usage } = (await after.json()) as {
-    usage: { ownKeyTokens: number; hostedTokens: number; hostedLimit: null };
+    usage: {
+      ownKeyTokens: number;
+      hostedTokens: number;
+      hostedBudgetUsed: null;
+    };
   };
   expect(usage.ownKeyTokens).toBeGreaterThanOrEqual(20);
-  expect(usage).toMatchObject({ hostedTokens: 0, hostedLimit: null });
+  expect(usage).toMatchObject({ hostedTokens: 0, hostedBudgetUsed: null });
 });
 
 test('never returns stored keys', async ({ request }) => {

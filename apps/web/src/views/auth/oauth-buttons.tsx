@@ -8,6 +8,7 @@ import {
   type OAuthProviderId,
   getFirebaseIdTokenForProvider,
 } from '@/utils/firebase-auth';
+import { takeReturnTo } from '@/utils/return-to';
 import { cn } from '@/utils/shadcn';
 import { usePostHog } from 'posthog-js/react';
 import { useState } from 'react';
@@ -39,7 +40,7 @@ export function OAuthButtons({
         has_invitation: !!variables.invitationToken,
       });
       await initialize();
-      nav(redirectTo || getPath(['dashboard']));
+      nav(takeReturnTo(redirectTo || getPath(['dashboard'])));
     },
     onError: () => {
       toast.error(m.oauth_login_failed());

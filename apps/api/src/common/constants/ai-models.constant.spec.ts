@@ -49,7 +49,7 @@ describe('hostedModelFor', () => {
   ])(
     'keeps the coach feature %s on AI_MODEL_EVENT_MODIFICATION unless its own variable is set',
     (task) => {
-      expect(hostedModelFor(task, {})).toBe('openai/gpt-5.1');
+      expect(hostedModelFor(task, {})).toBe('openai/gpt-5.6-luna');
       expect(
         hostedModelFor(task, {
           AI_MODEL_EVENT_MODIFICATION: 'anthropic/claude-opus-5-5',
@@ -82,8 +82,8 @@ describe('hostedModelFor', () => {
   });
 
   it.each<[AiFeatureTask, string, string]>([
-    [AiTask.WORKOUT_PARSER, 'AI_MODEL_WORKOUT_PARSER', 'openai/gpt-5-mini'],
-    [AiTask.AI_MEMORY, 'AI_MODEL_MEMORY', 'openai/gpt-4o-mini'],
+    [AiTask.WORKOUT_PARSER, 'AI_MODEL_WORKOUT_PARSER', 'openai/gpt-5.6-luna'],
+    [AiTask.AI_MEMORY, 'AI_MODEL_MEMORY', 'openai/gpt-5.6-luna'],
   ])(
     'keeps %s on a small model: AI_MODEL_DEFAULT does not apply',
     (task, variable, fallback) => {

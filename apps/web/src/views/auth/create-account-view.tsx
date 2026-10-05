@@ -11,6 +11,7 @@ import { useAuthContext } from '@/contexts/auth';
 import { m } from '@/paraglide/messages';
 import { getPath } from '@/routes/paths';
 import { localizedNewPasswordSchema } from '@/utils/password';
+import { RETURN_TO_PARAM, rememberReturnTo } from '@/utils/return-to';
 import { cn } from '@/utils/shadcn';
 import { OAuthButtons } from '@/views/auth/oauth-buttons';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -49,12 +50,17 @@ export function CreateAccountView({ className }: React.ComponentProps<'form'>) {
     },
   });
 
+  const returnTo = searchParams.get(RETURN_TO_PARAM);
+
   // Store planToken in sessionStorage if present
   useEffect(() => {
     if (planToken) {
       sessionStorage.setItem(PLAN_TOKEN_STORAGE_KEY, planToken);
     }
   }, [planToken]);
+
+  // Followed once onboarding is done
+  useEffect(() => rememberReturnTo(returnTo), [returnTo]);
 
   useEffect(() => {
     const token = invitationToken || coachInvitationToken;

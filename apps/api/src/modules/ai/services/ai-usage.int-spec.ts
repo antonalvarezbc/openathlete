@@ -1,4 +1,4 @@
-import { AiTask } from '@openathlete/shared';
+import { AiFeatureTask, AiTask } from '@openathlete/shared';
 
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
@@ -18,17 +18,29 @@ const NOVEMBER = new Date('2026-11-01T00:30:00Z');
 
 describe('AiUsageService (PostgreSQL)', () => {
   let prisma: PrismaService;
-  const policy: { hostedMonthlyTokens: number | undefined } = {
-    hostedMonthlyTokens: undefined,
+  const policy: { hostedMonthlyBudgetUsd: number | undefined } = {
+    hostedMonthlyBudgetUsd: undefined,
   };
   let service: AiUsageService;
   let userId: number;
   let otherUserId: number;
 
+  // $0.20 per million input tokens, $1.20 per million output tokens
   const hosted = (): AiUsageOwner => ({
     userId,
     task: AiTask.EVENT_GENERATION,
     source: 'hosted',
+    provider: 'openai',
+    modelId: 'gpt-5.6-luna',
+  });
+  const ownKey = (
+    task: AiFeatureTask = AiTask.EVENT_GENERATION,
+  ): AiUsageOwner => ({
+    userId,
+    task,
+    source: 'own_key',
+    provider: 'anthropic',
+    modelId: 'claude-sonnet-4-5',
   });
 
   beforeAll(async () => {
@@ -45,7 +57,7 @@ describe('AiUsageService (PostgreSQL)', () => {
     await prisma.$executeRawUnsafe(
       'TRUNCATE "user", ai_usage RESTART IDENTITY CASCADE',
     );
-    policy.hostedMonthlyTokens = undefined;
+    policy.hostedMonthlyBudgetUsd = undefined;
     const user = (email: string) =>
       prisma.user.create({
         data: { email, password: 'x', firstName: 'A', lastName: 'B' },
@@ -66,7 +78,7 @@ describe('AiUsageService (PostgreSQL)', () => {
       OCTOBER,
     );
     await service.record(
-      { userId, task: AiTask.FEEDBACK_EXTRACTION, source: 'own_key' },
+      ownKey(AiTask.FEEDBACK_EXTRACTION),
       { inputTokens: 7, outputTokens: 3 },
       OCTOBER,
     );
@@ -74,13 +86,19 @@ describe('AiUsageService (PostgreSQL)', () => {
     await expect(service.describe(userId, OCTOBER)).resolves.toEqual({
       hostedTokens: 175,
       ownKeyTokens: 10,
-      hostedLimit: null,
+      hostedBudgetUsed: null,
       resetsAt: '2026-11-01T00:00:00.000Z',
     });
     const rows = await prisma.aiUsage.findMany({ orderBy: { task: 'asc' } });
     expect(rows).toEqual([
-      expect.objectContaining({ source: 'HOSTED', calls: 2, inputTokens: 150 }),
-      expect.objectContaining({ source: 'OWN_KEY', calls: 1 }),
+      // 150 input tokens at $0.20/M and 25 output tokens at $1.20/M
+      expect.objectContaining({
+        source: 'HOSTED',
+        calls: 2,
+        inputTokens: 150,
+        costMicroUsd: 60,
+      }),
+      expect.objectContaining({ source: 'OWN_KEY', calls: 1, costMicroUsd: 0 }),
     ]);
   });
 
@@ -112,32 +130,59 @@ describe('AiUsageService (PostgreSQL)', () => {
     });
   });
 
-  it('enforces the monthly allowance on the instance keys only', async () => {
-    policy.hostedMonthlyTokens = 1000;
+  it('enforces the monthly budget on the instance keys only', async () => {
+    policy.hostedMonthlyBudgetUsd = 3;
     await service.record(
-      { userId, task: AiTask.EVENT_GENERATION, source: 'own_key' },
-      { inputTokens: 5000, outputTokens: 0 },
+      ownKey(),
+      { inputTokens: 50_000_000, outputTokens: 0 },
       OCTOBER,
     );
     await expect(service.hasHostedAllowanceLeft(userId, OCTOBER)).resolves.toBe(
       true,
     );
 
+    // $2.00 of input and $1.20 of output: over the $3 budget
     await service.record(
       hosted(),
-      { inputTokens: 900, outputTokens: 100 },
+      { inputTokens: 10_000_000, outputTokens: 1_000_000 },
       OCTOBER,
     );
 
     await expect(service.hasHostedAllowanceLeft(userId, OCTOBER)).resolves.toBe(
       false,
     );
+    await expect(service.describe(userId, OCTOBER)).resolves.toMatchObject({
+      hostedBudgetUsed: 1,
+    });
     await expect(
       service.hasHostedAllowanceLeft(otherUserId, OCTOBER),
     ).resolves.toBe(true);
     await expect(
       service.hasHostedAllowanceLeft(userId, NOVEMBER),
     ).resolves.toBe(true);
+  });
+
+  it('reports the share of the budget used', async () => {
+    policy.hostedMonthlyBudgetUsd = 2;
+    // $0.50
+    await service.record(hosted(), { inputTokens: 2_500_000 }, OCTOBER);
+
+    await expect(service.describe(userId, OCTOBER)).resolves.toMatchObject({
+      hostedBudgetUsed: 0.25,
+    });
+  });
+
+  it('charges a model missing from the price table like a flagship', async () => {
+    await service.record(
+      { ...hosted(), modelId: 'gpt-unknown' },
+      { inputTokens: 1000, outputTokens: 1000 },
+      OCTOBER,
+    );
+
+    // $5/M input and $30/M output
+    await expect(prisma.aiUsage.findFirstOrThrow()).resolves.toMatchObject({
+      costMicroUsd: 35_000,
+    });
   });
 
   it('counts a call whose provider reported no tokens', async () => {

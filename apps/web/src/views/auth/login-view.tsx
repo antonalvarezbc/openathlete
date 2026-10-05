@@ -9,6 +9,11 @@ import { Label } from '@/components/ui/label';
 import { useAuthContext } from '@/contexts/auth';
 import { m } from '@/paraglide/messages';
 import { getPath } from '@/routes/paths';
+import {
+  RETURN_TO_PARAM,
+  rememberReturnTo,
+  takeReturnTo,
+} from '@/utils/return-to';
 import { cn } from '@/utils/shadcn';
 import { OAuthButtons } from '@/views/auth/oauth-buttons';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -38,6 +43,8 @@ export function LoginView({ className }: React.ComponentProps<'form'>) {
   const planToken = searchParams.get('planToken');
   const posthog = usePostHog();
 
+  const returnTo = searchParams.get(RETURN_TO_PARAM);
+
   // Store planToken in sessionStorage if present
   useEffect(() => {
     if (planToken) {
@@ -45,11 +52,13 @@ export function LoginView({ className }: React.ComponentProps<'form'>) {
     }
   }, [planToken]);
 
+  useEffect(() => rememberReturnTo(returnTo), [returnTo]);
+
   const loginMutation = useLoginMutation({
     onSuccess: async () => {
       posthog?.capture('user_logged_in');
       await initialize();
-      navigate(getPath(['dashboard']));
+      navigate(takeReturnTo(getPath(['dashboard'])));
     },
     onError: (error) => toast.error(loginErrorMessage(error)),
   });

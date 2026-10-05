@@ -1,6 +1,7 @@
 import { useGetMeQuery } from '@/api/user';
 import { useAuthContext } from '@/contexts/auth';
 import { getPath } from '@/routes/paths';
+import { rememberReturnTo } from '@/utils/return-to';
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -12,7 +13,7 @@ type Props = {
 
 export function AuthGuard({ children }: Props) {
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const { pathname, search, hash } = useLocation();
   const [searchParams] = useSearchParams();
 
   const { authenticated } = useAuthContext();
@@ -22,6 +23,8 @@ export function AuthGuard({ children }: Props) {
 
   const check = useCallback(() => {
     if (!authenticated) {
+      // Brought back here once signed in
+      rememberReturnTo(`${pathname}${search}${hash}`);
       const planToken = searchParams.get('planToken');
       if (planToken) {
         sessionStorage.setItem(PLAN_TOKEN_STORAGE_KEY, planToken);
@@ -39,6 +42,7 @@ export function AuthGuard({ children }: Props) {
         !user.onboardingCompleted &&
         pathname !== getPath(['dashboard', 'onboarding'])
       ) {
+        rememberReturnTo(`${pathname}${search}${hash}`);
         navigate(getPath(['dashboard', 'onboarding']));
       }
       setChecked(true);
