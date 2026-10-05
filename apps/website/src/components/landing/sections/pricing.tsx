@@ -51,32 +51,31 @@ export function Pricing() {
             ctaExternal
           />
           <PricingCard
-            name={m.landing_pricing_solo_name()}
-            price={m.landing_pricing_solo_price()}
-            priceLabel={m.landing_pricing_solo_period()}
+            name={m.landing_pricing_free_name()}
+            price={m.landing_pricing_free_price()}
             perks={[
-              m.landing_pricing_solo_perk_1(),
-              m.landing_pricing_solo_perk_2(),
-              m.landing_pricing_solo_perk_3(),
-              m.landing_pricing_solo_perk_4(),
+              m.landing_pricing_free_perk_1(),
+              m.landing_pricing_free_perk_2(),
+              m.landing_pricing_free_perk_3(),
+              m.landing_pricing_free_perk_4(),
             ]}
-            highlighted
-            badge={m.landing_pricing_popular_badge()}
-            ctaLabel={m.landing_pricing_start_free_trial()}
+            ctaLabel={m.landing_pricing_free_cta()}
             ctaHref={signupUrl}
           />
           <PricingCard
-            name={m.landing_pricing_coach_cloud_name()}
-            price={m.landing_pricing_coach_cloud_price()}
-            priceLabel={m.landing_pricing_coach_cloud_period()}
+            name={m.landing_pricing_supporter_name()}
+            price={m.landing_pricing_supporter_price()}
+            priceLabel={m.landing_pricing_supporter_period()}
             perks={[
-              m.landing_pricing_coach_cloud_perk_1(),
-              m.landing_pricing_coach_cloud_perk_2(),
-              m.landing_pricing_coach_cloud_perk_3(),
-              m.landing_pricing_coach_cloud_perk_4(),
-              m.landing_pricing_coach_cloud_perk_5(),
+              m.landing_pricing_supporter_perk_1(),
+              m.landing_pricing_supporter_perk_2(),
+              m.landing_pricing_supporter_perk_3(),
+              m.landing_pricing_supporter_perk_4(),
+              m.landing_pricing_supporter_perk_5(),
             ]}
-            ctaLabel={m.landing_pricing_start_free_trial()}
+            highlighted
+            badge={m.landing_pricing_popular_badge()}
+            ctaLabel={m.landing_pricing_supporter_cta()}
             ctaHref={signupUrl}
           />
         </div>

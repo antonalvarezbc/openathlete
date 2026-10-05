@@ -107,7 +107,7 @@ export const articleOpenathleteFreeAlternativeTrainingpeaks: BlogPost = {
         <h3>OpenAthlete: The Free Alternative</h3>
         <p>
           <strong>OpenAthlete Pricing:</strong> <strong>Free Forever</strong>{' '}
-          (with optional Pro features at €5.99/month)
+          (with an optional Supporter subscription at €5/month)
         </p>
 
         <p>
@@ -426,9 +426,10 @@ export const articleOpenathleteFreeAlternativeTrainingpeaks: BlogPost = {
         <p>
           Yes! OpenAthlete's core features are 100% free forever. This includes
           unlimited planning, data centralization, device integration, and basic
-          analytics. Optional Pro features (AI adaptation, AI generator, injury
-          prevention) are available for €5.99/month, but the free tier is
-          completely functional.
+          analytics. AI features work for free with your own AI provider key;
+          the optional Supporter subscription (€5/month or €50/year) includes AI
+          every month, removes the limit of 5 coached athletes and funds the
+          project.
         </p>
 
         <h3>Can I import my TrainingPeaks data?</h3>
@@ -543,7 +544,7 @@ export const articleOpenathleteFreeAlternativeTrainingpeaks: BlogPost = {
         <h3>OpenAthlete : L'Alternative Gratuite</h3>
         <p>
           <strong>Tarifs OpenAthlete :</strong> <strong>Gratuit à Vie</strong>{' '}
-          (avec fonctionnalités Pro optionnelles à 5,99€/mois)
+          (avec un abonnement Supporter optionnel à 5 €/mois)
         </p>
 
         <p>
@@ -883,10 +884,11 @@ export const articleOpenathleteFreeAlternativeTrainingpeaks: BlogPost = {
         <p>
           Oui ! Les fonctionnalités de base d'OpenAthlete sont 100% gratuites à
           vie. Cela inclut la planification illimitée, la centralisation des
-          données, l'intégration d'appareils et les analyses de base. Les
-          fonctionnalités Pro optionnelles (adaptation IA, générateur IA,
-          prévention des blessures) sont disponibles pour 5,99€/mois, mais le
-          niveau gratuit est complètement fonctionnel.
+          données, l'intégration d'appareils et les analyses de base. L'IA
+          fonctionne gratuitement avec votre propre clé de fournisseur ;
+          l'abonnement Supporter optionnel (5 €/mois ou 50 €/an) inclut l'IA
+          chaque mois, lève la limite de 5 athlètes coachés et finance le
+          projet.
         </p>
 
         <h3>Puis-je importer mes données TrainingPeaks ?</h3>
