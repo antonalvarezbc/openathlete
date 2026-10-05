@@ -1,0 +1,15 @@
+# Builds the images from this repository instead of pulling them:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+services:
+  api:
+    image: openathlete-api:local
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+
+  web:
+    image: openathlete-web:local
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
