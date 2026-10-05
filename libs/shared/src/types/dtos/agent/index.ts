@@ -8,3 +8,4 @@ export * from './plan-adaptation.dto';
 export * from './coach-assistant.dto';
 export * from './activity-analysis.dto';
 export * from './ai-memory.dto';
+export * from './ai-plan.dto';

@@ -192,6 +192,11 @@ export const routes = {
     workoutStructure: '/agent/ai/events/structure',
     memory: (athleteId: number) => `/agent/ai/memory/${athleteId}`,
   },
+  aiPlan: {
+    draft: '/agent/ai/plans/draft',
+    draftStatus: (jobId: string) => `/agent/ai/plans/draft/${jobId}`,
+    weekSteps: '/agent/ai/plans/week-steps',
+  },
   aiSettings: {
     providers: '/ai/providers',
     credentials: '/ai/credentials',

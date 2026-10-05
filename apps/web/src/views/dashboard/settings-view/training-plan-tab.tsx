@@ -6,6 +6,7 @@ import {
   ManagedPlan,
   PlanWorkspaceAPI,
 } from '@/api/plan-workspace/plan-workspace.api';
+import { AiPlanDialog } from '@/components/ai-plan/ai-plan-dialog';
 import { CoachAssistant } from '@/components/coach-assistant/coach-assistant';
 import { AthleteInjuries } from '@/components/plan-workspace/athlete-injuries';
 import { CalendarWeeks } from '@/components/plan-workspace/calendar-weeks';
@@ -53,6 +54,7 @@ export function TrainingPlanTab() {
   // Absent until chosen, by the coach or by the default below.
   const choice = parsePlanChoice(params.get('planId'));
   const [editor, setEditor] = useState<ManagedPlan | 'new' | null>(null);
+  const [aiPlanOpen, setAiPlanOpen] = useState(false);
   const client = useQueryClient();
   const plans = useQuery({
     queryKey: ['managed-plans', athleteId],
@@ -107,10 +109,20 @@ export function TrainingPlanTab() {
             {m.workspace_intro()}
           </p>
         </div>
-        <Button disabled={!athleteId} onClick={() => setEditor('new')}>
-          <Plus className="size-4" />
-          {m.workspace_new_plan()}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            disabled={!athleteId}
+            onClick={() => setAiPlanOpen(true)}
+          >
+            <SparklesIcon className="size-4" />
+            {m.ai_plan_create()}
+          </Button>
+          <Button disabled={!athleteId} onClick={() => setEditor('new')}>
+            <Plus className="size-4" />
+            {m.workspace_new_plan()}
+          </Button>
+        </div>
       </div>
       <div className="grid gap-4 rounded-xl border p-4 sm:grid-cols-2 sm:p-6">
         <Field label={m.athlete()}>
@@ -321,6 +333,17 @@ export function TrainingPlanTab() {
           )}
         </TabsContent>
       </Tabs>
+      {aiPlanOpen && !!athleteId && (
+        <AiPlanDialog
+          key={athleteId}
+          athleteId={athleteId}
+          onClose={() => setAiPlanOpen(false)}
+          onImported={(saved) => {
+            change(athleteId, saved.trainingPlanId);
+            void refresh();
+          }}
+        />
+      )}
       {editor && !!athleteId && (
         <PlanEditor
           key={editor === 'new' ? 'new' : editor.trainingPlanId}

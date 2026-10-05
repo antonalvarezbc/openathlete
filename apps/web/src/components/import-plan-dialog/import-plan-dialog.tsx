@@ -16,9 +16,16 @@ import { toast } from 'sonner';
 import {
   SEOPlanData,
   buildPlanSchedule,
+  checkAiPlan,
   trainingPlanImportSchema,
 } from '@openathlete/shared';
 
+import {
+  AiPlanChecks,
+  AiPlanReviewDraft,
+  AiPlanRulesEditor,
+  AiPlanSteps,
+} from '../ai-plan/ai-plan-review';
 import { Button } from '../ui/button';
 import {
   Dialog,
@@ -37,22 +44,36 @@ interface ImportPlanDialogProps {
   open: boolean;
   onClose: () => void;
   planToken?: string;
+  /** An AI draft: reviewed for its athlete and dates, imported as DRAFT. */
+  draft?: AiPlanReviewDraft;
+  onImported?: (plan: { trainingPlanId: number; name: string }) => void;
 }
 
 export function ImportPlanDialog({
   open,
   onClose,
   planToken,
+  draft,
+  onImported,
 }: ImportPlanDialogProps) {
   const { data: ownAthlete } = useGetMyAthleteQuery();
   const { data: coachedAthletes = [] } = useGetMyCoachedAthletesQuery();
   const temporary = useGetTemporaryPlan(planToken ?? null);
-  const [text, setText] = useState('');
+  const [text, setText] = useState(() =>
+    draft ? JSON.stringify(draft.plan, null, 2) : '',
+  );
   const [fileError, setFileError] = useState('');
-  const [athleteId, setAthleteId] = useState('');
+  const [athleteId, setAthleteId] = useState(() =>
+    draft ? String(draft.athleteId) : '',
+  );
   const [replacePlanId, setReplacePlanId] = useState('');
   const [confirmed, setConfirmed] = useState(false);
+  const [structuring, setStructuring] = useState(false);
+  // The plan's rules; the coach may change them within the safety bounds.
+  const [rules, setRules] = useState(draft?.rules);
+  const [ruleNotes, setRuleNotes] = useState(draft?.ruleNotes ?? []);
   const [startDate, setStartDate] = useState(() => {
+    if (draft) return draft.startDate;
     const date = new Date();
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   });
@@ -96,6 +117,14 @@ export function ImportPlanDialog({
       };
     }
   }, [text, startDate, timeZone]);
+  // The same checks as the API, again on every edit of an AI draft.
+  const issues = useMemo(
+    () =>
+      draft && preview.plan
+        ? checkAiPlan(preview.plan, draft.facts, rules)
+        : [],
+    [draft, preview.plan, rules],
+  );
   const mutation = useMutation({
     mutationFn: async (plan: SEOPlanData) => {
       const options = {
@@ -103,6 +132,7 @@ export function ImportPlanDialog({
         athleteId: Number(athleteId),
         timeZone,
         replacePlanId: replacePlanId ? Number(replacePlanId) : undefined,
+        ...(draft ? { status: 'DRAFT' as const } : {}),
       };
       return planToken
         ? SeoPlanAPI.importPlan({ ...options, planToken })
@@ -116,6 +146,7 @@ export function ImportPlanDialog({
       toast.success(
         m.training_plan_imported_successfully({ planName: data.name }),
       );
+      onImported?.(data);
       onClose();
     },
   });
@@ -123,6 +154,10 @@ export function ImportPlanDialog({
   const serverError = isAxiosError(error)
     ? error.response?.data?.message
     : error?.message;
+  // Only a future plan can be replaced; for an AI draft, offer only those.
+  const replaceable = (plans.data ?? []).filter(
+    (plan) => !draft || new Date(plan.startDate).getTime() > Date.now(),
+  );
   const selectedPlan = plans.data?.find(
     (plan) => String(plan.trainingPlanId) === replacePlanId,
   );
@@ -157,11 +192,15 @@ export function ImportPlanDialog({
     >
       <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{m.json_plan_import()}</DialogTitle>
-          <DialogDescription>{m.json_plan_review_help()}</DialogDescription>
+          <DialogTitle>
+            {draft ? m.ai_plan_review_title() : m.json_plan_import()}
+          </DialogTitle>
+          <DialogDescription>
+            {draft ? m.ai_plan_review_help() : m.json_plan_review_help()}
+          </DialogDescription>
         </DialogHeader>
         <fieldset disabled={mutation.isPending} className="min-w-0 space-y-4">
-          {!planToken && (
+          {!planToken && !draft && (
             <section
               aria-label={m.json_plan_example_title()}
               className="space-y-2 rounded-md border bg-muted/30 p-3"
@@ -205,7 +244,7 @@ export function ImportPlanDialog({
               </details>
             </section>
           )}
-          {!planToken && (
+          {!planToken && !draft && (
             <label className="block space-y-2">
               {m.json_plan_file()}
               <Input
@@ -238,7 +277,7 @@ export function ImportPlanDialog({
             {m.json_plan_content()}
             <textarea
               aria-label={m.json_plan_content()}
-              readOnly={!!planToken}
+              readOnly={!!planToken || structuring}
               className="w-full h-36 border rounded p-2 font-mono text-xs"
               value={text}
               onChange={(event) => {
@@ -256,12 +295,35 @@ export function ImportPlanDialog({
               {fileError || preview.error}
             </pre>
           )}
+          {draft && preview.plan && (
+            <>
+              <AiPlanChecks issues={issues} conflicts={draft.conflicts} />
+              {rules && (
+                <AiPlanRulesEditor
+                  rules={rules}
+                  notes={ruleNotes}
+                  onChange={(next, notes) => {
+                    setRules(next);
+                    setRuleNotes(notes);
+                    setConfirmed(false);
+                  }}
+                />
+              )}
+              <AiPlanSteps
+                plan={preview.plan}
+                athleteId={draft.athleteId}
+                onPlan={(plan) => setText(JSON.stringify(plan, null, 2))}
+                onRunningChange={setStructuring}
+              />
+            </>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <label>
               {m.athlete()}
               <select
                 aria-label={m.athlete()}
                 className="block w-full border rounded p-2"
+                disabled={!!draft}
                 value={athleteId}
                 onChange={(event) => {
                   setAthleteId(event.target.value);
@@ -287,6 +349,7 @@ export function ImportPlanDialog({
               <Input
                 aria-label={m.training_plan_start_date()}
                 type="date"
+                disabled={!!draft}
                 value={startDate}
                 onChange={(event) => {
                   setStartDate(event.target.value);
@@ -311,7 +374,7 @@ export function ImportPlanDialog({
                 }}
               >
                 <option value="">{m.json_plan_new()}</option>
-                {plans.data?.map((plan) => (
+                {replaceable.map((plan) => (
                   <option key={plan.trainingPlanId} value={plan.trainingPlanId}>
                     {plan.name} · {dateLabel(plan.startDate)} –{' '}
                     {dateLabel(plan.endDate)}
@@ -436,7 +499,9 @@ export function ImportPlanDialog({
                 !confirmed ||
                 !!fileError ||
                 temporary.isError ||
-                mutation.isPending
+                mutation.isPending ||
+                issues.length > 0 ||
+                structuring
               }
               isLoading={mutation.isPending}
               onClick={() => preview.plan && mutation.mutate(preview.plan)}

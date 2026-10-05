@@ -33,6 +33,8 @@ export const importPlanBodyDtoSchema = z.object({
     }, 'Invalid time zone')
     .default('UTC'),
   replacePlanId: z.number().int().positive().optional(),
+  /** AI drafts are created as DRAFT so they never become active by surprise. */
+  status: z.enum(['ACTIVE', 'DRAFT']).optional(),
 });
 export type ImportPlanBodyDto = z.infer<typeof importPlanBodyDtoSchema>;
 export const importPlanDtoSchema = importPlanBodyDtoSchema.extend({
