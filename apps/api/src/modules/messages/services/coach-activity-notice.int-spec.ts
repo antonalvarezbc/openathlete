@@ -22,7 +22,11 @@ describe('activity notices in PostgreSQL', () => {
   let prisma: PrismaService;
   let service: CoachActivityNoticeService;
   const emitter = new EventEmitter2();
-  const coach: AuthUser = { userId: COACH_USER_ID, email: 'coach@example.com' };
+  const coach: AuthUser = {
+    userId: COACH_USER_ID,
+    email: 'coach@example.com',
+    athlete: null,
+  };
   const notice = {
     eventId: 3002,
     kind: 'RPE' as const,
