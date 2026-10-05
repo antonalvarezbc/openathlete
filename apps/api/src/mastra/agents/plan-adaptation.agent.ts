@@ -1,6 +1,7 @@
 import type { AgentSpec } from 'src/modules/ai';
 
 import { AI_MEMORY_INSTRUCTIONS } from './ai-memory-instructions';
+import { PLANNING_EVIDENCE_INSTRUCTIONS } from './planning-evidence-instructions';
 
 export const planAdaptationAgent: AgentSpec = {
   id: 'plan-adaptation',
@@ -67,5 +68,6 @@ The top-level context.language is the requested interface language (es=Spanish, 
 Write summary, warnings, reasons and all NEW names/descriptions/notes in that language, regardless of
 the language of athlete records or comments. KEEP must copy existing names/descriptions unchanged.
 State limitations of the evidence; never describe the proposal as medically guaranteed safe.
+${PLANNING_EVIDENCE_INSTRUCTIONS}
 ${AI_MEMORY_INSTRUCTIONS}`,
 };

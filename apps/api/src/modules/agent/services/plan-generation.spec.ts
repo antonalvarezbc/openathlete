@@ -690,6 +690,12 @@ describe('PlanGenerationService race context', () => {
     );
     expect(preview.conflicts).toEqual(draft.conflicts);
     expect(preview.zoneTypes).toEqual(['HEARTRATE']);
+    expect(preview.athlete.evidence).toMatchObject({
+      asOfDate: '2030-10-20',
+      windowDays: 42,
+      historyTruncated: false,
+      recent: { activities: 1, minutes: 200, meanRpe: null, loads: [] },
+    });
   });
 
   test('lists upcoming calendar races with their goals', async () => {

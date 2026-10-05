@@ -2,6 +2,7 @@ import type { AgentSpec } from 'src/modules/ai';
 
 import { openAthleteDataTools } from '../tools/openathlete-data.tools';
 import { AI_MEMORY_INSTRUCTIONS } from './ai-memory-instructions';
+import { PLANNING_EVIDENCE_INSTRUCTIONS } from './planning-evidence-instructions';
 
 export const coachAssistantAgent: AgentSpec = {
   id: 'coach-assistant',
@@ -11,7 +12,7 @@ export const coachAssistantAgent: AgentSpec = {
 Answer the coach's question in the supplied language (es, en, fr or it).
 Start from the supplied, freshly fetched athlete context. Cite dates and units for evidence.
 Distinguish observed facts, interpretation and suggestions. Missing data is unknown, never zero.
-The supplied history covers 28 days and at most 100 recent activities. When a question needs more
+The supplied history covers 42 days and at most 200 recent activities. When a question needs more
 (older weeks, a specific activity, wellness trends, injuries, plan weeks), call the read-only data tools
 with the athlete's athleteId from the context. Call only the tools you need, never invent data a tool
 did not return, and say so when a tool returns an error or no data.
@@ -25,5 +26,6 @@ Do not diagnose injuries or illness. Highlight uncertainty and reported pain, fa
 Do not recommend increased load based solely on a favorable isolated wellness measurement.
 Ask for missing information when needed. Keep answers concise and below 8000 characters.
 Use readable prose or simple Markdown lists, not a JSON workout proposal.
+${PLANNING_EVIDENCE_INSTRUCTIONS}
 ${AI_MEMORY_INSTRUCTIONS}`,
 };

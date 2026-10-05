@@ -60,6 +60,11 @@ import {
   describeIssue,
   toImportPlan,
 } from './plan-generation';
+import {
+  PLANNING_HISTORY_LIMIT,
+  buildPlanningEvidence,
+  planningActivitySelect,
+} from './planning-evidence';
 import { WorkoutParserService } from './workout-parser.service';
 
 export const PLAN_GENERATION_QUEUE = 'plan-generation';
@@ -583,8 +588,10 @@ export class PlanGenerationService {
           },
           select: {
             startDate: true,
-            activity: { select: { sport: true, movingTime: true } },
+            activity: { select: planningActivitySelect },
           },
+          orderBy: [{ startDate: 'desc' }, { eventId: 'asc' }],
+          take: PLANNING_HISTORY_LIMIT + 1,
         }),
         this.prisma.event.findMany({
           where: {
@@ -644,7 +651,7 @@ export class PlanGenerationService {
       sessions: 0,
     }));
     const bySport: Record<string, number> = {};
-    for (const event of activities) {
+    for (const event of activities.slice(0, PLANNING_HISTORY_LIMIT)) {
       if (!event.activity) continue;
       const week = Math.floor(
         (now.getTime() - event.startDate.getTime()) / (7 * DAY_MS),
@@ -683,6 +690,12 @@ export class PlanGenerationService {
           sameName(race.name, input.goalName) &&
           civilDate(race.startDate, timeZone) === raceDate;
     const athlete: AiPlanAthleteContext = {
+      evidence: buildPlanningEvidence(
+        activities.slice(0, PLANNING_HISTORY_LIMIT),
+        metricRows,
+        now,
+        activities.length > PLANNING_HISTORY_LIMIT,
+      ),
       recentWeeklyMinutes,
       weeklyHistoryNewestFirst: history.map((week) => ({
         minutes: Math.round(week.minutes),
