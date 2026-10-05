@@ -5,9 +5,11 @@ import { CoreModule } from '../core/core.module';
 import { NotificationModule } from '../notification/notification.module';
 import { PrismaService } from '../prisma/services/prisma.service';
 import { WebSocketModule } from '../websocket/websocket.module';
+import { ActivityAlertSettingsController } from './controllers/activity-alert-settings.controller';
 import { MessagesController } from './controllers/messages.controller';
 import { MessagesGateway } from './gateways/messages.gateway';
 import { WsJwtAuthGuard } from './guards/ws-jwt-auth.guard';
+import { CoachActivityNoticeService } from './services/coach-activity-notice.service';
 import { MessageNotificationScheduler } from './services/message-notification.scheduler';
 import { MessageThreadService } from './services/message-thread.service';
 import { MessageService } from './services/message.service';
@@ -19,8 +21,9 @@ import { MessageService } from './services/message.service';
     NotificationModule,
     WebSocketModule,
   ],
-  controllers: [MessagesController],
+  controllers: [MessagesController, ActivityAlertSettingsController],
   providers: [
+    CoachActivityNoticeService,
     MessageThreadService,
     MessageService,
     MessagesGateway,

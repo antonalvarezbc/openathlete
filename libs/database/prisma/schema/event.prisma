@@ -30,6 +30,7 @@ model Event {
   type      EventType
 
   // relationships
+  activityChatNotices ActivityChatNotice[]
   training       EventTraining?
   competition    EventCompetition?
   note           EventNote?

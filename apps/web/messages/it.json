@@ -1209,5 +1209,20 @@
   "data_export_include_streams": "Includi i flussi delle attività (GPS, frequenza cardiaca), file più pesante",
   "data_export_download": "Scarica i miei dati",
   "data_export_preparing": "Preparazione del file…",
-  "data_export_failed": "L'esportazione non è riuscita. Riprova più tardi."
+  "data_export_failed": "L'esportazione non è riuscita. Riprova più tardi.",
+  "activity_alert_settings_title": "Notifiche nella chat",
+  "activity_alert_settings_help": "Scegli quali notifiche automatiche ricevere per questo atleta nella vostra conversazione. Le tue preferenze non riguardano gli altri allenatori. Si applicano alle modifiche future; gli avvisi esistenti vengono conservati.",
+  "activity_alert_comments": "Commenti e risposte dell’atleta",
+  "activity_alert_rpe": "Modifiche all’RPE dell’atleta",
+  "activity_alert_new": "Nuove attività",
+  "activity_alert_settings_error": "Impossibile caricare o salvare le preferenze. Riprova.",
+  "activity_alert_settings_saved": "Preferenze salvate.",
+  "activity_alert_retry": "Riprova",
+  "activity_alert_automatic": "Notifica automatica",
+  "activity_alert_uploaded": "Nuova attività disponibile",
+  "activity_alert_comment_updated": "L’atleta ha aggiunto o modificato un commento",
+  "activity_alert_rpe_updated": "L’atleta ha aggiornato l’RPE",
+  "activity_alert_rpe_removed": "RPE rimosso",
+  "activity_alert_open": "Apri attività",
+  "activity_alert_unavailable": "L’attività non è più disponibile o non hai accesso."
 }
