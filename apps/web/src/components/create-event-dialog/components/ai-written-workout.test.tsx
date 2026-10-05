@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AxiosError, AxiosHeaders } from 'axios';
 import { type ReactNode, act } from 'react';
 import { type Root, createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  AiErrorCode,
   type CreateEventDto,
   EVENT_TYPE,
   SPORT_TYPE,
@@ -37,6 +39,8 @@ vi.mock('@/paraglide/messages', () => ({
   m: new Proxy({}, { get: (_target, key) => () => String(key) }),
 }));
 vi.mock('posthog-js/react', () => ({ usePostHog: () => undefined }));
+const toastError = vi.hoisted(() => vi.fn());
+vi.mock('sonner', () => ({ toast: { error: toastError, success: vi.fn() } }));
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -134,6 +138,25 @@ describe('converting a written workout with AI', () => {
         description: TEXT,
         instructions: TEXT,
       });
+    });
+
+    it('points to Settings > AI when no AI is set up for written workouts', async () => {
+      api.post.mockRejectedValue(
+        new AxiosError('Forbidden', 'ERR_BAD_REQUEST', undefined, undefined, {
+          status: 403,
+          statusText: '',
+          headers: {},
+          config: { headers: new AxiosHeaders() },
+          data: { code: AiErrorCode.NOT_CONFIGURED },
+        }),
+      );
+      const { onSteps } = await mount();
+      await click(button('ai_structure_button'));
+      await click(button('ai_structure_generate'));
+      await vi.waitFor(() =>
+        expect(toastError).toHaveBeenCalledWith('ai_error_not_configured'),
+      );
+      expect(onSteps).not.toHaveBeenCalled();
     });
 
     it('opens the paywall without AI access', async () => {

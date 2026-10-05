@@ -1,3 +1,4 @@
+import { useAiTaskAvailable } from '@/api/ai-settings';
 import {
   useGetMyAthleteQuery,
   useGetMyCoachedAthletesQuery,
@@ -7,6 +8,7 @@ import {
   PlanWorkspaceAPI,
 } from '@/api/plan-workspace/plan-workspace.api';
 import { AiPlanDialog } from '@/components/ai-plan/ai-plan-dialog';
+import { AiSetupDialog } from '@/components/ai-settings';
 import { CoachAssistant } from '@/components/coach-assistant/coach-assistant';
 import { AthleteInjuries } from '@/components/plan-workspace/athlete-injuries';
 import { CalendarWeeks } from '@/components/plan-workspace/calendar-weeks';
@@ -34,6 +36,8 @@ import { Calendar, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
+import { AiTask } from '@openathlete/shared';
+
 import { PlanAdaptationSection } from './plan-adaptation-section';
 
 export function TrainingPlanTab() {
@@ -55,6 +59,8 @@ export function TrainingPlanTab() {
   const choice = parsePlanChoice(params.get('planId'));
   const [editor, setEditor] = useState<ManagedPlan | 'new' | null>(null);
   const [aiPlanOpen, setAiPlanOpen] = useState(false);
+  const [aiSetupOpen, setAiSetupOpen] = useState(false);
+  const aiPlans = useAiTaskAvailable(AiTask.PLAN_GENERATION);
   const client = useQueryClient();
   const plans = useQuery({
     queryKey: ['managed-plans', athleteId],
@@ -113,7 +119,12 @@ export function TrainingPlanTab() {
           <Button
             variant="outline"
             disabled={!athleteId}
-            onClick={() => setAiPlanOpen(true)}
+            onClick={() =>
+              // Without AI for plans, say where to set it up first.
+              !aiPlans.isLoading && !aiPlans.available
+                ? setAiSetupOpen(true)
+                : setAiPlanOpen(true)
+            }
           >
             <SparklesIcon className="size-4" />
             {m.ai_plan_create()}
@@ -333,6 +344,11 @@ export function TrainingPlanTab() {
           )}
         </TabsContent>
       </Tabs>
+      <AiSetupDialog
+        open={aiSetupOpen}
+        onOpenChange={setAiSetupOpen}
+        analyticsSource="ai_plan"
+      />
       {aiPlanOpen && !!athleteId && (
         <AiPlanDialog
           key={athleteId}

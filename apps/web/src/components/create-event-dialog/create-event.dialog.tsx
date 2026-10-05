@@ -366,8 +366,9 @@ export function CreateEventDialog({ open, onClose, ...rest }: P) {
                     };
                   }}
                   hasSteps={workoutSteps.length > 0}
-                  // Converting text runs on the instance's AI keys.
-                  hasAccess={!!aiAccess?.hostedAccess}
+                  hasAccess={
+                    aiAccess?.tasks[AiTask.WORKOUT_PARSER].available ?? false
+                  }
                   onPaywall={() => setAiSetupOpen(true)}
                   onSteps={setWorkoutSteps}
                 />

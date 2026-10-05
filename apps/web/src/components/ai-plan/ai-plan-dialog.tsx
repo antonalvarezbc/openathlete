@@ -30,6 +30,7 @@ import { toast } from 'sonner';
 
 import {
   AI_PLAN_METHODOLOGIES,
+  AiAccessSource,
   AiPlanFailureReason,
   AiPlanRequest,
   SPORT_TYPE,
@@ -124,13 +125,19 @@ function FieldError({ message }: { message?: string }) {
   ) : null;
 }
 
-/** Why the draft failed: mostly the instance's AI account, not the answers. */
-function failureText(reason?: AiPlanFailureReason) {
+/**
+ * Why the draft failed: mostly the AI account, not the answers. The coach
+ * fixes their own key; the administrator fixes the instance's.
+ */
+function failureText(reason?: AiPlanFailureReason, source?: AiAccessSource) {
+  const ownKey = source === 'own_key';
   switch (reason) {
+    case 'NOT_CONFIGURED':
+      return m.ai_error_not_configured();
     case 'QUOTA':
-      return m.ai_plan_failed_quota();
+      return ownKey ? m.ai_plan_failed_quota_own() : m.ai_plan_failed_quota();
     case 'AUTH':
-      return m.ai_plan_failed_auth();
+      return ownKey ? m.ai_plan_failed_auth_own() : m.ai_plan_failed_auth();
     case 'RATE_LIMIT':
       return m.ai_plan_failed_rate_limit();
     case 'UNAVAILABLE':
@@ -347,7 +354,7 @@ export function AiPlanDialog({ athleteId, onClose, onImported, pollMs }: P) {
           <form onSubmit={submit} className="space-y-4" noValidate>
             {failed && (
               <div role="alert" className="space-y-1 text-sm text-destructive">
-                <p>{failureText(status?.reason)}</p>
+                <p>{failureText(status?.reason, status?.source)}</p>
                 {status?.detail && (
                   <p className="text-xs text-muted-foreground">
                     {m.ai_plan_failed_detail({ detail: status.detail })}

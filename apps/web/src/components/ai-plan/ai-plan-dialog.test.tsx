@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AxiosError, AxiosHeaders } from 'axios';
 import { act } from 'react';
 import { type Root, createRoot } from 'react-dom/client';
+import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  AiErrorCode,
   AiPlanDraft,
   AiPlanRuleNote,
   CYCLE_PHASE,
@@ -687,5 +690,46 @@ describe('AiPlanDialog', () => {
         `ai_plan_failed_detail ${JSON.stringify({ detail })}`,
       );
     else expect(alert).not.toContain('ai_plan_failed_detail');
+  });
+
+  it.each([
+    ['QUOTA', 'own_key', 'ai_plan_failed_quota_own'],
+    ['QUOTA', 'hosted', 'ai_plan_failed_quota'],
+    ['AUTH', 'own_key', 'ai_plan_failed_auth_own'],
+    ['AUTH', 'hosted', 'ai_plan_failed_auth'],
+    ['NOT_CONFIGURED', undefined, 'ai_error_not_configured'],
+  ])(
+    'says whose account to fix after a %s failure on %s',
+    async (reason, source, message) => {
+      api.start.mockResolvedValue({ jobId: 'job-1', state: 'queued' });
+      api.status.mockResolvedValue({
+        jobId: 'job-1',
+        state: 'failed',
+        reason,
+        ...(source ? { source } : {}),
+      });
+      await fillValid();
+      await submit();
+      await waitFor(() => !!dialog().querySelector('[role="alert"]'));
+      expect(dialog().querySelector('[role="alert"] p')!.textContent).toBe(
+        message,
+      );
+    },
+  );
+
+  it('points to Settings > AI when no AI is set up for plans', async () => {
+    api.start.mockRejectedValue(
+      new AxiosError('Forbidden', 'ERR_BAD_REQUEST', undefined, undefined, {
+        status: 403,
+        statusText: '',
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+        data: { code: AiErrorCode.NOT_CONFIGURED },
+      }),
+    );
+    await fillValid();
+    await submit();
+    await waitFor(() => vi.mocked(toast.error).mock.calls.length > 0);
+    expect(toast.error).toHaveBeenCalledWith('ai_error_not_configured');
   });
 });
