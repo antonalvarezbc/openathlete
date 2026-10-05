@@ -1,4 +1,8 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 
 import {
   AI_PLAN_ISSUE_CODES,
@@ -97,6 +101,42 @@ class TestService extends PlanGenerationService {
   }
 }
 
+// The goal race in the calendar, and a tune-up linked to another plan.
+const races = [
+  {
+    eventId: 51,
+    name: 'Tune-up 5K',
+    startDate: new Date('2030-11-16T09:00:00Z'),
+    competition: {
+      sport: 'RUNNING',
+      description: `Hilly. ${'x'.repeat(400)}`,
+      goalDistance: 5000,
+      goalElevationGain: null,
+      goalDuration: 1200,
+      planRaces: [{ priority: 'PREPARATORY' }],
+    },
+  },
+  {
+    eventId: 50,
+    name: '10K',
+    startDate: new Date('2030-12-14T08:00:00Z'),
+    competition: {
+      sport: 'RUNNING',
+      description: '  Flat and fast  ',
+      goalDistance: 10000,
+      goalElevationGain: 20,
+      goalDuration: 2700,
+      planRaces: [],
+    },
+  },
+];
+const events: Record<number, { athleteId: number; type: string }> = {
+  50: { athleteId: 4, type: 'COMPETITION' },
+  51: { athleteId: 4, type: 'COMPETITION' },
+  60: { athleteId: 99, type: 'COMPETITION' },
+  61: { athleteId: 4, type: 'TRAINING' },
+};
+
 function setup() {
   const prisma = {
     coachAthlete: {
@@ -141,7 +181,14 @@ function setup() {
                 activity: { sport: 'RUNNING', movingTime: 7200 },
               },
             ]
-          : [],
+          : where.type === 'COMPETITION'
+            ? races
+            : [],
+      ),
+      findUnique: jest.fn(async ({ where }: { where: { eventId: number } }) =>
+        events[where.eventId]
+          ? { eventId: where.eventId, ...events[where.eventId] }
+          : null,
       ),
       count: jest.fn().mockResolvedValue(2),
     },
@@ -475,6 +522,150 @@ describe('applyAiPlanRules', () => {
       expect(DEFAULT_AI_PLAN_RULES[key]).toBeGreaterThanOrEqual(min);
       expect(DEFAULT_AI_PLAN_RULES[key]).toBeLessThanOrEqual(max);
     }
+  });
+});
+
+describe('PlanGenerationService race context', () => {
+  type Prompt = {
+    request: { goal: unknown };
+    athlete: { races: Array<Record<string, unknown>> };
+  };
+
+  test('flags the calendar goal once and sends the other races in full', async () => {
+    const { service } = setup();
+    service.answers = [{ object: answer(GOOD), raw: '' }];
+    await service.generate({ ...request, goalEventId: 50 });
+    const sent = (service.prompts[0] as Prompt).athlete.races;
+    expect(sent).toEqual([
+      {
+        name: 'Tune-up 5K',
+        date: '2030-11-16T09:00:00.000Z',
+        dayInPlan: 26,
+        sport: 'RUNNING',
+        distance: 5000,
+        elevationGain: null,
+        timeTarget: 1200,
+        description: `Hilly. ${'x'.repeat(293)}`,
+        priority: 'PREPARATORY',
+        goal: false,
+      },
+      {
+        name: '10K',
+        date: '2030-12-14T08:00:00.000Z',
+        dayInPlan: 54,
+        sport: 'RUNNING',
+        distance: 10000,
+        elevationGain: 20,
+        timeTarget: 2700,
+        description: 'Flat and fast',
+        priority: null,
+        goal: true,
+      },
+    ]);
+  });
+
+  test('recognizes a typed goal already in the calendar, by name and day', async () => {
+    const { service } = setup();
+    service.answers = [
+      { object: answer(GOOD), raw: '' },
+      { object: answer(GOOD), raw: '' },
+    ];
+    await service.generate({
+      ...request,
+      goal: { ...request.goal, name: ' 10k ' },
+    });
+    expect(
+      (service.prompts[0] as Prompt).athlete.races.map((race) => race.goal),
+    ).toEqual([false, true]);
+    // Another name on the same day, or the same name another day, is
+    // another race.
+    await service.generate({
+      ...request,
+      goal: { ...request.goal, name: 'Marathon' },
+    });
+    expect(
+      (service.prompts[1] as Prompt).athlete.races.map((race) => race.goal),
+    ).toEqual([false, false]);
+    service.answers = [{ object: answer(GOOD), raw: '' }];
+    await service.generate({
+      ...request,
+      goal: { ...request.goal, name: 'Tune-up 5K' },
+    });
+    expect(
+      (service.prompts[2] as Prompt).athlete.races.map((race) => race.goal),
+    ).toEqual([false, false]);
+  });
+
+  test('takes a goal from the calendar only if it is a race of that athlete', async () => {
+    const { service, queue } = setup();
+    await expect(
+      service.start(coach, { ...request, goalEventId: 60 }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.start(coach, { ...request, goalEventId: 404 }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.start(coach, { ...request, goalEventId: 61 }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(queue.add).not.toHaveBeenCalled();
+    await expect(
+      service.start(coach, { ...request, goalEventId: 50 }),
+    ).resolves.toMatchObject({ state: 'queued' });
+  });
+
+  test('the form shows exactly what a draft sends', async () => {
+    const { service } = setup();
+    service.answers = [{ object: answer(GOOD), raw: '' }];
+    const draft = await service.generate({ ...request, goalEventId: 50 });
+    const preview = await service.previewContext(coach, {
+      athleteId: 4,
+      goalEventId: 50,
+      startDate: request.startDate,
+      raceDate: request.goal.date,
+      timeZone: request.timeZone,
+    });
+    expect(preview.athlete).toEqual(
+      (service.prompts[0] as { athlete: unknown }).athlete,
+    );
+    expect(preview.conflicts).toEqual(draft.conflicts);
+    expect(preview.zoneTypes).toEqual(['HEARTRATE']);
+  });
+
+  test('lists upcoming calendar races with their goals', async () => {
+    const { service, prisma } = setup();
+    await expect(service.upcomingRaces(coach, 4)).resolves.toEqual([
+      {
+        eventId: 51,
+        name: 'Tune-up 5K',
+        startDate: '2030-11-16T09:00:00.000Z',
+        sport: 'RUNNING',
+        distance: 5000,
+        elevationGain: null,
+        timeTarget: 1200,
+      },
+      {
+        eventId: 50,
+        name: '10K',
+        startDate: '2030-12-14T08:00:00.000Z',
+        sport: 'RUNNING',
+        distance: 10000,
+        elevationGain: 20,
+        timeTarget: 2700,
+      },
+    ]);
+    const where = prisma.event.findMany.mock.calls.at(-1)![0].where as {
+      type: string;
+      startDate: { gte: Date; lt: Date };
+    };
+    expect(where.type).toBe('COMPETITION');
+    // From today, about a year ahead.
+    expect(where.startDate.lt.getTime() - NOW.getTime()).toBeGreaterThan(
+      360 * 86400000,
+    );
+    prisma.coachAthlete.findFirst.mockResolvedValue(null);
+    await expect(service.upcomingRaces(coach, 4)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
   });
 });
 

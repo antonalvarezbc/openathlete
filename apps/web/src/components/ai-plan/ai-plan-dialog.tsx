@@ -1,5 +1,9 @@
-import { useAiPlanJobQuery, useStartAiPlanMutation } from '@/api/ai-plan';
-import { useGetInjuriesQuery } from '@/api/injury';
+import {
+  useAiPlanContextQuery,
+  useAiPlanJobQuery,
+  useAiPlanRacesQuery,
+  useStartAiPlanMutation,
+} from '@/api/ai-plan';
 import { ImportPlanDialog } from '@/components/import-plan-dialog';
 import {
   Field,
@@ -20,18 +24,19 @@ import { m } from '@/paraglide/messages';
 import { getLocale } from '@/paraglide/runtime';
 import { sportTypeLabelMap } from '@/utils/label-map/core';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
 import {
   AI_PLAN_METHODOLOGIES,
   AiPlanRequest,
-  INJURY_STATUS,
   SPORT_TYPE,
+  aiPlanContextRequestSchema,
   aiPlanRequestSchema,
 } from '@openathlete/shared';
 
+import { AiPlanContextSummary } from './ai-plan-context';
 import { draftProgress, estimateDraftSeconds } from './draft-progress';
 
 /** Sports usually combined in an endurance plan; the race sport is added. */
@@ -65,6 +70,24 @@ function nextMonday() {
 
 const optionalNumber = (value: unknown) =>
   value === '' || value == null ? null : Number(value);
+
+/** Seconds as "03:45:00" for a time input. */
+const toTime = (seconds: number | null | undefined) =>
+  seconds == null || !Number.isFinite(seconds)
+    ? ''
+    : [seconds / 3600, (seconds % 3600) / 60, seconds % 60]
+        .map((part) => String(Math.floor(part)).padStart(2, '0'))
+        .join(':');
+
+/** A value that settles once typing stops. */
+function useSettled<T>(value: T, ms = 400) {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), ms);
+    return () => clearTimeout(timer);
+  }, [value, ms]);
+  return settled;
+}
 
 /** "3:45:00" or "45:00" from a time input, in seconds. */
 const toSeconds = (value: unknown) => {
@@ -118,6 +141,7 @@ export function AiPlanDialog({ athleteId, onClose, onImported, pollMs }: P) {
     resolver: zodResolver(aiPlanRequestSchema),
     defaultValues: {
       athleteId,
+      goalEventId: null,
       goal: { name: '', date: '', sport: SPORT_TYPE.RUNNING },
       startDate: nextMonday(),
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -148,11 +172,54 @@ export function AiPlanDialog({ athleteId, onClose, onImported, pollMs }: P) {
   const [, setTick] = useState(0);
   const start = useStartAiPlanMutation();
   const job = useAiPlanJobQuery(jobId, pollMs);
-  const injuries = useGetInjuriesQuery(athleteId).data?.filter(
-    (injury) => injury.status !== INJURY_STATUS.RESOLVED,
-  );
+  const racesQuery = useAiPlanRacesQuery(athleteId);
+  const races = useMemo(() => racesQuery.data ?? [], [racesQuery.data]);
   const goalSport = watch('goal.sport');
   const trainingDays = watch('trainingDays');
+  const goalEventId = watch('goalEventId');
+  const goalDate = watch('goal.date');
+  const goalName = useSettled(watch('goal.name'));
+  const startDate = watch('startDate');
+  const timeZone = getValues('timeZone');
+  // What the AI will use, for the dates and goal in the form.
+  const contextInput = aiPlanContextRequestSchema.safeParse({
+    athleteId,
+    goalEventId: goalEventId ?? null,
+    goalName: goalName?.trim() || undefined,
+    startDate,
+    raceDate: goalDate,
+    timeZone,
+  });
+  const context = useAiPlanContextQuery(
+    contextInput.success ? contextInput.data : null,
+  );
+  useEffect(() => {
+    if (context.isError) toast.error(m.ai_plan_context_failed());
+  }, [context.isError]);
+
+  /** Fills the goal from a race in the calendar; fields stay editable. */
+  const pickRace = (eventId: number | null) => {
+    const race = races.find((item) => item.eventId === eventId);
+    setValue('goalEventId', race ? race.eventId : null);
+    if (!race) return;
+    const options = { shouldDirty: true } as const;
+    setValue('goal.name', race.name.slice(0, 100), options);
+    setValue('goal.date', dateInput(race.startDate), options);
+    setValue('goal.sport', race.sport, options);
+    setValue(
+      'goal.distanceKm',
+      race.distance ? Math.round(race.distance / 100) / 10 : null,
+      options,
+    );
+    setValue('goal.elevationGain', race.elevationGain ?? null, options);
+    setValue('goal.timeTarget', race.timeTarget ?? null, options);
+  };
+  // Moving the race day makes it another race than the one picked.
+  useEffect(() => {
+    const race = races.find((item) => item.eventId === goalEventId);
+    if (race && dateInput(race.startDate) !== goalDate)
+      setValue('goalEventId', null);
+  }, [races, goalEventId, goalDate, setValue]);
 
   // The race sport is always part of the plan.
   useEffect(() => {
@@ -194,6 +261,7 @@ export function AiPlanDialog({ athleteId, onClose, onImported, pollMs }: P) {
           plan: draft.plan,
           athleteId,
           startDate: getValues('startDate'),
+          goalEventId: getValues('goalEventId') ?? null,
           facts: draft.facts,
           rules: draft.rules,
           ruleNotes: draft.ruleNotes,
@@ -259,6 +327,27 @@ export function AiPlanDialog({ athleteId, onClose, onImported, pollMs }: P) {
                 {m.ai_plan_failed()}
               </p>
             )}
+            {races.length > 0 && (
+              <Field label={m.ai_plan_goal_pick()}>
+                <select
+                  className={selectClass}
+                  value={goalEventId ?? ''}
+                  onChange={(event) =>
+                    pickRace(
+                      event.target.value ? Number(event.target.value) : null,
+                    )
+                  }
+                >
+                  <option value="">{m.ai_plan_goal_other()}</option>
+                  {races.map((race) => (
+                    <option key={race.eventId} value={race.eventId}>
+                      {race.name} ·{' '}
+                      {new Date(race.startDate).toLocaleDateString(locale)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label={m.ai_plan_goal_name()}>
                 <Input {...register('goal.name')} maxLength={100} />
@@ -305,10 +394,22 @@ export function AiPlanDialog({ athleteId, onClose, onImported, pollMs }: P) {
                 <FieldError message={errors.goal?.elevationGain?.message} />
               </Field>
               <Field label={m.ai_plan_time_target()}>
-                <Input
-                  type="time"
-                  step={1}
-                  {...register('goal.timeTarget', { setValueAs: toSeconds })}
+                <Controller
+                  name="goal.timeTarget"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      type="time"
+                      step={1}
+                      name={field.name}
+                      ref={field.ref}
+                      value={toTime(field.value)}
+                      onBlur={field.onBlur}
+                      onChange={(event) =>
+                        field.onChange(toSeconds(event.target.value))
+                      }
+                    />
+                  )}
                 />
                 <FieldError message={errors.goal?.timeTarget?.message} />
               </Field>
@@ -451,15 +552,10 @@ export function AiPlanDialog({ athleteId, onClose, onImported, pollMs }: P) {
                 {...register('constraints')}
               />
             </Field>
-            {!!injuries?.length && (
-              <p className="text-sm text-muted-foreground">
-                {m.ai_plan_injuries({
-                  injuries: injuries
-                    .map((injury) => injury.location)
-                    .join(', '),
-                })}
-              </p>
-            )}
+            <AiPlanContextSummary
+              context={contextInput.success ? context.data : undefined}
+              isLoading={context.isFetching}
+            />
             <div className="flex flex-wrap justify-end gap-2">
               <Button
                 type="button"

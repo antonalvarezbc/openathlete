@@ -58,6 +58,8 @@ const uniqueDays = z
 export const aiPlanRequestSchema = z
   .object({
     athleteId: z.number().int().positive(),
+    /** The goal race picked from the athlete's calendar, when it is there */
+    goalEventId: z.number().int().positive().nullable().optional(),
     goal: z
       .object({
         name: z.string().trim().min(1).max(100),
@@ -178,6 +180,84 @@ export interface AiPlanIssue {
   /** Minutes, sessions or RPE, depending on the code */
   value?: number;
   limit?: number;
+}
+
+/** What the AI will see, shown in the form before generating. */
+export const aiPlanContextRequestSchema = z
+  .object({
+    athleteId: z.number().int().positive(),
+    goalEventId: z.number().int().positive().nullable().optional(),
+    /** To recognize a typed goal that is already in the calendar */
+    goalName: z.string().trim().max(100).optional(),
+    startDate: isoDate,
+    raceDate: isoDate,
+    timeZone,
+  })
+  .strict()
+  .refine(
+    (input) =>
+      aiPlanDayOffset(input.startDate, input.raceDate) >= 0 &&
+      aiPlanWeekCount(input.startDate, input.raceDate) <= AI_PLAN_MAX_WEEKS,
+    { message: 'AI_PLAN_LENGTH', path: ['raceDate'] },
+  );
+
+export type AiPlanContextRequest = z.infer<typeof aiPlanContextRequestSchema>;
+
+/** A race in the plan window, as the AI receives it. */
+export interface AiPlanRaceContext {
+  name: string;
+  /** ISO 8601 */
+  date: string;
+  /** Days from the plan start */
+  dayInPlan: number;
+  sport: SPORT_TYPE | null;
+  /** Meters */
+  distance: number | null;
+  elevationGain: number | null;
+  /** Seconds */
+  timeTarget: number | null;
+  description: string | null;
+  /** Its priority in a training plan it is already linked to */
+  priority: 'TARGET' | 'PREPARATORY' | null;
+  /** The goal race of the plan being drafted */
+  goal: boolean;
+}
+
+/** The athlete part of the AI's input, exactly as it is sent. */
+export interface AiPlanAthleteContext {
+  recentWeeklyMinutes: number | null;
+  weeklyHistoryNewestFirst: Array<{ minutes: number; sessions: number }>;
+  minutesBySportLast8Weeks: Record<string, number>;
+  metrics: Record<string, number>;
+  zones: string | null;
+  injuries: Array<{
+    location: string;
+    painScore: number;
+    status: string;
+    context: string;
+  }>;
+  races: AiPlanRaceContext[];
+}
+
+export interface AiPlanContextPreview {
+  athlete: AiPlanAthleteContext;
+  /** Zone types the athlete has (HEARTRATE, PACE, POWER) */
+  zoneTypes: string[];
+  conflicts: AiPlanConflicts;
+}
+
+/** A competition in the athlete's calendar that can be the goal race. */
+export interface AiPlanUpcomingRace {
+  eventId: number;
+  name: string;
+  /** ISO 8601 */
+  startDate: string;
+  sport: SPORT_TYPE;
+  /** Meters */
+  distance: number | null;
+  elevationGain: number | null;
+  /** Seconds */
+  timeTarget: number | null;
 }
 
 export interface AiPlanConflicts {

@@ -252,4 +252,79 @@ describe('JSON import transaction boundary', () => {
     ).importSeoPlan(user, fixture(), '2030-10-21', { status });
     expect(tx.trainingPlan.create.mock.calls[0][0].data.status).toBe(expected);
   });
+  describe('linking the goal race', () => {
+    // The fixture's two weeks start on 2030-10-21 (UTC).
+    const setupLink = (goal: unknown) => {
+      const tx = {
+        athlete: { findFirst: jest.fn().mockResolvedValue({ athleteId: 3 }) },
+        trainingPlan: {
+          findFirst: jest.fn().mockResolvedValue(null),
+          create: jest.fn().mockResolvedValue({ trainingPlanId: 9 }),
+        },
+        trainingPlanRace: { create: jest.fn() },
+        cycle: { create: jest.fn().mockResolvedValue({ cycleId: 1 }) },
+        trainingWeek: {
+          create: jest.fn().mockResolvedValue({ trainingWeekId: 1 }),
+        },
+        event: {
+          findFirst: jest.fn().mockResolvedValue(goal),
+          create: jest.fn().mockResolvedValue({ training: null }),
+        },
+      };
+      const prisma = { $transaction: jest.fn((fn) => fn(tx)) };
+      const service = new TrainingPlanService(
+        prisma as unknown as PrismaService,
+      );
+      return { tx, service };
+    };
+    const race = (day: string) => ({
+      startDate: new Date(`${day}T08:00:00Z`),
+      endDate: new Date(`${day}T10:00:00Z`),
+      competition: { eventCompetitionId: 77 },
+    });
+
+    test('links it as the target race of the new plan', async () => {
+      const { tx, service } = setupLink(race('2030-11-02'));
+      await service.importSeoPlan(user, fixture(), '2030-10-21', {
+        goalEventId: 40,
+      });
+      expect(tx.event.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { eventId: 40, athleteId: 3, type: 'COMPETITION' },
+        }),
+      );
+      expect(tx.trainingPlanRace.create).toHaveBeenCalledWith({
+        data: { trainingPlanId: 9, eventCompetitionId: 77, priority: 'TARGET' },
+      });
+    });
+
+    test('refuses a race of another athlete or outside the plan', async () => {
+      const missing = setupLink(null);
+      await expect(
+        missing.service.importSeoPlan(user, fixture(), '2030-10-21', {
+          goalEventId: 40,
+        }),
+      ).rejects.toThrow('Goal race not found');
+      const late = setupLink(race('2030-11-05'));
+      await expect(
+        late.service.importSeoPlan(user, fixture(), '2030-10-21', {
+          goalEventId: 40,
+        }),
+      ).rejects.toThrow('inside the plan dates');
+      expect(late.tx.trainingPlanRace.create).not.toHaveBeenCalled();
+      const early = setupLink(race('2030-10-20'));
+      await expect(
+        early.service.importSeoPlan(user, fixture(), '2030-10-21', {
+          goalEventId: 40,
+        }),
+      ).rejects.toThrow('inside the plan dates');
+    });
+
+    test('links nothing without a goal race', async () => {
+      const { tx, service } = setupLink(race('2030-11-02'));
+      await service.importSeoPlan(user, fixture(), '2030-10-21');
+      expect(tx.event.findFirst).not.toHaveBeenCalled();
+      expect(tx.trainingPlanRace.create).not.toHaveBeenCalled();
+    });
+  });
 });

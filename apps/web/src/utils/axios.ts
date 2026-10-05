@@ -196,6 +196,8 @@ export const routes = {
     draft: '/agent/ai/plans/draft',
     draftStatus: (jobId: string) => `/agent/ai/plans/draft/${jobId}`,
     weekSteps: '/agent/ai/plans/week-steps',
+    races: '/agent/ai/plans/races',
+    context: '/agent/ai/plans/context',
   },
   aiSettings: {
     providers: '/ai/providers',
