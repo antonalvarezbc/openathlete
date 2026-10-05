@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '@/config';
+import { socketUrl } from '@/config';
 import { getAccessToken, isTokenExpiringSoon } from '@/utils/auth';
 import client, { routes } from '@/utils/axios';
 import { ACCESS_TOKEN, getItem, setItem } from '@/utils/local-storage';
@@ -106,7 +106,7 @@ export class MessagesAPI {
       // Get JWT token from localStorage using project's auth utils
       const token = getItem(ACCESS_TOKEN);
 
-      this.socket = io(`${API_BASE_URL}/messages`, {
+      this.socket = io(socketUrl('messages'), {
         transports: ['polling', 'websocket'], // Allow polling first, then upgrade to websocket
         withCredentials: true,
         autoConnect: false,

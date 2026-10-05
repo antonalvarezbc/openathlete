@@ -81,9 +81,8 @@ services:
     build:
       context: ..
       dockerfile: apps/web/Dockerfile
-    environment:
-      # Injected into index.html when the container starts
-      API_PUBLIC_URL: http://localhost:13000
+    # No API_PUBLIC_URL: the app reaches the API through the image's /api
+    # proxy, as in the self-hosting setup
     ports: ['127.0.0.1:18080:80']
     healthcheck:
       test: ['CMD-SHELL', 'wget -qO /dev/null http://127.0.0.1/ || exit 1']

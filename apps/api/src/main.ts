@@ -7,6 +7,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 import { ApiEnvSchemaType } from '@openathlete/shared';
 
+import { getAllowedOrigins } from './common/utils/cors.util';
 import './instrument';
 import { AppModule } from './modules/app.module';
 
@@ -38,13 +39,9 @@ async function bootstrap() {
         : trustProxy,
   );
 
-  const corsOrigins = configService.get('CORS_ORIGINS');
-  const allowedOrigins = corsOrigins
-    ? corsOrigins.split(',')
-    : ['http://localhost:5173'];
-
+  // CORS_ORIGINS, else APP_URL: the same rule as the WebSocket gateways
   app.enableCors({
-    origin: allowedOrigins,
+    origin: getAllowedOrigins(),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
