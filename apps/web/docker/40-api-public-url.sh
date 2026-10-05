@@ -13,11 +13,13 @@ if ! grep -qF "$PLACEHOLDER" "$INDEX"; then
   exit 0
 fi
 
-API_URL="${API_PUBLIC_URL:-http://localhost:3000}"
+# Without API_PUBLIC_URL, the app calls the API through this container's
+# /api proxy, on its own origin (see nginx.conf)
+API_URL="${API_PUBLIC_URL:-/api}"
 API_URL="${API_URL%/}"
 # Only characters that are safe inside an HTML attribute and a sed replacement
-if ! printf '%s' "$API_URL" | grep -Eq '^https?://[A-Za-z0-9._~:/?#@!$()*+,;=%-]+$'; then
-  echo "API_PUBLIC_URL must be an http:// or https:// URL (got '$API_URL')" >&2
+if ! printf '%s' "$API_URL" | grep -Eq '^(https?://[A-Za-z0-9._~:/?#@!$()*+,;=%-]+|/[A-Za-z0-9._~/-]*)$'; then
+  echo "API_PUBLIC_URL must be an http:// or https:// URL, or a path such as /api (got '$API_URL')" >&2
   exit 1
 fi
 

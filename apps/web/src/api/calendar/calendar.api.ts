@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '@/config';
+import { socketUrl } from '@/config';
 import { getAccessToken, isTokenExpiringSoon } from '@/utils/auth';
 import { ACCESS_TOKEN, getItem, setItem } from '@/utils/local-storage';
 import { Socket, io } from 'socket.io-client';
@@ -57,7 +57,7 @@ export class CalendarAPI {
     if (!this.socket) {
       const token = getItem(ACCESS_TOKEN);
 
-      this.socket = io(`${API_BASE_URL}/calendar`, {
+      this.socket = io(socketUrl('calendar'), {
         transports: ['polling', 'websocket'],
         withCredentials: true,
         autoConnect: false,

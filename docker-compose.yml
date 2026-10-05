@@ -1,15 +1,36 @@
+# =============================================================================
+# OpenAthlete - self-hosting with Docker Compose
+# =============================================================================
+# Runs the published images. Quick start (see the self-hosting guide):
+#
+#   curl -fsSL https://raw.githubusercontent.com/openathleteorg/openathlete/main/scripts/install.sh | sh
+#
+# or, by hand: copy .env.example to .env, set the two secrets, then
+#
+#   docker compose up -d
+#
+# The app and its API share one address: the web container serves the app and
+# forwards /api to the API, so only APP_URL needs to be set. With
+# COMPOSE_PROFILES=https, Caddy serves DOMAIN over HTTPS with automatic
+# certificates.
+#
+# To build the images from this repository instead:
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+# =============================================================================
+
+x-api-image: &api-image ghcr.io/openathleteorg/openathlete-api:${OPENATHLETE_VERSION:-1}
+
 services:
-  # PostgreSQL Database with pgvector extension
+  # PostgreSQL with the pgvector extension
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: openathlete-postgres
     environment:
       POSTGRES_USER: openathlete
-      POSTGRES_PASSWORD: openathlete_dev_password
+      # Only reachable from the other containers. Instances created before
+      # October 2026 used this default: keep it, or change it in the database
+      # first.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-openathlete_dev_password}
       POSTGRES_DB: openathlete
-    ports:
-      # Bound to localhost: never expose the database on a public interface
-      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -17,16 +38,12 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
     networks:
       - openathlete-network
 
-  # Redis
   redis:
     image: redis:7-alpine
-    container_name: openathlete-redis
-    ports:
-      # Bound to localhost: Redis has no password in this setup
-      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -34,57 +51,63 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    restart: unless-stopped
     networks:
       - openathlete-network
 
-  # API Service
+  # API, with the background jobs (device sync, processing)
   api:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-    container_name: openathlete-api
+    image: *api-image
     ports:
-      - "${API_PORT:-3000}:3000"
+      # Only for a reverse proxy on this host; browsers use APP_URL/api.
+      # API_PORT=3000 publishes it on every interface (former setups).
+      - "${API_PORT:-127.0.0.1:3000}:3000"
     environment:
-      # Core configuration
-      ENV: ${ENV:-development}
+      ENV: ${ENV:-production}
+      NODE_ENV: production
+      PORT: 3000
+      # This fork's optional modes (see apps/api/.env.example)
       SELF_HOSTED: ${SELF_HOSTED:-false}
       ENABLE_MANUAL_FIT_IMPORT: ${ENABLE_MANUAL_FIT_IMPORT:-false}
       ENABLE_MANUAL_GARMIN_SYNC: ${ENABLE_MANUAL_GARMIN_SYNC:-false}
-      NODE_ENV: ${NODE_ENV:-production}
-      PORT: ${PORT:-3000}
-      
-      # Database
-      DATABASE_URL: postgresql://openathlete:openathlete_dev_password@postgres:5432/openathlete
-      
-      # Redis - use Docker service name for internal communication
+
+      DATABASE_URL: postgresql://openathlete:${POSTGRES_PASSWORD:-openathlete_dev_password}@postgres:5432/openathlete
       REDIS_URL: redis://redis:6379/0
-      
-      # Security
+
       # Required, set them in .env (see .env.example)
       HASH_PEPPER: ${HASH_PEPPER:?Set HASH_PEPPER in .env, see .env.example}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env, see .env.example}
-      
-      # Application URLs
-      # Public URL of the web app, used in email links (reset, invitations)
+
+      # Where users open OpenAthlete: email links, allowed origins and device
+      # callback URLs follow it
       APP_URL: ${APP_URL:-http://localhost}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost,http://localhost:80,http://localhost:5173}
-      
-      # Strava OAuth (optional)
+      FRONTEND_URL: ${APP_URL:-http://localhost}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      TRUST_PROXY: ${TRUST_PROXY:-}
+
+      # Device integrations (optional). Callback and webhook URLs default to
+      # APP_URL/auth/callback/<provider> and APP_URL/api/provider/<provider>/webhook
       STRAVA_CLIENT_ID: ${STRAVA_CLIENT_ID:-}
       STRAVA_CLIENT_SECRET: ${STRAVA_CLIENT_SECRET:-}
-      STRAVA_REDIRECT_URI: ${STRAVA_REDIRECT_URI:-http://localhost:3000/api/auth/strava/callback}
+      STRAVA_REDIRECT_URI: ${STRAVA_REDIRECT_URI:-}
       STRAVA_WEBHOOK_TOKEN: ${STRAVA_WEBHOOK_TOKEN:-}
-
-      # Polar OAuth (optional)
       POLAR_CLIENT_ID: ${POLAR_CLIENT_ID:-}
       POLAR_CLIENT_SECRET: ${POLAR_CLIENT_SECRET:-}
-      POLAR_REDIRECT_URI: ${POLAR_REDIRECT_URI:-http://localhost:3000/api/auth/polar/callback}
-      POLAR_WEBHOOK_URL: ${POLAR_WEBHOOK_URL:-http://localhost:3000/api/webhooks/polar}
+      POLAR_REDIRECT_URI: ${POLAR_REDIRECT_URI:-}
+      POLAR_WEBHOOK_URL: ${POLAR_WEBHOOK_URL:-}
       POLAR_WEBHOOK_SECRET_KEY: ${POLAR_WEBHOOK_SECRET_KEY:-}
+      GARMIN_CLIENT_ID: ${GARMIN_CLIENT_ID:-}
+      GARMIN_CLIENT_SECRET: ${GARMIN_CLIENT_SECRET:-}
+      GARMIN_REDIRECT_URI: ${GARMIN_REDIRECT_URI:-}
+      SUUNTO_CLIENT_ID: ${SUUNTO_CLIENT_ID:-}
+      SUUNTO_CLIENT_SECRET: ${SUUNTO_CLIENT_SECRET:-}
+      SUUNTO_REDIRECT_URI: ${SUUNTO_REDIRECT_URI:-}
+      SUUNTO_SUBSCRIPTION_KEY: ${SUUNTO_SUBSCRIPTION_KEY:-}
+      COROS_CLIENT_ID: ${COROS_CLIENT_ID:-}
+      COROS_CLIENT_SECRET: ${COROS_CLIENT_SECRET:-}
+      COROS_REDIRECT_URI: ${COROS_REDIRECT_URI:-}
 
-      # Email service (Brevo, optional)
+      # Email (Brevo, optional)
       BREVO_API_KEY: ${BREVO_API_KEY:-}
       BREVO_FROM_EMAIL: ${BREVO_FROM_EMAIL:-}
 
@@ -101,67 +124,80 @@ services:
       AI_HOSTED_ACCESS: ${AI_HOSTED_ACCESS:-}
       AI_HOSTED_MONTHLY_BUDGET_USD: ${AI_HOSTED_MONTHLY_BUDGET_USD:-}
       AI_ALLOW_CUSTOM_ENDPOINTS: ${AI_ALLOW_CUSTOM_ENDPOINTS:-}
-      
-      # Optional OAuth providers
-      GARMIN_CLIENT_ID: ${GARMIN_CLIENT_ID:-}
-      GARMIN_CLIENT_SECRET: ${GARMIN_CLIENT_SECRET:-}
-      GARMIN_REDIRECT_URI: ${GARMIN_REDIRECT_URI:-}
-      SUUNTO_CLIENT_ID: ${SUUNTO_CLIENT_ID:-}
-      SUUNTO_CLIENT_SECRET: ${SUUNTO_CLIENT_SECRET:-}
-      SUUNTO_REDIRECT_URI: ${SUUNTO_REDIRECT_URI:-}
-      SUUNTO_SUBSCRIPTION_KEY: ${SUUNTO_SUBSCRIPTION_KEY:-}
-      COROS_CLIENT_ID: ${COROS_CLIENT_ID:-}
-      COROS_CLIENT_SECRET: ${COROS_CLIENT_SECRET:-}
-      COROS_REDIRECT_URI: ${COROS_REDIRECT_URI:-}
-      
-      # Stripe (optional)
+
+      # Billing (Stripe, not needed for self-hosting)
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
       STRIPE_PRICE_SUPPORTER_MONTHLY: ${STRIPE_PRICE_SUPPORTER_MONTHLY:-}
       STRIPE_PRICE_SUPPORTER_YEARLY: ${STRIPE_PRICE_SUPPORTER_YEARLY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
-      
-      # Firebase (optional)
+
+      # Push notifications (optional)
       FIREBASE_FUNCTIONS_URL: ${FIREBASE_FUNCTIONS_URL:-}
-      
+
       # Background jobs (device sync needs import and processing)
       ENABLE_ACTIVITY_IMPORT: ${ENABLE_ACTIVITY_IMPORT:-true}
       ENABLE_ACTIVITY_PROCESSING: ${ENABLE_ACTIVITY_PROCESSING:-true}
       ENABLE_TRAINING_LOAD_ESTIMATION: ${ENABLE_TRAINING_LOAD_ESTIMATION:-false}
-      
-      # Monitoring (optional)
+
+      # Error monitoring (optional)
       BETTER_STACK_DSN: ${BETTER_STACK_DSN:-}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    restart: unless-stopped
     networks:
       - openathlete-network
-    restart: unless-stopped
 
-  # Web Frontend
+  # Web app, forwarding /api and /socket.io to the API
   web:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
-    container_name: openathlete-web
+    image: ghcr.io/openathleteorg/openathlete-web:${OPENATHLETE_VERSION:-1}
     environment:
-      # Public URL browsers use to reach the API, injected at startup
-      API_PUBLIC_URL: ${API_PUBLIC_URL:-http://localhost:3000}
+      # Leave empty: the app calls the API through /api. Only set it to serve
+      # the API from another address.
+      API_PUBLIC_URL: ${API_PUBLIC_URL:-}
     ports:
       - "${WEB_PORT:-80}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     depends_on:
-      - api
+      api:
+        condition: service_healthy
+    restart: unless-stopped
     networks:
       - openathlete-network
+
+  # HTTPS with automatic certificates (COMPOSE_PROFILES=https and DOMAIN).
+  # Then set WEB_PORT=127.0.0.1:8080 so the web container leaves ports 80
+  # and 443 to Caddy.
+  caddy:
+    image: caddy:2-alpine
+    profiles: [https]
+    command: caddy reverse-proxy --from ${DOMAIN:-localhost} --to web:80
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
     restart: unless-stopped
+    networks:
+      - openathlete-network
 
 volumes:
   postgres_data:
   redis_data:
+  caddy_data:
+  caddy_config:
 
 networks:
   openathlete-network:
     driver: bridge
-
