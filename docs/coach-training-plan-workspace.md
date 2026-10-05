@@ -76,16 +76,20 @@ missing authorization returns 403.
 
 ## AI scope
 
-This change preserves the existing adaptation behavior. The selected plan and
-athlete are preselected in the adaptation form. Existing context already includes
-unresolved athlete injuries, the plan objective and calendar events in its queried
-window. Unresolved injuries prevent increases and added sessions under existing
-validation rules.
+**Create plan with AI** produces a reviewable draft from the goal race,
+availability, methodology and stored athlete context. Generation runs in the
+existing job queue; review and import remain explicit coach actions.
 
-Target/preparation priority from the new relation is **not yet added explicitly to
-the AI context**. This feature does not generate a complete plan from races, add
-medical advice, or resolve earlier provider/output-format failures. It makes the
-plan structure and relevant athlete records editable for the coach.
+The assistant and adaptation can also work from the calendar without a plan.
+Selected athlete/plan context carries over between these tools. See the
+[AI planning workflow](ai-planning-workflow.md) for the shared load/recovery
+summary, next-session/week handoff, review permissions and evidence limitations.
+
+Plan generation includes upcoming race priority where recorded. Adaptation
+includes the selected plan goal, surrounding calendar, unresolved injuries and
+existing workouts. Unresolved injuries block increases and added sessions under
+its existing validation rules. None of these checks establishes medical safety
+or guarantees that a live provider will return a valid proposal.
 
 ## Migration and checks
 

@@ -1,5 +1,6 @@
 import { CoachAssistantAPI } from '@/api/coach-assistant/coach-assistant.api';
 import { AdaptationContextResponse } from '@/api/plan-adaptation/plan-adaptation.api';
+import { PlanningEvidenceSummary } from '@/components/ai-plan/planning-evidence';
 import {
   Field,
   dateInput,
@@ -20,6 +21,11 @@ import {
   CoachAssistantContextRequest,
 } from '@openathlete/shared';
 
+import {
+  type AdaptationHandoff,
+  adaptationHandoff,
+} from './adaptation-handoff';
+
 export function CoachAssistant({
   athleteId,
   planId,
@@ -28,7 +34,7 @@ export function CoachAssistant({
   athleteId: number;
   /** Without a plan, the assistant works from the athlete's calendar. */
   planId?: number;
-  onAdapt: () => void;
+  onAdapt: (handoff: AdaptationHandoff) => void;
 }) {
   const [weekStart, setWeekStart] = useState(dateInput());
   const [currentState, setCurrentState] = useState('');
@@ -145,6 +151,7 @@ export function CoachAssistant({
       >
         {m.adaptation_context()}
       </Button>
+      <PlanningEvidenceSummary evidence={context?.data.evidence} />
       {context && (
         <details className="min-w-0 rounded-lg border p-3">
           <summary className="cursor-pointer text-sm">
@@ -235,9 +242,32 @@ export function CoachAssistant({
         <p className="text-sm text-muted-foreground">
           {m.assistant_review_help()}
         </p>
-        <Button variant="outline" onClick={onAdapt}>
-          {m.workspace_adapt()}
-        </Button>
+        <p className="text-sm text-muted-foreground">
+          {m.planning_handoff_help()}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {(['NEXT_SESSION', 'WEEK'] as const).map((scope) => (
+            <Button
+              key={scope}
+              variant="outline"
+              disabled={busy || !weekStart}
+              onClick={() =>
+                onAdapt(
+                  adaptationHandoff(
+                    request,
+                    scope,
+                    history.at(-1)?.question ?? '',
+                  ),
+                )
+              }
+            >
+              <SparklesIcon className="size-4" aria-hidden="true" />
+              {scope === 'NEXT_SESSION'
+                ? m.planning_handoff_next()
+                : m.planning_handoff_week()}
+            </Button>
+          ))}
+        </div>
       </div>
     </section>
   );

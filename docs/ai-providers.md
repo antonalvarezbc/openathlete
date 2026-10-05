@@ -6,37 +6,35 @@ The API runs its AI agents through the Mastra model router, so every model is a
 `apps/api/.env` (or the Compose environment); restart the API after changing
 them. Personal keys and models are set by each user in **Settings → AI**.
 
-## Two kinds of AI features
+## Model and key resolution
 
-**AI settings features** (generate and modify sessions, post-activity
-questions, feedback extraction, training load estimation) run on the first
-model available for the user:
+User-triggered features, including this fork's plan generation, adaptation,
+coach assistant, activity analysis and written workout conversion, run through
+`AiModelResolverService` and `AiService`:
 
-1. A key the user added in **Settings → AI**, with the model they chose for the
-   feature (or their default model).
-2. For work done for an athlete in the background (questions, extraction,
-   load), the athlete's key, then their coaches' keys.
-3. The instance keys, when `AI_HOSTED_ACCESS` allows it: `subscribers` by default
-   with Stripe, `everyone` without it, or `none`.
+1. The requesting user's own encrypted key and per-feature model (or DEFAULT).
+2. Instance keys only when `AI_HOSTED_ACCESS` permits and the user's monthly
+   hosted allowance is available. `AI_HOSTED_MONTHLY_TOKENS` is optional; an
+   unset value does not cap hosted usage.
 
-Instance models come from `AI_MODEL_<FEATURE>` (for example
-`AI_MODEL_EVENT_GENERATION` or `AI_MODEL_FEEDBACK_EXTRACTION`), else
-`AI_MODEL_DEFAULT`, else `AI_PROVIDER=anthropic` (`anthropic/claude-opus-5`),
-else the built-in defaults. Users without any model available get
-`AI_NOT_CONFIGURED`; rejected keys and exhausted quotas are reported with their
-own error codes.
+Background athlete questions, feedback extraction and load estimation use the
+athlete's own access or permitted instance access, **never a coach's personal
+key**. Coach–athlete memory consolidation resolves the coach's AI_MEMORY model;
+without access, the notes wait. `ai_usage` records model calls through AiService.
 
-**Features of this fork that run on the instance keys only**: the coach
-assistant, plan adaptation, activity analysis, AI memory consolidation and the
-[written workout converter](written-workout-conversion.md). They use
-`AI_MODEL_EVENT_MODIFICATION` (assistant, adaptation, analysis),
-`AI_MODEL_MEMORY` and `AI_MODEL_WORKOUT_PARSER`, else `AI_MODEL_DEFAULT` or
-`AI_PROVIDER=anthropic`. The converter keeps its small default
-(`openai/gpt-5-mini`, or `anthropic/claude-haiku-4-5` with
-`AI_PROVIDER=anthropic`) unless `AI_MODEL_WORKOUT_PARSER` is set. In the web
-app they are available when the user may use the instance keys.
+The coach assistant shares PLAN_ADAPTATION settings. Hosted model overrides are
+`AI_MODEL_PLAN_GENERATION`, `AI_MODEL_PLAN_ADAPTATION` and
+`AI_MODEL_ACTIVITY_ANALYSIS`, each falling back to `AI_MODEL_EVENT_MODIFICATION`.
+Other main-task fallbacks are `AI_MODEL_DEFAULT`, `AI_PROVIDER=anthropic`, then
+built-in defaults. `WORKOUT_PARSER` and `AI_MEMORY` have their own overrides and
+small-model defaults; they do not inherit `AI_MODEL_DEFAULT`.
 
-See [model defaults](../apps/api/src/common/constants/ai-models.constant.ts).
+Users without access receive `AI_NOT_CONFIGURED`, or
+`AI_HOSTED_QUOTA_EXCEEDED` when only the hosted allowance is exhausted.
+Rejected provider keys and exhausted provider credit have separate error codes.
+Configure personal access in **Settings → AI**. See
+[model defaults](../apps/api/src/common/constants/ai-models.constant.ts) for the
+exact environment precedence and repository model identifiers.
 
 ## Transcription
 

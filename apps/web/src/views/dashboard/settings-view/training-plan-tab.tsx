@@ -9,6 +9,7 @@ import {
 } from '@/api/plan-workspace/plan-workspace.api';
 import { AiPlanDialog } from '@/components/ai-plan/ai-plan-dialog';
 import { AiSetupDialog } from '@/components/ai-settings';
+import type { AdaptationHandoff } from '@/components/coach-assistant/adaptation-handoff';
 import { CoachAssistant } from '@/components/coach-assistant/coach-assistant';
 import { AthleteInjuries } from '@/components/plan-workspace/athlete-injuries';
 import { CalendarWeeks } from '@/components/plan-workspace/calendar-weeks';
@@ -44,6 +45,10 @@ export function TrainingPlanTab() {
   const [params, setParams] = useSearchParams();
   const activeTab = params.get('tab') === 'assistant' ? 'assistant' : 'plan';
   const [adaptOpen, setAdaptOpen] = useState(false);
+  const [handoff, setHandoff] = useState<{
+    value: AdaptationHandoff;
+    revision: number;
+  } | null>(null);
   const roles = useUserRoles();
   const { data: own } = useGetMyAthleteQuery();
   const { data: coached = [], isError: athletesError } =
@@ -70,6 +75,11 @@ export function TrainingPlanTab() {
   const plan = plans.data?.find((p) => p.trainingPlanId === choice);
   // A plan that no longer exists falls back to the calendar.
   const calendarMode = !!athleteId && !!plans.data && choice !== null && !plan;
+  const matchingHandoff =
+    handoff?.value.athleteId === athleteId &&
+    handoff.value.planId === plan?.trainingPlanId
+      ? handoff
+      : null;
   const editable = plan && ['DRAFT', 'ACTIVE'].includes(plan.status);
   const calendarPath =
     athleteId === own?.athleteId
@@ -77,6 +87,7 @@ export function TrainingPlanTab() {
       : `/dashboard/calendar/${athleteId}`;
   const change = (athlete: number, next?: PlanChoice) => {
     setEditor(null);
+    setHandoff(null);
     setParams((previous) => {
       previous.set('athleteId', String(athlete));
       if (next !== undefined) previous.set('planId', String(next));
@@ -290,7 +301,8 @@ export function TrainingPlanTab() {
               </summary>
               <div className="mt-4">
                 <PlanAdaptationSection
-                  key={`${athleteId}-${plan?.trainingPlanId ?? 'calendar'}`}
+                  handoff={matchingHandoff?.value}
+                  key={`${athleteId}-${plan?.trainingPlanId ?? 'calendar'}-${matchingHandoff?.revision ?? 0}`}
                   selection={{
                     athleteId,
                     planId: plan?.trainingPlanId,
@@ -324,7 +336,11 @@ export function TrainingPlanTab() {
               key={`${athleteId}-${plan?.trainingPlanId ?? 'calendar'}-${getLocale()}`}
               athleteId={athleteId}
               planId={plan?.trainingPlanId}
-              onAdapt={() => {
+              onAdapt={(value) => {
+                setHandoff((previous) => ({
+                  value,
+                  revision: (previous?.revision ?? 0) + 1,
+                }));
                 setAdaptOpen(true);
                 setParams((previous) => {
                   previous.set('tab', 'plan');
