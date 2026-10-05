@@ -25,8 +25,34 @@ export interface AiMemoryDto {
   summary: string;
   summaryUpdatedAt: string | null;
   notes: {
+    id: number;
     source: AiMemorySource;
     content: string;
     createdAt: string;
   }[];
 }
+
+/** Optimistic edit: original note text and summary version prevent lost updates. */
+export const editAiMemorySchema = z
+  .object({
+    summary: z.string().trim().max(2000),
+    summaryUpdatedAt: z.string().datetime().nullable(),
+    notes: z
+      .array(
+        z
+          .object({
+            id: z.number().int().positive(),
+            originalContent: z.string().max(300),
+            content: z.string().trim().max(300),
+          })
+          .strict(),
+      )
+      .max(50),
+  })
+  .strict()
+  .refine(
+    (value) =>
+      new Set(value.notes.map((note) => note.id)).size === value.notes.length,
+    { message: 'Duplicate memory notes', path: ['notes'] },
+  );
+export type EditAiMemory = z.infer<typeof editAiMemorySchema>;

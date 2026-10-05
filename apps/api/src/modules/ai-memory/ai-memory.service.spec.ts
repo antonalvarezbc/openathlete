@@ -1,4 +1,6 @@
-import { AiTask } from '@openathlete/shared';
+import { ConflictException, NotFoundException } from '@nestjs/common';
+
+import { AiTask, editAiMemorySchema } from '@openathlete/shared';
 
 import { aiMemoryConsolidationAgent } from '../../mastra/agents/ai-memory-consolidation.agent';
 import { aiResolverStandIn, aiServiceStandIn } from '../ai/ai.testing';
@@ -48,7 +50,8 @@ function setup(mode: 'OFF' | 'COMPACT' | 'EXTENDED' = 'COMPACT') {
       findMany: jest.fn().mockResolvedValue([]),
       create: jest.fn(),
       count: jest.fn().mockResolvedValue(1),
-      deleteMany: jest.fn(),
+      deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     eventActivity: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: jest.fn((arg: unknown) =>
@@ -211,6 +214,109 @@ describe('AiMemoryService', () => {
     expect(generate).not.toHaveBeenCalled();
     expect(db.coachAthlete.updateMany).not.toHaveBeenCalled();
     expect(db.aiMemoryNote.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('edits only the linked coach memory and preserves unseen notes', async () => {
+    const { service, db } = setup();
+    await service.edit(1, 7, {
+      summary: 'Coach correction',
+      summaryUpdatedAt: null,
+      notes: [
+        {
+          id: 11,
+          originalContent: 'Old conclusion',
+          content: 'Corrected conclusion',
+        },
+        { id: 12, originalContent: 'Remove this', content: '' },
+      ],
+    });
+    expect(db.coachAthlete.findFirst).toHaveBeenCalledWith({
+      where: { userId: 1, athleteId: 7 },
+      orderBy: { coachAthleteId: 'asc' },
+    });
+    expect(db.coachAthlete.updateMany).toHaveBeenCalledWith({
+      where: { coachAthleteId: 5, aiMemorySummaryUpdatedAt: null },
+      data: {
+        aiMemorySummary: 'Coach correction',
+        aiMemorySummaryUpdatedAt: expect.any(Date),
+      },
+    });
+    expect(db.aiMemoryNote.updateMany).toHaveBeenCalledWith({
+      where: {
+        aiMemoryNoteId: 11,
+        coachAthleteId: 5,
+        content: 'Old conclusion',
+      },
+      data: { content: 'Corrected conclusion' },
+    });
+    expect(db.aiMemoryNote.deleteMany).toHaveBeenCalledWith({
+      where: { aiMemoryNoteId: 12, coachAthleteId: 5, content: 'Remove this' },
+    });
+    expect(generate).not.toHaveBeenCalled();
+  });
+
+  it('rejects edits from an unlinked coach before writing', async () => {
+    const { service, db } = setup();
+    db.coachAthlete.findFirst.mockResolvedValue(null);
+    await expect(
+      service.edit(2, 7, {
+        summary: '',
+        summaryUpdatedAt: null,
+        notes: [],
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects a stale summary before modifying any notes', async () => {
+    const { service, db } = setup();
+    db.coachAthlete.updateMany.mockResolvedValue({ count: 0 });
+    await expect(
+      service.edit(1, 7, {
+        summary: 'stale',
+        summaryUpdatedAt: null,
+        notes: [{ id: 11, originalContent: 'old', content: 'new' }],
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(db.aiMemoryNote.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('aborts the transaction for a foreign, consolidated or changed note', async () => {
+    const { service, db } = setup();
+    db.aiMemoryNote.updateMany.mockResolvedValue({ count: 0 });
+    await expect(
+      service.edit(1, 7, {
+        summary: 'correction',
+        summaryUpdatedAt: null,
+        notes: [{ id: 99, originalContent: 'old', content: 'new' }],
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(db.$transaction).toHaveBeenCalledWith(expect.any(Function));
+    expect(
+      db.aiMemoryNote.updateMany.mock.calls[0][0].where.coachAthleteId,
+    ).toBe(5);
+  });
+
+  it('validates edit lengths and refuses duplicate note IDs or unknown fields', () => {
+    const valid = { summary: '', summaryUpdatedAt: null, notes: [] };
+    expect(editAiMemorySchema.safeParse(valid).success).toBe(true);
+    expect(
+      editAiMemorySchema.safeParse({ ...valid, summary: 'x'.repeat(2001) })
+        .success,
+    ).toBe(false);
+    expect(
+      editAiMemorySchema.safeParse({ ...valid, coachUserId: 2 }).success,
+    ).toBe(false);
+    const note = { id: 1, originalContent: 'old', content: 'new' };
+    expect(
+      editAiMemorySchema.safeParse({ ...valid, notes: [note, note] }).success,
+    ).toBe(false);
+    expect(
+      editAiMemorySchema.safeParse({
+        ...valid,
+        notes: [{ ...note, content: 'x'.repeat(301) }],
+      }).success,
+    ).toBe(false);
   });
 
   it('clears notes and summary', async () => {

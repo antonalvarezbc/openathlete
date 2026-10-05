@@ -1,7 +1,7 @@
 import client, { routes } from '@/utils/axios';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { AiMemoryDto, AiMemoryMode } from '@openathlete/shared';
+import { AiMemoryDto, AiMemoryMode, EditAiMemory } from '@openathlete/shared';
 
 const aiMemoryKey = (athleteId: number) => ['ai-memory', athleteId];
 
@@ -34,6 +34,22 @@ export function useClearAiMemoryMutation(athleteId: number) {
     mutationFn: async () =>
       (await client.delete<AiMemoryDto>(routes.aiFeatures.memory(athleteId)))
         .data,
+    onSuccess: (data) => queryClient.setQueryData(aiMemoryKey(athleteId), data),
+  });
+}
+
+export function useEditAiMemoryMutation(athleteId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: EditAiMemory) =>
+      (
+        await client.patch<AiMemoryDto>(
+          routes.aiFeatures.memory(athleteId) + '/content',
+          input,
+        )
+      ).data,
+    onError: () =>
+      queryClient.invalidateQueries({ queryKey: aiMemoryKey(athleteId) }),
     onSuccess: (data) => queryClient.setQueryData(aiMemoryKey(athleteId), data),
   });
 }

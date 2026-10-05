@@ -91,3 +91,20 @@ db:deploy` (or `db:migrate` in development).
 - [Consolidation agent](../apps/api/src/mastra/agents/ai-memory-consolidation.agent.ts) and [shared agent rule](../apps/api/src/mastra/agents/ai-memory-instructions.ts)
 - [Memory dialog](../apps/web/src/components/ai-memory-settings.tsx), opened from the [athletes list](../apps/web/src/views/dashboard/settings-view/athletes-tab.tsx)
 - [Schema](../libs/database/prisma/schema/ai_memory.prisma)
+
+## Editing memory
+
+In the coach's **Athletes → AI memory** dialog, choose **Edit memory**.
+The large editor contains the summary (up to 2,000 characters) and the displayed
+notes (300 characters each). An empty note is deleted on saving. Cancel leaves
+stored memory unchanged. Compact mode still sends only the first 700 characters
+of the summary; editing does not change the memory mode.
+
+Edits are private to the coach–athlete relationship. Saving uses
+`PATCH /agent/ai/memory/:athleteId/content` and a transaction, checks the summary
+revision and each note's original text, and preserves newly generated notes
+that were not in the editor. A concurrent edit or consolidation returns a
+conflict and preserves the local draft for copying before reopening. Saving
+invalidates an older consolidation already in progress. It does not call an LLM,
+change athlete feedback, or modify calendar entries. Future AI work can still
+add notes and consolidate the summary.

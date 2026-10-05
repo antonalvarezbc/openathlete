@@ -509,7 +509,7 @@ describe('AiPlanDialog', () => {
     expect(status).not.toContain('json_plan_race_unlinked {"name":"City 10K"}');
   });
 
-  it('shows a progress bar and the estimated time while writing', async () => {
+  it('shows a progress bar without a timer while writing', async () => {
     api.start.mockResolvedValue({ jobId: 'job-1', state: 'queued' });
     api.status.mockResolvedValue({
       jobId: 'job-1',
@@ -525,8 +525,8 @@ describe('AiPlanDialog', () => {
     // Being written, but never complete before the draft arrives.
     expect(Number(bar.getAttribute('aria-valuenow'))).toBeGreaterThanOrEqual(5);
     expect(Number(bar.getAttribute('aria-valuenow'))).toBeLessThan(90);
-    // Two weeks of three sessions: well under a minute, shown as one.
-    expect(dialog().textContent).toContain('ai_plan_estimate {"minutes":"1"}');
+    expect(dialog().textContent).not.toContain('ai_plan_elapsed');
+    expect(dialog().textContent).not.toContain('ai_plan_estimate');
   });
 
   it('imports the reviewed draft as DRAFT and selects it', async () => {

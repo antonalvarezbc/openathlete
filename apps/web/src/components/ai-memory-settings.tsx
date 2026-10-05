@@ -1,11 +1,21 @@
 import {
   useAiMemoryQuery,
   useClearAiMemoryMutation,
+  useEditAiMemoryMutation,
   useUpdateAiMemoryModeMutation,
 } from '@/api/ai-memory/ai-memory.hooks';
 import { ConfirmAction } from '@/components/confirm-action/confirm-action';
 import { LoadingScreen } from '@/components/loading-screen';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -15,10 +25,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { m } from '@/paraglide/messages';
+import { isAxiosError } from 'axios';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { AiMemoryMode, AiMemorySource } from '@openathlete/shared';
+import {
+  AiMemoryMode,
+  AiMemorySource,
+  EditAiMemory,
+} from '@openathlete/shared';
 
 interface P {
   athleteId: number;
@@ -50,6 +65,8 @@ const sourceLabels: Record<AiMemorySource, () => string> = {
  */
 export function AiMemorySettings({ athleteId }: P) {
   const { data: memory, isLoading } = useAiMemoryQuery(athleteId);
+  const edit = useEditAiMemoryMutation(athleteId);
+  const [draft, setDraft] = useState<EditAiMemory | null>(null);
   const updateMode = useUpdateAiMemoryModeMutation(athleteId);
   const clear = useClearAiMemoryMutation(athleteId);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -97,14 +114,34 @@ export function AiMemorySettings({ athleteId }: P) {
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-2">
             <Label>{m.ai_memory_contents()}</Label>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isEmpty || clear.isPending}
-              onClick={() => setConfirmClear(true)}
-            >
-              {m.ai_memory_clear()}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={clear.isPending}
+                onClick={() =>
+                  setDraft({
+                    summary: memory.summary,
+                    summaryUpdatedAt: memory.summaryUpdatedAt,
+                    notes: memory.notes.map((note) => ({
+                      id: note.id,
+                      originalContent: note.content,
+                      content: note.content,
+                    })),
+                  })
+                }
+              >
+                {m.ai_memory_edit()}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isEmpty || clear.isPending}
+                onClick={() => setConfirmClear(true)}
+              >
+                {m.ai_memory_clear()}
+              </Button>
+            </div>
           </div>
           {isEmpty ? (
             <p className="text-sm text-muted-foreground">
@@ -141,6 +178,100 @@ export function AiMemorySettings({ athleteId }: P) {
           </p>
         </div>
       </div>
+
+      <Dialog
+        open={draft !== null}
+        onOpenChange={(open) => {
+          if (!open && !edit.isPending) setDraft(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-4xl max-h-[90dvh]">
+          <DialogHeader>
+            <DialogTitle>{m.ai_memory_edit()}</DialogTitle>
+            <DialogDescription>{m.ai_memory_edit_help()}</DialogDescription>
+          </DialogHeader>
+          {draft && (
+            <form
+              className="space-y-5 min-w-0"
+              onSubmit={(event) => {
+                event.preventDefault();
+                edit.mutate(draft, {
+                  onSuccess: () => {
+                    setDraft(null);
+                    toast.success(m.ai_memory_saved());
+                  },
+                  onError: (error) =>
+                    toast.error(
+                      isAxiosError(error) && error.response?.status === 409
+                        ? m.ai_memory_edit_conflict()
+                        : m.ai_memory_update_error(),
+                    ),
+                });
+              }}
+            >
+              <div className="space-y-2">
+                <Label htmlFor="ai-memory-summary">
+                  {m.ai_memory_summary()}
+                </Label>
+                <Textarea
+                  id="ai-memory-summary"
+                  className="min-h-64 text-base"
+                  value={draft.summary}
+                  maxLength={2000}
+                  disabled={edit.isPending}
+                  onChange={(event) =>
+                    setDraft({ ...draft, summary: event.target.value })
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  {m.ai_memory_edit_limits()}
+                </p>
+              </div>
+              {draft.notes.map((note, index) => (
+                <div key={note.id} className="space-y-2">
+                  <Label htmlFor={`ai-memory-note-${note.id}`}>
+                    {m.ai_memory_note()} {index + 1}
+                  </Label>
+                  <Textarea
+                    id={`ai-memory-note-${note.id}`}
+                    className="min-h-28 text-base"
+                    value={note.content}
+                    maxLength={300}
+                    disabled={edit.isPending}
+                    onChange={(event) =>
+                      setDraft({
+                        ...draft,
+                        notes: draft.notes.map((item) =>
+                          item.id === note.id
+                            ? { ...item, content: event.target.value }
+                            : item,
+                        ),
+                      })
+                    }
+                  />
+                </div>
+              ))}
+              <DialogFooter className="sticky bottom-0 bg-background py-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={edit.isPending}
+                  onClick={() => setDraft(null)}
+                >
+                  {m.cancel()}
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={edit.isPending}
+                  isLoading={edit.isPending}
+                >
+                  {m.save()}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <ConfirmAction
         open={confirmClear}
