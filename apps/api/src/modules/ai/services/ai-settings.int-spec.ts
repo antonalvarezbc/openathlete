@@ -11,6 +11,7 @@ import {
   AiSettingsService,
   MAX_AI_CREDENTIALS_PER_USER,
 } from './ai-settings.service';
+import { AiUsageService } from './ai-usage.service';
 import { AiService } from './ai.service';
 
 jest.mock('@mastra/core/agent', () => ({ Agent: jest.fn() }));
@@ -64,6 +65,7 @@ describe('AiSettingsService (PostgreSQL)', () => {
       policy as AiPolicyService,
       catalog,
       { hasAIFeaturesAccess: () => Promise.resolve(false) } as never,
+      new AiUsageService(prisma, policy as AiPolicyService),
       cipher,
       {},
     );

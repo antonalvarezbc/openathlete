@@ -26,6 +26,8 @@ export function aiErrorMessage(errorOrCode: unknown): string | null {
       return m.ai_error_credential_rejected();
     case AiErrorCode.QUOTA_EXCEEDED:
       return m.ai_error_quota_exceeded();
+    case AiErrorCode.HOSTED_QUOTA_EXCEEDED:
+      return m.ai_error_hosted_quota_exceeded();
     case AiErrorCode.PROVIDER_ERROR:
       return m.ai_error_provider();
     default:

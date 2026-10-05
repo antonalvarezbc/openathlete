@@ -19,6 +19,7 @@ import {
   MODEL_REGISTRY,
 } from './services/ai-provider-catalog.service';
 import { AiSettingsService } from './services/ai-settings.service';
+import { AiUsageService } from './services/ai-usage.service';
 import { AiService } from './services/ai.service';
 
 @Module({
@@ -31,6 +32,7 @@ import { AiService } from './services/ai.service';
     AiModelResolverService,
     AiService,
     AiSettingsService,
+    AiUsageService,
     { provide: MODEL_REGISTRY, useValue: mastraModelRegistry },
     // Instance keys of any provider (ANTHROPIC_API_KEY...) are read as-is
     { provide: AI_ENV, useValue: process.env },

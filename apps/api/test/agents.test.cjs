@@ -34,6 +34,7 @@ const { trainingEventSchema } = require(
 
 const originalFetch = globalThis.fetch;
 let requests = [];
+let usageRecords = [];
 
 const generatedEvent = {
   type: 'TRAINING',
@@ -132,7 +133,10 @@ function model(config, source = 'own_key') {
   };
 }
 
-const ai = new AiService({ aiCredential: { update: async () => undefined } });
+const ai = new AiService(
+  { aiCredential: { update: async () => undefined } },
+  { record: async (owner, usage) => usageRecords.push({ owner, usage }) },
+);
 
 before(() => {
   // Mastra warns about the recursive repeat block schema
@@ -143,6 +147,7 @@ before(() => {
 afterEach(() => {
   globalThis.fetch = originalFetch;
   requests = [];
+  usageRecords = [];
 });
 
 test("OpenAI runs on the user's key, without strict mode", async () => {
@@ -180,6 +185,25 @@ test("Anthropic runs on the user's key", async () => {
   assert.equal(request.headers.get('x-api-key'), 'sk-ant-user');
   assert.equal(request.body.model, 'claude-sonnet-4-5');
   assert.equal(event.workout.steps[0].durationValue, 3600);
+});
+
+test('counts the tokens each provider reports', async () => {
+  providersAnswer('Nice session!');
+
+  for (const config of [
+    { id: 'openai/gpt-5.1', apiKey: 'sk-user-openai' },
+    { id: 'anthropic/claude-sonnet-4-5', apiKey: 'sk-ant-user' },
+  ]) {
+    await ai.generateText(extractRpeAgent, model(config, 'hosted'), 'Hi');
+  }
+
+  assert.equal(usageRecords.length, 2);
+  for (const { owner, usage } of usageRecords) {
+    assert.equal(owner.source, 'hosted');
+    assert.equal(owner.userId, 1);
+    assert.equal(usage.inputTokens, 10);
+    assert.equal(usage.outputTokens, 10);
+  }
 });
 
 test('custom OpenAI-compatible endpoints get the schema in the prompt', async () => {

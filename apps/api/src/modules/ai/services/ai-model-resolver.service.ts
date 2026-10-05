@@ -14,10 +14,14 @@ import { hostedModelFor } from 'src/common/constants/ai-models.constant';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 import { SubscriptionService } from 'src/modules/subscription/services/subscription.service';
 
-import { AiNotConfiguredException } from '../ai.errors';
+import {
+  AiHostedQuotaExceededException,
+  AiNotConfiguredException,
+} from '../ai.errors';
 import { AiCredentialCipher } from './ai-credential-cipher';
 import { AiPolicyService } from './ai-policy.service';
 import { AiProviderCatalogService } from './ai-provider-catalog.service';
+import { AiUsageService } from './ai-usage.service';
 
 export const AI_CREDENTIAL_CIPHER = Symbol('AI_CREDENTIAL_CIPHER');
 export const AI_ENV = Symbol('AI_ENV');
@@ -46,7 +50,8 @@ const NO_API_KEY = 'not-needed';
  * Decides which model and key run an AI feature:
  * 1. the model the user chose for the task (or their default), on their key;
  * 2. otherwise the instance keys, when their plan or the instance policy
- *    allows it (AI_HOSTED_ACCESS);
+ *    allows it (AI_HOSTED_ACCESS) and their monthly allowance is not used
+ *    up (AI_HOSTED_MONTHLY_TOKENS);
  * 3. for work done on an athlete's behalf (feedback questions, analysis,
  *    load estimation), the same for each of the athlete's coaches.
  */
@@ -59,6 +64,7 @@ export class AiModelResolverService {
     private readonly policy: AiPolicyService,
     private readonly catalog: AiProviderCatalogService,
     private readonly subscriptionService: SubscriptionService,
+    private readonly usage: AiUsageService,
     @Inject(AI_CREDENTIAL_CIPHER) private readonly cipher: AiCredentialCipher,
     @Inject(AI_ENV) private readonly env: Record<string, string | undefined>,
   ) {}
@@ -69,8 +75,15 @@ export class AiModelResolverService {
     userId: number,
   ): Promise<ResolvedAiModel> {
     const resolved = await this.tryResolveForUser(task, userId);
-    if (!resolved) throw new AiNotConfiguredException(task);
-    return resolved;
+    if (resolved) return resolved;
+    if (
+      this.resolveHosted(task, userId) &&
+      (await this.hasHostedAccess(userId))
+    ) {
+      // Hosted AI would run it: only the allowance is missing
+      throw new AiHostedQuotaExceededException();
+    }
+    throw new AiNotConfiguredException(task);
   }
 
   /**
@@ -92,12 +105,14 @@ export class AiModelResolverService {
     task: AiFeatureTask,
     userId: number,
   ): Promise<ResolvedAiModel | null> {
-    return (
-      (await this.resolveOwnKey(task, userId)) ??
-      ((await this.hasHostedAccess(userId))
-        ? this.resolveHosted(task, userId)
-        : null)
-    );
+    const ownKey = await this.resolveOwnKey(task, userId);
+    if (ownKey) return ownKey;
+    if (!(await this.hasHostedAccess(userId))) return null;
+    const hosted = this.resolveHosted(task, userId);
+    if (!hosted || !(await this.usage.hasHostedAllowanceLeft(userId))) {
+      return null;
+    }
+    return hosted;
   }
 
   async hasHostedAccess(userId: number): Promise<boolean> {
@@ -146,14 +161,18 @@ export class AiModelResolverService {
       (task) => this.resolveHosted(task, userId) !== null,
     );
     const allowed = await this.hasHostedAccess(userId);
+    const hostedAvailable = allowed && instanceHasKeys;
     return {
       tasks: Object.fromEntries(entries) as AiAccessDto['tasks'],
-      hostedAccess: allowed && instanceHasKeys,
+      hostedAccess: hostedAvailable,
       upgradeUnlocksHosted:
         !allowed &&
         instanceHasKeys &&
         this.policy.hostedAccess === 'subscribers',
       customEndpointsAllowed: this.policy.customEndpointsAllowed,
+      hostedQuotaExhausted:
+        hostedAvailable && !(await this.usage.hasHostedAllowanceLeft(userId)),
+      usage: await this.usage.describe(userId),
     };
   }
 

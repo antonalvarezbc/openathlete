@@ -10,6 +10,7 @@ import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
 import { AiProviderException, toAiProviderException } from '../ai.errors';
 import { AiModelConfig, ResolvedAiModel } from './ai-model-resolver.service';
+import { AiUsageService, TokenUsage } from './ai-usage.service';
 
 /** What an agent is, independently of the model it runs on. */
 export interface AgentSpec {
@@ -39,7 +40,10 @@ const callSettings = () => ({
 export class AiService {
   private readonly logger = new Logger(AiService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly usage: AiUsageService,
+  ) {}
 
   async generateText(
     agent: AgentSpec,
@@ -107,7 +111,7 @@ export class AiService {
     });
   }
 
-  private async run<T>(
+  private async run<T extends { totalUsage?: TokenUsage; usage?: TokenUsage }>(
     model: ResolvedAiModel,
     call: () => Promise<T>,
   ): Promise<T> {
@@ -118,6 +122,8 @@ export class AiService {
         `${model.task} ran on ${model.provider}/${model.modelId} (${model.source}) in ${Date.now() - started}ms`,
       );
       await this.recordCredentialUse(model, null);
+      // Across all steps; failed calls are not counted, their usage is unknown
+      await this.usage.record(model, result.totalUsage ?? result.usage);
       return result;
     } catch (error) {
       const failure = toAiProviderException(error);

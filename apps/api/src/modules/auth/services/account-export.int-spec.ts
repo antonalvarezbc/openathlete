@@ -27,6 +27,7 @@ const EXPORTED_TABLES = [
   'agent_thread',
   'ai_credential',
   'ai_model_preference',
+  'ai_usage',
   'athlete',
   'athlete_availability',
   'athlete_injury',

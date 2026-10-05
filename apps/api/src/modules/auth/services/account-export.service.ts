@@ -176,7 +176,7 @@ export class AccountExportService {
 
   /** Which providers and models are configured, never the keys. */
   private async aiSettings(userId: number) {
-    const [credentials, models] = await Promise.all([
+    const [credentials, models, usage] = await Promise.all([
       this.prisma.aiCredential.findMany({
         where: { userId },
         select: {
@@ -195,8 +195,20 @@ export class AccountExportService {
           credential: { select: { label: true } },
         },
       }),
+      this.prisma.aiUsage.findMany({
+        where: { userId },
+        select: {
+          month: true,
+          task: true,
+          source: true,
+          inputTokens: true,
+          outputTokens: true,
+          calls: true,
+        },
+        orderBy: [{ month: 'asc' }, { task: 'asc' }],
+      }),
     ]);
-    return { keys: credentials, models };
+    return { keys: credentials, models, usage };
   }
 
   private async writeEvents(

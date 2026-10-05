@@ -241,6 +241,15 @@ export const ApiEnvSchema = z
         'Who may use the instance AI keys: subscribers (paid plan with AI), everyone, or none. Default: subscribers when Stripe is configured, everyone otherwise',
       ),
 
+    AI_HOSTED_MONTHLY_TOKENS: z
+      .string()
+      .regex(/^\d+$/, 'AI_HOSTED_MONTHLY_TOKENS must be a whole number')
+      .optional()
+      .transform((val) => (val === undefined ? undefined : Number(val)))
+      .describe(
+        'Tokens (input + output) each user may use per month on the instance AI keys. Unset: no limit',
+      ),
+
     AI_ALLOW_CUSTOM_ENDPOINTS: z
       .enum(['true', 'false'])
       .optional()

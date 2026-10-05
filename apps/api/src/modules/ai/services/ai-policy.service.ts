@@ -28,6 +28,11 @@ export class AiPolicyService {
     );
   }
 
+  /** Monthly tokens per user on the instance keys; undefined: no limit. */
+  get hostedMonthlyTokens(): number | undefined {
+    return this.configService.get('AI_HOSTED_MONTHLY_TOKENS');
+  }
+
   /** Users may add OpenAI-compatible endpoints and local providers. */
   get customEndpointsAllowed(): boolean {
     return (
