@@ -35,6 +35,12 @@ export type CurrentSubscriptionDto = z.infer<
 export const createCheckoutSessionDtoSchema = z.object({
   /** Supporter is the only plan for sale; the interval picks its price */
   interval: billingIntervalSchema,
+  /**
+   * The customer accepts the terms of sale and asks for the subscription to
+   * start at once, within the withdrawal period. Required to subscribe, not
+   * to switch interval.
+   */
+  acceptTerms: z.literal(true).optional(),
   successUrl: z.string().url(),
   cancelUrl: z.string().url(),
 });

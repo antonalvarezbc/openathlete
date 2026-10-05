@@ -7,7 +7,7 @@ import {
 } from '@/utils/analytics-events';
 import { isPaymentDisabled } from '@/utils/capacitor';
 import { cn } from '@/utils/shadcn';
-import { supporterPriceLabel } from '@/utils/supporter';
+import { supporterPriceLabel, termsOfSaleUrl } from '@/utils/supporter';
 import { Check } from 'lucide-react';
 import { usePostHog } from 'posthog-js/react';
 import { useState } from 'react';
@@ -21,6 +21,8 @@ import {
 
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
+import { Checkbox } from '../ui/checkbox';
+import { Label } from '../ui/label';
 import { SparklesIcon } from '../ui/sparkles-icon';
 
 /**
@@ -38,6 +40,7 @@ export function SupporterOffer({
   const posthog = usePostHog();
   const createCheckout = useCreateCheckout();
   const [interval, setInterval] = useState(BillingInterval.YEAR);
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [showIOSPaymentBlock, setShowIOSPaymentBlock] = useState(false);
 
   const subscribe = async () => {
@@ -49,6 +52,7 @@ export function SupporterOffer({
     try {
       const { url } = await createCheckout.mutateAsync({
         interval,
+        acceptTerms: true,
         successUrl: `${settingsUrl}&success=true`,
         cancelUrl: `${settingsUrl}&canceled=true`,
       });
@@ -125,11 +129,33 @@ export function SupporterOffer({
         ))}
       </ul>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
+        <div className="flex items-start gap-3">
+          <Checkbox
+            id="supporter-terms"
+            className="mt-0.5"
+            checked={acceptTerms}
+            onCheckedChange={(checked) => setAcceptTerms(checked === true)}
+          />
+          <Label
+            htmlFor="supporter-terms"
+            className="text-xs leading-relaxed font-normal text-muted-foreground"
+          >
+            {m.supporter_terms_consent()}
+          </Label>
+        </div>
+        <a
+          href={termsOfSaleUrl()}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block text-xs underline underline-offset-4"
+        >
+          {m.supporter_terms_link()}
+        </a>
         <Button
           className="h-11 w-full"
           onClick={subscribe}
-          disabled={createCheckout.isPending}
+          disabled={!acceptTerms || createCheckout.isPending}
         >
           {createCheckout.isPending ? m.loading() : m.supporter_cta()}
         </Button>

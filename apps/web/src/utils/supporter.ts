@@ -1,4 +1,5 @@
 import { m } from '@/paraglide/messages';
+import { getLocale } from '@/paraglide/runtime';
 
 import {
   BillingInterval,
@@ -14,4 +15,16 @@ export function supporterPriceLabel(interval: BillingInterval): string {
   return interval === BillingInterval.YEAR
     ? m.supporter_price_year({ price })
     : m.supporter_price_month({ price });
+}
+
+/**
+ * The terms of sale on the website, in French or English. Only the hosted
+ * instance sells subscriptions, so the website defaults to openathlete.org.
+ */
+export function termsOfSaleUrl(): string {
+  const website = (
+    (import.meta.env.VITE_WEBSITE_URL as string | undefined) ||
+    'https://openathlete.org'
+  ).replace(/\/$/, '');
+  return `${website}${getLocale() === 'fr' ? '/fr' : ''}/terms-of-sale`;
 }

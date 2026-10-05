@@ -1,9 +1,11 @@
 import { ZodValidationPipe } from 'nestjs-zod';
 
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
+  NotFoundException,
   Param,
   Post,
   Query,
@@ -167,7 +169,7 @@ export class SubscriptionController {
   @ApiOperation({
     summary: 'Become a Supporter, or change the billing interval',
     description:
-      'Creates a Stripe checkout session for the Supporter subscription, billed monthly or yearly (no trial). A user who is already a Supporter switches interval immediately, with proration, and gets the success URL back.',
+      'Creates a Stripe checkout session for the Supporter subscription, billed monthly or yearly (no trial). Subscribing requires acceptTerms: the terms of sale and an immediate start within the withdrawal period; the accepted version is stored on the Stripe subscription. A user who is already a Supporter switches interval immediately, with proration, and gets the success URL back.',
   })
   @ApiBody({
     description: 'Checkout session creation data',
@@ -179,6 +181,12 @@ export class SubscriptionController {
           enum: ['month', 'year'],
           example: 'year',
           description: 'Billing interval of the Supporter subscription',
+        },
+        acceptTerms: {
+          type: 'boolean',
+          enum: [true],
+          description:
+            'Required to subscribe: accepts the terms of sale and asks for an immediate start',
         },
         successUrl: {
           type: 'string',
@@ -225,7 +233,8 @@ export class SubscriptionController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Bad request - invalid interval',
+    description:
+      'Bad request - invalid interval, or TERMS_NOT_ACCEPTED when subscribing without accepting the terms of sale',
   })
   @ApiResponse({
     status: 401,
@@ -240,52 +249,43 @@ export class SubscriptionController {
     @Body(new ZodValidationPipe(createCheckoutSessionDtoSchema))
     dto: CreateCheckoutSessionDto,
   ) {
-    // Get user email
+    // A Supporter switching between monthly and yearly billing
+    const currentSubscription =
+      await this.subscriptionService.getCurrentSubscription(user.userId);
+    if (
+      currentSubscription?.stripeSubscriptionId &&
+      (currentSubscription.status === SubscriptionStatus.active ||
+        currentSubscription.status === SubscriptionStatus.trialing)
+    ) {
+      const updatedSubscription =
+        await this.stripeService.changeBillingInterval(
+          currentSubscription.stripeSubscriptionId,
+          dto.interval,
+        );
+      await this.subscriptionService.updateSubscriptionFromWebhook(
+        updatedSubscription,
+      );
+      // No checkout needed: back to the app
+      return { sessionId: null, url: dto.successUrl };
+    }
+
+    if (!dto.acceptTerms) {
+      throw new BadRequestException('TERMS_NOT_ACCEPTED');
+    }
+
     const userRecord = await this.subscriptionService['prisma'].user.findUnique(
       {
         where: { userId: user.userId },
         select: { email: true },
       },
     );
-
     if (!userRecord) {
-      throw new Error('User not found');
+      throw new NotFoundException('User not found');
     }
-
-    // Get or create Stripe customer
     const customer = await this.stripeService.getOrCreateCustomer(
       user.userId,
       userRecord.email,
     );
-
-    // Check if user has an active subscription
-    const currentSubscription =
-      await this.subscriptionService.getCurrentSubscription(user.userId);
-
-    // If user has an active subscription with Stripe, update it instead of creating a new one
-    if (
-      currentSubscription?.stripeSubscriptionId &&
-      (currentSubscription.status === SubscriptionStatus.active ||
-        currentSubscription.status === SubscriptionStatus.trialing)
-    ) {
-      // Update existing subscription
-      const updatedSubscription =
-        await this.stripeService.changeBillingInterval(
-          currentSubscription.stripeSubscriptionId,
-          dto.interval,
-        );
-
-      // Update subscription in database
-      await this.subscriptionService.updateSubscriptionFromWebhook(
-        updatedSubscription,
-      );
-
-      // Return success URL since we don't need to redirect to Stripe
-      return {
-        sessionId: null,
-        url: dto.successUrl,
-      };
-    }
 
     // Create checkout session for new subscription
     const session = await this.stripeService.createCheckoutSession(

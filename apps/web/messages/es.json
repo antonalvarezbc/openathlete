@@ -882,6 +882,8 @@
   "supporter_perk_ai": "IA incluida cada mes, sin claves que gestionar",
   "supporter_perk_project": "Financia un proyecto de código abierto, independiente de inversores",
   "supporter_cta": "Hazte Supporter",
+  "supporter_terms_consent": "Acepto las condiciones generales de venta y solicito que mi suscripción empiece de inmediato. Si desisto en un plazo de 14 días, se me reembolsa salvo el periodo ya transcurrido.",
+  "supporter_terms_link": "Leer las condiciones generales de venta",
   "supporter_no_commitment": "Sin permanencia, cancela cuando quieras.",
   "paywall_ai_own_key": "Usar gratis mi propia clave de IA",
   "subscription_free_title": "Plan gratuito",

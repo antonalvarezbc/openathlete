@@ -42,6 +42,12 @@ export interface PlanConfig {
   hasAIFeatures: boolean;
 }
 
+/**
+ * Version (date) of the terms of sale on the website. Change it with the
+ * terms: each new subscription records the version its customer accepted.
+ */
+export const TERMS_OF_SALE_VERSION = '2026-10-05';
+
 /** Athletes a free account may coach on an instance with billing. */
 export const FREE_PLAN_MAX_ATHLETES = 5;
 

@@ -15,6 +15,7 @@ vi.mock('sonner', () => ({ toast: { error: vi.fn() } }));
 vi.mock('@/components/payment/ios-payment-block-dialog', () => ({
   IOSPaymentBlockDialog: () => null,
 }));
+vi.mock('@/paraglide/runtime', () => ({ getLocale: () => 'en' }));
 vi.mock('@/paraglide/messages', () => ({
   m: {
     plan_supporter_name: () => 'Supporter',
@@ -29,6 +30,8 @@ vi.mock('@/paraglide/messages', () => ({
     supporter_perk_ai: () => 'AI included',
     supporter_perk_project: () => 'Fund the project',
     supporter_cta: () => 'Become a Supporter',
+    supporter_terms_consent: () => 'I accept the terms of sale',
+    supporter_terms_link: () => 'Read the terms of sale',
     supporter_no_commitment: () => 'Cancel anytime',
     loading: () => 'Loading',
     subscription_checkout_error: () => 'Checkout failed',
@@ -67,18 +70,34 @@ describe('SupporterOffer', () => {
     expect(container.textContent).toContain('Unlimited athletes (free: 5)');
   });
 
+  const acceptTerms = () =>
+    act(() =>
+      container.querySelector<HTMLButtonElement>('[role="checkbox"]')!.click(),
+    );
+
+  it('waits for the terms of sale to be accepted', () => {
+    expect(button('Become a Supporter').disabled).toBe(true);
+    expect(container.querySelector('a[href$="/terms-of-sale"]')).not.toBeNull();
+
+    acceptTerms();
+
+    expect(button('Become a Supporter').disabled).toBe(false);
+  });
+
   it('defaults to yearly billing', async () => {
     expect(button('Yearly').getAttribute('aria-checked')).toBe('true');
 
+    acceptTerms();
     await act(async () => button('Become a Supporter').click());
 
     expect(mutateAsync).toHaveBeenCalledWith(
-      expect.objectContaining({ interval: 'year' }),
+      expect.objectContaining({ interval: 'year', acceptTerms: true }),
     );
   });
 
   it('checks out the interval the user picks', async () => {
     act(() => button('Monthly').click());
+    acceptTerms();
     await act(async () => button('Become a Supporter').click());
 
     expect(mutateAsync).toHaveBeenCalledWith(

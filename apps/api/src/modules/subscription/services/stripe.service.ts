@@ -7,7 +7,11 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import { ApiEnvSchemaType, BillingInterval } from '@openathlete/shared';
+import {
+  ApiEnvSchemaType,
+  BillingInterval,
+  TERMS_OF_SALE_VERSION,
+} from '@openathlete/shared';
 
 @Injectable()
 export class StripeService {
@@ -117,6 +121,13 @@ export class StripeService {
       allow_promotion_codes: true,
       success_url: successUrl,
       cancel_url: cancelUrl,
+      // Proof of the customer's acceptance and request to start at once
+      subscription_data: {
+        metadata: {
+          terms_of_sale_version: TERMS_OF_SALE_VERSION,
+          terms_accepted_at: new Date().toISOString(),
+        },
+      },
     });
   }
 
