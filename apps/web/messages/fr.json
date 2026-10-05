@@ -1209,5 +1209,12 @@
   "data_export_include_streams": "Inclure les flux des activités (GPS, fréquence cardiaque), fichier plus lourd",
   "data_export_download": "Télécharger mes données",
   "data_export_preparing": "Préparation du fichier…",
-  "data_export_failed": "L'export a échoué. Réessayez plus tard."
+  "data_export_failed": "L'export a échoué. Réessayez plus tard.",
+  "calendar_view": "Vue du calendrier",
+  "calendar_view_month": "Mois",
+  "calendar_view_week": "Semaine",
+  "calendar_week_title": "la semaine {week}",
+  "calendar_current_week": "Semaine en cours",
+  "calendar_previous_week": "Semaine précédente",
+  "calendar_next_week": "Semaine suivante"
 }

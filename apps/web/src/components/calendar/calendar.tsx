@@ -7,7 +7,10 @@ import { useUseEventTemplateMutation } from '@/api/event-template';
 import { eventKeys } from '@/api/event/event.keys';
 import { useWeeklyLoadSummaryQuery } from '@/api/training-load';
 import { trainingLoadKeys } from '@/api/training-load/training-load.keys';
-import { useCalendarData } from '@/components/calendar/hooks/use-calendar-data';
+import {
+  CalendarView,
+  useCalendarData,
+} from '@/components/calendar/hooks/use-calendar-data';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -57,6 +60,8 @@ import { CalendarBody } from './calendar-body';
 import { CalendarEventDetailsDialog } from './calendar-event-details.dialog';
 import { CalendarHeader } from './calendar-header';
 import { CalendarMobileList } from './calendar-mobile-list';
+import { CalendarViewToggle } from './calendar-view-toggle';
+import { CalendarWeekView } from './calendar-week-view';
 import { CalendarWeeklyLoadChart } from './calendar-weekly-load-chart';
 import { CalendarContext } from './contexts/calendar-context';
 import { EventClipboardProvider } from './contexts/event-clipboard-context';
@@ -85,7 +90,22 @@ export function Calendar({
   const posthog = usePostHog();
   const isMobile = useIsMobile();
   const [planningDate, setPlanningDate] = useState(() => new Date());
-  const calendarData = useCalendarData({ events });
+  const [view, setViewState] = useState<CalendarView>(() => {
+    const requested = new URLSearchParams(window.location.search).get('view');
+    return (requested ?? getItem('calendar_view')) === 'week'
+      ? 'week'
+      : 'month';
+  });
+  const calendarData = useCalendarData({ events, view });
+  const { goToWeek, displayedMonth } = calendarData;
+  const setView = useCallback(
+    (next: CalendarView) => {
+      if (next === 'week') goToWeek(displayedMonth);
+      setViewState(next);
+      setItem('calendar_view', next);
+    },
+    [goToWeek, displayedMonth],
+  );
   const { data: cycles } = useGetMyCyclesQuery(undefined, athleteId);
   const { available: hasAIAccess } = useAiTaskAvailable(
     AiTask.EVENT_GENERATION,
@@ -409,6 +429,8 @@ export function Calendar({
   const memoizedValue = useMemo<CalendarContextType>(
     () => ({
       ...calendarData,
+      view,
+      setView,
       events: calendarData.events.filter(filter),
       cycles: cycles || [],
       createEvent: (date, type) => {
@@ -443,6 +465,9 @@ export function Calendar({
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
+      view,
+      setView,
+      calendarData.weekStart,
       calendarData.displayedMonth,
       calendarData.events,
       cycles,
@@ -688,9 +713,17 @@ export function Calendar({
       <EventClipboardProvider>
         <EventContextMenuProvider>
           <CalendarContext.Provider value={memoizedValue}>
-            {!isMobile && <CalendarHeader />}
+            {!isMobile || view === 'week' ? (
+              <CalendarHeader />
+            ) : (
+              <div className="px-4">
+                <CalendarViewToggle />
+              </div>
+            )}
             <div className={isMobile ? 'w-full flex-1' : 'relative'}>
-              {isMobile ? (
+              {view === 'week' ? (
+                <CalendarWeekView isLoading={isLoading} />
+              ) : isMobile ? (
                 <div className="w-full h-full">
                   <CalendarMobileList isLoading={isLoading} />
                 </div>
@@ -714,7 +747,7 @@ export function Calendar({
                 </>
               )}
             </div>
-            {!isMobile && (
+            {!isMobile && view === 'month' && (
               <CalendarWeeklyLoadChart
                 weeks={calendarData.displayedWeeks}
                 displayedMonth={calendarData.displayedMonth}

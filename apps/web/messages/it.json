@@ -1209,5 +1209,12 @@
   "data_export_include_streams": "Includi i flussi delle attività (GPS, frequenza cardiaca), file più pesante",
   "data_export_download": "Scarica i miei dati",
   "data_export_preparing": "Preparazione del file…",
-  "data_export_failed": "L'esportazione non è riuscita. Riprova più tardi."
+  "data_export_failed": "L'esportazione non è riuscita. Riprova più tardi.",
+  "calendar_view": "Vista del calendario",
+  "calendar_view_month": "Mese",
+  "calendar_view_week": "Settimana",
+  "calendar_week_title": "la settimana {week}",
+  "calendar_current_week": "Settimana corrente",
+  "calendar_previous_week": "Settimana precedente",
+  "calendar_next_week": "Settimana successiva"
 }

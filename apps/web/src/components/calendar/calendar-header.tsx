@@ -3,6 +3,7 @@ import { useAthleteInfo } from '@/hooks/use-athlete-info';
 import { m } from '@/paraglide/messages';
 import { getLocale } from '@/paraglide/runtime';
 import { getDateLocale } from '@/utils/locales';
+import { addDays, getISOWeek } from 'date-fns';
 import { BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 
@@ -17,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
+import { CalendarViewToggle } from './calendar-view-toggle';
 import { useTemplateLibrarySidebar } from './contexts/template-library-sidebar-context';
 import { useCalendarContext } from './hooks/use-calendar-context';
 import { COLORED_BY, coloredByLabelMap } from './types/filter';
@@ -31,7 +33,13 @@ export function CalendarHeader() {
     coloredBy,
     setColoredBy,
     athleteId,
+    view,
+    weekStart,
+    nextWeek,
+    prevWeek,
+    goToCurrentWeek,
   } = useCalendarContext();
+  const isWeek = view === 'week';
   const [sportFilter, setSportFilter] = useState<SPORT_TYPE | null>(null);
   const { athlete, isCurrentUser } = useAthleteInfo({ athleteId });
   const { open, setOpen, mainSidebarWasOpen, setMainSidebarWasOpen } =
@@ -51,13 +59,12 @@ export function CalendarHeader() {
     }
   };
 
-  const displayedMonthString = displayedMonth.toLocaleString(
-    getDateLocale(getLocale()),
-    {
-      month: 'long',
-      year: 'numeric',
-    },
-  );
+  const displayedMonthString = isWeek
+    ? m.calendar_week_title({ week: getISOWeek(weekStart) })
+    : displayedMonth.toLocaleString(getDateLocale(getLocale()), {
+        month: 'long',
+        year: 'numeric',
+      });
 
   const calendarTitle = isCurrentUser
     ? m.calendar_of({ month: displayedMonthString })
@@ -95,9 +102,26 @@ export function CalendarHeader() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row md:justify-between gap-4">
-      <h1 className="text-xl md:text-2xl font-semibold">{calendarTitle}</h1>
-      <div className="flex flex-col md:flex-row gap-2">
+    <div className="flex flex-col lg:flex-row lg:flex-wrap lg:justify-between gap-4">
+      <div className="min-w-0">
+        <h1 className="text-xl md:text-2xl font-semibold">{calendarTitle}</h1>
+        {isWeek && (
+          <p className="text-sm text-muted-foreground">
+            {weekStart.toLocaleDateString(getDateLocale(getLocale()), {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+            })}
+            {' – '}
+            {addDays(weekStart, 6).toLocaleDateString(
+              getDateLocale(getLocale()),
+              { day: 'numeric', month: 'short', year: 'numeric' },
+            )}
+          </p>
+        )}
+      </div>
+      <div className="flex flex-col md:flex-row md:flex-wrap gap-2">
+        <CalendarViewToggle />
         {/* Filters row */}
         <div className="flex gap-2">
           <Button
@@ -136,7 +160,13 @@ export function CalendarHeader() {
         </div>
         {/* Navigation buttons */}
         <div className="flex gap-2">
-          <Button size="icon" onClick={() => prevMonth()}>
+          <Button
+            size="icon"
+            aria-label={
+              isWeek ? m.calendar_previous_week() : m.calendar_previous_month()
+            }
+            onClick={() => (isWeek ? prevWeek() : prevMonth())}
+          >
             <ChevronLeft />
           </Button>
           <Button
@@ -144,14 +174,22 @@ export function CalendarHeader() {
             size="default"
             className="px-2 md:px-3 text-xs md:text-sm"
             disabled={
-              displayedMonth.getMonth() === new Date().getMonth() &&
-              displayedMonth.getFullYear() === new Date().getFullYear()
+              isWeek
+                ? new Date() >= weekStart && new Date() < addDays(weekStart, 7)
+                : displayedMonth.getMonth() === new Date().getMonth() &&
+                  displayedMonth.getFullYear() === new Date().getFullYear()
             }
-            onClick={() => goToCurrentMonth()}
+            onClick={() => (isWeek ? goToCurrentWeek() : goToCurrentMonth())}
           >
-            {m.calendar_current_month()}
+            {isWeek ? m.calendar_current_week() : m.calendar_current_month()}
           </Button>
-          <Button onClick={() => nextMonth()} size="icon">
+          <Button
+            aria-label={
+              isWeek ? m.calendar_next_week() : m.calendar_next_month()
+            }
+            onClick={() => (isWeek ? nextWeek() : nextMonth())}
+            size="icon"
+          >
             <ChevronRight />
           </Button>
         </div>
