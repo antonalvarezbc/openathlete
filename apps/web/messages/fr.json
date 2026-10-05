@@ -1311,6 +1311,8 @@
   "ai_plan_generating": "Rédaction du plan. Un plan long peut prendre quelques minutes ; vous pouvez laisser cette fenêtre ouverte.",
   "ai_plan_repairing": "Correction de ce que les vérifications automatiques ont trouvé…",
   "ai_plan_elapsed": "{seconds} s",
+  "ai_plan_progress_label": "Progression du plan",
+  "ai_plan_estimate": "environ {minutes} min estimées",
   "ai_plan_failed": "Le brouillon n'a pas pu être généré. Réessayez ou modifiez les réponses.",
   "ai_plan_error_length": "La course doit avoir lieu 2 à 24 semaines après le début du plan.",
   "ai_plan_error_race_before_start": "La course doit avoir lieu après le début du plan.",

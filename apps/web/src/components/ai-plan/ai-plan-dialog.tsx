@@ -32,6 +32,8 @@ import {
   aiPlanRequestSchema,
 } from '@openathlete/shared';
 
+import { draftProgress, estimateDraftSeconds } from './draft-progress';
+
 /** Sports usually combined in an endurance plan; the race sport is added. */
 const SPORT_CHOICES = [
   SPORT_TYPE.RUNNING,
@@ -142,6 +144,7 @@ export function AiPlanDialog({ athleteId, onClose, onImported, pollMs }: P) {
   } = methods;
   const [jobId, setJobId] = useState<string | null>(null);
   const [startedAt, setStartedAt] = useState(0);
+  const [estimate, setEstimate] = useState(60);
   const [, setTick] = useState(0);
   const start = useStartAiPlanMutation();
   const job = useAiPlanJobQuery(jobId, pollMs);
@@ -166,6 +169,13 @@ export function AiPlanDialog({ athleteId, onClose, onImported, pollMs }: P) {
     start.mutate(request, {
       onSuccess: (status) => {
         setStartedAt(Date.now());
+        setEstimate(
+          estimateDraftSeconds(
+            request.startDate,
+            request.goal.date,
+            request.trainingDays.length,
+          ),
+        );
         setJobId(status.jobId);
       },
       onError: (error) => toast.error(workspaceError(error)),
@@ -193,6 +203,12 @@ export function AiPlanDialog({ athleteId, onClose, onImported, pollMs }: P) {
     );
   const failed =
     status?.state === 'failed' || (status?.state === 'done' && !draft?.plan);
+  const elapsed = Math.round((Date.now() - startedAt) / 1000);
+  const progress = draftProgress(
+    status?.state === 'running' ? (status.stage ?? 'generating') : 'queued',
+    elapsed,
+    estimate,
+  );
 
   const sportOptions = Object.values(SPORT_TYPE).sort((a, b) =>
     sportTypeLabelMap[a].localeCompare(sportTypeLabelMap[b], locale),
@@ -213,9 +229,23 @@ export function AiPlanDialog({ athleteId, onClose, onImported, pollMs }: P) {
                   : m.ai_plan_generating()
                 : m.ai_plan_queued()}
             </p>
+            <div
+              role="progressbar"
+              aria-label={m.ai_plan_progress_label()}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={progress}
+              className="h-2 w-full overflow-hidden rounded-full bg-muted"
+            >
+              <div
+                className="h-full rounded-full bg-primary transition-[width] duration-1000 ease-linear"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
             <p className="text-sm text-muted-foreground">
-              {m.ai_plan_elapsed({
-                seconds: String(Math.round((Date.now() - startedAt) / 1000)),
+              {m.ai_plan_elapsed({ seconds: String(elapsed) })} ·{' '}
+              {m.ai_plan_estimate({
+                minutes: String(Math.max(1, Math.round(estimate / 60))),
               })}
             </p>
             <Button variant="outline" className="min-h-11" onClick={onClose}>

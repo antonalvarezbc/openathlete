@@ -297,6 +297,26 @@ describe('AiPlanDialog', () => {
     ).toEqual(['json_plan_new', 'Future plan']);
   });
 
+  it('shows a progress bar and the estimated time while writing', async () => {
+    api.start.mockResolvedValue({ jobId: 'job-1', state: 'queued' });
+    api.status.mockResolvedValue({
+      jobId: 'job-1',
+      state: 'running',
+      stage: 'generating',
+    });
+    await fillValid();
+    await submit();
+    await waitFor(() => !!dialog().querySelector('[role="progressbar"]'));
+    const bar = dialog().querySelector('[role="progressbar"]')!;
+    await waitFor(() => Number(bar.getAttribute('aria-valuenow')) >= 5);
+    expect(bar.getAttribute('aria-label')).toBe('ai_plan_progress_label');
+    // Being written, but never complete before the draft arrives.
+    expect(Number(bar.getAttribute('aria-valuenow'))).toBeGreaterThanOrEqual(5);
+    expect(Number(bar.getAttribute('aria-valuenow'))).toBeLessThan(90);
+    // Two weeks of three sessions: well under a minute, shown as one.
+    expect(dialog().textContent).toContain('ai_plan_estimate {"minutes":"1"}');
+  });
+
   it('imports the reviewed draft as DRAFT and selects it', async () => {
     api.start.mockResolvedValue({ jobId: 'job-1', state: 'queued' });
     api.status.mockResolvedValue({

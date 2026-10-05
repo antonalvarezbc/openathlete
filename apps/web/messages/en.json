@@ -1311,6 +1311,8 @@
   "ai_plan_generating": "Writing the plan. A long plan can take a few minutes; you can leave this window open.",
   "ai_plan_repairing": "Fixing what the automatic checks found…",
   "ai_plan_elapsed": "{seconds} s",
+  "ai_plan_progress_label": "Plan progress",
+  "ai_plan_estimate": "about {minutes} min estimated",
   "ai_plan_failed": "The draft could not be generated. Try again, or change the answers.",
   "ai_plan_error_length": "The race must be 2 to 24 weeks after the plan start.",
   "ai_plan_error_race_before_start": "The race must be after the plan start.",

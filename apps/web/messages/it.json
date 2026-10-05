@@ -1311,6 +1311,8 @@
   "ai_plan_generating": "Scrittura del piano. Un piano lungo può richiedere qualche minuto; puoi lasciare aperta questa finestra.",
   "ai_plan_repairing": "Correzione di quanto trovato dai controlli automatici…",
   "ai_plan_elapsed": "{seconds} s",
+  "ai_plan_progress_label": "Avanzamento del piano",
+  "ai_plan_estimate": "circa {minutes} min stimati",
   "ai_plan_failed": "Non è stato possibile generare la bozza. Riprova o modifica le risposte.",
   "ai_plan_error_length": "La gara deve essere tra 2 e 24 settimane dopo l'inizio del piano.",
   "ai_plan_error_race_before_start": "La gara deve essere dopo l'inizio del piano.",
