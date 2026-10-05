@@ -333,19 +333,13 @@ export function AiPlanDialog({ athleteId, onClose, onImported, pollMs }: P) {
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={progress}
-              className="h-2 w-full overflow-hidden rounded-full bg-muted"
+              className="h-3 w-full overflow-hidden rounded-full bg-primary/15"
             >
               <div
-                className="h-full rounded-full bg-primary transition-[width] duration-1000 ease-linear"
+                className="h-full rounded-full bg-primary transition-[width] duration-1000 ease-linear motion-reduce:transition-none"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <p className="text-sm text-muted-foreground">
-              {m.ai_plan_elapsed({ seconds: String(elapsed) })} ·{' '}
-              {m.ai_plan_estimate({
-                minutes: String(Math.max(1, Math.round(estimate / 60))),
-              })}
-            </p>
             <Button variant="outline" className="min-h-11" onClick={onClose}>
               {m.cancel()}
             </Button>
