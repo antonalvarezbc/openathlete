@@ -13,7 +13,9 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 
 import {
+  EditAiMemory,
   UpdateAiMemorySettings,
+  editAiMemorySchema,
   updateAiMemorySettingsSchema,
 } from '@openathlete/shared';
 
@@ -48,6 +50,15 @@ export class AiMemoryController {
     input: UpdateAiMemorySettings,
   ) {
     return this.memory.setMode(user.userId, athleteId, input.mode);
+  }
+
+  @Patch('content')
+  edit(
+    @JwtUser() user: AuthUser,
+    @Param('athleteId', ParseIntPipe) athleteId: number,
+    @Body(new ZodValidationPipe(editAiMemorySchema)) input: EditAiMemory,
+  ) {
+    return this.memory.edit(user.userId, athleteId, input);
   }
 
   @Delete()

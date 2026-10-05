@@ -1,10 +1,16 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 
 import {
   AiMemoryDto,
   AiMemoryMode,
   AiMemorySource,
   AiTask,
+  EditAiMemory,
 } from '@openathlete/shared';
 
 import { aiMemoryConsolidationAgent } from '../../mastra/agents/ai-memory-consolidation.agent';
@@ -284,11 +290,53 @@ export class AiMemoryService {
       summary: link.aiMemorySummary,
       summaryUpdatedAt: link.aiMemorySummaryUpdatedAt?.toISOString() ?? null,
       notes: notes.map((n) => ({
+        id: n.aiMemoryNoteId,
         source: n.source,
         content: n.content,
         createdAt: n.createdAt.toISOString(),
       })),
     };
+  }
+
+  async edit(coachUserId: number, athleteId: number, input: EditAiMemory) {
+    const link = await this.requireLink(coachUserId, athleteId);
+    await this.prisma.$transaction(async (tx) => {
+      // Serialize edits with consolidation; a newer revision always wins.
+      const updated = await tx.coachAthlete.updateMany({
+        where: {
+          coachAthleteId: link.coachAthleteId,
+          aiMemorySummaryUpdatedAt: input.summaryUpdatedAt
+            ? new Date(input.summaryUpdatedAt)
+            : null,
+        },
+        data: {
+          aiMemorySummary: input.summary,
+          aiMemorySummaryUpdatedAt: new Date(
+            Math.max(
+              Date.now(),
+              (link.aiMemorySummaryUpdatedAt?.getTime() ?? 0) + 1,
+            ),
+          ),
+        },
+      });
+      if (!updated.count) throw new ConflictException('AI_MEMORY_CHANGED');
+      for (const note of input.notes) {
+        const where = {
+          aiMemoryNoteId: note.id,
+          coachAthleteId: link.coachAthleteId,
+          content: note.originalContent,
+        };
+        const result = note.content
+          ? await tx.aiMemoryNote.updateMany({
+              where,
+              data: { content: note.content },
+            })
+          : await tx.aiMemoryNote.deleteMany({ where });
+        if (!result.count) throw new ConflictException('AI_MEMORY_CHANGED');
+      }
+      // Notes created since the editor opened are intentionally preserved.
+    });
+    return this.get(coachUserId, athleteId);
   }
 
   async setMode(coachUserId: number, athleteId: number, mode: AiMemoryMode) {
