@@ -51,10 +51,15 @@ const resolver = new AiModelResolverService(
   policy,
   new AiProviderCatalogService(mastraModelRegistry, policy),
   null,
+  // Monthly allowance of the instance keys: not limited here
+  { hasHostedAllowanceLeft: async () => true },
   null,
   process.env,
 );
-const ai = new AiService({ aiCredential: { update: async () => undefined } });
+const ai = new AiService(
+  { aiCredential: { update: async () => undefined } },
+  { record: async () => undefined },
+);
 const parser = new WorkoutParserService(null, resolver, ai);
 const planner = new PlanGenerationService(null, parser, resolver, ai, null);
 

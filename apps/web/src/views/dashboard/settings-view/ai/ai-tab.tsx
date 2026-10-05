@@ -9,6 +9,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import { AiKeysSection } from './ai-keys-section';
 import { AiModelsSection } from './ai-models-section';
+import { AiUsageSection } from './ai-usage-section';
 
 export function AiTab() {
   const { data: access } = useAiAccessQuery();
@@ -49,6 +50,8 @@ export function AiTab() {
           </AlertDescription>
         </Alert>
       )}
+
+      {access && <AiUsageSection access={access} />}
 
       <AiKeysSection />
       <AiModelsSection />

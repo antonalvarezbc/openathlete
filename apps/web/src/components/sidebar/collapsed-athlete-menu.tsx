@@ -21,6 +21,11 @@ import { m } from '@/paraglide/messages';
 import { User, Users } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
+/**
+ * Athlete navigation for the collapsed desktop sidebar. In icon mode the
+ * sidebar hides submenus, so each athlete's pages are listed in a menu that
+ * opens beside a single Athletes button.
+ */
 export function CollapsedAthleteMenu({
   athletes,
 }: {

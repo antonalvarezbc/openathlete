@@ -42,6 +42,7 @@ model User {
   agentThreads              AgentThread[]
   aiCredentials             AiCredential[]
   aiModelPreferences        AiModelPreference[]
+  aiUsage                   AiUsage[]
   eventTemplateFolder       EventTemplateFolder[]
   athleteInvitations        AthleteInvitation[]
   coachInvitationsSent      CoachInvitation[]          @relation("CoachInvitationsSent")

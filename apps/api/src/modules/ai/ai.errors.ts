@@ -27,6 +27,20 @@ export class AiNotConfiguredException extends HttpException {
  */
 export type AiFailureKind = 'rate_limit' | 'timeout';
 
+/** The user's monthly allowance on the instance keys is used up. */
+export class AiHostedQuotaExceededException extends HttpException {
+  constructor() {
+    super(
+      body(
+        HttpStatus.FORBIDDEN,
+        AiErrorCode.HOSTED_QUOTA_EXCEEDED,
+        'The AI included in your plan is used up for this month. Add your own key in Settings > AI to keep going',
+      ),
+      HttpStatus.FORBIDDEN,
+    );
+  }
+}
+
 /** The provider refused the call; `code` says whether the key is at fault. */
 export class AiProviderException extends HttpException {
   constructor(

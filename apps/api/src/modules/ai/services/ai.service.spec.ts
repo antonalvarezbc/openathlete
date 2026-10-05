@@ -37,7 +37,12 @@ const ownKeyModel: ResolvedAiModel = {
 
 function setup() {
   const prisma = { aiCredential: { update: jest.fn().mockResolvedValue({}) } };
-  return { prisma, service: new AiService(prisma as never) };
+  const usage = { record: jest.fn().mockResolvedValue(undefined) };
+  return {
+    prisma,
+    usage,
+    service: new AiService(prisma as never, usage as never),
+  };
 }
 
 describe('AiService', () => {
@@ -57,6 +62,22 @@ describe('AiService', () => {
       id: 'test-agent',
       instructions: 'Be helpful',
       model: { id: 'anthropic/claude-sonnet-4-5', apiKey: 'sk-ant-user' },
+    });
+  });
+
+  it('counts the tokens of the call for the user who pays for it', async () => {
+    const { service, usage } = setup();
+    generate.mockResolvedValue({
+      text: 'Hello',
+      usage: { inputTokens: 5, outputTokens: 2 },
+      totalUsage: { inputTokens: 120, outputTokens: 30 },
+    });
+
+    await service.generateText(agent, ownKeyModel, 'Hi');
+
+    expect(usage.record).toHaveBeenCalledWith(ownKeyModel, {
+      inputTokens: 120,
+      outputTokens: 30,
     });
   });
 

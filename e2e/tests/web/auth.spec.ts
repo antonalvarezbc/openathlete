@@ -48,8 +48,39 @@ test('logs in and lands on the dashboard', async ({ page, request }) => {
   await expect(page).toHaveURL(/\/dashboard/);
 });
 
+test('says when the password is wrong', async ({ page, request }) => {
+  const athlete = await createAthlete(request);
+
+  await page.goto('/auth/login');
+  await page.fill('input[name="email"]', athlete.email);
+  await page.fill('input[name="password"]', `${athlete.password}-wrong`);
+  await page.click('button[type="submit"]');
+
+  await expect(
+    page.getByText('The email or password is incorrect'),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/auth\/login/);
+});
+
 test('sends logged out visitors to the login page', async ({ page }) => {
   await page.goto('/dashboard/calendar');
 
   await expect(page).toHaveURL(/\/auth\/login/);
+});
+
+test('shows the password while logging in', async ({ page, request }) => {
+  const athlete = await createAthlete(request);
+
+  await page.goto('/auth/login');
+  await page.fill('input[name="email"]', athlete.email);
+  const password = page.locator('input[name="password"]');
+  await password.fill(athlete.password);
+  await expect(password).toHaveAttribute('type', 'password');
+
+  await page.getByRole('button', { name: 'Show password' }).click();
+  await expect(password).toHaveAttribute('type', 'text');
+  await expect(password).toHaveValue(athlete.password);
+
+  await page.click('button[type="submit"]');
+  await expect(page).toHaveURL(/\/dashboard/);
 });

@@ -274,6 +274,8 @@ client.interceptors.response.use(undefined, async (error) => {
     const queryClient = new QueryClient();
     queryClient.clear();
   }
+  // Callers still need the failure: swallowing it made a wrong password look
+  // like a broken response, and an unauthorized change like a success.
   throw error;
 });
 

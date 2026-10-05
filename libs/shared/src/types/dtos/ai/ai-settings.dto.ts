@@ -44,6 +44,8 @@ export enum AiErrorCode {
   CREDENTIAL_REJECTED = 'AI_CREDENTIAL_REJECTED',
   /** Quota exhausted or rate limited at the provider */
   QUOTA_EXCEEDED = 'AI_QUOTA_EXCEEDED',
+  /** The monthly allowance on the instance keys is used up */
+  HOSTED_QUOTA_EXCEEDED = 'AI_HOSTED_QUOTA_EXCEEDED',
   /** Any other provider failure */
   PROVIDER_ERROR = 'AI_PROVIDER_ERROR',
 }
@@ -142,6 +144,18 @@ export interface AiTaskAccessDto {
   modelId: string | null;
 }
 
+/** Tokens the user's AI calls used this month. */
+export interface AiUsageDto {
+  /** On the instance keys, counted against the allowance */
+  hostedTokens: number;
+  /** On the user's own keys, billed to them by their provider */
+  ownKeyTokens: number;
+  /** Monthly allowance on the instance keys; null when unlimited */
+  hostedLimit: number | null;
+  /** Start of next month (UTC), when the count starts again */
+  resetsAt: string;
+}
+
 export interface AiAccessDto {
   tasks: Record<AiFeatureTask, AiTaskAccessDto>;
   /** The user's plan or the instance gives access to the instance keys */
@@ -150,4 +164,7 @@ export interface AiAccessDto {
   upgradeUnlocksHosted: boolean;
   /** Custom OpenAI-compatible endpoints can be added on this instance */
   customEndpointsAllowed: boolean;
+  /** The monthly allowance on the instance keys is used up */
+  hostedQuotaExhausted: boolean;
+  usage: AiUsageDto;
 }

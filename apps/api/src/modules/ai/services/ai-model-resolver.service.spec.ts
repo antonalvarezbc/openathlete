@@ -1,6 +1,9 @@
 import { AiFeatureTask, AiTask, CUSTOM_AI_PROVIDER } from '@openathlete/shared';
 
-import { AiNotConfiguredException } from '../ai.errors';
+import {
+  AiHostedQuotaExceededException,
+  AiNotConfiguredException,
+} from '../ai.errors';
 import { AiCredentialCipher } from './ai-credential-cipher';
 import { AiModelResolverService } from './ai-model-resolver.service';
 import { AiPolicyService, HostedAccessPolicy } from './ai-policy.service';
@@ -48,6 +51,8 @@ interface Setup {
   subscribers?: number[];
   env?: Record<string, string>;
   coaches?: number[];
+  /** Users whose monthly allowance on the instance keys is used up */
+  quotaExhausted?: number[];
 }
 
 function setup({
@@ -57,6 +62,7 @@ function setup({
   subscribers = [],
   env = {},
   coaches = [],
+  quotaExhausted = [],
 }: Setup = {}) {
   const prisma = {
     aiModelPreference: {
@@ -93,11 +99,23 @@ function setup({
       Promise.resolve(subscribers.includes(userId)),
     ),
   };
+  const usage = {
+    hasHostedAllowanceLeft: jest.fn((userId: number) =>
+      Promise.resolve(!quotaExhausted.includes(userId)),
+    ),
+    describe: jest.fn().mockResolvedValue({
+      hostedTokens: 0,
+      ownKeyTokens: 0,
+      hostedLimit: null,
+      resetsAt: '2026-11-01T00:00:00.000Z',
+    }),
+  };
   const resolver = new AiModelResolverService(
     prisma as never,
     policy,
     catalog,
     subscriptions as never,
+    usage as never,
     cipher,
     env,
   );
@@ -327,6 +345,75 @@ describe('AiModelResolverService', () => {
       await expect(
         resolver.resolveForUser(AiTask.POST_ACTIVITY_QUESTIONS, 1),
       ).resolves.toMatchObject({ modelId: 'gpt-5-mini' });
+    });
+  });
+
+  describe('monthly allowance on the instance keys', () => {
+    const instance = { OPENAI_API_KEY: 'sk-instance' };
+
+    it('stops hosted AI once the allowance is used up', async () => {
+      const { resolver } = setup({
+        hostedAccess: 'everyone',
+        env: instance,
+        quotaExhausted: [1],
+      });
+
+      await expect(
+        resolver.tryResolveForUser(AiTask.EVENT_GENERATION, 1),
+      ).resolves.toBeNull();
+      await expect(
+        resolver.resolveForUser(AiTask.EVENT_GENERATION, 1),
+      ).rejects.toBeInstanceOf(AiHostedQuotaExceededException);
+    });
+
+    it("never limits the user's own keys", async () => {
+      const { resolver } = setup({
+        hostedAccess: 'everyone',
+        env: instance,
+        quotaExhausted: [1],
+        preferences: [
+          preference(1, AiTask.DEFAULT, 'openai', 'gpt-5-mini', 'sk-mine'),
+        ],
+      });
+
+      await expect(
+        resolver.resolveForUser(AiTask.EVENT_GENERATION, 1),
+      ).resolves.toMatchObject({ source: 'own_key' });
+    });
+
+    it('still says "not configured" to users without hosted access', async () => {
+      const { resolver } = setup({ env: instance, quotaExhausted: [1] });
+
+      await expect(
+        resolver.resolveForUser(AiTask.EVENT_GENERATION, 1),
+      ).rejects.toBeInstanceOf(AiNotConfiguredException);
+    });
+
+    // In this fork an athlete's AI never runs on a coach's key or allowance.
+    it("skips background work instead of using a coach's allowance", async () => {
+      const { resolver } = setup({
+        hostedAccess: 'everyone',
+        env: instance,
+        coaches: [2],
+        quotaExhausted: [1],
+      });
+
+      await expect(
+        resolver.tryResolveForAthlete(AiTask.FEEDBACK_EXTRACTION, 100),
+      ).resolves.toBeNull();
+    });
+
+    it('reports the used-up allowance in the access summary', async () => {
+      const { resolver } = setup({
+        hostedAccess: 'everyone',
+        env: instance,
+        quotaExhausted: [1],
+      });
+
+      const access = await resolver.describeAccess(1);
+
+      expect(access.hostedQuotaExhausted).toBe(true);
+      expect(access.tasks[AiTask.EVENT_GENERATION].available).toBe(false);
     });
   });
 

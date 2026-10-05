@@ -83,3 +83,40 @@ model AiModelPreference {
   @@index([aiCredentialId])
   @@map("ai_model_preference")
 }
+
+/// Whose key paid for an AI call.
+enum AiKeySource {
+  /// The user's own key: billed to them, only counted for their information
+  OWN_KEY
+  /// The instance keys: counted against the monthly allowance
+  HOSTED
+
+  @@map("ai_key_source")
+}
+
+/// Tokens a user's AI calls used in a month, per feature and key source.
+model AiUsage {
+  // primary key
+  aiUsageId Int @id @default(autoincrement()) @map("ai_usage_id")
+
+  // fields
+  /// First day of the month, in UTC
+  month        DateTime    @db.Date
+  task         AiTask
+  source       AiKeySource
+  inputTokens  Int         @default(0) @map("input_tokens")
+  outputTokens Int         @default(0) @map("output_tokens")
+  calls        Int         @default(0)
+
+  // relationships
+  /// User whose key or allowance paid for the calls
+  user   User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  userId Int  @map("user_id")
+
+  // timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, month, task, source])
+  @@map("ai_usage")
+}
