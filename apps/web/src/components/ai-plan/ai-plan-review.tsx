@@ -27,6 +27,8 @@ export interface AiPlanReviewDraft {
   plan: SEOPlanData;
   athleteId: number;
   startDate: string;
+  /** The goal race from the calendar, linked as the plan's target race */
+  goalEventId?: number | null;
   facts: AiPlanCheckFacts;
   rules: AiPlanRules;
   ruleNotes: AiPlanRuleNote[];

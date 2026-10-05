@@ -500,6 +500,7 @@ METRIC-BASED TARGETS (using metricType):
  * @param fn - The async function to retry
  * @param maxRetries - Maximum number of retry attempts (default: 3)
  * @param baseDelayMs - Base delay in milliseconds for exponential backoff (default: 1000)
+ * @param shouldRetry - Which errors are worth another try (default: isRetryableAiError)
  * @returns The result of the function
  * @throws The last error if all retries fail
  */
@@ -507,6 +508,7 @@ export async function withRetry<T>(
   fn: () => Promise<T>,
   maxRetries = 3,
   baseDelayMs = 1000,
+  shouldRetry: (error: unknown) => boolean = isRetryableAiError,
 ): Promise<T> {
   let lastError: unknown;
 
@@ -516,7 +518,7 @@ export async function withRetry<T>(
     } catch (error) {
       lastError = error;
 
-      if (!isRetryableAiError(error)) break;
+      if (!shouldRetry(error)) break;
 
       // Don't retry on the last attempt
       if (attempt < maxRetries - 1) {

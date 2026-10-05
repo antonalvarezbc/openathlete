@@ -22,6 +22,8 @@ describe('AI plan HTTP boundary', () => {
     start: jest.fn().mockResolvedValue({ jobId: 'x', state: 'queued' }),
     status: jest.fn().mockResolvedValue({ jobId: 'x', state: 'running' }),
     weekSteps: jest.fn().mockResolvedValue({ steps: [null] }),
+    upcomingRaces: jest.fn().mockResolvedValue([]),
+    previewContext: jest.fn().mockResolvedValue({ athlete: {} }),
   };
   const draft = {
     athleteId: 4,
@@ -128,5 +130,35 @@ describe('AI plan HTTP boundary', () => {
       ).status,
     ).toBe(400);
     expect(service.start).not.toHaveBeenCalled();
+  });
+
+  test('shows races and the AI context without AI access, to coaches', async () => {
+    aiAllowed = false;
+    const races = await fetch(`${origin}/agent/ai/plans/races?athleteId=4`);
+    expect(races.status).toBe(200);
+    expect(service.upcomingRaces).toHaveBeenCalledWith(expect.anything(), 4);
+    const context = {
+      athleteId: 4,
+      goalEventId: 50,
+      startDate: '2030-10-21',
+      raceDate: '2030-12-14',
+      timeZone: 'Europe/Madrid',
+    };
+    expect((await post('context', context)).status).toBe(201);
+    expect(service.previewContext).toHaveBeenCalledWith(
+      expect.anything(),
+      context,
+    );
+    // Over 24 weeks, or a race before the start, is refused.
+    expect(
+      (await post('context', { ...context, raceDate: '2031-04-07' })).status,
+    ).toBe(400);
+    expect(
+      (await post('context', { ...context, raceDate: '2030-10-20' })).status,
+    ).toBe(400);
+    roles = ['ATHLETE'];
+    expect(
+      (await fetch(`${origin}/agent/ai/plans/races?athleteId=4`)).status,
+    ).toBe(403);
   });
 });

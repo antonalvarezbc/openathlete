@@ -20,6 +20,8 @@ const api = vi.hoisted(() => ({
   status: vi.fn(),
   weekSteps: vi.fn(),
   importJson: vi.fn(),
+  races: vi.fn(),
+  context: vi.fn(),
 }));
 
 vi.mock('@/api/ai-plan/ai-plan.api', () => ({
@@ -27,8 +29,75 @@ vi.mock('@/api/ai-plan/ai-plan.api', () => ({
     start: api.start,
     status: api.status,
     weekSteps: api.weekSteps,
+    races: api.races,
+    context: api.context,
   },
 }));
+const calendarRaces = [
+  {
+    eventId: 51,
+    name: 'Autumn 5K',
+    startDate: '2030-11-16T09:00:00.000Z',
+    sport: 'TRAIL_RUNNING',
+    distance: 5000,
+    elevationGain: 120,
+    timeTarget: 1200,
+  },
+];
+const preview = {
+  athlete: {
+    recentWeeklyMinutes: 150,
+    weeklyHistoryNewestFirst: [3, 4, 2, 3, 0, 0, 0, 0].map((sessions) => ({
+      minutes: sessions * 50,
+      sessions,
+    })),
+    minutesBySportLast8Weeks: { RUNNING: 600 },
+    metrics: { HR_MAX: 190 },
+    zones: 'HEARTRATE Zones: ...',
+    injuries: [
+      { location: 'knee', painScore: 3, status: 'STABLE', context: '' },
+    ],
+    races: [
+      {
+        name: 'Autumn 5K',
+        date: '2030-11-16T09:00:00.000Z',
+        dayInPlan: 26,
+        sport: 'TRAIL_RUNNING',
+        distance: 5000,
+        elevationGain: 120,
+        timeTarget: 1200,
+        description: null,
+        priority: 'PREPARATORY',
+        goal: false,
+      },
+      {
+        name: 'City 10K',
+        date: '2030-11-02T08:00:00.000Z',
+        dayInPlan: 12,
+        sport: 'RUNNING',
+        distance: 10000,
+        elevationGain: null,
+        timeTarget: 2700,
+        description: null,
+        priority: null,
+        goal: true,
+      },
+    ],
+  },
+  zoneTypes: ['HEARTRATE'],
+  conflicts: {
+    sessions: 2,
+    plans: [
+      {
+        trainingPlanId: 7,
+        name: 'Old plan',
+        startDate: '2030-09-01T00:00:00Z',
+        endDate: '2030-11-01T00:00:00Z',
+        status: 'ACTIVE',
+      },
+    ],
+  },
+};
 vi.mock('@/api/seo-plan', () => ({
   SeoPlanAPI: {
     importJson: api.importJson,
@@ -54,14 +123,6 @@ vi.mock('@/api/athlete', () => ({
     data: { athleteId: 4, user: { firstName: 'Ana', lastName: 'Runner' } },
   }),
   useGetMyCoachedAthletesQuery: () => ({ data: [] }),
-}));
-vi.mock('@/api/injury', () => ({
-  useGetInjuriesQuery: () => ({
-    data: [
-      { location: 'knee', status: 'STABLE' },
-      { location: 'ankle', status: 'RESOLVED' },
-    ],
-  }),
 }));
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 // Every message renders as its key, followed by its parameters.
@@ -148,6 +209,8 @@ describe('AiPlanDialog', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    api.races.mockResolvedValue(calendarRaces);
+    api.context.mockResolvedValue(preview);
     container = document.createElement('div');
     document.body.append(container);
     root = createRoot(container);
@@ -223,15 +286,126 @@ describe('AiPlanDialog', () => {
     await type('ai_plan_start_date', '2030-10-21');
   };
 
-  it('shows unresolved injuries and refuses plans over 24 weeks', async () => {
-    expect(dialog().textContent).toContain(
-      'ai_plan_injuries {"injuries":"knee"}',
-    );
+  const summary = () =>
+    dialog().querySelector('section[aria-label="ai_plan_context"]')!;
+
+  it('shows what the AI will use for the dates, and refuses plans over 24 weeks', async () => {
+    // Nothing to show until the dates are chosen.
+    expect(summary().textContent).toContain('ai_plan_context_dates');
     await fillValid();
+    await waitFor(() =>
+      summary().textContent!.includes('ai_plan_context_training_value'),
+    );
+    expect(api.context).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        athleteId: 4,
+        goalEventId: null,
+        startDate: '2030-10-21',
+        raceDate: '2030-11-02',
+      }),
+    );
+    const text = summary().textContent!;
+    expect(text).toContain(
+      // The locale is Spanish in these tests.
+      'ai_plan_context_training_value {"hours":"2,5","sessions":"12"}',
+    );
+    expect(text).toContain('metric_hr_max 190');
+    expect(text).toContain('heart_rate');
+    expect(text).toContain('knee (injury_status_stable, 3/10)');
+    expect(text).toContain('Autumn 5K');
+    expect(text).toContain('ai_plan_context_race_preparatory');
+    expect(text).toMatch(/City 10K · [^·]+ · ai_plan_context_race_goal/);
+    expect(text).toContain(
+      'ai_plan_context_calendar_sessions {"count":"2"} · Old plan',
+    );
+    // The typed goal name reaches the context once typing settles.
+    await waitFor(() =>
+      api.context.mock.calls.some((call) => call[0].goalName === '10K'),
+    );
+    expect(api.context).toHaveBeenCalledWith(
+      expect.objectContaining({ goalName: '10K' }),
+    );
+
     await type('ai_plan_race_date', '2031-04-07');
+    expect(summary().textContent).toContain('ai_plan_context_dates');
     await submit();
     expect(dialog().textContent).toContain('ai_plan_error_length');
     expect(api.start).not.toHaveBeenCalled();
+  });
+
+  it('fills the goal from a race in the calendar and links it on import', async () => {
+    api.start.mockResolvedValue({ jobId: 'job-1', state: 'queued' });
+    api.status.mockResolvedValue({
+      jobId: 'job-1',
+      state: 'done',
+      draft: draft({ raceDate: '2030-11-16' }),
+    });
+    api.importJson.mockResolvedValue({ trainingPlanId: 12, name: 'Plan 10K' });
+    await waitFor(() => !!dialog().querySelector('select option[value="51"]'));
+    await type('ai_plan_goal_pick', '51');
+    expect((field('ai_plan_goal_name') as HTMLInputElement).value).toBe(
+      'Autumn 5K',
+    );
+    expect((field('ai_plan_race_date') as HTMLInputElement).value).toBe(
+      '2030-11-16',
+    );
+    expect((field('ai_plan_goal_sport') as HTMLSelectElement).value).toBe(
+      'TRAIL_RUNNING',
+    );
+    expect((field('ai_plan_distance') as HTMLInputElement).value).toBe('5');
+    expect((field('ai_plan_elevation') as HTMLInputElement).value).toBe('120');
+    expect((field('ai_plan_time_target') as HTMLInputElement).value).toBe(
+      '00:20:00',
+    );
+    await type('ai_plan_start_date', '2030-10-21');
+    await waitFor(() =>
+      api.context.mock.calls.some((call) => call[0].goalEventId === 51),
+    );
+    expect(api.context).toHaveBeenCalledWith(
+      expect.objectContaining({ goalEventId: 51, raceDate: '2030-11-16' }),
+    );
+    await submit();
+    expect(api.start).toHaveBeenCalledWith(
+      expect.objectContaining({
+        goalEventId: 51,
+        goal: expect.objectContaining({
+          name: 'Autumn 5K',
+          date: '2030-11-16',
+          sport: 'TRAIL_RUNNING',
+          distanceKm: 5,
+          elevationGain: 120,
+          timeTarget: 1200,
+        }),
+      }),
+    );
+    await waitFor(() =>
+      dialog()?.textContent?.includes('ai_plan_review_title'),
+    );
+    await act(async () => {
+      dialog()
+        .querySelector<HTMLInputElement>('input[type="checkbox"]')!
+        .click();
+    });
+    const publish = [...dialog().querySelectorAll('button')].find(
+      (button) => button.textContent === 'json_plan_publish',
+    )!;
+    await act(async () => publish.click());
+    await waitFor(() => onImported.mock.calls.length > 0);
+    expect(api.importJson).toHaveBeenCalledWith(
+      expect.objectContaining({ goalEventId: 51, status: 'DRAFT' }),
+    );
+  });
+
+  it('forgets the calendar race when its date is changed', async () => {
+    await waitFor(() => !!dialog().querySelector('select option[value="51"]'));
+    await type('ai_plan_goal_pick', '51');
+    expect((field('ai_plan_goal_pick') as HTMLSelectElement).value).toBe('51');
+    await type('ai_plan_race_date', '2030-11-23');
+    expect((field('ai_plan_goal_pick') as HTMLSelectElement).value).toBe('');
+    // What was filled in stays, as a typed race.
+    expect((field('ai_plan_goal_name') as HTMLInputElement).value).toBe(
+      'Autumn 5K',
+    );
   });
 
   it("queues the coach's answers and follows the draft to the review", async () => {
@@ -254,6 +428,8 @@ describe('AiPlanDialog', () => {
     expect(api.start).toHaveBeenCalledWith(
       expect.objectContaining({
         athleteId: 4,
+        // Another race, typed: no calendar race to link.
+        goalEventId: null,
         goal: expect.objectContaining({
           name: '10K',
           date: '2030-11-02',
@@ -295,6 +471,26 @@ describe('AiPlanDialog', () => {
         ),
       ].map((option) => option.textContent?.split(' · ')[0]),
     ).toEqual(['json_plan_new', 'Future plan']);
+  });
+
+  it('shows a progress bar and the estimated time while writing', async () => {
+    api.start.mockResolvedValue({ jobId: 'job-1', state: 'queued' });
+    api.status.mockResolvedValue({
+      jobId: 'job-1',
+      state: 'running',
+      stage: 'generating',
+    });
+    await fillValid();
+    await submit();
+    await waitFor(() => !!dialog().querySelector('[role="progressbar"]'));
+    const bar = dialog().querySelector('[role="progressbar"]')!;
+    await waitFor(() => Number(bar.getAttribute('aria-valuenow')) >= 5);
+    expect(bar.getAttribute('aria-label')).toBe('ai_plan_progress_label');
+    // Being written, but never complete before the draft arrives.
+    expect(Number(bar.getAttribute('aria-valuenow'))).toBeGreaterThanOrEqual(5);
+    expect(Number(bar.getAttribute('aria-valuenow'))).toBeLessThan(90);
+    // Two weeks of three sessions: well under a minute, shown as one.
+    expect(dialog().textContent).toContain('ai_plan_estimate {"minutes":"1"}');
   });
 
   it('imports the reviewed draft as DRAFT and selects it', async () => {
@@ -459,6 +655,37 @@ describe('AiPlanDialog', () => {
     await fillValid();
     await submit();
     await waitFor(() => dialog().textContent!.includes('ai_plan_failed'));
+    expect(dialog().querySelector('[role="alert"]')!.textContent).toBe(
+      'ai_plan_failed',
+    );
     expect((field('ai_plan_goal_name') as HTMLInputElement).value).toBe('10K');
+  });
+
+  it.each([
+    ['QUOTA', '429 insufficient_quota', 'ai_plan_failed_quota'],
+    ['AUTH', '401 invalid_api_key', 'ai_plan_failed_auth'],
+    ['RATE_LIMIT', '429 rate_limit_exceeded', 'ai_plan_failed_rate_limit'],
+    ['UNAVAILABLE', '529 overloaded_error', 'ai_plan_failed_unavailable'],
+    ['TIMEOUT', undefined, 'ai_plan_failed_timeout'],
+    ['INVALID_ANSWER', 'TRUNCATED', 'ai_plan_failed_invalid'],
+    ['PROVIDER_ERROR', '404 model_not_found', 'ai_plan_failed_provider'],
+  ])('explains a %s failure', async (reason, detail, message) => {
+    api.start.mockResolvedValue({ jobId: 'job-1', state: 'queued' });
+    api.status.mockResolvedValue({
+      jobId: 'job-1',
+      state: 'failed',
+      reason,
+      ...(detail ? { detail } : {}),
+    });
+    await fillValid();
+    await submit();
+    await waitFor(() => !!dialog().querySelector('[role="alert"]'));
+    const alert = dialog().querySelector('[role="alert"]')!.textContent;
+    expect(alert).toContain(message);
+    if (detail)
+      expect(alert).toContain(
+        `ai_plan_failed_detail ${JSON.stringify({ detail })}`,
+      );
+    else expect(alert).not.toContain('ai_plan_failed_detail');
   });
 });

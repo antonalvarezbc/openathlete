@@ -11,6 +11,7 @@ import {
 import { workoutParserAgent } from 'src/mastra/agents';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
+import { isTerminalAiFailure } from './ai-failure';
 import {
   buildZonesContext,
   fetchAthleteMetrics,
@@ -80,6 +81,10 @@ export class WorkoutParserService {
           abortSignal: AbortSignal.timeout(60_000),
         }),
       2,
+      1000,
+      // An invalid answer may be fixed by another try; quota, key and
+      // timeout errors won't.
+      (error) => !isTerminalAiFailure(error),
     );
     if (!result.object) throw new Error('No structured workout returned');
     return result.object;

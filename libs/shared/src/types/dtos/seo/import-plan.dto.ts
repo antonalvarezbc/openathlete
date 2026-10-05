@@ -35,6 +35,8 @@ export const importPlanBodyDtoSchema = z.object({
   replacePlanId: z.number().int().positive().optional(),
   /** AI drafts are created as DRAFT so they never become active by surprise. */
   status: z.enum(['ACTIVE', 'DRAFT']).optional(),
+  /** A competition of the athlete to link as the plan's target race */
+  goalEventId: z.number().int().positive().optional(),
 });
 export type ImportPlanBodyDto = z.infer<typeof importPlanBodyDtoSchema>;
 export const importPlanDtoSchema = importPlanBodyDtoSchema.extend({

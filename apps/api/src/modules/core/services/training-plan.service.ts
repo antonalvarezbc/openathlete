@@ -187,6 +187,35 @@ export class TrainingPlanService {
                 data,
               })
             : await tx.trainingPlan.create({ data });
+          if (options.goalEventId) {
+            // The goal race becomes the plan's target race, with the same
+            // rules as linking it in Planning.
+            const goal = await tx.event.findFirst({
+              where: {
+                eventId: options.goalEventId,
+                athleteId,
+                type: EVENT_TYPE.COMPETITION,
+              },
+              include: { competition: true },
+            });
+            if (!goal?.competition)
+              throw new BadRequestException('Goal race not found');
+            if (
+              goal.startDate < data.startDate ||
+              goal.endDate > data.endDate ||
+              goal.endDate < goal.startDate
+            )
+              throw new BadRequestException(
+                'The goal race must be inside the plan dates',
+              );
+            await tx.trainingPlanRace.create({
+              data: {
+                trainingPlanId: plan.trainingPlanId,
+                eventCompetitionId: goal.competition.eventCompetitionId,
+                priority: 'TARGET',
+              },
+            });
+          }
           for (const cycle of schedule.cycles) {
             const savedCycle = await tx.cycle.create({
               data: {

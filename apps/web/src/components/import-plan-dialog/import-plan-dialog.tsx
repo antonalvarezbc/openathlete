@@ -133,6 +133,7 @@ export function ImportPlanDialog({
         timeZone,
         replacePlanId: replacePlanId ? Number(replacePlanId) : undefined,
         ...(draft ? { status: 'DRAFT' as const } : {}),
+        ...(draft?.goalEventId ? { goalEventId: draft.goalEventId } : {}),
       };
       return planToken
         ? SeoPlanAPI.importPlan({ ...options, planToken })

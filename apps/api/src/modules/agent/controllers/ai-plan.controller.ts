@@ -5,17 +5,21 @@ import {
   Controller,
   Get,
   Param,
+  ParseIntPipe,
   ParseUUIDPipe,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import {
+  AiPlanContextRequest,
   AiPlanRequest,
   AiPlanWeekStepsRequest,
   FeatureName,
+  aiPlanContextRequestSchema,
   aiPlanRequestSchema,
   aiPlanWeekStepsRequestSchema,
 } from '@openathlete/shared';
@@ -48,6 +52,31 @@ export class AiPlanController {
     @Body(new ZodValidationPipe(aiPlanRequestSchema)) request: AiPlanRequest,
   ) {
     return this.service.start(user, request);
+  }
+
+  @Get('races')
+  @ApiOperation({
+    summary: "The athlete's upcoming competitions, to pick the goal race",
+  })
+  races(
+    @JwtUser() user: AuthUser,
+    @Query('athleteId', ParseIntPipe) athleteId: number,
+  ) {
+    return this.service.upcomingRaces(user, athleteId);
+  }
+
+  @Post('context')
+  @ApiOperation({
+    summary: 'What the AI will receive about the athlete',
+    description:
+      'Recent training, metrics, zones, unresolved injuries and races in the plan window, exactly as a draft sends them, plus the sessions and plans already in those dates. Read-only and without AI.',
+  })
+  context(
+    @JwtUser() user: AuthUser,
+    @Body(new ZodValidationPipe(aiPlanContextRequestSchema))
+    input: AiPlanContextRequest,
+  ) {
+    return this.service.previewContext(user, input);
   }
 
   @Get('draft/:jobId')

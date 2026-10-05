@@ -8,4 +8,7 @@ export const workoutParserAgent = new Agent({
   name: 'workout-parser',
   model: WORKOUT_PARSER_MODEL,
   instructions: WORKOUT_PARSER_INSTRUCTIONS,
+  // No hidden retries: the default error processors retry quota and key
+  // errors too. Callers retry rate limits and outages (shouldRetryAiCall).
+  errorProcessorDefaults: false,
 });

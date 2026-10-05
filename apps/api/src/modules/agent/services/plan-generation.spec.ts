@@ -1,4 +1,9 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 
 import {
   AI_PLAN_ISSUE_CODES,
@@ -12,10 +17,14 @@ import {
   trainingPlanImportSchema,
 } from '@openathlete/shared';
 
+import { planGenerationAgent } from '../../../mastra/agents/plan-generation.agent';
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { AiPlanOutput, describeIssue, toImportPlan } from './plan-generation';
-import { PlanGenerationService } from './plan-generation.service';
+import {
+  PLAN_MAX_OUTPUT_TOKENS,
+  PlanGenerationService,
+} from './plan-generation.service';
 import { WorkoutParserService } from './workout-parser.service';
 
 jest.mock('../../../mastra/agents/plan-generation.agent', () => ({
@@ -72,7 +81,7 @@ function answer(
               description: "10' warm-up + 20' easy",
               minutes: total / days.length,
               rpe: 4,
-              distanceKm: null,
+              distanceKm: 0,
             })),
           };
         }),
@@ -89,13 +98,53 @@ const coach = {
 } as AuthUser;
 
 class TestService extends PlanGenerationService {
-  answers: Array<{ object: AiPlanOutput | null; raw: string }> = [];
+  answers: Array<{
+    object: AiPlanOutput | null;
+    raw: string;
+    truncated?: boolean;
+  }> = [];
   prompts: Array<Record<string, unknown>> = [];
   protected async callModel(prompt: string) {
     this.prompts.push(JSON.parse(prompt));
     return this.answers.shift() ?? { object: null, raw: '' };
   }
 }
+
+// The goal race in the calendar, and a tune-up linked to another plan.
+const races = [
+  {
+    eventId: 51,
+    name: 'Tune-up 5K',
+    startDate: new Date('2030-11-16T09:00:00Z'),
+    competition: {
+      sport: 'RUNNING',
+      description: `Hilly. ${'x'.repeat(400)}`,
+      goalDistance: 5000,
+      goalElevationGain: null,
+      goalDuration: 1200,
+      planRaces: [{ priority: 'PREPARATORY' }],
+    },
+  },
+  {
+    eventId: 50,
+    name: '10K',
+    startDate: new Date('2030-12-14T08:00:00Z'),
+    competition: {
+      sport: 'RUNNING',
+      description: '  Flat and fast  ',
+      goalDistance: 10000,
+      goalElevationGain: 20,
+      goalDuration: 2700,
+      planRaces: [],
+    },
+  },
+];
+const events: Record<number, { athleteId: number; type: string }> = {
+  50: { athleteId: 4, type: 'COMPETITION' },
+  51: { athleteId: 4, type: 'COMPETITION' },
+  60: { athleteId: 99, type: 'COMPETITION' },
+  61: { athleteId: 4, type: 'TRAINING' },
+};
 
 function setup() {
   const prisma = {
@@ -141,7 +190,14 @@ function setup() {
                 activity: { sport: 'RUNNING', movingTime: 7200 },
               },
             ]
-          : [],
+          : where.type === 'COMPETITION'
+            ? races
+            : [],
+      ),
+      findUnique: jest.fn(async ({ where }: { where: { eventId: number } }) =>
+        events[where.eventId]
+          ? { eventId: where.eventId, ...events[where.eventId] }
+          : null,
       ),
       count: jest.fn().mockResolvedValue(2),
     },
@@ -320,18 +376,32 @@ describe('PlanGenerationService.generate', () => {
     expect(draft.plan).not.toBeNull();
   });
 
-  test('returns no plan when both answers are unusable', async () => {
+  test('fails as an invalid answer when both answers are unusable, and logs why', async () => {
     const { service } = setup();
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
     service.answers = [
-      { object: null, raw: '{"name":' },
+      { object: null, raw: '{"name":', truncated: true },
       { object: null, raw: '' },
     ];
-    const draft = await service.generate(request);
-    expect(draft.plan).toBeNull();
+    await expect(service.generate(request)).rejects.toMatchObject({
+      name: 'AiPlanFailureError',
+      reason: 'INVALID_ANSWER',
+      detail: 'TRUNCATED',
+    });
     // The raw text of a malformed answer is what the repair sees.
     expect(
       (service.prompts[1].revision as { previousDraft: string }).previousDraft,
     ).toBe('{"name":');
+    const logged = warn.mock.calls.map((call) => String(call[0])).join('\n');
+    expect(logged).toMatch(/invalid after the repair round/);
+    expect(logged).toMatch(/model=\S+/);
+    expect(logged).toMatch(/truncated=true answer=8\/0 chars/);
+    expect(logged).toMatch(/problems=\[".*required format/);
+    // Never the prompt.
+    expect(logged).not.toContain('weekStarts');
+    warn.mockRestore();
   });
 
   test('treats no recent activity as unknown and counts injuries', async () => {
@@ -478,6 +548,220 @@ describe('applyAiPlanRules', () => {
   });
 });
 
+describe('PlanGenerationService race context', () => {
+  type Prompt = {
+    request: { goal: unknown };
+    athlete: { races: Array<Record<string, unknown>> };
+  };
+
+  test('flags the calendar goal once and sends the other races in full', async () => {
+    const { service } = setup();
+    service.answers = [{ object: answer(GOOD), raw: '' }];
+    await service.generate({ ...request, goalEventId: 50 });
+    const sent = (service.prompts[0] as Prompt).athlete.races;
+    expect(sent).toEqual([
+      {
+        name: 'Tune-up 5K',
+        date: '2030-11-16T09:00:00.000Z',
+        dayInPlan: 26,
+        sport: 'RUNNING',
+        distance: 5000,
+        elevationGain: null,
+        timeTarget: 1200,
+        description: `Hilly. ${'x'.repeat(293)}`,
+        priority: 'PREPARATORY',
+        goal: false,
+      },
+      {
+        name: '10K',
+        date: '2030-12-14T08:00:00.000Z',
+        dayInPlan: 54,
+        sport: 'RUNNING',
+        distance: 10000,
+        elevationGain: 20,
+        timeTarget: 2700,
+        description: 'Flat and fast',
+        priority: null,
+        goal: true,
+      },
+    ]);
+  });
+
+  test('recognizes a typed goal already in the calendar, by name and day', async () => {
+    const { service } = setup();
+    service.answers = [
+      { object: answer(GOOD), raw: '' },
+      { object: answer(GOOD), raw: '' },
+    ];
+    await service.generate({
+      ...request,
+      goal: { ...request.goal, name: ' 10k ' },
+    });
+    expect(
+      (service.prompts[0] as Prompt).athlete.races.map((race) => race.goal),
+    ).toEqual([false, true]);
+    // Another name on the same day, or the same name another day, is
+    // another race.
+    await service.generate({
+      ...request,
+      goal: { ...request.goal, name: 'Marathon' },
+    });
+    expect(
+      (service.prompts[1] as Prompt).athlete.races.map((race) => race.goal),
+    ).toEqual([false, false]);
+    service.answers = [{ object: answer(GOOD), raw: '' }];
+    await service.generate({
+      ...request,
+      goal: { ...request.goal, name: 'Tune-up 5K' },
+    });
+    expect(
+      (service.prompts[2] as Prompt).athlete.races.map((race) => race.goal),
+    ).toEqual([false, false]);
+  });
+
+  test('takes a goal from the calendar only if it is a race of that athlete', async () => {
+    const { service, queue } = setup();
+    await expect(
+      service.start(coach, { ...request, goalEventId: 60 }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.start(coach, { ...request, goalEventId: 404 }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.start(coach, { ...request, goalEventId: 61 }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(queue.add).not.toHaveBeenCalled();
+    await expect(
+      service.start(coach, { ...request, goalEventId: 50 }),
+    ).resolves.toMatchObject({ state: 'queued' });
+  });
+
+  test('the form shows exactly what a draft sends', async () => {
+    const { service } = setup();
+    service.answers = [{ object: answer(GOOD), raw: '' }];
+    const draft = await service.generate({ ...request, goalEventId: 50 });
+    const preview = await service.previewContext(coach, {
+      athleteId: 4,
+      goalEventId: 50,
+      startDate: request.startDate,
+      raceDate: request.goal.date,
+      timeZone: request.timeZone,
+    });
+    expect(preview.athlete).toEqual(
+      (service.prompts[0] as { athlete: unknown }).athlete,
+    );
+    expect(preview.conflicts).toEqual(draft.conflicts);
+    expect(preview.zoneTypes).toEqual(['HEARTRATE']);
+  });
+
+  test('lists upcoming calendar races with their goals', async () => {
+    const { service, prisma } = setup();
+    await expect(service.upcomingRaces(coach, 4)).resolves.toEqual([
+      {
+        eventId: 51,
+        name: 'Tune-up 5K',
+        startDate: '2030-11-16T09:00:00.000Z',
+        sport: 'RUNNING',
+        distance: 5000,
+        elevationGain: null,
+        timeTarget: 1200,
+      },
+      {
+        eventId: 50,
+        name: '10K',
+        startDate: '2030-12-14T08:00:00.000Z',
+        sport: 'RUNNING',
+        distance: 10000,
+        elevationGain: 20,
+        timeTarget: 2700,
+      },
+    ]);
+    const where = prisma.event.findMany.mock.calls.at(-1)![0].where as {
+      type: string;
+      startDate: { gte: Date; lt: Date };
+    };
+    expect(where.type).toBe('COMPETITION');
+    // From today, about a year ahead.
+    expect(where.startDate.lt.getTime() - NOW.getTime()).toBeGreaterThan(
+      360 * 86400000,
+    );
+    prisma.coachAthlete.findFirst.mockResolvedValue(null);
+    await expect(service.upcomingRaces(coach, 4)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+  });
+});
+
+describe('PlanGenerationService model call', () => {
+  // The real call, with the agent replaced.
+  const generate = planGenerationAgent.generate as jest.Mock;
+  const real = () =>
+    new PlanGenerationService(
+      null as never,
+      null as never,
+      null as never,
+    ) as unknown as {
+      callModel: (prompt: string) => Promise<{
+        object: unknown;
+        raw: string;
+        truncated?: boolean;
+      }>;
+    };
+  beforeEach(() => generate.mockReset());
+
+  test('asks for a structured plan with room for the longest one', async () => {
+    generate.mockResolvedValue({
+      // Whole minutes, as the output schema requires
+      object: answer([180, 120]),
+      text: '{}',
+      finishReason: 'stop',
+    });
+    const result = await real().callModel('{}');
+    expect(result.truncated).toBe(false);
+    expect(result.object).not.toBeNull();
+    expect(generate.mock.calls[0][1]).toMatchObject({
+      modelSettings: { maxOutputTokens: PLAN_MAX_OUTPUT_TOKENS },
+    });
+    // 24 weeks of 7 sessions (~12k tokens) plus thinking.
+    expect(PLAN_MAX_OUTPUT_TOKENS).toBeGreaterThanOrEqual(48_000);
+  });
+
+  test('notices an answer cut by the output limit', async () => {
+    generate.mockResolvedValueOnce({
+      object: null,
+      text: '{"rules":[],"name":"P',
+      finishReason: 'length',
+    });
+    await expect(real().callModel('{}')).resolves.toMatchObject({
+      object: null,
+      truncated: true,
+    });
+    generate.mockRejectedValueOnce(
+      new Error(
+        'Structured output was truncated because the model finished with reason "length".',
+      ),
+    );
+    await expect(real().callModel('{}')).resolves.toMatchObject({
+      object: null,
+      truncated: true,
+    });
+  });
+
+  test('does not call again when the account has no credit', async () => {
+    generate.mockRejectedValue(
+      Object.assign(new Error('You have no credits remaining.'), {
+        name: 'AI_APICallError',
+        statusCode: 429,
+        data: { error: { code: 'insufficient_quota' } },
+      }),
+    );
+    await expect(real().callModel('{}')).rejects.toMatchObject({
+      statusCode: 429,
+    });
+    expect(generate).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('PlanGenerationService jobs', () => {
   test('queues a draft only for a linked athlete', async () => {
     const { service, prisma, queue } = setup();
@@ -524,9 +808,26 @@ describe('PlanGenerationService jobs', () => {
     await expect(service.status(coach, 'a')).resolves.toMatchObject({
       state: 'queued',
     });
-    queue.getJob.mockResolvedValue(job('failed'));
-    await expect(service.status(coach, 'a')).resolves.toMatchObject({
+    queue.getJob.mockResolvedValue(
+      job('failed', {
+        failedReason:
+          'AI_PLAN_FAILED {"reason":"QUOTA","detail":"429 insufficient_quota"}',
+      }),
+    );
+    await expect(service.status(coach, 'a')).resolves.toEqual({
+      jobId: 'a',
       state: 'failed',
+      reason: 'QUOTA',
+      detail: '429 insufficient_quota',
+    });
+    // A failure the worker did not classify, such as a stalled job.
+    queue.getJob.mockResolvedValue(
+      job('failed', { failedReason: 'job stalled more than allowable limit' }),
+    );
+    await expect(service.status(coach, 'a')).resolves.toEqual({
+      jobId: 'a',
+      state: 'failed',
+      reason: 'PROVIDER_ERROR',
     });
     queue.getJob.mockResolvedValue({
       ...job('completed'),

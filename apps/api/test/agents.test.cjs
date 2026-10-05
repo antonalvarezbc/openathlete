@@ -379,7 +379,7 @@ test('AI plans are drafted on the planning model with a strict schema', async ()
     description: "10' calentamiento + 30' Z2 + 5' vuelta a la calma",
     minutes,
     rpe: 4,
-    distanceKm: null,
+    distanceKm: 0,
   });
   providersAnswer(
     JSON.stringify({
@@ -443,4 +443,158 @@ test('AI plans are drafted on the planning model with a strict schema', async ()
   assert.equal(trainingPlanImportSchema.safeParse(plan).success, true);
   assert.equal(plan.cycles[0].weeks[1].sessions[1].dayOfWeek, 6);
   assert.equal(plan.cycles[0].weeks[1].sessions[1].goalDuration, 3600);
+});
+
+/** Every keyword in a JSON schema, except property names. */
+function schemaKeywords(schema, out = new Set()) {
+  if (Array.isArray(schema))
+    schema.forEach((item) => schemaKeywords(item, out));
+  else if (schema && typeof schema === 'object')
+    for (const [key, value] of Object.entries(schema)) {
+      out.add(key);
+      if (key === 'properties')
+        Object.values(value).forEach((item) => schemaKeywords(item, out));
+      else schemaKeywords(value, out);
+    }
+  return out;
+}
+
+/** Objects as both providers require them: closed, every property required. */
+function assertClosedObjects(schema) {
+  if (Array.isArray(schema)) return schema.forEach(assertClosedObjects);
+  if (!schema || typeof schema !== 'object') return;
+  if (schema.type === 'object') {
+    assert.equal(schema.additionalProperties, false);
+    assert.deepEqual(
+      [...(schema.required ?? [])].sort(),
+      Object.keys(schema.properties ?? {}).sort(),
+    );
+  }
+  Object.values(schema).forEach(assertClosedObjects);
+}
+
+// Keywords OpenAI strict mode and Anthropic structured outputs both accept.
+// Bounds, lengths, patterns and formats are left to our own validation.
+const PORTABLE_KEYWORDS = new Set([
+  '$schema',
+  'type',
+  'properties',
+  'required',
+  'additionalProperties',
+  'items',
+  'enum',
+  'anyOf',
+  'description',
+]);
+
+function providerRequests(env) {
+  const { execFileSync } = require('node:child_process');
+  const output = execFileSync(
+    process.execPath,
+    [require('node:path').join(__dirname, 'provider-requests.cjs')],
+    {
+      env: {
+        PATH: process.env.PATH,
+        OPENAI_API_KEY: 'sk-instance-openai',
+        ANTHROPIC_API_KEY: 'sk-instance-anthropic',
+        ...env,
+      },
+    },
+  );
+  return JSON.parse(String(output));
+}
+
+test('on Anthropic, plans use native structured output, a token limit and no sampling settings', () => {
+  // The instance as configured in production
+  const { plan, parser } = providerRequests({
+    AI_PROVIDER: 'anthropic',
+    AI_MODEL_DEFAULT: 'anthropic/claude-opus-5-5',
+  });
+  // No hidden retries: a 400 is final for plans; the parser keeps its one
+  // retry of answers that may be fixed by another try.
+  assert.equal(plan.length, 1);
+  assert.equal(parser.length, 2);
+
+  const planBody = plan[0].body;
+  assert.ok(plan[0].url.endsWith('/messages'));
+  assert.equal(planBody.model, 'claude-opus-5-5');
+  // Room for the plan and the thinking tokens that count as output.
+  assert.equal(planBody.max_tokens, 64000);
+  // Opus 5 refuses forced tool use and sampling settings.
+  for (const key of ['temperature', 'top_p', 'top_k', 'tools', 'tool_choice'])
+    assert.equal(planBody[key], undefined, key);
+  assert.equal(planBody.output_config.format.type, 'json_schema');
+  const planSchema = planBody.output_config.format.schema;
+  assert.deepEqual(
+    [...schemaKeywords(planSchema)].filter(
+      (key) => !PORTABLE_KEYWORDS.has(key),
+    ),
+    [],
+  );
+  // No nullable unions in the plan schema.
+  assert.ok(!JSON.stringify(planSchema).includes('"null"'));
+  assertClosedObjects(planSchema);
+
+  const parserBody = parser[0].body;
+  assert.equal(parserBody.model, 'claude-haiku-4-5');
+  for (const key of ['temperature', 'top_p', 'tools', 'tool_choice'])
+    assert.equal(parserBody[key], undefined, key);
+  const parserSchema = parserBody.output_config.format.schema;
+  assert.deepEqual(
+    [...schemaKeywords(parserSchema)].filter(
+      (key) => !PORTABLE_KEYWORDS.has(key),
+    ),
+    [],
+  );
+  assertClosedObjects(parserSchema);
+});
+
+test('on OpenAI, plans use strict structured output with the same token limit', () => {
+  const { plan, parser } = providerRequests({});
+  assert.equal(plan.length, 1);
+  const body = plan[0].body;
+  assert.equal(body.model, 'gpt-5.1');
+  assert.equal(body.max_output_tokens, 64000);
+  assert.equal(body.temperature, undefined);
+  assert.equal(body.text.format.type, 'json_schema');
+  assert.notEqual(body.text.format.strict, false);
+  assert.deepEqual(
+    [...schemaKeywords(body.text.format.schema)].filter(
+      (key) => !PORTABLE_KEYWORDS.has(key),
+    ),
+    [],
+  );
+  assertClosedObjects(body.text.format.schema);
+  assertClosedObjects(parser[0].body.text.format.schema);
+});
+
+test('an account without credit is called once, not retried', async () => {
+  for (const agent of [planGenerationAgent, workoutParserAgent]) {
+    requests = [];
+    globalThis.fetch = async (url, init) => {
+      requests.push({ url: String(url), body: JSON.parse(init.body) });
+      return json(
+        {
+          error: {
+            message:
+              'You have no credits remaining. Add credits to continue using the API at https://platform.openai.com/settings/organization/billing/.',
+            type: 'insufficient_quota',
+            code: 'insufficient_quota',
+          },
+        },
+        429,
+      );
+    };
+    await assert.rejects(
+      agent.generate('{}', {
+        structuredOutput: {
+          schema:
+            agent === planGenerationAgent
+              ? aiPlanOutputSchema
+              : parsedWorkoutSchema,
+        },
+      }),
+    );
+    assert.equal(requests.length, 1, agent.id);
+  }
 });

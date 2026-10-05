@@ -2,16 +2,27 @@ import { Queue } from 'bullmq';
 import { randomUUID } from 'node:crypto';
 
 import { InjectQueue } from '@nestjs/bullmq';
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 
 import {
+  AiPlanAthleteContext,
   AiPlanCheckFacts,
+  AiPlanConflicts,
+  AiPlanContextPreview,
+  AiPlanContextRequest,
   AiPlanDraft,
   AiPlanIssue,
   AiPlanJobStatus,
   AiPlanRequest,
   AiPlanRuleNote,
   AiPlanRules,
+  AiPlanUpcomingRace,
   AiPlanWeekSteps,
   AiPlanWeekStepsRequest,
   METRIC_TYPE,
@@ -23,9 +34,16 @@ import {
   trainingPlanImportSchema,
 } from '@openathlete/shared';
 
+import { EVENT_MODIFICATION_MODEL } from '../../../common/constants/ai-models.constant';
 import { planGenerationAgent } from '../../../mastra/agents/plan-generation.agent';
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PrismaService } from '../../prisma/services/prisma.service';
+import {
+  AiPlanFailureError,
+  classifyAiFailure,
+  decodeAiFailure,
+  shouldRetryAiCall,
+} from './ai-failure';
 import {
   buildZonesContext,
   fetchAthleteMetrics,
@@ -54,6 +72,8 @@ const AVERAGE_WEEKS = 4;
 /** Sessions of one week structured at the same time. */
 const STEP_CONCURRENCY = 3;
 const MODEL_TIMEOUT_MS = 10 * 60_000;
+/** Logged with failures: the instance model plans run on. */
+export const PLAN_MODEL = EVENT_MODIFICATION_MODEL;
 const REFERENCE_METRICS = [
   METRIC_TYPE.HR_MAX,
   METRIC_TYPE.HR_REST,
@@ -65,7 +85,21 @@ const REFERENCE_METRICS = [
   METRIC_TYPE.VO2MAX,
 ];
 
-type ModelAnswer = { object: AiPlanOutput | null; raw: string };
+type ModelAnswer = {
+  object: AiPlanOutput | null;
+  raw: string;
+  /** The model hit the output limit before finishing */
+  truncated?: boolean;
+};
+
+/**
+ * Room for the longest plan, 24 weeks of 7 sessions (about 12,000 tokens),
+ * plus the thinking or reasoning tokens that count as output on current
+ * Claude and GPT models.
+ */
+export const PLAN_MAX_OUTPUT_TOKENS = 64_000;
+
+const TRUNCATED = /truncated|finished with reason "length"/i;
 
 /** The instant a civil date starts in a time zone. */
 function startOfDay(date: string, timeZone: string): Date {
@@ -98,6 +132,30 @@ function startOfDay(date: string, timeZone: string): Date {
   }
   return new Date(result);
 }
+
+/** The civil date of an instant in a time zone, as YYYY-MM-DD. */
+const civilDate = (date: Date, timeZone: string) =>
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+
+const sameName = (a: string, b: string) =>
+  a.trim().toLowerCase() === b.trim().toLowerCase();
+
+/** Races in the window after the race date (other goals, the next season). */
+const RACES_AFTER_DAYS = 28;
+const RACES_LIMIT = 10;
+/** How far ahead the goal race can be picked from the calendar. */
+const UPCOMING_RACES_DAYS = 370;
+
+/** What the context is built for: the athlete, the dates and the goal. */
+type ContextInput = Pick<
+  AiPlanContextRequest,
+  'athleteId' | 'startDate' | 'raceDate' | 'timeZone' | 'goalEventId'
+> & { goalName?: string };
 
 const addDays = (date: string, days: number) =>
   new Date(new Date(`${date}T00:00:00Z`).getTime() + days * DAY_MS)
@@ -148,6 +206,7 @@ function rawModelText(error: unknown): string {
 const isOutputError = (error: unknown) =>
   error instanceof Error &&
   (error.message.includes('Structured output validation failed') ||
+    TRUNCATED.test(error.message) ||
     error.name === 'AI_NoObjectGeneratedError' ||
     ('cause' in error &&
       error.cause instanceof Error &&
@@ -176,6 +235,8 @@ export class PlanGenerationService {
     request: AiPlanRequest,
   ): Promise<AiPlanJobStatus> {
     await resolveAiEventAthleteId(this.prisma, user, request.athleteId);
+    if (request.goalEventId)
+      await this.goalEvent(request.athleteId, request.goalEventId);
     const job = await this.queue.add(
       'generate',
       { userId: user.userId, request },
@@ -191,7 +252,8 @@ export class PlanGenerationService {
     const state = await job.getState();
     if (state === 'completed')
       return { jobId, state: 'done', draft: job.returnvalue };
-    if (state === 'failed') return { jobId, state: 'failed' };
+    if (state === 'failed')
+      return { jobId, state: 'failed', ...decodeAiFailure(job.failedReason) };
     if (state === 'active') {
       const stage = (job.progress as { stage?: AiPlanJobStatus['stage'] })
         ?.stage;
@@ -225,14 +287,95 @@ export class PlanGenerationService {
           });
           return parsed.length ? parsed : null;
         } catch (error) {
+          const failure = classifyAiFailure(error);
           this.logger.warn(
-            `A session could not be structured: ${error instanceof Error ? error.name : 'error'}`,
+            `A session could not be structured: task=WORKOUT_STRUCTURE reason=${failure.reason} ` +
+              `status=${failure.status ?? '-'} error=${failure.name}: ${failure.message}`,
           );
           return null;
         }
       },
     );
     return { steps };
+  }
+
+  /**
+   * Competitions in the athlete's calendar from today on, to pick the goal
+   * race from. Their goals fill in the form.
+   */
+  async upcomingRaces(
+    user: AuthUser,
+    athleteId: number,
+  ): Promise<AiPlanUpcomingRace[]> {
+    await resolveAiEventAthleteId(this.prisma, user, athleteId);
+    const now = new Date();
+    const events = await this.prisma.event.findMany({
+      where: {
+        athleteId,
+        type: 'COMPETITION',
+        startDate: {
+          gte: new Date(now.getTime() - DAY_MS),
+          lt: new Date(now.getTime() + UPCOMING_RACES_DAYS * DAY_MS),
+        },
+      },
+      select: {
+        eventId: true,
+        name: true,
+        startDate: true,
+        competition: {
+          select: {
+            sport: true,
+            goalDistance: true,
+            goalElevationGain: true,
+            goalDuration: true,
+          },
+        },
+      },
+      orderBy: { startDate: 'asc' },
+      take: 50,
+    });
+    return events.flatMap((event) =>
+      event.competition
+        ? [
+            {
+              eventId: event.eventId,
+              name: event.name,
+              startDate: event.startDate.toISOString(),
+              sport: event.competition.sport as AiPlanUpcomingRace['sport'],
+              distance: event.competition.goalDistance,
+              elevationGain: event.competition.goalElevationGain,
+              timeTarget: event.competition.goalDuration,
+            },
+          ]
+        : [],
+    );
+  }
+
+  /** Exactly what the AI will receive about the athlete, for the form. */
+  async previewContext(
+    user: AuthUser,
+    input: AiPlanContextRequest,
+  ): Promise<AiPlanContextPreview> {
+    await resolveAiEventAthleteId(this.prisma, user, input.athleteId);
+    const context = await this.athleteContext(input);
+    return {
+      athlete: context.athlete,
+      zoneTypes: context.zoneTypes,
+      conflicts: context.conflicts,
+    };
+  }
+
+  /** A goal race from the calendar must be a competition of the athlete. */
+  private async goalEvent(athleteId: number, eventId: number) {
+    const event = await this.prisma.event.findUnique({
+      where: { eventId },
+      select: { eventId: true, athleteId: true, type: true },
+    });
+    if (!event || event.athleteId !== athleteId)
+      throw new ForbiddenException('You cannot use this race');
+    if (event.type !== 'COMPETITION')
+      throw new BadRequestException('AI_PLAN_GOAL_NOT_RACE');
+    return event.eventId;
   }
 
   /** Runs in the plan-generation job. */
@@ -258,6 +401,18 @@ export class PlanGenerationService {
       const revised = this.evaluate(second, request, context.facts);
       // Keep the first draft if the repair broke the format.
       if (revised.plan || !result.plan) result = revised;
+      if (!result.plan) {
+        const truncated = !!(first.truncated || second.truncated);
+        this.logger.warn(
+          `AI plan draft invalid after the repair round: model=${PLAN_MODEL} ` +
+            `truncated=${truncated} answer=${first.raw.length}/${second.raw.length} chars ` +
+            `problems=${JSON.stringify(result.problems.slice(0, 3))}`,
+        );
+        throw new AiPlanFailureError(
+          'INVALID_ANSWER',
+          truncated ? 'TRUNCATED' : undefined,
+        );
+      }
     }
     return {
       plan: result.plan,
@@ -323,28 +478,101 @@ export class PlanGenerationService {
         () =>
           planGenerationAgent.generate(prompt, {
             structuredOutput: { schema: aiPlanOutputSchema },
+            modelSettings: { maxOutputTokens: PLAN_MAX_OUTPUT_TOKENS },
             abortSignal: AbortSignal.timeout(MODEL_TIMEOUT_MS),
           }),
-        2,
+        3,
+        2000,
+        // Rate limits and outages pass; quota, key and invalid answers don't
+        // (the repair round handles those).
+        shouldRetryAiCall,
       );
       const parsed = aiPlanOutputSchema.safeParse(result.object);
       return {
         object: parsed.success ? parsed.data : null,
         raw: typeof result.text === 'string' ? result.text : '',
+        truncated: result.finishReason === 'length',
       };
     } catch (error) {
       // A malformed answer gets the repair round; provider errors fail the job.
       if (isOutputError(error))
-        return { object: null, raw: rawModelText(error) };
+        return {
+          object: null,
+          raw: rawModelText(error),
+          truncated: TRUNCATED.test((error as Error).message),
+        };
       throw error;
     }
   }
 
   private async context(request: AiPlanRequest) {
-    const { athleteId, timeZone } = request;
     const raceDate = request.goal.date;
     const weeks = aiPlanWeekCount(request.startDate, raceDate);
-    const start = startOfDay(request.startDate, timeZone);
+    const context = await this.athleteContext({
+      athleteId: request.athleteId,
+      startDate: request.startDate,
+      raceDate,
+      timeZone: request.timeZone,
+      goalEventId: request.goalEventId,
+      goalName: request.goal.name,
+    });
+    const facts: AiPlanCheckFacts = {
+      startDate: request.startDate,
+      raceDate,
+      weeks,
+      sports: request.sports,
+      trainingDays: request.trainingDays,
+      weeklyHours: request.weeklyHours,
+      injuries: context.athlete.injuries.length,
+      zoneNumbers: context.zoneNumbers,
+      metrics: context.metricTypes,
+      recentWeeklyMinutes: context.athlete.recentWeeklyMinutes,
+    };
+    const prompt = {
+      request: {
+        goal: request.goal,
+        sports: request.sports,
+        weeklyHours: request.weeklyHours,
+        methodology: request.methodology ?? null,
+        methodologyNotes: request.methodologyNotes ?? null,
+        constraints: request.constraints ?? null,
+        language: request.language,
+      },
+      schedule: {
+        weeks,
+        weekStarts: Array.from({ length: weeks }, (_, k) =>
+          addDays(request.startDate, k * 7),
+        ),
+        raceDate,
+        raceWeekday: dayName(new Date(`${raceDate}T00:00:00Z`).getUTCDay()),
+        trainingDays: request.trainingDays.map(dayName),
+        longSessionDay:
+          request.longSessionDay != null
+            ? dayName(request.longSessionDay)
+            : null,
+      },
+      athlete: context.athlete,
+    };
+    return { prompt, facts, conflicts: context.conflicts };
+  }
+
+  /**
+   * What the AI receives about the athlete for these dates: recent training,
+   * metrics, zones, injuries and the races in the plan window, plus what is
+   * already in the calendar. The form shows the same object.
+   */
+  private async athleteContext(input: ContextInput): Promise<{
+    athlete: AiPlanAthleteContext;
+    metricTypes: METRIC_TYPE[];
+    zoneNumbers: number[];
+    zoneTypes: string[];
+    conflicts: AiPlanConflicts;
+  }> {
+    const { athleteId, timeZone, startDate, raceDate } = input;
+    const goalEventId = input.goalEventId
+      ? await this.goalEvent(athleteId, input.goalEventId)
+      : null;
+    const start = startOfDay(startDate, timeZone);
     const end = startOfDay(addDays(raceDate, 1), timeZone);
     const now = new Date();
     const historyStart = new Date(now.getTime() - HISTORY_WEEKS * 7 * DAY_MS);
@@ -379,22 +607,26 @@ export class PlanGenerationService {
             type: 'COMPETITION',
             startDate: {
               gte: start,
-              lt: new Date(end.getTime() + 28 * DAY_MS),
+              lt: new Date(end.getTime() + RACES_AFTER_DAYS * DAY_MS),
             },
           },
           select: {
+            eventId: true,
             name: true,
             startDate: true,
             competition: {
               select: {
                 sport: true,
+                description: true,
                 goalDistance: true,
                 goalElevationGain: true,
+                goalDuration: true,
+                planRaces: { select: { priority: true } },
               },
             },
           },
           orderBy: { startDate: 'asc' },
-          take: 10,
+          take: RACES_LIMIT,
         }),
         this.prisma.event.count({
           where: {
@@ -457,81 +689,70 @@ export class PlanGenerationService {
         ),
       ),
     ];
-    const facts: AiPlanCheckFacts = {
-      startDate: request.startDate,
-      raceDate,
-      weeks,
-      sports: request.sports,
-      trainingDays: request.trainingDays,
-      weeklyHours: request.weeklyHours,
-      injuries: injuries.length,
-      zoneNumbers,
-      metrics: [...latest.keys()] as METRIC_TYPE[],
+    // The goal is flagged, never listed again as another race. Without a
+    // calendar pick, a race on the race day with the same name is the goal.
+    const isGoal = (race: (typeof races)[number]) =>
+      goalEventId
+        ? race.eventId === goalEventId
+        : !!input.goalName &&
+          sameName(race.name, input.goalName) &&
+          civilDate(race.startDate, timeZone) === raceDate;
+    const athlete: AiPlanAthleteContext = {
       recentWeeklyMinutes,
-    };
-    const prompt = {
-      request: {
-        goal: request.goal,
-        sports: request.sports,
-        weeklyHours: request.weeklyHours,
-        methodology: request.methodology ?? null,
-        methodologyNotes: request.methodologyNotes ?? null,
-        constraints: request.constraints ?? null,
-        language: request.language,
-      },
-      schedule: {
-        weeks,
-        weekStarts: Array.from({ length: weeks }, (_, k) =>
-          addDays(request.startDate, k * 7),
-        ),
-        raceDate,
-        raceWeekday: dayName(new Date(`${raceDate}T00:00:00Z`).getUTCDay()),
-        trainingDays: request.trainingDays.map(dayName),
-        longSessionDay:
-          request.longSessionDay != null
-            ? dayName(request.longSessionDay)
-            : null,
-      },
-      athlete: {
-        recentWeeklyMinutes,
-        weeklyHistoryNewestFirst: history.map((week) => ({
-          minutes: Math.round(week.minutes),
-          sessions: week.sessions,
-        })),
-        minutesBySportLast8Weeks: Object.fromEntries(
-          Object.entries(bySport).map(([sport, minutes]) => [
-            sport,
-            Math.round(minutes),
-          ]),
-        ),
-        metrics: Object.fromEntries(
-          REFERENCE_METRICS.filter((type) => latest.has(type)).map((type) => [
-            type,
-            latest.get(type),
-          ]),
-        ),
-        zones:
-          buildZonesContext(formatZonesByType(zones), { ids: false }) || null,
-        injuries: injuries.map((injury) => ({
-          ...injury,
-          context: injury.context.slice(0, 300),
-        })),
-        races: races.map((race) => ({
+      weeklyHistoryNewestFirst: history.map((week) => ({
+        minutes: Math.round(week.minutes),
+        sessions: week.sessions,
+      })),
+      minutesBySportLast8Weeks: Object.fromEntries(
+        Object.entries(bySport).map(([sport, minutes]) => [
+          sport,
+          Math.round(minutes),
+        ]),
+      ),
+      metrics: Object.fromEntries(
+        REFERENCE_METRICS.filter((type) => latest.has(type)).map((type) => [
+          type,
+          latest.get(type)!,
+        ]),
+      ),
+      zones:
+        buildZonesContext(formatZonesByType(zones), { ids: false }) || null,
+      injuries: injuries.map((injury) => ({
+        ...injury,
+        context: injury.context.slice(0, 300),
+      })),
+      races: races.map((race) => {
+        const priorities = race.competition?.planRaces.map(
+          (link) => link.priority,
+        );
+        return {
           name: race.name,
           date: race.startDate.toISOString(),
           dayInPlan: aiPlanDayOffset(
-            request.startDate,
-            race.startDate.toISOString().slice(0, 10),
+            startDate,
+            civilDate(race.startDate, timeZone),
           ),
-          sport: race.competition?.sport ?? null,
+          sport: (race.competition?.sport ??
+            null) as AiPlanAthleteContext['races'][number]['sport'],
           distance: race.competition?.goalDistance ?? null,
           elevationGain: race.competition?.goalElevationGain ?? null,
-        })),
-      },
+          timeTarget: race.competition?.goalDuration ?? null,
+          description:
+            race.competition?.description.trim().slice(0, 300) || null,
+          priority: priorities?.includes('TARGET')
+            ? 'TARGET'
+            : priorities?.length
+              ? 'PREPARATORY'
+              : null,
+          goal: isGoal(race),
+        };
+      }),
     };
     return {
-      prompt,
-      facts,
+      athlete,
+      metricTypes: [...latest.keys()] as METRIC_TYPE[],
+      zoneNumbers,
+      zoneTypes: [...new Set(zones.map((zone) => zone.type))],
       conflicts: {
         sessions,
         plans: plans.map((plan) => ({
