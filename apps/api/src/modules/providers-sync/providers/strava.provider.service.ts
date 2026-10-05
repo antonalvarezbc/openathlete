@@ -38,6 +38,7 @@ import {
   ImportedActivity,
   ProviderImportCapability,
 } from '../base/provider-import.interface';
+import { providerRedirectUri } from '../base/provider-urls';
 
 @Injectable()
 export class StravaProviderService
@@ -77,7 +78,11 @@ export class StravaProviderService
       tokenUrl: 'https://www.strava.com/api/v3/oauth/token',
       clientId: this.configService.get('STRAVA_CLIENT_ID') || '',
       clientSecret: this.configService.get('STRAVA_CLIENT_SECRET') || '',
-      redirectUri: this.configService.get('STRAVA_REDIRECT_URI') || '',
+      redirectUri: providerRedirectUri(
+        this.configService.get('STRAVA_REDIRECT_URI'),
+        this.configService.get('APP_URL'),
+        'strava',
+      ),
       scopes: ['read', 'activity:read_all'],
     };
   }
