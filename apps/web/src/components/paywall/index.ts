@@ -1,2 +1,2 @@
 export * from './paywall-dialog';
-export * from './plan-card';
+export * from './supporter-offer';

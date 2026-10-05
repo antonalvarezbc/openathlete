@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import {
+  billingIntervalSchema,
   subscriptionPlanSchema,
   subscriptionStatusSchema,
 } from '../../subscription.types';
@@ -16,6 +17,12 @@ export const currentSubscriptionDtoSchema = z.object({
   currentPeriodEnd: z.date().nullable(),
   trialEnd: z.date().nullable(),
   cancelAtPeriodEnd: z.boolean(),
+  /** Billing interval of a Supporter subscription */
+  billingInterval: billingIntervalSchema.nullable(),
+  /** Athletes the user may coach right now; null = unlimited */
+  maxAthletes: z.number().nullable(),
+  /** The instance sells subscriptions (Stripe is configured) */
+  billingEnabled: z.boolean(),
 });
 
 export type CurrentSubscriptionDto = z.infer<
@@ -26,7 +33,8 @@ export type CurrentSubscriptionDto = z.infer<
  * Create checkout session DTO
  */
 export const createCheckoutSessionDtoSchema = z.object({
-  plan: subscriptionPlanSchema,
+  /** Supporter is the only plan for sale; the interval picks its price */
+  interval: billingIntervalSchema,
   successUrl: z.string().url(),
   cancelUrl: z.string().url(),
 });

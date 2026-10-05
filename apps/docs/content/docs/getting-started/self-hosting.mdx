@@ -67,6 +67,8 @@ Leave a variable empty to disable the feature:
 | AI load estimation of planned sessions | `ENABLE_TRAINING_LOAD_ESTIMATION` |
 | Billing | `STRIPE_*` (not needed for self-hosting) |
 
+Without Stripe, the instance sells nothing and limits nobody: every account can coach any number of athletes. With Stripe, free accounts coach up to 5 athletes and the Supporter subscription (`STRIPE_PRICE_SUPPORTER_MONTHLY`, `STRIPE_PRICE_SUPPORTER_YEARLY`) removes the limit and includes AI on the instance keys.
+
 Every API variable is documented in `apps/api/.env.example`.
 
 Activities from connected devices, including historical imports, are fetched by background jobs that run inside the API container (`ENABLE_ACTIVITY_IMPORT` and `ENABLE_ACTIVITY_PROCESSING`, both on by default). To run them in a separate worker instead, start a second API container with these two variables set to `true` and `SKIP_MIGRATIONS=true`, and set them to `false` on the API.

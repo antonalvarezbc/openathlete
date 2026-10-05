@@ -7,14 +7,14 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import { SubscriptionPlan } from '@openathlete/shared';
-import { ApiEnvSchemaType } from '@openathlete/shared';
+import { ApiEnvSchemaType, BillingInterval } from '@openathlete/shared';
 
 @Injectable()
 export class StripeService {
   private readonly logger = new Logger(StripeService.name);
   private readonly client: Stripe | null;
-  private readonly priceIds: Record<SubscriptionPlan, string>;
+  /** Supporter prices, the only plan for sale */
+  private readonly priceIds: Record<BillingInterval, string | undefined>;
 
   constructor(
     private readonly configService: ConfigService<ApiEnvSchemaType, true>,
@@ -30,38 +30,22 @@ export class StripeService {
       this.logger.warn('STRIPE_SECRET_KEY is not set, billing is disabled');
     }
 
-    const priceIdsJson = this.configService.get('STRIPE_PRICE_IDS');
-    if (!priceIdsJson) {
-      this.priceIds = {
-        [SubscriptionPlan.FREE]: '',
-        [SubscriptionPlan.ATHLETE_PRO]: '',
-        [SubscriptionPlan.COACH_PRO]: '',
-        [SubscriptionPlan.COACH_ULTRA]: '',
-        [SubscriptionPlan.CLUB_PRO]: '',
-        [SubscriptionPlan.CLUB_ULTRA]: '',
-      };
-      return;
-    }
+    this.priceIds = {
+      [BillingInterval.MONTH]: this.configService.get(
+        'STRIPE_PRICE_SUPPORTER_MONTHLY',
+      ),
+      [BillingInterval.YEAR]: this.configService.get(
+        'STRIPE_PRICE_SUPPORTER_YEARLY',
+      ),
+    };
+  }
 
-    try {
-      this.priceIds = JSON.parse(priceIdsJson) as Record<
-        SubscriptionPlan,
-        string
-      >;
-    } catch (error) {
-      this.logger.error(
-        `Failed to parse STRIPE_PRICE_IDS: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
-      this.logger.error('Price IDs: %j', priceIdsJson);
-      this.priceIds = {
-        [SubscriptionPlan.FREE]: '',
-        [SubscriptionPlan.ATHLETE_PRO]: '',
-        [SubscriptionPlan.COACH_PRO]: '',
-        [SubscriptionPlan.COACH_ULTRA]: '',
-        [SubscriptionPlan.CLUB_PRO]: '',
-        [SubscriptionPlan.CLUB_ULTRA]: '',
-      };
-    }
+  /**
+   * The instance sells Supporter subscriptions. Without billing (self-hosted
+   * instances) there is nothing to buy, so plan limits do not apply.
+   */
+  get billingEnabled(): boolean {
+    return this.client !== null;
   }
 
   private get stripe(): Stripe {
@@ -116,81 +100,24 @@ export class StripeService {
     return customer;
   }
 
-  async hasUsedTrial(customerId: string): Promise<boolean> {
-    const subscriptions = await this.stripe.subscriptions.list({
-      customer: customerId,
-      limit: 100,
-      status: 'all', // Include all statuses (active, canceled, past_due, etc.)
-    });
-
-    for (const subscription of subscriptions.data) {
-      if (subscription.trial_end && subscription.trial_end > 0) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
   /**
-   * Create a checkout session for subscription
+   * Create a checkout session for the Supporter subscription. There is no
+   * trial: the free plan already has the whole app.
    */
   async createCheckoutSession(
     customerId: string,
-    plan: SubscriptionPlan,
+    interval: BillingInterval,
     successUrl: string,
     cancelUrl: string,
   ): Promise<Stripe.Checkout.Session> {
-    const priceId = this.priceIds[plan];
-    if (!priceId) {
-      throw new Error(`Price ID not found for plan: ${plan}`);
-    }
-
-    // Check if plan is paid (not FREE)
-    const isPaidPlan = plan !== SubscriptionPlan.FREE;
-
-    // Check if customer has already used a trial
-    const hasUsedTrial = isPaidPlan
-      ? await this.hasUsedTrial(customerId)
-      : false;
-
-    // Calculate trial end date (15 days from now) if applicable
-    const trialEndDate =
-      isPaidPlan && !hasUsedTrial
-        ? Math.floor(Date.now() / 1000) + 15 * 24 * 60 * 60 // 15 days in seconds
-        : undefined;
-
-    const sessionConfig: Stripe.Checkout.SessionCreateParams = {
+    return await this.stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
+      line_items: [{ price: this.priceIdFor(interval), quantity: 1 }],
+      allow_promotion_codes: true,
       success_url: successUrl,
       cancel_url: cancelUrl,
-      metadata: {
-        plan,
-      },
-      subscription_data: {
-        metadata: {
-          plan,
-        },
-      },
-    };
-
-    if (trialEndDate) {
-      sessionConfig.subscription_data = {
-        ...sessionConfig.subscription_data,
-        trial_end: trialEndDate,
-      };
-    }
-
-    const session = await this.stripe.checkout.sessions.create(sessionConfig);
-
-    return session;
+    });
   }
 
   /**
@@ -224,20 +151,26 @@ export class StripeService {
   }
 
   /**
-   * Get plan from price ID (reverse lookup)
+   * The billing interval of a Supporter price, or null for a price this
+   * instance does not sell (an old plan, another product).
    */
-  getPlanFromPriceId(priceId: string): SubscriptionPlan {
-    // Reverse lookup: find which plan has this price ID
-    for (const [plan, id] of Object.entries(this.priceIds)) {
-      if (id === priceId) {
-        return plan as SubscriptionPlan;
-      }
+  intervalOfPrice(priceId: string | undefined): BillingInterval | null {
+    if (!priceId) return null;
+    for (const interval of Object.values(BillingInterval)) {
+      if (this.priceIds[interval] === priceId) return interval;
     }
-    // If not found, return FREE as fallback
-    this.logger.warn(
-      `Price ID ${priceId} not found in priceIds mapping, defaulting to FREE`,
-    );
-    return SubscriptionPlan.FREE;
+    this.logger.warn(`Price ID ${priceId} is not a Supporter price`);
+    return null;
+  }
+
+  private priceIdFor(interval: BillingInterval): string {
+    const priceId = this.priceIds[interval];
+    if (!priceId) {
+      throw new ServiceUnavailableException(
+        `No Stripe price is configured for the ${interval}ly Supporter subscription`,
+      );
+    }
+    return priceId;
   }
 
   /**
@@ -302,35 +235,24 @@ export class StripeService {
     });
   }
 
-  /**
-   * Update subscription to a new plan
-   */
-  async updateSubscriptionPlan(
+  /** Switches a Supporter subscription between monthly and yearly billing. */
+  async changeBillingInterval(
     subscriptionId: string,
-    newPlan: SubscriptionPlan,
+    interval: BillingInterval,
   ): Promise<Stripe.Subscription> {
     const subscription = await this.getSubscription(subscriptionId);
     if (!subscription) {
       throw new Error('Subscription not found');
     }
 
-    const newPriceId = this.priceIds[newPlan];
-    if (!newPriceId) {
-      throw new Error(`Price ID not found for plan: ${newPlan}`);
-    }
-
-    // Update subscription with proration
     return await this.stripe.subscriptions.update(subscriptionId, {
       items: [
         {
           id: subscription.items.data[0].id,
-          price: newPriceId,
+          price: this.priceIdFor(interval),
         },
       ],
       proration_behavior: 'always_invoice',
-      metadata: {
-        plan: newPlan,
-      },
     });
   }
 

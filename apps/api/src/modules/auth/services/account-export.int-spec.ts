@@ -131,7 +131,7 @@ describe('AccountExportService (PostgreSQL)', () => {
     expect(data.user).toMatchObject({
       email: 'athlete@example.com',
       firstName: 'Ath',
-      subscription: { plan: 'ATHLETE_PRO' },
+      subscription: { plan: 'SUPPORTER' },
     });
     expect(data.athlete.metrics).toHaveLength(1);
     expect(data.athlete.trainingZones[0].values).toHaveLength(1);

@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 
 import {
+  BillingInterval as PrismaBillingInterval,
   SubscriptionPlan as PrismaSubscriptionPlan,
   Subscription,
   SubscriptionStatus,
@@ -110,70 +111,43 @@ export class SubscriptionService {
   }
 
   /**
+   * Stores a Stripe subscription for a user, after checkout or from a
+   * webhook. Every Stripe subscription is a Supporter one; whether it gives
+   * access depends on its status.
+   */
+  async saveStripeSubscription(
+    userId: number,
+    customerId: string,
+    stripeSubscription: Stripe.Subscription,
+  ): Promise<Subscription> {
+    await this.assertUserExistsForSubscription(userId);
+
+    const data = {
+      ...this.fieldsFromStripe(stripeSubscription),
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: stripeSubscription.id,
+    };
+    return await this.prisma.subscription.upsert({
+      where: { userId },
+      create: { userId, ...data },
+      update: data,
+    });
+  }
+
+  /**
    * Create subscription from Stripe checkout
    */
   async createSubscriptionFromCheckout(
     userId: number,
     customerId: string,
     subscriptionId: string,
-    plan: SubscriptionPlan,
   ): Promise<Subscription> {
-    await this.assertUserExistsForSubscription(userId);
-
     const stripeSubscription =
       await this.stripeService.getSubscription(subscriptionId);
     if (!stripeSubscription) {
       throw new NotFoundException('Stripe subscription not found');
     }
-
-    const stripeSub = stripeSubscription as Stripe.Subscription & {
-      current_period_start?: number;
-      current_period_end?: number;
-      trial_end?: number | null;
-    };
-
-    // Check if subscription already exists
-    const existing = await this.prisma.subscription.findUnique({
-      where: { userId: userId },
-    });
-
-    const currentPeriodStart =
-      stripeSub.current_period_start != null
-        ? new Date(stripeSub.current_period_start * 1000)
-        : new Date();
-
-    const currentPeriodEnd =
-      stripeSub.current_period_end != null
-        ? new Date(stripeSub.current_period_end * 1000)
-        : new Date();
-
-    const trialEnd =
-      stripeSub.trial_end != null ? new Date(stripeSub.trial_end * 1000) : null;
-
-    const subscriptionData = {
-      plan: this.mapPlanToPrisma(plan),
-      status: this.mapStatusToPrisma(stripeSubscription.status),
-      stripeCustomerId: customerId,
-      stripeSubscriptionId: subscriptionId,
-      currentPeriodStart,
-      currentPeriodEnd,
-      trialEnd,
-      cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end ?? false,
-    };
-
-    if (existing) {
-      return await this.prisma.subscription.update({
-        where: { subscriptionId: existing.subscriptionId },
-        data: subscriptionData,
-      });
-    }
-
-    return await this.prisma.subscription.create({
-      data: {
-        userId,
-        ...subscriptionData,
-      },
-    });
+    return this.saveStripeSubscription(userId, customerId, stripeSubscription);
   }
 
   /**
@@ -182,140 +156,78 @@ export class SubscriptionService {
   async updateSubscriptionFromWebhook(
     stripeSubscription: Stripe.Subscription,
   ): Promise<Subscription> {
+    const existing = await this.prisma.subscription.findUnique({
+      where: { stripeSubscriptionId: stripeSubscription.id },
+    });
+    if (existing) {
+      return await this.prisma.subscription.update({
+        where: { subscriptionId: existing.subscriptionId },
+        data: this.fieldsFromStripe(stripeSubscription),
+      });
+    }
+
+    // The webhook can arrive before checkout.session.completed: find the
+    // user from the customer
+    this.logger.warn(
+      `Subscription not found for Stripe subscription ID: ${stripeSubscription.id}, creating from webhook`,
+    );
+    const customerId = stripeSubscription.customer as string;
+    const customer = await this.stripeService.getCustomer(customerId);
+    const userId = customer.metadata?.userId;
+    if (!userId) {
+      throw new NotFoundException('User ID not found in customer metadata');
+    }
+    return this.saveStripeSubscription(
+      Number.parseInt(userId, 10),
+      customerId,
+      stripeSubscription,
+    );
+  }
+
+  private fieldsFromStripe(stripeSubscription: Stripe.Subscription) {
+    // Billing periods moved to subscription items in recent API versions
     const stripeSub = stripeSubscription as Stripe.Subscription & {
       current_period_start?: number;
       current_period_end?: number;
-      trial_end?: number | null;
     };
+    const item = stripeSubscription.items?.data?.[0] as
+      | (Stripe.SubscriptionItem & {
+          current_period_start?: number;
+          current_period_end?: number;
+        })
+      | undefined;
+    const date = (seconds: number | null | undefined) =>
+      seconds != null ? new Date(seconds * 1000) : null;
+    return {
+      plan: PrismaSubscriptionPlan.SUPPORTER,
+      billingInterval: this.billingIntervalOf(stripeSubscription),
+      status: this.mapStatusToPrisma(stripeSubscription.status),
+      currentPeriodStart: date(
+        stripeSub.current_period_start ?? item?.current_period_start,
+      ),
+      currentPeriodEnd: date(
+        stripeSub.current_period_end ?? item?.current_period_end,
+      ),
+      trialEnd: date(stripeSubscription.trial_end),
+      cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end ?? false,
+    };
+  }
 
-    let subscription = await this.prisma.subscription.findUnique({
-      where: {
-        stripeSubscriptionId: stripeSubscription.id,
-      },
-    });
-
-    // If subscription doesn't exist yet (webhook arrived before checkout.session.completed),
-    // create it from the Stripe subscription data
-    if (!subscription) {
-      this.logger.warn(
-        `Subscription not found for Stripe subscription ID: ${stripeSubscription.id}, creating from webhook`,
-      );
-
-      // Get customer to find user_id
-      const customer = await this.stripeService.getCustomer(
-        stripeSubscription.customer as string,
-      );
-
-      if (customer.deleted || !('metadata' in customer)) {
-        throw new NotFoundException('Customer not found');
-      }
-
-      const userId = customer.metadata?.userId;
-      if (!userId) {
-        throw new NotFoundException('User ID not found in customer metadata');
-      }
-
-      const plan =
-        (stripeSubscription.metadata?.plan as SubscriptionPlan | undefined) ||
-        SubscriptionPlan.FREE;
-
-      subscription = await this.createSubscriptionFromCheckout(
-        Number.parseInt(userId, 10),
-        stripeSubscription.customer as string,
-        stripeSubscription.id,
-        plan,
-      );
+  private billingIntervalOf(
+    stripeSubscription: Stripe.Subscription,
+  ): PrismaBillingInterval | null {
+    const price = stripeSubscription.items?.data?.[0]?.price;
+    const interval =
+      this.stripeService.intervalOfPrice(price?.id) ??
+      price?.recurring?.interval;
+    switch (interval) {
+      case 'month':
+        return PrismaBillingInterval.month;
+      case 'year':
+        return PrismaBillingInterval.year;
+      default:
+        return null;
     }
-
-    this.logger.log(
-      `Fetching full subscription ${stripeSubscription.id} to extract plan from price ID (source of truth)`,
-    );
-    const fullSubscription = await this.stripeService.getSubscription(
-      stripeSubscription.id,
-    );
-
-    let plan: SubscriptionPlan;
-
-    if (!fullSubscription) {
-      this.logger.error(
-        `Failed to fetch subscription ${stripeSubscription.id} from Stripe`,
-      );
-      // Fallback: try metadata if available, otherwise use existing plan
-      if (stripeSubscription.metadata?.plan) {
-        plan = stripeSubscription.metadata.plan as SubscriptionPlan;
-        this.logger.warn(
-          `Using metadata plan ${plan} as fallback (subscription fetch failed)`,
-        );
-      } else {
-        plan = subscription.plan
-          ? this.mapPrismaPlanToEnum(subscription.plan)
-          : SubscriptionPlan.FREE;
-        this.logger.warn(
-          `Using existing plan ${plan} as fallback (subscription fetch failed and no metadata)`,
-        );
-      }
-    } else {
-      const priceId = fullSubscription.items?.data?.[0]?.price?.id;
-      if (priceId) {
-        this.logger.log(
-          `Extracting plan from price ID: ${priceId} for subscription ${stripeSubscription.id}`,
-        );
-        plan = this.stripeService.getPlanFromPriceId(priceId);
-        this.logger.log(
-          `Plan extracted from price ID ${priceId}: ${plan} for subscription ${stripeSubscription.id}`,
-        );
-        // Log if metadata differs from price ID (indicates stale metadata)
-        if (
-          stripeSubscription.metadata?.plan &&
-          stripeSubscription.metadata.plan !== plan
-        ) {
-          this.logger.warn(
-            `Metadata plan (${stripeSubscription.metadata.plan}) differs from price ID plan (${plan}). Using price ID as source of truth.`,
-          );
-        }
-      } else {
-        // Fallback: try metadata if available, otherwise use existing plan
-        if (stripeSubscription.metadata?.plan) {
-          plan = stripeSubscription.metadata.plan as SubscriptionPlan;
-          this.logger.warn(
-            `Using metadata plan ${plan} as fallback (price ID not found)`,
-          );
-        } else {
-          plan = subscription.plan
-            ? this.mapPrismaPlanToEnum(subscription.plan)
-            : SubscriptionPlan.FREE;
-          this.logger.warn(
-            `Could not extract plan from subscription ${stripeSubscription.id}. Price ID: ${priceId}, Items: ${JSON.stringify(fullSubscription.items?.data?.map((item) => ({ id: item.id, priceId: item.price?.id })))}. Using existing plan: ${plan}`,
-          );
-        }
-      }
-    }
-
-    // Safely extract period dates from Stripe subscription
-    const currentPeriodStart =
-      stripeSub.current_period_start != null
-        ? new Date(stripeSub.current_period_start * 1000)
-        : subscription.currentPeriodStart || new Date();
-
-    const currentPeriodEnd =
-      stripeSub.current_period_end != null
-        ? new Date(stripeSub.current_period_end * 1000)
-        : subscription.currentPeriodEnd || new Date();
-
-    const trialEnd =
-      stripeSub.trial_end != null ? new Date(stripeSub.trial_end * 1000) : null;
-
-    return await this.prisma.subscription.update({
-      where: { subscriptionId: subscription.subscriptionId },
-      data: {
-        plan: this.mapPlanToPrisma(plan),
-        status: this.mapStatusToPrisma(stripeSubscription.status),
-        currentPeriodStart: currentPeriodStart,
-        currentPeriodEnd: currentPeriodEnd,
-        trialEnd: trialEnd,
-        cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end ?? false,
-      },
-    });
   }
 
   /**
@@ -372,6 +284,9 @@ export class SubscriptionService {
    * Get max athletes for a user's plan
    */
   async getMaxAthletesForUser(userId: number): Promise<number | null> {
+    // Nothing is sold without billing, so nothing is limited
+    if (!this.stripeService.billingEnabled) return null;
+
     const subscription = await this.getOrCreateSubscription(userId);
 
     if (!this.isSubscriptionActive(subscription.status)) {
@@ -461,44 +376,10 @@ export class SubscriptionService {
     }
   }
 
-  /**
-   * Map SubscriptionPlan enum to Prisma enum
-   */
-  private mapPlanToPrisma(plan: SubscriptionPlan): PrismaSubscriptionPlan {
-    switch (plan) {
-      case SubscriptionPlan.FREE:
-        return PrismaSubscriptionPlan.FREE;
-      case SubscriptionPlan.ATHLETE_PRO:
-        return PrismaSubscriptionPlan.ATHLETE_PRO;
-      case SubscriptionPlan.COACH_PRO:
-        return PrismaSubscriptionPlan.COACH_PRO;
-      case SubscriptionPlan.COACH_ULTRA:
-        return PrismaSubscriptionPlan.COACH_ULTRA;
-      case SubscriptionPlan.CLUB_PRO:
-        return PrismaSubscriptionPlan.CLUB_PRO;
-      case SubscriptionPlan.CLUB_ULTRA:
-        return PrismaSubscriptionPlan.CLUB_ULTRA;
-    }
-  }
-
-  /**
-   * Map Prisma enum to SubscriptionPlan enum
-   */
   private mapPrismaPlanToEnum(plan: PrismaSubscriptionPlan): SubscriptionPlan {
-    switch (plan) {
-      case PrismaSubscriptionPlan.FREE:
-        return SubscriptionPlan.FREE;
-      case PrismaSubscriptionPlan.ATHLETE_PRO:
-        return SubscriptionPlan.ATHLETE_PRO;
-      case PrismaSubscriptionPlan.COACH_PRO:
-        return SubscriptionPlan.COACH_PRO;
-      case PrismaSubscriptionPlan.COACH_ULTRA:
-        return SubscriptionPlan.COACH_ULTRA;
-      case PrismaSubscriptionPlan.CLUB_PRO:
-        return SubscriptionPlan.CLUB_PRO;
-      case PrismaSubscriptionPlan.CLUB_ULTRA:
-        return SubscriptionPlan.CLUB_ULTRA;
-    }
+    return plan === PrismaSubscriptionPlan.SUPPORTER
+      ? SubscriptionPlan.SUPPORTER
+      : SubscriptionPlan.FREE;
   }
 
   private async assertUserExistsForSubscription(userId: number): Promise<void> {

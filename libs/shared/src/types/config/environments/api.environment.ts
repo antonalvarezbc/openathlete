@@ -315,12 +315,15 @@ export const ApiEnvSchema = z
       .optional()
       .describe('Stripe secret key for payment processing (optional)'),
 
-    STRIPE_PRICE_IDS: z
+    STRIPE_PRICE_SUPPORTER_MONTHLY: z
       .string()
       .optional()
-      .describe(
-        'JSON string of Stripe price IDs mapped to subscription plans (optional)',
-      ),
+      .describe('Stripe price ID of the monthly Supporter subscription'),
+
+    STRIPE_PRICE_SUPPORTER_YEARLY: z
+      .string()
+      .optional()
+      .describe('Stripe price ID of the yearly Supporter subscription'),
 
     STRIPE_WEBHOOK_SECRET: z
       .string()

@@ -31,7 +31,7 @@ export const accountFixtureSql = [
   `INSERT INTO coach_invitation (email, coach_user_id, athlete_user_id, updated_at) VALUES ('athlete@example.com', 1002, 1001, ${now}), ('coach@example.com', 1001, 1002, ${now})`,
   `INSERT INTO athlete_invitation (email, user_id, updated_at) VALUES ('friend@example.com', 1001, ${now})`,
   `INSERT INTO token (token, user_id, type, updated_at) VALUES ('reset', 1001, 'PASSWORD_RESET', ${now})`,
-  `INSERT INTO subscription (plan, user_id, updated_at) VALUES ('ATHLETE_PRO', 1001, ${now})`,
+  `INSERT INTO subscription (plan, user_id, updated_at) VALUES ('SUPPORTER', 1001, ${now})`,
 
   // Training plan, cycle and week
   `INSERT INTO training_plan (training_plan_id, name, goal, start_date, end_date, athlete_id, updated_at) VALUES (3901, 'Plan', 'Marathon', '2026-01-01', '2026-06-01', 2001, ${now})`,
