@@ -83,3 +83,38 @@ export async function createAthlete(
 
   return { email, password, accessToken, refreshToken };
 }
+
+/** The OpenAI-compatible service of docker-compose.yml, seen from the API. */
+export const FAKE_LLM_URL = 'http://fake-llm:8080/v1';
+
+/**
+ * Gives the user their own AI key on the fake-llm service and makes it the
+ * default for every AI task, so the AI features are available to them.
+ */
+export async function setUpFakeLlm(
+  request: APIRequestContext,
+  accessToken: string,
+): Promise<{ aiCredentialId: number }> {
+  const headers = apiHeaders(undefined, accessToken);
+  const credential = await request.post(`${API_URL}/ai/credentials`, {
+    headers,
+    data: {
+      provider: 'custom',
+      apiKey: 'e2e-secret-key-1234',
+      baseUrl: FAKE_LLM_URL,
+    },
+  });
+  expect(credential.status(), await credential.text()).toBe(201);
+  const { aiCredentialId } = (await credential.json()) as {
+    aiCredentialId: number;
+  };
+
+  const models = await request.put(`${API_URL}/ai/models`, {
+    headers,
+    data: {
+      preferences: [{ task: 'DEFAULT', aiCredentialId, modelId: 'fake-coach' }],
+    },
+  });
+  expect(models.ok(), await models.text()).toBe(true);
+  return { aiCredentialId };
+}

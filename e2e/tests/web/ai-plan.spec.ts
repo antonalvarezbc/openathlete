@@ -1,12 +1,13 @@
 import { expect, test } from '@playwright/test';
 
-import { createAthlete } from '../../support/api';
+import { createAthlete, setUpFakeLlm } from '../../support/api';
 import { signIn } from '../../support/browser';
 import { trackPageProblems } from '../../support/page-health';
 
 // Planning is for coaches in this fork: the athlete coaches their own profile.
-// The draft itself runs on the instance AI keys, which this stack does not
-// have, so the flow is followed up to the answers being checked.
+// Without AI for plans the button opens the AI setup instead, so the athlete
+// gets their own key on the fake-llm service. The flow is followed up to the
+// answers being checked, before any draft is generated.
 test.use({ storageState: { cookies: [], origins: [] } });
 
 test('asks for the plan goal in Planning and checks its length', async ({
@@ -14,6 +15,7 @@ test('asks for the plan goal in Planning and checks its length', async ({
   request,
 }) => {
   const athlete = await createAthlete(request, { selfCoached: true });
+  await setUpFakeLlm(request, athlete.accessToken);
   await signIn(page, athlete);
   const problems = trackPageProblems(page);
 
