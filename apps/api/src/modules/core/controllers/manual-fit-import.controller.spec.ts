@@ -23,6 +23,7 @@ describe('Manual FIT multipart upload', () => {
   const service = {
     import: jest.fn().mockResolvedValue({ eventId: 90 }),
     importGpx: jest.fn().mockResolvedValue({ eventId: 91 }),
+    importTcx: jest.fn().mockResolvedValue({ eventId: 92 }),
   };
   beforeAll(async () => {
     const module = await Test.createTestingModule({
@@ -61,6 +62,7 @@ describe('Manual FIT multipart upload', () => {
     enabled = true;
     service.import.mockClear();
     service.importGpx.mockClear();
+    service.importTcx.mockClear();
   });
   const form = () => {
     const data = new FormData();
@@ -149,6 +151,16 @@ describe('Manual FIT multipart upload', () => {
     expect(response.status).toBe(403);
     expect(service.importGpx).not.toHaveBeenCalled();
   });
+  test('blocks TCX uploads too when manual import is disabled', async () => {
+    enabled = false;
+    const response = await fetch(origin + '/activity-import/tcx', {
+      method: 'POST',
+      headers: { 'Content-Type': 'multipart/form-data; boundary=invalid' },
+      body: 'not-a-valid-multipart-upload',
+    });
+    expect(response.status).toBe(403);
+    expect(service.importTcx).not.toHaveBeenCalled();
+  });
   test('rejects coach-only uploads before parsing', async () => {
     roles = ['COACH'];
     const response = await fetch(origin + '/activity-import/fit', {
@@ -157,5 +169,37 @@ describe('Manual FIT multipart upload', () => {
     });
     expect(response.status).toBe(403);
     expect(service.import).not.toHaveBeenCalled();
+  });
+  test('accepts a TCX with an optional sport', async () => {
+    const tcx = (sport?: string) => {
+      const data = new FormData();
+      data.append('file', new Blob(['<TrainingCenterDatabase/>']), 'run.tcx');
+      data.append('name', 'Morning run');
+      if (sport) data.append('sport', sport);
+      return data;
+    };
+    let response = await fetch(origin + '/activity-import/tcx', {
+      method: 'POST',
+      body: tcx('HIKING'),
+    });
+    expect(response.status).toBe(201);
+    expect(service.importTcx).toHaveBeenCalledWith(
+      { userId: 4, roles: ['ATHLETE'] },
+      expect.objectContaining({ originalname: 'run.tcx' }),
+      'Morning run',
+      'HIKING',
+    );
+    response = await fetch(origin + '/activity-import/tcx', {
+      method: 'POST',
+      body: tcx(),
+    });
+    expect(response.status).toBe(201);
+    expect(service.importTcx.mock.calls[1][3]).toBeUndefined();
+    response = await fetch(origin + '/activity-import/tcx', {
+      method: 'POST',
+      body: tcx('QUIDDITCH'),
+    });
+    expect(response.status).toBe(400);
+    expect(service.importTcx).toHaveBeenCalledTimes(2);
   });
 });

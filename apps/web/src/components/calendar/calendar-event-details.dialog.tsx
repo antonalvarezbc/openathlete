@@ -67,6 +67,11 @@ export function CalendarEventDetailsDialog({
                 event.externalId?.startsWith('gpx-manual:') && (
                   <Badge variant="outline">{m.gpx_import_source()}</Badge>
                 )}
+              {event?.type === EVENT_TYPE.ACTIVITY &&
+                !event.provider &&
+                event.externalId?.startsWith('tcx-manual:') && (
+                  <Badge variant="outline">{m.tcx_import_source()}</Badge>
+                )}
               {event &&
                 event.type === EVENT_TYPE.ACTIVITY &&
                 event.externalId &&

@@ -30,6 +30,7 @@ export const routes = {
   activityImport: {
     fit: '/activity-import/fit',
     gpx: '/activity-import/gpx',
+    tcx: '/activity-import/tcx',
   },
   event: {
     create: '/event',

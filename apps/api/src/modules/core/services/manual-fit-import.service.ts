@@ -29,6 +29,7 @@ import {
   prepareManualFit,
 } from '../helpers/manual-fit-import';
 import { prepareManualGpx } from '../helpers/manual-gpx-import';
+import { prepareManualTcx } from '../helpers/manual-tcx-import';
 import { FitParserStrategy } from '../helpers/strategies/fit-parser.strategy';
 
 export type ManualFitFile = {
@@ -37,9 +38,11 @@ export type ManualFitFile = {
   buffer: Buffer;
 };
 
-type FileFormat = 'FIT' | 'GPX';
+type FileFormat = 'FIT' | 'GPX' | 'TCX';
 type PreparedActivity =
-  ReturnType<typeof prepareManualFit> | ReturnType<typeof prepareManualGpx>;
+  | ReturnType<typeof prepareManualFit>
+  | ReturnType<typeof prepareManualGpx>
+  | ReturnType<typeof prepareManualTcx>;
 
 @Injectable()
 export class ManualFitImportService {
@@ -113,6 +116,28 @@ export class ManualFitImportService {
       name,
       'GPX',
     );
+  }
+
+  /**
+   * A recorded TCX activity. TCX only names running and biking, so the
+   * athlete can choose the sport; otherwise the activity's own is used.
+   */
+  async importTcx(
+    user: AuthUser,
+    file: ManualFitFile | undefined,
+    name: string,
+    sport?: SPORT_TYPE,
+  ) {
+    const athlete = await this.ownAthlete(user);
+    this.checkFile(file, 'TCX');
+    let tcx: ReturnType<typeof prepareManualTcx>;
+    try {
+      tcx = prepareManualTcx(file.buffer, sport);
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      throw new BadRequestException('TCX_INVALID');
+    }
+    return this.save(athlete, tcx, file, name, 'TCX');
   }
 
   /**

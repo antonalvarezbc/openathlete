@@ -21,8 +21,10 @@ import {
 import {
   ImportActivityFileDto,
   ImportGpxActivityFileDto,
+  ImportTcxActivityFileDto,
   importActivityFileDtoSchema,
   importGpxActivityFileDtoSchema,
+  importTcxActivityFileDtoSchema,
 } from '@openathlete/shared';
 
 import { UserTypes } from '../../auth/decorators/user-type.decorator';
@@ -116,5 +118,41 @@ export class ManualFitImportController {
     body: ImportGpxActivityFileDto,
   ) {
     return this.service.importGpx(user, file, body.name, body.sport);
+  }
+
+  @Post('tcx')
+  @ApiOperation({
+    summary: 'Import a recorded TCX activity',
+    description:
+      'Multipart `file` (one .tcx activity, up to 20 MB, 100,000 track points and 1,000 laps), `name` and an optional `sport` that overrides the activity type (TCX only names running and biking). The laps give timer time, distance and heart rate when present; the rest is calculated from the track, as for GPX. Courses, workouts and multisport files are refused. Same ownership, duplicate rules and processing as FIT files.',
+  })
+  @ApiResponse({ status: 201, description: 'Imported, or already imported' })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Not a recorded TCX activity: TCX_INVALID, TCX_NO_TIME (a course, a workout or no times), TCX_MULTISPORT_UNSUPPORTED or TCX_LIMIT',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Not an athlete account, or manual import disabled',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'TCX_DUPLICATE_TIME: another activity starts at the same time',
+  })
+  @ApiResponse({ status: 413, description: 'TCX_LIMIT: file too large' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: MAX_MANUAL_FIT_BYTES, files: 1, fields: 2, parts: 4 },
+    }),
+  )
+  importTcx(
+    @JwtUser() user: AuthUser,
+    @UploadedFile() file: ManualFitFile | undefined,
+    @Body(new ZodValidationPipe(importTcxActivityFileDtoSchema))
+    body: ImportTcxActivityFileDto,
+  ) {
+    return this.service.importTcx(user, file, body.name, body.sport);
   }
 }
