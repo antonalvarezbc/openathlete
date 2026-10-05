@@ -23,6 +23,8 @@ interface P {
   value?: number;
   displayRow?: (event: Event) => ReactNode | string;
   filter?: (event: Event, events: Event[]) => boolean;
+  /** Options under headings, in this order; replaces `filter`. */
+  groups?: { heading: string; events: Event[] }[];
 }
 
 export function SelectEvent({
@@ -32,10 +34,17 @@ export function SelectEvent({
   onChange,
   filter,
   displayRow,
+  groups,
 }: P) {
   const [open, setOpen] = useState(false);
 
-  const events = (filter ? data?.filter((e) => filter(e, data)) : data) || [];
+  const sections = groups ?? [
+    {
+      heading: undefined,
+      events: (filter ? data?.filter((e) => filter(e, data)) : data) || [],
+    },
+  ];
+  const events = sections.flatMap((section) => section.events);
   const currentEvent = data?.find((event) => event.eventId === value);
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -68,27 +77,32 @@ export function SelectEvent({
           <CommandInput placeholder={m.search_event()} className="h-9" />
           <CommandList>
             <CommandEmpty>{m.no_event_found()}</CommandEmpty>
-            <CommandGroup>
-              {events.map((event) => (
-                <CommandItem
-                  key={event.eventId}
-                  value={event.eventId.toString()}
-                  onSelect={(currentValue) => {
-                    setOpen(false);
-                    if (Number(currentValue) === value) return;
-                    onChange(Number(currentValue));
-                  }}
-                >
-                  {displayRow ? displayRow(event) : event.name}
-                  <Check
-                    className={cn(
-                      'ml-auto',
-                      value === event.eventId ? 'opacity-100' : 'opacity-0',
-                    )}
-                  />
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            {sections.map((section, index) => (
+              <CommandGroup
+                key={section.heading ?? index}
+                heading={section.heading}
+              >
+                {section.events.map((event) => (
+                  <CommandItem
+                    key={event.eventId}
+                    value={event.eventId.toString()}
+                    onSelect={(currentValue) => {
+                      setOpen(false);
+                      if (Number(currentValue) === value) return;
+                      onChange(Number(currentValue));
+                    }}
+                  >
+                    {displayRow ? displayRow(event) : event.name}
+                    <Check
+                      className={cn(
+                        'ml-auto',
+                        value === event.eventId ? 'opacity-100' : 'opacity-0',
+                      )}
+                    />
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ))}
           </CommandList>
         </Command>
       </PopoverContent>
