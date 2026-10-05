@@ -1,5 +1,6 @@
 import { useGenerateWorkoutStructureMutation } from '@/api/agent';
 import { m } from '@/paraglide/messages';
+import { aiErrorMessage } from '@/utils/ai-errors';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -85,7 +86,8 @@ export function AiWorkoutStructure({
           setInstructions('');
           toast.success(m.ai_structure_done());
         },
-        onError: () => toast.error(m.ai_structure_failed()),
+        onError: (error) =>
+          toast.error(aiErrorMessage(error) ?? m.ai_structure_failed()),
       },
     );
   };

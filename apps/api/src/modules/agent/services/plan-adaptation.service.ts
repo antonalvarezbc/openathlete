@@ -5,12 +5,12 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
-  ServiceUnavailableException,
 } from '@nestjs/common';
 
 import { Prisma } from '@openathlete/database';
 import {
   AdaptationSession,
+  AiTask,
   ApplyPlanAdaptation,
   METRIC_TYPE,
   PlanAdaptationProposal,
@@ -24,7 +24,10 @@ import {
 } from '@openathlete/shared';
 
 import { planAdaptationAgent } from '../../../mastra/agents/plan-adaptation.agent';
+import { AiModelResolverService, AiService } from '../../ai';
 import { AiMemoryService } from '../../ai-memory/ai-memory.service';
+import { AiInvalidAnswerException } from '../../ai/ai.errors';
+import type { ResolvedAiModel } from '../../ai/services/ai-model-resolver.service';
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { adaptationWeek } from './adaptation-dates';
@@ -144,7 +147,14 @@ export class PlanAdaptationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly memory: AiMemoryService,
+    private readonly resolver: AiModelResolverService,
+    private readonly ai: AiService,
   ) {}
+
+  /** Adaptation and the assistant run on the coach's own AI settings. */
+  resolveModel(userId: number): Promise<ResolvedAiModel> {
+    return this.resolver.resolveForUser(AiTask.PLAN_ADAPTATION, userId);
+  }
 
   /**
    * Adds the coach's AI memory to a prompt. Kept out of context() so memory
@@ -569,64 +579,35 @@ export class PlanAdaptationService {
     }
   }
 
-  private async generateProposal(prompt: string) {
-    let result;
+  /**
+   * A proposal from the model. One that does not match the schema goes back
+   * to the coach for a revision with its text, never the error's; provider
+   * errors reach the coach as AiService reports them.
+   */
+  private async generateProposal(model: ResolvedAiModel, prompt: string) {
     try {
-      result = await planAdaptationAgent.generate(prompt, {
-        structuredOutput: { schema: planAdaptationProposalSchema },
-        // OpenAI strict outputs reject optional fields and repeat blocks;
-        // Mastra still validates the answer against the zod schema.
-        providerOptions: { openai: { strictJsonSchema: false } },
-      });
+      const proposal = await this.ai.generateObject(
+        planAdaptationAgent,
+        model,
+        prompt,
+        planAdaptationProposalSchema,
+      );
+      return {
+        proposal,
+        rawResponse: JSON.stringify(proposal).slice(0, 100000),
+      };
     } catch (error) {
-      if (
-        error instanceof Error &&
-        (error.message.includes('Structured output validation failed') ||
-          error.name === 'AI_NoObjectGeneratedError' ||
-          ('cause' in error &&
-            error.cause instanceof Error &&
-            error.cause.name === 'ZodError'))
-      ) {
-        // Extract only model output, never the error message, request, headers or stack.
-        let current: unknown = error;
-        for (
-          let depth = 0;
-          depth < 4 && current && typeof current === 'object';
-          depth++
-        ) {
-          const item = current as {
-            details?: { value?: unknown };
-            name?: string;
-            text?: unknown;
-            cause?: unknown;
-          };
-          const raw =
-            item.details?.value ??
-            (item.name === 'AI_NoObjectGeneratedError' ? item.text : undefined);
-          if (typeof raw === 'string' && raw.length)
-            return { proposal: null, rawResponse: raw.slice(0, 100000) };
-          current = item.cause;
-        }
-        return { proposal: null, rawResponse: '' };
-      }
-      throw new ServiceUnavailableException({
-        code: 'ADAPTATION_PROVIDER',
-        message: 'AI generation could not complete. No changes were saved.',
-      });
+      if (error instanceof AiInvalidAnswerException)
+        return { proposal: null, rawResponse: error.rawText.slice(0, 100000) };
+      throw error;
     }
-    const parsed = planAdaptationProposalSchema.safeParse(result.object);
-    return {
-      proposal: parsed.success ? parsed.data : null,
-      rawResponse: (typeof result.text === 'string' && result.text
-        ? result.text
-        : JSON.stringify(result.object ?? '')
-      ).slice(0, 100000),
-    };
   }
 
   async propose(user: AuthUser, request: PlanAdaptationRequest) {
+    const model = await this.resolveModel(user.userId);
     const context = await this.context(user, request);
     const generated = await this.generateProposal(
+      model,
       JSON.stringify(
         await this.withMemory(user, request.athleteId, context.data),
       ),
@@ -638,12 +619,14 @@ export class PlanAdaptationService {
   }
 
   async refine(user: AuthUser, dto: RefinePlanAdaptation) {
+    const model = await this.resolveModel(user.userId);
     const context = await this.context(user, dto.request);
     if (context.contextVersion !== dto.contextVersion)
       throw new ConflictException(
         'Athlete context or calendar changed. Generate and review a new proposal.',
       );
     const generated = await this.generateProposal(
+      model,
       JSON.stringify({
         ...(await this.withMemory(user, dto.request.athleteId, context.data)),
         revision: {

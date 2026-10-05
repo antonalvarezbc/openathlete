@@ -7,8 +7,10 @@ import {
 
 import { coachAssistantAgent } from '../../../mastra/agents/coach-assistant.agent';
 import { aiToolsRequestContext } from '../../../mastra/tools/openathlete-data.tools';
+import { AiService } from '../../ai';
 import { AiMemoryService } from '../../ai-memory/ai-memory.service';
 import { AiToolsService } from '../../ai-tools/ai-tools.service';
+import { AiProviderException } from '../../ai/ai.errors';
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PlanAdaptationService } from './plan-adaptation.service';
 
@@ -18,6 +20,7 @@ export class CoachAssistantService {
     private readonly adaptation: PlanAdaptationService,
     private readonly memory: AiMemoryService,
     private readonly tools: AiToolsService,
+    private readonly ai: AiService,
   ) {}
 
   async context(user: AuthUser, input: CoachAssistantContextRequest) {
@@ -51,22 +54,27 @@ export class CoachAssistantService {
   async chat(user: AuthUser, input: CoachAssistantChatRequest) {
     // Always recheck ownership and fetch current data, including on follow-up turns.
     const { question, history, ...selection } = input;
+    // The assistant shares the plan adaptation model of the coach's settings.
+    const model = await this.adaptation.resolveModel(user.userId);
     const context = await this.context(user, selection);
     try {
-      const result = await coachAssistantAgent.generate(
-        JSON.stringify({
-          language: context.data.language,
-          context: context.data,
-          history,
-          question,
-        }),
-        {
-          // Read-only data tools act as this user (same access checks as the API).
-          requestContext: aiToolsRequestContext(this.tools, user),
-          maxSteps: 6,
-        },
-      );
-      const reply = result.text?.trim();
+      const reply = (
+        await this.ai.generateText(
+          coachAssistantAgent,
+          model,
+          JSON.stringify({
+            language: context.data.language,
+            context: context.data,
+            history,
+            question,
+          }),
+          {
+            // Read-only data tools act as this user (same access checks as the API).
+            requestContext: aiToolsRequestContext(this.tools, user),
+            maxSteps: 6,
+          },
+        )
+      ).trim();
       if (!reply || reply.length > 8000)
         throw new Error('Invalid assistant response');
       await this.memory.addNote(
@@ -76,7 +84,10 @@ export class CoachAssistantService {
         `Coach asked: ${question} → ${reply}`,
       );
       return { reply, context };
-    } catch {
+    } catch (error) {
+      // AiService's errors are safe to show: a rejected key or an empty
+      // account can be fixed in Settings > AI.
+      if (error instanceof AiProviderException) throw error;
       // Do not return provider errors, request headers or credentials to the client.
       throw new ServiceUnavailableException({
         code: 'COACH_ASSISTANT_PROVIDER',

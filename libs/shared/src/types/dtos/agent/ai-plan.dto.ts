@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { METRIC_TYPE, SPORT_TYPE } from '../../misc';
+import { AiAccessSource } from '../ai/ai-settings.dto';
 import { CreateWorkoutStepDto } from '../core/workout.dto';
 import { SEOPlanData } from '../seo/seo-plan.dto';
 
@@ -376,6 +377,8 @@ export const AI_PLAN_FAILURE_REASONS = [
   'TIMEOUT',
   'PROVIDER_ERROR',
   'INVALID_ANSWER',
+  /** No AI key of the user's for plans, and no instance AI for them */
+  'NOT_CONFIGURED',
 ] as const;
 export type AiPlanFailureReason = (typeof AI_PLAN_FAILURE_REASONS)[number];
 
@@ -388,6 +391,8 @@ export interface AiPlanJobStatus {
   reason?: AiPlanFailureReason;
   /** A short, safe hint: the provider's HTTP status or error code */
   detail?: string;
+  /** Whose key the failed call ran on: the user's own or the instance's */
+  source?: AiAccessSource;
   draft?: AiPlanDraft;
 }
 

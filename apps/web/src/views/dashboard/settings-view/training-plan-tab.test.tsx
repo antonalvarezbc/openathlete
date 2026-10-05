@@ -39,6 +39,15 @@ vi.mock('@/components/plan-workspace/athlete-injuries', () => ({
 vi.mock('@/components/coach-assistant/coach-assistant', () => ({
   CoachAssistant: () => null,
 }));
+const aiPlans = vi.hoisted(() => ({ available: true, isLoading: false }));
+vi.mock('@/api/ai-settings', () => ({ useAiTaskAvailable: () => aiPlans }));
+vi.mock('@/components/ai-settings', () => ({
+  AiSetupDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-ai-setup /> : null,
+}));
+vi.mock('@/components/ai-plan/ai-plan-dialog', () => ({
+  AiPlanDialog: () => <div data-ai-plan />,
+}));
 vi.mock('./plan-adaptation-section', () => ({
   PlanAdaptationSection: ({
     selection,
@@ -150,5 +159,20 @@ describe('TrainingPlanTab', () => {
     });
     expect(new URLSearchParams(search).get('planId')).toBe('calendar');
     expect(container.querySelector('[data-planning-calendar]')).not.toBeNull();
+  });
+  it('points to Settings > AI instead of the AI plan dialog when there is no AI for plans', async () => {
+    api.list.mockResolvedValue([]);
+    aiPlans.available = false;
+    await open('athleteId=4');
+    const create = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent === 'ai_plan_create',
+    )!;
+    await act(async () => create.click());
+    expect(container.querySelector('[data-ai-setup]')).not.toBeNull();
+    expect(container.querySelector('[data-ai-plan]')).toBeNull();
+
+    aiPlans.available = true;
+    await act(async () => create.click());
+    expect(container.querySelector('[data-ai-plan]')).not.toBeNull();
   });
 });

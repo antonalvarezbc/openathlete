@@ -1,13 +1,11 @@
-import { Agent } from '@mastra/core/agent';
+import type { AgentSpec } from 'src/modules/ai';
 
-import { EVENT_MODIFICATION_MODEL } from '../../common/constants/ai-models.constant';
 import { openAthleteDataTools } from '../tools/openathlete-data.tools';
 import { AI_MEMORY_INSTRUCTIONS } from './ai-memory-instructions';
 
-export const coachAssistantAgent = new Agent({
+export const coachAssistantAgent: AgentSpec = {
   id: 'coach-assistant',
   name: 'coach-assistant',
-  model: EVENT_MODIFICATION_MODEL,
   tools: openAthleteDataTools,
   instructions: `You are a read-only training assistant for a human coach.
 Answer the coach's question in the supplied language (es, en, fr or it).
@@ -28,4 +26,4 @@ Do not recommend increased load based solely on a favorable isolated wellness me
 Ask for missing information when needed. Keep answers concise and below 8000 characters.
 Use readable prose or simple Markdown lists, not a JSON workout proposal.
 ${AI_MEMORY_INSTRUCTIONS}`,
-});
+};

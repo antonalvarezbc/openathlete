@@ -16,6 +16,22 @@ export const HOSTED_MODEL_ENV_VARS: Record<AiFeatureTask, string[]> = {
     'AI_MODEL_EXTRACT_INJURY',
   ],
   [AiTask.TRAINING_LOAD_ESTIMATION]: ['AI_MODEL_TRIMP_ESTIMATION'],
+  // The coach features ran on AI_MODEL_EVENT_MODIFICATION before having
+  // their own tasks: it still applies when their own variable is unset.
+  [AiTask.PLAN_GENERATION]: [
+    'AI_MODEL_PLAN_GENERATION',
+    'AI_MODEL_EVENT_MODIFICATION',
+  ],
+  [AiTask.PLAN_ADAPTATION]: [
+    'AI_MODEL_PLAN_ADAPTATION',
+    'AI_MODEL_EVENT_MODIFICATION',
+  ],
+  [AiTask.ACTIVITY_ANALYSIS]: [
+    'AI_MODEL_ACTIVITY_ANALYSIS',
+    'AI_MODEL_EVENT_MODIFICATION',
+  ],
+  [AiTask.WORKOUT_PARSER]: ['AI_MODEL_WORKOUT_PARSER'],
+  [AiTask.AI_MEMORY]: ['AI_MODEL_MEMORY'],
 };
 
 export const DEFAULT_HOSTED_MODELS: Record<AiFeatureTask, string> = {
@@ -24,7 +40,23 @@ export const DEFAULT_HOSTED_MODELS: Record<AiFeatureTask, string> = {
   [AiTask.POST_ACTIVITY_QUESTIONS]: 'google/gemini-3-pro-preview',
   [AiTask.FEEDBACK_EXTRACTION]: 'openai/gpt-5.1',
   [AiTask.TRAINING_LOAD_ESTIMATION]: 'openai/gpt-5.1',
+  [AiTask.PLAN_GENERATION]: 'openai/gpt-5.1',
+  [AiTask.PLAN_ADAPTATION]: 'openai/gpt-5.1',
+  [AiTask.ACTIVITY_ANALYSIS]: 'openai/gpt-5.1',
+  [AiTask.WORKOUT_PARSER]: 'openai/gpt-5-mini',
+  [AiTask.AI_MEMORY]: 'openai/gpt-4o-mini',
 };
+
+/**
+ * Short, well-defined tasks run on a small model: AI_MODEL_DEFAULT, meant
+ * for the main model, does not apply to them, and AI_PROVIDER=anthropic
+ * picks Claude Haiku.
+ */
+const SMALL_MODEL_TASKS: AiFeatureTask[] = [
+  AiTask.WORKOUT_PARSER,
+  AiTask.AI_MEMORY,
+];
+const CLAUDE_SMALL_MODEL = 'anthropic/claude-haiku-4-5';
 
 /**
  * Claude model for every agent when AI_PROVIDER=anthropic (an older way to
@@ -45,6 +77,11 @@ export function hostedModelFor(
   const configured = HOSTED_MODEL_ENV_VARS[task]
     .map((name) => env[name])
     .find(Boolean);
+  if (SMALL_MODEL_TASKS.includes(task))
+    return (
+      configured ||
+      (providerDefault(env) ? CLAUDE_SMALL_MODEL : DEFAULT_HOSTED_MODELS[task])
+    );
   return (
     configured ||
     env.AI_MODEL_DEFAULT ||
@@ -53,22 +90,10 @@ export function hostedModelFor(
   );
 }
 
-/*
- * The agents below run on the instance keys only; they are not AI settings
- * tasks yet. These constants use process.env because the agents are created
- * at module initialization, before ConfigService is available.
- */
-
-/** Default provider of the agents below: 'openai' (default) or 'anthropic'. */
+/** Provider of the instance keys: 'openai' (default) or 'anthropic'. */
 export const AI_PROVIDER = (process.env.AI_PROVIDER || 'openai')
   .trim()
   .toLowerCase();
-
-const instanceModel = (variable: string, fallback: string) =>
-  process.env[variable] ||
-  process.env.AI_MODEL_DEFAULT ||
-  providerDefault(process.env) ||
-  fallback;
 
 /**
  * Provider for voice note transcription: 'openai' (Whisper, default) or
@@ -115,34 +140,3 @@ export function getAiModelApiKeyEnvVar(model: string): string | undefined {
       return undefined;
   }
 }
-
-/**
- * Model of the activity analysis, plan adaptation and coach assistant agents
- * (named after event modification, whose variable it shares).
- * Fallback: 'openai/gpt-5.1'
- */
-export const EVENT_MODIFICATION_MODEL = instanceModel(
-  'AI_MODEL_EVENT_MODIFICATION',
-  'openai/gpt-5.1',
-);
-
-/**
- * Model that consolidates AI memory notes into the coach–athlete summary.
- * It only runs every few notes; a small model is enough here.
- * Fallback: 'openai/gpt-4o-mini'
- */
-export const AI_MEMORY_MODEL = instanceModel(
-  'AI_MODEL_MEMORY',
-  'openai/gpt-4o-mini',
-);
-
-/**
- * Model that turns a workout written in plain words into structured steps.
- * A short, well-defined task: a small model keeps it cheap and fast.
- * Fallback: 'openai/gpt-5-mini', or Claude Haiku with AI_PROVIDER=anthropic
- */
-export const WORKOUT_PARSER_MODEL =
-  process.env.AI_MODEL_WORKOUT_PARSER ||
-  (AI_PROVIDER === 'anthropic'
-    ? 'anthropic/claude-haiku-4-5'
-    : 'openai/gpt-5-mini');

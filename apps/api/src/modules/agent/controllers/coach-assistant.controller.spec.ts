@@ -2,12 +2,18 @@ import { INestApplication } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Test } from '@nestjs/testing';
 
-import { FeatureAccessGuard } from '../../subscription';
+import { AiErrorCode, AiTask } from '@openathlete/shared';
+
+import { AiNotConfiguredException } from '../../ai/ai.errors';
 import { CoachAssistantService } from '../services/coach-assistant.service';
 import { CoachAssistantController } from './coach-assistant.controller';
 
 jest.mock('../../../mastra/agents/coach-assistant.agent', () => ({
-  coachAssistantAgent: { generate: jest.fn() },
+  coachAssistantAgent: { id: 'coach-assistant' },
+}));
+jest.mock('../../ai', () => ({
+  AiModelResolverService: class {},
+  AiService: class {},
 }));
 jest.mock('../../../mastra/tools/openathlete-data.tools', () => ({
   aiToolsRuntimeContext: jest.fn(),
@@ -16,7 +22,7 @@ jest.mock('../../ai-tools/ai-tools.service', () => ({
   AiToolsService: class {},
 }));
 jest.mock('../../../mastra/agents/plan-adaptation.agent', () => ({
-  planAdaptationAgent: { generate: jest.fn() },
+  planAdaptationAgent: { id: 'plan-adaptation' },
 }));
 
 // Local HTTP exercises the actual DTO pipes and role guard. Ownership is tested
@@ -25,7 +31,6 @@ describe('Coach assistant HTTP boundary', () => {
   let app: INestApplication;
   let origin: string;
   let roles: string[];
-  let aiAllowed = true;
   const service = {
     context: jest.fn().mockResolvedValue({ data: {} }),
     chat: jest.fn().mockResolvedValue({ reply: 'Suggestion' }),
@@ -51,8 +56,6 @@ describe('Coach assistant HTTP boundary', () => {
           return true;
         },
       })
-      .overrideGuard(FeatureAccessGuard)
-      .useValue({ canActivate: () => aiAllowed })
       .compile();
     app = module.createNestApplication();
     await app.listen(0, '127.0.0.1');
@@ -63,7 +66,6 @@ describe('Coach assistant HTTP boundary', () => {
   });
   beforeEach(() => {
     roles = ['COACH'];
-    aiAllowed = true;
     jest.clearAllMocks();
   });
   const post = (path: string, body: unknown) =>
@@ -72,13 +74,20 @@ describe('Coach assistant HTTP boundary', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-  test('permits context preview without granting access to the LLM feature', async () => {
-    aiAllowed = false;
+  test('permits context preview without AI configured for the chat', async () => {
+    // The coach's AI settings decide, in the service (no subscription guard).
+    service.chat.mockRejectedValueOnce(
+      new AiNotConfiguredException(AiTask.PLAN_ADAPTATION),
+    );
     expect((await post('context', input)).status).toBe(201);
-    expect(
-      (await post('chat', { ...input, question: 'Review this week' })).status,
-    ).toBe(403);
-    expect(service.chat).not.toHaveBeenCalled();
+    const refused = await post('chat', {
+      ...input,
+      question: 'Review this week',
+    });
+    expect(refused.status).toBe(403);
+    expect(await refused.json()).toMatchObject({
+      code: AiErrorCode.NOT_CONFIGURED,
+    });
   });
   test.each(['context', 'chat'])(
     'rejects athlete-only access to %s',

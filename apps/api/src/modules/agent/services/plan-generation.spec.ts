@@ -9,7 +9,9 @@ import {
   AI_PLAN_ISSUE_CODES,
   AI_PLAN_RULES,
   AI_PLAN_RULE_KEYS,
+  AiErrorCode,
   AiPlanRequest,
+  AiTask,
   CYCLE_PHASE,
   DEFAULT_AI_PLAN_RULES,
   SPORT_TYPE,
@@ -18,6 +20,12 @@ import {
 } from '@openathlete/shared';
 
 import { planGenerationAgent } from '../../../mastra/agents/plan-generation.agent';
+import {
+  AiInvalidAnswerException,
+  AiNotConfiguredException,
+  AiProviderException,
+} from '../../ai/ai.errors';
+import type { ResolvedAiModel } from '../../ai/services/ai-model-resolver.service';
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { AiPlanOutput, describeIssue, toImportPlan } from './plan-generation';
@@ -28,9 +36,30 @@ import {
 import { WorkoutParserService } from './workout-parser.service';
 
 jest.mock('../../../mastra/agents/plan-generation.agent', () => ({
-  planGenerationAgent: { generate: jest.fn() },
+  planGenerationAgent: { id: 'plan-generation' },
 }));
 jest.mock('src/mastra/agents', () => ({ workoutParserAgent: {} }));
+// The module barrel loads Mastra's registry; the service only needs the classes.
+jest.mock('../../ai', () => ({
+  AiModelResolverService: class {},
+  AiService: class {},
+}));
+
+// The coach's models, as the resolver returns them.
+const planModel: ResolvedAiModel = {
+  task: AiTask.PLAN_GENERATION,
+  source: 'own_key',
+  userId: 3,
+  provider: 'anthropic',
+  modelId: 'claude-opus-5-5',
+  credentialId: 9,
+  config: { id: 'anthropic/claude-opus-5-5', apiKey: 'sk-ant-coach' },
+};
+const parserModel = {
+  ...planModel,
+  task: AiTask.WORKOUT_PARSER,
+  modelId: 'claude-haiku-4-5',
+};
 
 const NOW = new Date('2030-10-20T12:00:00Z');
 const request: AiPlanRequest = {
@@ -104,7 +133,7 @@ class TestService extends PlanGenerationService {
     truncated?: boolean;
   }> = [];
   prompts: Array<Record<string, unknown>> = [];
-  protected async callModel(prompt: string) {
+  protected async callModel(_model: ResolvedAiModel, prompt: string) {
     this.prompts.push(JSON.parse(prompt));
     return this.answers.shift() ?? { object: null, raw: '' };
   }
@@ -217,13 +246,19 @@ function setup() {
     add: jest.fn().mockResolvedValue({ id: 'job-1' }),
     getJob: jest.fn(),
   };
-  const parser = { parse: jest.fn() };
+  const parser = {
+    parse: jest.fn(),
+    resolveModel: jest.fn().mockResolvedValue(parserModel),
+  };
+  const resolver = { resolveForUser: jest.fn().mockResolvedValue(planModel) };
   const service = new TestService(
     prisma as unknown as PrismaService,
     parser as unknown as WorkoutParserService,
+    resolver as never,
+    {} as never,
     queue as never,
   );
-  return { prisma, queue, parser, service };
+  return { prisma, queue, parser, resolver, service };
 }
 
 beforeAll(() => {
@@ -282,7 +317,7 @@ describe('PlanGenerationService.generate', () => {
     const { service, prisma } = setup();
     service.answers = [{ object: answer(GOOD), raw: '' }];
     const stage = jest.fn();
-    const draft = await service.generate(request, stage);
+    const draft = await service.generate(planModel, request, stage);
     expect(service.prompts).toHaveLength(1);
     expect(stage).not.toHaveBeenCalled();
     expect(draft.issues).toEqual([]);
@@ -338,7 +373,7 @@ describe('PlanGenerationService.generate', () => {
       { object: answer(GOOD), raw: '' },
     ];
     const stage = jest.fn();
-    const draft = await service.generate(request, stage);
+    const draft = await service.generate(planModel, request, stage);
     expect(stage).toHaveBeenCalledWith('repairing');
     const revision = service.prompts[1].revision as {
       problems: string[];
@@ -358,7 +393,7 @@ describe('PlanGenerationService.generate', () => {
       { object: answer(tooFast), raw: '' },
       { object: null, raw: 'not json' },
     ];
-    const draft = await service.generate(request);
+    const draft = await service.generate(planModel, request);
     expect(draft.plan?.cycles[0].weeks[1].sessions[0].goalDuration).toBe(6000);
     expect(draft.issues.map((issue) => issue.code)).toContain('PROGRESSION');
   });
@@ -369,7 +404,7 @@ describe('PlanGenerationService.generate', () => {
       { object: answer(GOOD, 'parkour'), raw: '' },
       { object: answer(GOOD), raw: '' },
     ];
-    const draft = await service.generate(request);
+    const draft = await service.generate(planModel, request);
     const problems = (service.prompts[1].revision as { problems: string[] })
       .problems;
     expect(problems[0]).toMatch(/sport/);
@@ -385,7 +420,7 @@ describe('PlanGenerationService.generate', () => {
       { object: null, raw: '{"name":', truncated: true },
       { object: null, raw: '' },
     ];
-    await expect(service.generate(request)).rejects.toMatchObject({
+    await expect(service.generate(planModel, request)).rejects.toMatchObject({
       name: 'AiPlanFailureError',
       reason: 'INVALID_ANSWER',
       detail: 'TRUNCATED',
@@ -416,7 +451,7 @@ describe('PlanGenerationService.generate', () => {
       },
     ]);
     service.answers = [{ object: answer(GOOD), raw: '' }];
-    const draft = await service.generate(request);
+    const draft = await service.generate(planModel, request);
     expect(draft.facts.recentWeeklyMinutes).toBeNull();
     expect(draft.facts.injuries).toBe(1);
     const injuries = (
@@ -432,7 +467,7 @@ describe('PlanGenerationService plan rules', () => {
   test('uses the defaults when the AI keeps them', async () => {
     const { service } = setup();
     service.answers = [{ object: answer(GOOD), raw: '' }];
-    const draft = await service.generate(request);
+    const draft = await service.generate(planModel, request);
     expect(draft.rules).toEqual(DEFAULT_AI_PLAN_RULES);
     expect(draft.ruleNotes.every((note) => note.source === 'default')).toBe(
       true,
@@ -457,7 +492,7 @@ describe('PlanGenerationService plan rules', () => {
         raw: '',
       },
     ];
-    const draft = await service.generate({
+    const draft = await service.generate(planModel, {
       ...request,
       methodologyNotes: 'progresión del 15 %',
     });
@@ -486,7 +521,7 @@ describe('PlanGenerationService plan rules', () => {
       },
       { object: answer(GOOD), raw: '' },
     ];
-    const draft = await service.generate(request);
+    const draft = await service.generate(planModel, request);
     // The repair round sees the clamped rules: 20%, not 60%.
     const revision = service.prompts[1].revision as {
       rules: Record<string, number>;
@@ -557,7 +592,7 @@ describe('PlanGenerationService race context', () => {
   test('flags the calendar goal once and sends the other races in full', async () => {
     const { service } = setup();
     service.answers = [{ object: answer(GOOD), raw: '' }];
-    await service.generate({ ...request, goalEventId: 50 });
+    await service.generate(planModel, { ...request, goalEventId: 50 });
     const sent = (service.prompts[0] as Prompt).athlete.races;
     expect(sent).toEqual([
       {
@@ -593,7 +628,7 @@ describe('PlanGenerationService race context', () => {
       { object: answer(GOOD), raw: '' },
       { object: answer(GOOD), raw: '' },
     ];
-    await service.generate({
+    await service.generate(planModel, {
       ...request,
       goal: { ...request.goal, name: ' 10k ' },
     });
@@ -602,7 +637,7 @@ describe('PlanGenerationService race context', () => {
     ).toEqual([false, true]);
     // Another name on the same day, or the same name another day, is
     // another race.
-    await service.generate({
+    await service.generate(planModel, {
       ...request,
       goal: { ...request.goal, name: 'Marathon' },
     });
@@ -610,7 +645,7 @@ describe('PlanGenerationService race context', () => {
       (service.prompts[1] as Prompt).athlete.races.map((race) => race.goal),
     ).toEqual([false, false]);
     service.answers = [{ object: answer(GOOD), raw: '' }];
-    await service.generate({
+    await service.generate(planModel, {
       ...request,
       goal: { ...request.goal, name: 'Tune-up 5K' },
     });
@@ -639,7 +674,10 @@ describe('PlanGenerationService race context', () => {
   test('the form shows exactly what a draft sends', async () => {
     const { service } = setup();
     service.answers = [{ object: answer(GOOD), raw: '' }];
-    const draft = await service.generate({ ...request, goalEventId: 50 });
+    const draft = await service.generate(planModel, {
+      ...request,
+      goalEventId: 50,
+    });
     const preview = await service.previewContext(coach, {
       athleteId: 4,
       goalEventId: 50,
@@ -693,82 +731,74 @@ describe('PlanGenerationService race context', () => {
 });
 
 describe('PlanGenerationService model call', () => {
-  // The real call, with the agent replaced.
-  const generate = planGenerationAgent.generate as jest.Mock;
+  // The real call, through a stand-in AiService.
+  const generateObject = jest.fn();
   const real = () =>
     new PlanGenerationService(
       null as never,
       null as never,
       null as never,
+      { generateObject } as never,
+      null as never,
     ) as unknown as {
-      callModel: (prompt: string) => Promise<{
-        object: unknown;
-        raw: string;
-        truncated?: boolean;
-      }>;
+      callModel: (
+        model: ResolvedAiModel,
+        prompt: string,
+      ) => Promise<{ object: unknown; raw: string; truncated?: boolean }>;
     };
-  beforeEach(() => generate.mockReset());
+  beforeEach(() => generateObject.mockReset());
 
-  test('asks for a structured plan with room for the longest one', async () => {
-    generate.mockResolvedValue({
-      // Whole minutes, as the output schema requires
-      object: answer([180, 120]),
-      text: '{}',
-      finishReason: 'stop',
-    });
-    const result = await real().callModel('{}');
-    expect(result.truncated).toBe(false);
+  test("asks AiService for a plan on the coach's model, with room for the longest one", async () => {
+    generateObject.mockResolvedValue(answer([180, 120]));
+    const result = await real().callModel(planModel, '{}');
     expect(result.object).not.toBeNull();
-    expect(generate.mock.calls[0][1]).toMatchObject({
-      modelSettings: { maxOutputTokens: PLAN_MAX_OUTPUT_TOKENS },
-    });
+    expect(result.truncated).toBeFalsy();
+    expect(generateObject).toHaveBeenCalledWith(
+      planGenerationAgent,
+      planModel,
+      '{}',
+      expect.anything(),
+      { timeoutMs: 10 * 60_000, maxOutputTokens: PLAN_MAX_OUTPUT_TOKENS },
+    );
     // 24 weeks of 7 sessions (~12k tokens) plus thinking.
     expect(PLAN_MAX_OUTPUT_TOKENS).toBeGreaterThanOrEqual(48_000);
   });
 
-  test('notices an answer cut by the output limit', async () => {
-    generate.mockResolvedValueOnce({
-      object: null,
-      text: '{"rules":[],"name":"P',
-      finishReason: 'length',
-    });
-    await expect(real().callModel('{}')).resolves.toMatchObject({
-      object: null,
-      truncated: true,
-    });
-    generate.mockRejectedValueOnce(
-      new Error(
-        'Structured output was truncated because the model finished with reason "length".',
-      ),
+  test('hands an invalid or cut-off answer to the repair round', async () => {
+    generateObject.mockRejectedValueOnce(
+      new AiInvalidAnswerException('{"rules":[],"name":"P', true),
     );
-    await expect(real().callModel('{}')).resolves.toMatchObject({
+    await expect(real().callModel(planModel, '{}')).resolves.toEqual({
       object: null,
+      raw: '{"rules":[],"name":"P',
       truncated: true,
     });
   });
 
-  test('does not call again when the account has no credit', async () => {
-    generate.mockRejectedValue(
-      Object.assign(new Error('You have no credits remaining.'), {
-        name: 'AI_APICallError',
-        statusCode: 429,
-        data: { error: { code: 'insufficient_quota' } },
-      }),
+  test('lets provider errors fail the draft, after one call', async () => {
+    const quota = new AiProviderException(
+      AiErrorCode.QUOTA_EXCEEDED,
+      'quota',
+      429,
     );
-    await expect(real().callModel('{}')).rejects.toMatchObject({
-      statusCode: 429,
-    });
-    expect(generate).toHaveBeenCalledTimes(1);
+    generateObject.mockRejectedValue(quota);
+    await expect(real().callModel(planModel, '{}')).rejects.toBe(quota);
+    expect(generateObject).toHaveBeenCalledTimes(1);
   });
 });
 
 describe('PlanGenerationService jobs', () => {
   test('queues a draft only for a linked athlete', async () => {
-    const { service, prisma, queue } = setup();
+    const { service, prisma, queue, resolver } = setup();
     await expect(service.start(coach, request)).resolves.toEqual({
       jobId: 'job-1',
       state: 'queued',
     });
+    // The coach's own AI settings for plans; keys never enter the queue.
+    expect(resolver.resolveForUser).toHaveBeenCalledWith(
+      AiTask.PLAN_GENERATION,
+      3,
+    );
     expect(queue.add).toHaveBeenCalledWith(
       'generate',
       { userId: 3, request },
@@ -778,6 +808,17 @@ describe('PlanGenerationService jobs', () => {
     queue.add.mockClear();
     await expect(service.start(coach, request)).rejects.toBeInstanceOf(
       ForbiddenException,
+    );
+    expect(queue.add).not.toHaveBeenCalled();
+  });
+
+  test('queues nothing without AI for plans', async () => {
+    const { service, queue, resolver } = setup();
+    resolver.resolveForUser.mockRejectedValue(
+      new AiNotConfiguredException(AiTask.PLAN_GENERATION),
+    );
+    await expect(service.start(coach, request)).rejects.toBeInstanceOf(
+      AiNotConfiguredException,
     );
     expect(queue.add).not.toHaveBeenCalled();
   });
@@ -811,14 +852,15 @@ describe('PlanGenerationService jobs', () => {
     queue.getJob.mockResolvedValue(
       job('failed', {
         failedReason:
-          'AI_PLAN_FAILED {"reason":"QUOTA","detail":"429 insufficient_quota"}',
+          'AI_PLAN_FAILED {"reason":"QUOTA","detail":"429","source":"own_key"}',
       }),
     );
     await expect(service.status(coach, 'a')).resolves.toEqual({
       jobId: 'a',
       state: 'failed',
       reason: 'QUOTA',
-      detail: '429 insufficient_quota',
+      detail: '429',
+      source: 'own_key',
     });
     // A failure the worker did not classify, such as a stalled job.
     queue.getJob.mockResolvedValue(
@@ -871,11 +913,45 @@ describe('PlanGenerationService.weekSteps', () => {
       1,
     ]);
     expect(most).toBe(3);
-    expect(parser.parse).toHaveBeenCalledWith({
-      text: 'a',
-      sport: 'RUNNING',
-      athleteId: 4,
-    });
+    // The coach's model for written workouts, resolved once for the week.
+    expect(parser.resolveModel).toHaveBeenCalledTimes(1);
+    expect(parser.resolveModel).toHaveBeenCalledWith(3);
+    expect(parser.parse).toHaveBeenCalledWith(
+      { text: 'a', sport: 'RUNNING', athleteId: 4 },
+      parserModel,
+    );
+  });
+
+  test.each([
+    [AiErrorCode.CREDENTIAL_REJECTED, 401],
+    [AiErrorCode.QUOTA_EXCEEDED, 429],
+  ])(
+    'fails the week on %s, which every session would hit',
+    async (code, status) => {
+      const { service, parser } = setup();
+      const failure = new AiProviderException(code, 'key', status);
+      parser.parse.mockRejectedValue(failure);
+      await expect(
+        service.weekSteps(coach, {
+          athleteId: 4,
+          sessions: [{ sport: SPORT_TYPE.RUNNING, text: 'a' }],
+        }),
+      ).rejects.toBe(failure);
+    },
+  );
+
+  test('a coach without AI for written workouts gets NOT_CONFIGURED before any call', async () => {
+    const { service, parser } = setup();
+    parser.resolveModel.mockRejectedValue(
+      new AiNotConfiguredException(AiTask.WORKOUT_PARSER),
+    );
+    await expect(
+      service.weekSteps(coach, {
+        athleteId: 4,
+        sessions: [{ sport: SPORT_TYPE.RUNNING, text: 'a' }],
+      }),
+    ).rejects.toBeInstanceOf(AiNotConfiguredException);
+    expect(parser.parse).not.toHaveBeenCalled();
   });
 
   test('refuses athletes the coach is not linked to', async () => {

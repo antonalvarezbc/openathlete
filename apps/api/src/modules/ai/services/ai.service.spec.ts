@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { AiErrorCode, AiTask } from '@openathlete/shared';
 
-import { AiProviderException } from '../ai.errors';
+import { AiInvalidAnswerException, AiProviderException } from '../ai.errors';
 import { ResolvedAiModel } from './ai-model-resolver.service';
 import { AiService } from './ai.service';
 
@@ -10,6 +10,12 @@ import { AiService } from './ai.service';
 // test/agents.test.cjs against the build
 const generate = jest.fn();
 const agentConfigs: unknown[] = [];
+// Mastra's processors entry is ESM-only under Jest.
+jest.mock('./provider-retry.processor', () => ({
+  ProviderRetryProcessor: class {
+    readonly id = 'stream-error-retry-processor';
+  },
+}));
 jest.mock('@mastra/core/agent', () => ({
   Agent: jest.fn().mockImplementation((config: unknown) => {
     agentConfigs.push(config);
@@ -79,6 +85,60 @@ describe('AiService', () => {
     await expect(
       service.generateObject(agent, ownKeyModel, 'x', z.object({})),
     ).rejects.toMatchObject({ code: AiErrorCode.PROVIDER_ERROR });
+  });
+
+  it('keeps the answer of an invalid or cut-off object, for a repair', async () => {
+    const { service } = setup();
+    generate.mockResolvedValue({
+      object: undefined,
+      text: '{"cycles": [',
+      finishReason: 'length',
+    });
+
+    const error = await service
+      .generateObject(agent, ownKeyModel, 'x', z.object({}))
+      .catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(AiInvalidAnswerException);
+    expect(error).toMatchObject({ rawText: '{"cycles": [', truncated: true });
+  });
+
+  it('retries transient provider errors, but not an account without credit', async () => {
+    const { service } = setup();
+    generate.mockResolvedValue({ text: 'Hi' });
+    await service.generateText(agent, ownKeyModel, 'x');
+    // Replaces Mastra's default retry processor, which retried quota errors.
+    expect(agentConfigs[0]).toMatchObject({
+      errorProcessors: [{ id: 'stream-error-retry-processor' }],
+    });
+    expect(agentConfigs[0]).not.toHaveProperty('errorProcessorDefaults');
+  });
+
+  it('passes the call options: timeout, output cap, tools context and steps', async () => {
+    const { service } = setup();
+    const tools = { lookup: {} } as never;
+    const requestContext = { user: 1 } as never;
+    generate.mockResolvedValue({ text: 'Done' });
+
+    await service.generateText({ ...agent, tools }, ownKeyModel, 'x', {
+      timeoutMs: 600_000,
+      maxOutputTokens: 64_000,
+      requestContext,
+      maxSteps: 6,
+    });
+    expect(agentConfigs[0]).toMatchObject({ tools });
+    expect(generate).toHaveBeenCalledWith(
+      'x',
+      expect.objectContaining({
+        modelSettings: { maxOutputTokens: 64_000 },
+        requestContext,
+        maxSteps: 6,
+        abortSignal: expect.any(AbortSignal),
+      }),
+    );
+    // Without options, none of them is sent.
+    await service.generateText(agent, ownKeyModel, 'y');
+    expect(generate.mock.calls[1][1]).not.toHaveProperty('modelSettings');
+    expect(generate.mock.calls[1][1]).not.toHaveProperty('maxSteps');
   });
 
   it('records a successful use of the key', async () => {

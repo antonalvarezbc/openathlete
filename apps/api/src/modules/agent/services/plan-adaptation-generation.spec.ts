@@ -1,13 +1,23 @@
-import { PlanAdaptationRequest, SPORT_TYPE } from '@openathlete/shared';
+import { AiTask, PlanAdaptationRequest, SPORT_TYPE } from '@openathlete/shared';
 
 import { planAdaptationAgent } from '../../../mastra/agents/plan-adaptation.agent';
 import { disabledAiMemory } from '../../ai-memory/ai-memory.testing';
+import { aiResolverStandIn, aiServiceStandIn } from '../../ai/ai.testing';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { PlanAdaptationService } from './plan-adaptation.service';
 
 jest.mock('../../../mastra/agents/plan-adaptation.agent', () => ({
-  planAdaptationAgent: { generate: jest.fn() },
+  planAdaptationAgent: { id: 'plan-adaptation' },
 }));
+jest.mock('../../ai', () => ({
+  AiModelResolverService: class {},
+  AiService: class {},
+}));
+
+// The model, behind a stand-in AiService on the coach's own settings.
+const generate = jest.fn();
+const ai = aiServiceStandIn(generate);
+const resolver = aiResolverStandIn();
 
 const user = {
   roles: ['COACH' as const],
@@ -48,6 +58,8 @@ describe('Proposal generation is read-only', () => {
     const service = new PlanAdaptationService(
       prisma as unknown as PrismaService,
       disabledAiMemory(),
+      resolver as never,
+      ai,
     );
     const context = {
       contextVersion: 'a'.repeat(64),
@@ -76,19 +88,28 @@ describe('Proposal generation is read-only', () => {
       .mockResolvedValue(
         context as unknown as Awaited<ReturnType<typeof service.context>>,
       );
-    (planAdaptationAgent.generate as jest.Mock).mockResolvedValue({
+    generate.mockResolvedValue({
       object: { summary: 'Keep unchanged', warnings: [], sessions: [original] },
     });
     const result = await service.propose(user, request);
     expect(result.proposal!.sessions[0].eventId).toBe(9);
-    const prompt = JSON.parse(
-      (planAdaptationAgent.generate as jest.Mock).mock.calls.at(-1)[0],
-    );
+    const prompt = JSON.parse(generate.mock.calls.at(-1)[0]);
     expect(prompt.currentState).toBe('QA current state');
     expect(prompt.plan.goal).toBe('QA trail goal');
     expect(prompt.activities[0].rpe).toBe(7);
     expect(prompt.metrics[0].type).toBe('HRV_LAST_NIGHT_AVG');
     expect(prisma.$transaction).not.toHaveBeenCalled();
+    // The adaptation agent, on the coach's own model for plan adaptation.
+    expect(resolver.resolveForUser).toHaveBeenCalledWith(
+      AiTask.PLAN_ADAPTATION,
+      3,
+    );
+    expect(ai.generateObject).toHaveBeenLastCalledWith(
+      planAdaptationAgent,
+      expect.objectContaining({ task: AiTask.PLAN_ADAPTATION, userId: 3 }),
+      expect.any(String),
+      expect.anything(),
+    );
   });
   test('rejects unauthorized context before contacting the model', async () => {
     const prisma = {
@@ -97,12 +118,14 @@ describe('Proposal generation is read-only', () => {
     const service = new PlanAdaptationService(
       prisma as unknown as PrismaService,
       disabledAiMemory(),
+      resolver as never,
+      ai,
     );
-    (planAdaptationAgent.generate as jest.Mock).mockClear();
+    generate.mockClear();
     await expect(service.propose(user, request)).rejects.toThrow(
       'cannot manage',
     );
-    expect(planAdaptationAgent.generate).not.toHaveBeenCalled();
+    expect(generate).not.toHaveBeenCalled();
   });
 });
 
@@ -180,6 +203,8 @@ describe('Interface language takes precedence over athlete language', () => {
       const service = new PlanAdaptationService(
         prisma as unknown as PrismaService,
         disabledAiMemory(),
+        resolver as never,
+        ai,
       );
       const result = await service.context(
         user,
@@ -222,6 +247,8 @@ describe('Applying reviewed dates', () => {
     const service = new PlanAdaptationService(
       prisma as unknown as PrismaService,
       disabledAiMemory(),
+      resolver as never,
+      ai,
     );
     jest.spyOn(service, 'context').mockResolvedValue({
       contextVersion: 'a'.repeat(64),
@@ -277,6 +304,8 @@ describe('Applying reviewed dates', () => {
     const service = new PlanAdaptationService(
       prisma as unknown as PrismaService,
       memory,
+      resolver as never,
+      ai,
     );
     jest.spyOn(service, 'context').mockResolvedValue({
       contextVersion: 'a'.repeat(64),
@@ -354,6 +383,8 @@ describe('Refining proposals without calendar writes', () => {
     const service = new PlanAdaptationService(
       prisma as unknown as PrismaService,
       disabledAiMemory(),
+      resolver as never,
+      ai,
     );
     const context = {
       contextVersion: 'a'.repeat(64),
@@ -391,13 +422,11 @@ describe('Refining proposals without calendar writes', () => {
   }
   test('sends draft, feedback and history and returns a full validated revision without writes', async () => {
     const { prisma, service, dto } = setup();
-    (planAdaptationAgent.generate as jest.Mock).mockResolvedValue({
+    generate.mockResolvedValue({
       object: { ...dto.proposal, summary: 'Explicación en español' },
     });
     const result = await service.refine(user, dto);
-    const prompt = JSON.parse(
-      (planAdaptationAgent.generate as jest.Mock).mock.calls[0][0],
-    );
+    const prompt = JSON.parse(generate.mock.calls[0][0]);
     expect(prompt.revision).toEqual({
       previousProposal: dto.proposal,
       feedback: dto.feedback,
@@ -414,7 +443,7 @@ describe('Refining proposals without calendar writes', () => {
       ...dto.proposal,
       sessions: [{ ...original, description: 'Changed while KEEP' }],
     };
-    (planAdaptationAgent.generate as jest.Mock).mockResolvedValue({
+    generate.mockResolvedValue({
       object: invalid,
     });
     const draft = await service.propose(user, request);
@@ -422,16 +451,14 @@ describe('Refining proposals without calendar writes', () => {
       code: 'ADAPTATION_KEEP',
       sessionName: 'QA',
     });
-    (planAdaptationAgent.generate as jest.Mock).mockResolvedValue({
+    generate.mockResolvedValue({
       object: dto.proposal,
     });
     const corrected = await service.refine(user, {
       ...dto,
       proposal: draft.proposal,
     });
-    const prompt = JSON.parse(
-      (planAdaptationAgent.generate as jest.Mock).mock.calls.at(-1)[0],
-    );
+    const prompt = JSON.parse(generate.mock.calls.at(-1)[0]);
     expect(prompt.revision.validationIssue.code).toBe('ADAPTATION_KEEP');
     expect(corrected.validationIssue).toBeNull();
     expect(prisma.$transaction).not.toHaveBeenCalled();
@@ -460,7 +487,7 @@ describe('Refining proposals without calendar writes', () => {
     const { service, dto } = setup();
     dto.contextVersion = 'b'.repeat(64);
     await expect(service.refine(user, dto)).rejects.toThrow('changed');
-    expect(planAdaptationAgent.generate).not.toHaveBeenCalled();
+    expect(generate).not.toHaveBeenCalled();
   });
   test('keeps the original baseline across rounds rather than compounding increases', async () => {
     const { prisma, service, dto } = setup();
@@ -474,7 +501,7 @@ describe('Refining proposals without calendar writes', () => {
       ...dto,
       proposal: { ...dto.proposal, sessions: [previous] },
     };
-    (planAdaptationAgent.generate as jest.Mock).mockResolvedValue({
+    generate.mockResolvedValue({
       object: {
         ...dto.proposal,
         sessions: [{ ...previous, goalDuration: 2178 }],
@@ -487,13 +514,11 @@ describe('Refining proposals without calendar writes', () => {
     });
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
-  test.each([['Provider connection failure', 'ADAPTATION_PROVIDER']])(
-    'maps SDK failure to a localized error code: %s',
+  test.each([['Provider connection failure', 'AI_PROVIDER_ERROR']])(
+    'reports a provider failure as AiService does: %s',
     async (message, code) => {
       const { prisma, service, dto } = setup();
-      (planAdaptationAgent.generate as jest.Mock).mockRejectedValue(
-        new Error(message),
-      );
+      generate.mockRejectedValue(new Error(message));
       try {
         await service.refine(user, dto);
         throw new Error('Expected failure');
@@ -510,15 +535,16 @@ describe('Refining proposals without calendar writes', () => {
     const error = Object.assign(
       new Error('Structured output validation failed SECRET'),
       {
+        id: 'STRUCTURED_OUTPUT_SCHEMA_VALIDATION_FAILED',
         details: { value: '{"summary":"Incomplete draft"}', headers: 'SECRET' },
       },
     );
-    (planAdaptationAgent.generate as jest.Mock).mockRejectedValueOnce(error);
+    generate.mockRejectedValueOnce(error);
     const draft = await service.propose(user, request);
     expect(draft.proposal).toBeNull();
     expect(draft.rawResponse).toBe('{"summary":"Incomplete draft"}');
     expect(JSON.stringify(draft)).not.toContain('SECRET');
-    (planAdaptationAgent.generate as jest.Mock).mockResolvedValueOnce({
+    generate.mockResolvedValueOnce({
       object: dto.proposal,
     });
     const repaired = await service.refine(user, {
@@ -527,9 +553,7 @@ describe('Refining proposals without calendar writes', () => {
       rawResponse: draft.rawResponse,
     });
     expect(repaired.proposal).not.toBeNull();
-    const prompt = JSON.parse(
-      (planAdaptationAgent.generate as jest.Mock).mock.calls.at(-1)[0],
-    );
+    const prompt = JSON.parse(generate.mock.calls.at(-1)[0]);
     expect(prompt.revision.rawResponse).toBe(draft.rawResponse);
     expect(prompt.revision.validationIssue.code).toBe(
       'ADAPTATION_MODEL_INVALID',
@@ -538,8 +562,10 @@ describe('Refining proposals without calendar writes', () => {
   });
   test('keeps the repair flow available if SDK output is unavailable', async () => {
     const { service } = setup();
-    (planAdaptationAgent.generate as jest.Mock).mockRejectedValueOnce(
-      new Error('Structured output validation failed'),
+    generate.mockRejectedValueOnce(
+      Object.assign(new Error('Structured output validation failed'), {
+        id: 'STRUCTURED_OUTPUT_OBJECT_UNDEFINED',
+      }),
     );
     const result = await service.propose(user, request);
     expect(result.proposal).toBeNull();
@@ -547,7 +573,7 @@ describe('Refining proposals without calendar writes', () => {
   });
   test('invalid revised output is rejected without saving', async () => {
     const { prisma, service, dto } = setup();
-    (planAdaptationAgent.generate as jest.Mock).mockResolvedValue({
+    generate.mockResolvedValue({
       object: { summary: 'invalid' },
     });
     const result = await service.refine(user, dto);

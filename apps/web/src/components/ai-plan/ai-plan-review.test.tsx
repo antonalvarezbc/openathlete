@@ -1,9 +1,15 @@
 // @vitest-environment jsdom
+import { AxiosError, AxiosHeaders } from 'axios';
 import { act } from 'react';
 import { type Root, createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { CYCLE_PHASE, SEOPlanData, SPORT_TYPE } from '@openathlete/shared';
+import {
+  AiErrorCode,
+  CYCLE_PHASE,
+  SEOPlanData,
+  SPORT_TYPE,
+} from '@openathlete/shared';
 
 import { AiPlanSteps, issueText } from './ai-plan-review';
 
@@ -195,6 +201,27 @@ describe('AiPlanSteps', () => {
       () => !!container.textContent?.includes('ai_plan_steps_stopped'),
     );
     expect(api.weekSteps).toHaveBeenCalledTimes(2);
+  });
+
+  it('stops at once when there is no AI for written workouts, and says where to set it up', async () => {
+    api.weekSteps.mockRejectedValue(
+      new AxiosError('Forbidden', 'ERR_BAD_REQUEST', undefined, undefined, {
+        status: 403,
+        statusText: '',
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+        data: { code: AiErrorCode.NOT_CONFIGURED },
+      }),
+    );
+    await render(4);
+    await act(async () => button('ai_plan_steps_run').click());
+    await waitFor(() => !!container.querySelector('[role="alert"]'));
+    expect(container.querySelector('[role="alert"]')!.textContent).toBe(
+      'ai_error_not_configured',
+    );
+    // Both weeks started together; no other week is asked for.
+    expect(api.weekSteps.mock.calls.length).toBeLessThanOrEqual(2);
+    expect(container.textContent).not.toContain('ai_plan_steps_failed');
   });
 
   it('describes every check result', () => {

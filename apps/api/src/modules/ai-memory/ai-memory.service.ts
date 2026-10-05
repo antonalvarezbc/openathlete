@@ -1,7 +1,14 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 
-import { AiMemoryDto, AiMemoryMode, AiMemorySource } from '@openathlete/shared';
+import {
+  AiMemoryDto,
+  AiMemoryMode,
+  AiMemorySource,
+  AiTask,
+} from '@openathlete/shared';
 
+import { aiMemoryConsolidationAgent } from '../../mastra/agents/ai-memory-consolidation.agent';
+import { AiModelResolverService, AiService } from '../ai';
 import { PrismaService } from '../prisma/services/prisma.service';
 import {
   AI_MEMORY_LIMITS,
@@ -53,7 +60,11 @@ export class AiMemoryService {
   private readonly logger = new Logger(AiMemoryService.name);
   private readonly consolidating = new Set<number>();
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly resolver: AiModelResolverService,
+    private readonly ai: AiService,
+  ) {}
 
   private link(coachUserId: number, athleteId: number) {
     return this.prisma.coachAthlete.findFirst({
@@ -213,11 +224,16 @@ export class AiMemoryService {
       const older = notes.slice(0, Math.max(0, notes.length - limits.notes));
       if (!older.length) return;
 
-      // Loaded lazily: only consolidation needs a model, and services that
-      // read memory should not pull Mastra in (nor their specs).
-      const { aiMemoryConsolidationAgent } =
-        await import('../../mastra/agents/ai-memory-consolidation.agent');
-      const result = await aiMemoryConsolidationAgent.generate(
+      // The memory is the coach's: their AI settings, never the athlete's.
+      // Without AI the notes just wait; they are sent verbatim meanwhile.
+      const model = await this.resolver.tryResolveForUser(
+        AiTask.AI_MEMORY,
+        link.userId,
+      );
+      if (!model) return;
+      const text = await this.ai.generateText(
+        aiMemoryConsolidationAgent,
+        model,
         JSON.stringify({
           maxChars: limits.summaryChars,
           currentSummary: link.aiMemorySummary,
@@ -225,9 +241,9 @@ export class AiMemoryService {
             (n) => `${isoDate(n.createdAt)} ${n.source}: ${n.content}`,
           ),
         }),
-        { abortSignal: AbortSignal.timeout(60_000) },
+        { timeoutMs: 60_000 },
       );
-      const summary = clipSummary(result.text, limits.summaryChars);
+      const summary = clipSummary(text, limits.summaryChars);
       if (!summary) return;
 
       // Skip if the memory was cleared or consolidated elsewhere meanwhile.

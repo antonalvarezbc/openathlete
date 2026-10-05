@@ -20,12 +20,15 @@ jest.mock('../services/workout-parser.service', () => ({
 }));
 
 const coach = { userId: 3, roles: ['COACH'] } as AuthUser;
+// The coach's model for written workouts.
+const model = { task: 'WORKOUT_PARSER', userId: 3 };
 const steps = [
   { stepType: 'WARMUP', durationType: 'TIME', durationValue: 900 },
 ];
 
 function setup() {
   const parser = {
+    resolveModel: jest.fn().mockResolvedValue(model),
     parse: jest.fn().mockResolvedValue(steps),
     parseSession: jest
       .fn()
@@ -55,11 +58,15 @@ describe('POST agent/ai/events/structure', () => {
       instructions: "15' calentar + 3x8' RPE 6-7",
     });
     expect(result).toEqual({ steps });
-    expect(parser.parse).toHaveBeenCalledWith({
-      text: "15' calentar + 3x8' RPE 6-7",
-      sport: SPORT_TYPE.RUNNING,
-      athleteId: 7,
-    });
+    expect(parser.resolveModel).toHaveBeenCalledWith(3);
+    expect(parser.parse).toHaveBeenCalledWith(
+      {
+        text: "15' calentar + 3x8' RPE 6-7",
+        sport: SPORT_TYPE.RUNNING,
+        athleteId: 7,
+      },
+      model,
+    );
     expect(generation.generateTrainingEvent).not.toHaveBeenCalled();
   });
 
@@ -97,10 +104,10 @@ describe('POST agent/ai/events/structure', () => {
       instructions: "3x8' a 4:35/km",
     });
     expect(result).toEqual({ steps, name: 'Series', sport: 'RUNNING' });
-    expect(parser.parseSession).toHaveBeenCalledWith({
-      text: "3x8' a 4:35/km",
-      athleteId: 7,
-    });
+    expect(parser.parseSession).toHaveBeenCalledWith(
+      { text: "3x8' a 4:35/km", athleteId: 7 },
+      model,
+    );
     expect(parser.parse).not.toHaveBeenCalled();
   });
 
@@ -114,6 +121,18 @@ describe('POST agent/ai/events/structure', () => {
         name: 'x',
       }),
     ).rejects.toThrow();
+    expect(parser.parse).not.toHaveBeenCalled();
+  });
+
+  it('needs AI for written workouts', async () => {
+    const { controller, parser } = setup();
+    parser.resolveModel.mockRejectedValue(new Error('AI_NOT_CONFIGURED'));
+    await expect(
+      controller.generateWorkoutStructure(coach, {
+        sport: SPORT_TYPE.RUNNING,
+        instructions: "30' Z2",
+      }),
+    ).rejects.toThrow('AI_NOT_CONFIGURED');
     expect(parser.parse).not.toHaveBeenCalled();
   });
 });

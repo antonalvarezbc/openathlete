@@ -8,6 +8,14 @@ export enum AiTask {
   POST_ACTIVITY_QUESTIONS = 'POST_ACTIVITY_QUESTIONS',
   FEEDBACK_EXTRACTION = 'FEEDBACK_EXTRACTION',
   TRAINING_LOAD_ESTIMATION = 'TRAINING_LOAD_ESTIMATION',
+  PLAN_GENERATION = 'PLAN_GENERATION',
+  /** Plan adaptation and the coach assistant */
+  PLAN_ADAPTATION = 'PLAN_ADAPTATION',
+  ACTIVITY_ANALYSIS = 'ACTIVITY_ANALYSIS',
+  /** Workouts written in words turned into structured steps */
+  WORKOUT_PARSER = 'WORKOUT_PARSER',
+  /** The coach's private memory about each athlete */
+  AI_MEMORY = 'AI_MEMORY',
 }
 
 /** Every task an AI feature runs, i.e. all of them but DEFAULT. */
@@ -17,6 +25,11 @@ export const AI_FEATURE_TASKS = [
   AiTask.POST_ACTIVITY_QUESTIONS,
   AiTask.FEEDBACK_EXTRACTION,
   AiTask.TRAINING_LOAD_ESTIMATION,
+  AiTask.PLAN_GENERATION,
+  AiTask.PLAN_ADAPTATION,
+  AiTask.ACTIVITY_ANALYSIS,
+  AiTask.WORKOUT_PARSER,
+  AiTask.AI_MEMORY,
 ] as const;
 export type AiFeatureTask = (typeof AI_FEATURE_TASKS)[number];
 

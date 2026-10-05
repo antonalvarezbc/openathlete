@@ -6,7 +6,9 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { Test } from '@nestjs/testing';
 
-import { FeatureAccessGuard } from '../../subscription/guards/feature-access.guard';
+import { AiErrorCode, AiTask } from '@openathlete/shared';
+
+import { AiNotConfiguredException } from '../../ai/ai.errors';
 import { ActivityAnalysisService } from '../services/activity-analysis.service';
 import { ActivityAnalysisController } from './activity-analysis.controller';
 
@@ -19,7 +21,6 @@ jest.mock('../services/activity-analysis.service', () => ({
 describe('Activity analysis HTTP boundary', () => {
   let app: INestApplication;
   let origin: string;
-  let aiAllowed = true;
   const coach = { userId: 3, roles: ['COACH'] };
   const headers = {
     Authorization: 'Bearer synthetic-coach-token',
@@ -47,8 +48,6 @@ describe('Activity analysis HTTP boundary', () => {
           return true;
         },
       })
-      .overrideGuard(FeatureAccessGuard)
-      .useValue({ canActivate: () => aiAllowed })
       .compile();
     app = module.createNestApplication();
     await app.listen(0, '127.0.0.1');
@@ -58,7 +57,6 @@ describe('Activity analysis HTTP boundary', () => {
     await app?.close();
   });
   beforeEach(() => {
-    aiAllowed = true;
     jest.clearAllMocks();
   });
 
@@ -128,12 +126,16 @@ describe('Activity analysis HTTP boundary', () => {
     expect(service.generate).not.toHaveBeenCalled();
   });
 
-  test('preserves private history, context and draft editing without granting the AI feature', async () => {
-    aiAllowed = false;
-    expect(
-      (await request('42/generate', 'POST', { language: 'es' })).status,
-    ).toBe(403);
-    expect(service.generate).not.toHaveBeenCalled();
+  test('preserves private history, context and draft editing without AI configured', async () => {
+    // The coach's AI settings decide, in the service (no subscription guard).
+    service.generate.mockRejectedValueOnce(
+      new AiNotConfiguredException(AiTask.ACTIVITY_ANALYSIS),
+    );
+    const refused = await request('42/generate', 'POST', { language: 'es' });
+    expect(refused.status).toBe(403);
+    expect(await refused.json()).toMatchObject({
+      code: AiErrorCode.NOT_CONFIGURED,
+    });
     expect((await request('42')).status).toBe(200);
     expect(
       (await request('42/context', 'POST', { language: 'es' })).status,

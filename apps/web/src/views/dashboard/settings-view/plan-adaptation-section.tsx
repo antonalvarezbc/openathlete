@@ -18,6 +18,7 @@ import { SparklesIcon } from '@/components/ui/sparkles-icon';
 import { WorkoutSummary } from '@/components/workout/workout-summary';
 import { m } from '@/paraglide/messages';
 import { getLocale } from '@/paraglide/runtime';
+import { aiErrorMessage } from '@/utils/ai-errors';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { useEffect, useMemo, useState } from 'react';
@@ -161,7 +162,6 @@ export function PlanAdaptationSection({
   const messages: Record<string, () => string> = {
     ADAPTATION_NO_SESSIONS: m.adaptation_no_sessions,
     ADAPTATION_MODEL_INVALID: m.adaptation_model_invalid,
-    ADAPTATION_PROVIDER: m.adaptation_provider_failed,
     ADAPTATION_NO_WEEK: m.adaptation_no_week,
     ADAPTATION_NEW_PERMISSION: m.adaptation_new_permission,
     ADAPTATION_NEW_BUDGET: m.adaptation_new_budget_error,
@@ -190,7 +190,8 @@ export function PlanAdaptationSection({
 
       // Never expose untranslated server/provider errors in the interface.
       setError(
-        messages[code]?.() ??
+        aiErrorMessage(error) ??
+          messages[code]?.() ??
           (isAxiosError(error) && error.response?.status === 409
             ? m.adaptation_stale_error()
             : isAxiosError(error) && error.response?.status === 403

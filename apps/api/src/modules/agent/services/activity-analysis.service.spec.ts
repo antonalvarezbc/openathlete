@@ -2,29 +2,39 @@ import {
   ConflictException,
   ForbiddenException,
   NotFoundException,
-  ServiceUnavailableException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 
 import {
   ActivityAnalysisResult,
+  AiErrorCode,
+  AiTask,
   activityAnalysisRequestSchema,
   activityAnalysisResultSchema,
 } from '@openathlete/shared';
 
-import { EVENT_MODIFICATION_MODEL } from '../../../common/constants/ai-models.constant';
 import {
   ACTIVITY_ANALYSIS_PROMPT_VERSION,
   activityAnalysisAgent,
 } from '../../../mastra/agents/activity-analysis.agent';
 import { disabledAiMemory } from '../../ai-memory/ai-memory.testing';
+import { AiProviderException } from '../../ai/ai.errors';
+import { aiResolverStandIn, aiServiceStandIn } from '../../ai/ai.testing';
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { buildActivityAnalysisContext } from './activity-analysis-context';
 import { ActivityAnalysisService } from './activity-analysis.service';
 
+jest.mock('../../ai', () => ({
+  AiModelResolverService: class {},
+  AiService: class {},
+}));
+// The model, behind a stand-in AiService on the coach's own settings.
+const generate = jest.fn();
+// The coach's model the analysis is recorded with.
+const MODEL = 'anthropic/claude-opus-5-5';
 jest.mock('../../../mastra/agents/activity-analysis.agent', () => ({
-  activityAnalysisAgent: { generate: jest.fn() },
+  activityAnalysisAgent: { id: 'coach-activity-analysis' },
   ACTIVITY_ANALYSIS_PROMPT_VERSION: 'test-prompt-version',
 }));
 jest.mock('./activity-analysis-context', () => ({
@@ -66,7 +76,7 @@ const row = {
   analysis,
   feedbackDraft: analysis.athleteFeedback,
   contextSnapshot: snapshot,
-  model: EVENT_MODIFICATION_MODEL,
+  model: MODEL,
   promptVersion: ACTIVITY_ANALYSIS_PROMPT_VERSION,
   createdAt,
   updatedAt: createdAt,
@@ -103,13 +113,19 @@ function setup() {
       .mockImplementation(async (callback) => callback(tx)),
   };
   const memory = disabledAiMemory();
+  const resolver = aiResolverStandIn();
+  const ai = aiServiceStandIn(generate);
   return {
     db,
     tx,
     memory,
+    resolver,
+    ai,
     service: new ActivityAnalysisService(
       db as unknown as PrismaService,
       memory,
+      resolver as never,
+      ai,
     ),
   };
 }
@@ -117,7 +133,7 @@ function setup() {
 beforeEach(() => {
   jest.resetAllMocks();
   (buildActivityAnalysisContext as jest.Mock).mockResolvedValue(snapshot);
-  (activityAnalysisAgent.generate as jest.Mock).mockResolvedValue({
+  generate.mockResolvedValue({
     object: analysis,
   });
 });
@@ -140,7 +156,7 @@ describe('activity analysis authorization and private history', () => {
       expect(db.event.findFirst).not.toHaveBeenCalled();
       expect(tx.event.findFirst).not.toHaveBeenCalled();
       expect(buildActivityAnalysisContext).not.toHaveBeenCalled();
-      expect(activityAnalysisAgent.generate).not.toHaveBeenCalled();
+      expect(generate).not.toHaveBeenCalled();
       expect(tx.coachActivityAnalysis.updateMany).not.toHaveBeenCalled();
     },
   );
@@ -165,7 +181,7 @@ describe('activity analysis authorization and private history', () => {
       input.coachContext,
       'es',
     );
-    expect(activityAnalysisAgent.generate).not.toHaveBeenCalled();
+    expect(generate).not.toHaveBeenCalled();
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 
@@ -187,7 +203,7 @@ describe('activity analysis authorization and private history', () => {
         NotFoundException,
       );
       expect(buildActivityAnalysisContext).not.toHaveBeenCalled();
-      expect(activityAnalysisAgent.generate).not.toHaveBeenCalled();
+      expect(generate).not.toHaveBeenCalled();
       expect(tx.coachActivityAnalysis.create).not.toHaveBeenCalled();
     },
   );
@@ -217,15 +233,18 @@ describe('activity analysis authorization and private history', () => {
 
 describe('validated generation and failure isolation', () => {
   test('saves validated analysis, a context snapshot and a separate editable feedback draft', async () => {
-    const { service, db, tx } = setup();
+    const { service, db, tx, ai, resolver } = setup();
     const result = await service.generate(coach, 42, input);
-    expect(activityAnalysisAgent.generate).toHaveBeenCalledWith(
+    // The analysis agent, through AiService, on the coach's own model.
+    expect(resolver.resolveForUser).toHaveBeenCalledWith(
+      AiTask.ACTIVITY_ANALYSIS,
+      3,
+    );
+    expect(ai.generateObject).toHaveBeenCalledWith(
+      activityAnalysisAgent,
+      expect.objectContaining({ task: AiTask.ACTIVITY_ANALYSIS, userId: 3 }),
       JSON.stringify(snapshot),
-      expect.objectContaining({
-        structuredOutput: { schema: activityAnalysisResultSchema },
-        maxSteps: 1,
-        abortSignal: expect.any(AbortSignal),
-      }),
+      activityAnalysisResultSchema,
     );
     expect(tx.coachActivityAnalysis.create).toHaveBeenCalledWith({
       data: {
@@ -236,7 +255,7 @@ describe('validated generation and failure isolation', () => {
         analysis,
         feedbackDraft: analysis.athleteFeedback,
         contextSnapshot: snapshot,
-        model: EVENT_MODIFICATION_MODEL,
+        model: MODEL,
         promptVersion: ACTIVITY_ANALYSIS_PROMPT_VERSION,
       },
     });
@@ -246,7 +265,7 @@ describe('validated generation and failure isolation', () => {
     expect(savedSnapshot.activity).not.toBe(snapshot.activity);
     expect(result.analysis).toEqual(analysis);
     expect(result.feedbackDraft).toBe(analysis.athleteFeedback);
-    expect(result.model).toBe(EVENT_MODIFICATION_MODEL);
+    expect(result.model).toBe(MODEL);
     expect(db.event.update).not.toHaveBeenCalled();
     expect(db.event.create).not.toHaveBeenCalled();
     expect(tx.event.update).not.toHaveBeenCalled();
@@ -266,9 +285,7 @@ describe('validated generation and failure isolation', () => {
     expect(memory.getCoachMemory).toHaveBeenCalledWith(3, 7, {
       excludeEventActivityId: 17,
     });
-    const prompt = JSON.parse(
-      (activityAnalysisAgent.generate as jest.Mock).mock.calls[0][0],
-    );
+    const prompt = JSON.parse(generate.mock.calls[0][0]);
     expect(prompt.aiMemory).toEqual(aiMemory);
     expect(
       tx.coachActivityAnalysis.create.mock.calls[0][0].data.contextSnapshot
@@ -284,9 +301,7 @@ describe('validated generation and failure isolation', () => {
 
   test('records no memory note when generation fails', async () => {
     const { service, memory } = setup();
-    (activityAnalysisAgent.generate as jest.Mock).mockRejectedValueOnce(
-      new Error('provider down'),
-    );
+    generate.mockRejectedValueOnce(new Error('provider down'));
     await expect(service.generate(coach, 42, input)).rejects.toThrow();
     expect(memory.addNote).not.toHaveBeenCalled();
   });
@@ -303,7 +318,7 @@ describe('validated generation and failure isolation', () => {
     ['absent object', undefined],
   ])('does not persist output with %s', async (_label, object) => {
     const { service, db, tx } = setup();
-    (activityAnalysisAgent.generate as jest.Mock).mockResolvedValue({ object });
+    generate.mockResolvedValue({ object });
     await expect(service.generate(coach, 42, input)).rejects.toMatchObject({
       response: { code: 'ACTIVITY_ANALYSIS_INVALID' },
       status: 422,
@@ -313,18 +328,20 @@ describe('validated generation and failure isolation', () => {
   });
 
   test.each([
-    ['AI_NoObjectGeneratedError', 'Provider output unavailable'],
-    ['ZodError', 'Invalid output'],
-    ['Error', 'Structured output validation failed: secret-upstream-body'],
+    ['AI_NoObjectGeneratedError', 'Provider output unavailable', undefined],
+    ['ZodError', 'Invalid output', undefined],
+    [
+      'MastraError',
+      'Structured output validation failed: secret-upstream-body',
+      'STRUCTURED_OUTPUT_SCHEMA_VALIDATION_FAILED',
+    ],
   ])(
     'maps provider structured-output failure %s to a safe validation error',
-    async (name, message) => {
+    async (name, message, id) => {
       const { service, tx } = setup();
-      const providerError = new Error(message);
+      const providerError = Object.assign(new Error(message), { id });
       providerError.name = name;
-      (activityAnalysisAgent.generate as jest.Mock).mockRejectedValue(
-        providerError,
-      );
+      generate.mockRejectedValue(providerError);
       const error = await service
         .generate(coach, 42, input)
         .catch((value) => value);
@@ -338,7 +355,7 @@ describe('validated generation and failure isolation', () => {
 
   test('never leaks a provider error body or credentials and does not save it', async () => {
     const { service, db, tx } = setup();
-    (activityAnalysisAgent.generate as jest.Mock).mockRejectedValue(
+    generate.mockRejectedValue(
       Object.assign(
         new Error('Authorization: Bearer private-synthetic-token'),
         {
@@ -349,8 +366,11 @@ describe('validated generation and failure isolation', () => {
     const error = await service
       .generate(coach, 42, input)
       .catch((value) => value);
-    expect(error).toBeInstanceOf(ServiceUnavailableException);
-    expect(error.getResponse()).toEqual({ code: 'ACTIVITY_ANALYSIS_PROVIDER' });
+    // As AiService reports it: a code and a generic message.
+    expect(error).toBeInstanceOf(AiProviderException);
+    expect(error.getResponse()).toMatchObject({
+      code: AiErrorCode.PROVIDER_ERROR,
+    });
     expect(JSON.stringify(error)).not.toContain('private-');
     expect(db.$transaction).not.toHaveBeenCalled();
     expect(tx.coachActivityAnalysis.create).not.toHaveBeenCalled();
@@ -362,7 +382,7 @@ describe('validated generation and failure isolation', () => {
     await expect(service.generate(coach, 42, input)).rejects.toBeInstanceOf(
       NotFoundException,
     );
-    expect(activityAnalysisAgent.generate).toHaveBeenCalledTimes(1);
+    expect(generate).toHaveBeenCalledTimes(1);
     expect(db.event.findFirst).toHaveBeenCalledTimes(1);
     expect(tx.event.findFirst).toHaveBeenCalledWith(
       db.event.findFirst.mock.calls[0][0],
@@ -376,21 +396,21 @@ describe('validated generation and failure isolation', () => {
     const pending = new Promise((_resolve, reject) => {
       rejectProvider = reject;
     });
-    (activityAnalysisAgent.generate as jest.Mock).mockReturnValueOnce(pending);
+    generate.mockReturnValueOnce(pending);
     const first = service.generate(coach, 42, input).catch((error) => error);
     await new Promise<void>((resolve) => setImmediate(resolve));
     await expect(service.generate(coach, 42, input)).rejects.toBeInstanceOf(
       ConflictException,
     );
-    expect(activityAnalysisAgent.generate).toHaveBeenCalledTimes(1);
+    expect(generate).toHaveBeenCalledTimes(1);
     rejectProvider(new Error('temporary failure'));
-    expect(await first).toBeInstanceOf(ServiceUnavailableException);
+    expect(await first).toBeInstanceOf(AiProviderException);
     expect(tx.coachActivityAnalysis.create).not.toHaveBeenCalled();
     await expect(service.generate(coach, 42, input)).resolves.toHaveProperty(
       'activityAnalysisId',
       81,
     );
-    expect(activityAnalysisAgent.generate).toHaveBeenCalledTimes(2);
+    expect(generate).toHaveBeenCalledTimes(2);
     expect(tx.coachActivityAnalysis.create).toHaveBeenCalledTimes(1);
   });
 });
@@ -416,7 +436,7 @@ describe('private feedback draft edits', () => {
     expect(result.feedbackDraft).toBe('Coach-edited feedback.');
     expect(result.analysis.athleteFeedback).toBe(analysis.athleteFeedback);
     expect(result.contextSnapshot).toEqual(snapshot);
-    expect(activityAnalysisAgent.generate).not.toHaveBeenCalled();
+    expect(generate).not.toHaveBeenCalled();
     expect(tx.event.update).not.toHaveBeenCalled();
   });
 

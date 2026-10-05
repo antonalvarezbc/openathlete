@@ -3,6 +3,7 @@ import { AiPlanAPI } from '@/api/ai-plan';
 import { Button } from '@/components/ui/button';
 import { m } from '@/paraglide/messages';
 import { getLocale } from '@/paraglide/runtime';
+import { aiErrorCode, aiErrorMessage } from '@/utils/ai-errors';
 import { CheckCircle2, TriangleAlert } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { z } from 'zod';
@@ -11,6 +12,7 @@ import {
   AI_PLAN_MAX_WEEK_SESSIONS,
   AI_PLAN_RULES,
   AI_PLAN_RULE_KEYS,
+  AiErrorCode,
   AiPlanCheckFacts,
   AiPlanConflicts,
   AiPlanIssue,
@@ -246,7 +248,15 @@ type StepsProgress = {
   total: number;
   failed: number;
   stopped: boolean;
+  /** No AI for written workouts, or its key refused: every week would fail */
+  error: string | null;
 };
+
+const ACCOUNT_ERRORS: (AiErrorCode | null)[] = [
+  AiErrorCode.NOT_CONFIGURED,
+  AiErrorCode.CREDENTIAL_REJECTED,
+  AiErrorCode.QUOTA_EXCEEDED,
+];
 
 /**
  * Turns the sessions' descriptions into structured steps, week by week, and
@@ -278,6 +288,7 @@ export function AiPlanSteps({
       total: weeks.length,
       failed: 0,
       stopped: false,
+      error: null,
     };
     setProgress({ ...state });
     onRunningChange(true);
@@ -310,8 +321,13 @@ export function AiPlanSteps({
               if (parsed.success) session.workout = { steps: parsed.data };
               else state.failed++;
             });
-          } catch {
+          } catch (error) {
             if (abort.signal.aborted) return;
+            if (ACCOUNT_ERRORS.includes(aiErrorCode(error))) {
+              state.error = aiErrorMessage(error);
+              abort.abort();
+              return;
+            }
             state.failed += chunk.length;
           }
         }
@@ -369,6 +385,11 @@ export function AiPlanSteps({
                     total: String(progress.total),
                   })}
           </p>
+          {progress.error && (
+            <p role="alert" className="text-destructive">
+              {progress.error}
+            </p>
+          )}
           {progress.failed > 0 && (
             <p className="text-muted-foreground">
               {m.ai_plan_steps_failed({ count: String(progress.failed) })}

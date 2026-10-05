@@ -1,13 +1,11 @@
-import { Agent } from '@mastra/core/agent';
+import type { AgentSpec } from 'src/modules/ai';
 
-import { EVENT_MODIFICATION_MODEL } from '../../common/constants/ai-models.constant';
 import { AI_MEMORY_INSTRUCTIONS } from './ai-memory-instructions';
 
 export const ACTIVITY_ANALYSIS_PROMPT_VERSION = '2';
-export const activityAnalysisAgent = new Agent({
+export const activityAnalysisAgent: AgentSpec = {
   id: 'coach-activity-analysis',
   name: 'coach-activity-analysis',
-  model: EVENT_MODIFICATION_MODEL,
   instructions: `You analyze a completed activity for its coach. You have no tools and cannot change
 training plans, send messages or access anything beyond the supplied context. Return the complete
 structured analysis requested by the output schema. Write every field in context.language
@@ -32,4 +30,4 @@ Do not diagnose illness or injury or assert medical safety. Report pain/fatigue 
 without prescribing treatment. Increased load requires careful coach review, never an automatic action.
 Do not expose the coach's private notes verbatim in athleteFeedback or claim the feedback was sent.
 ${AI_MEMORY_INSTRUCTIONS}`,
-});
+};

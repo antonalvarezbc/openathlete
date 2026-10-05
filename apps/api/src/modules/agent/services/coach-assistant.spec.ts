@@ -4,6 +4,8 @@ import {
 } from '@nestjs/common';
 
 import {
+  AiErrorCode,
+  AiTask,
   METRIC_TYPE,
   coachAssistantChatSchema,
   coachAssistantContextSchema,
@@ -12,14 +14,25 @@ import {
 import { coachAssistantAgent } from '../../../mastra/agents/coach-assistant.agent';
 import { disabledAiMemory } from '../../ai-memory/ai-memory.testing';
 import type { AiToolsService } from '../../ai-tools/ai-tools.service';
+import { AiProviderException } from '../../ai/ai.errors';
+import { aiResolverStandIn, aiServiceStandIn } from '../../ai/ai.testing';
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { CoachAssistantService } from './coach-assistant.service';
 import { PlanAdaptationService } from './plan-adaptation.service';
 
 jest.mock('../../../mastra/agents/coach-assistant.agent', () => ({
-  coachAssistantAgent: { generate: jest.fn() },
+  coachAssistantAgent: { id: 'coach-assistant' },
 }));
+jest.mock('../../ai', () => ({
+  AiModelResolverService: class {},
+  AiService: class {},
+}));
+
+// The model, behind a stand-in AiService on the coach's own settings.
+const generate = jest.fn();
+const ai = aiServiceStandIn(generate);
+const resolver = aiResolverStandIn();
 jest.mock('../../ai-tools/ai-tools.service', () => ({
   AiToolsService: class {},
 }));
@@ -27,7 +40,7 @@ jest.mock('../../../mastra/tools/openathlete-data.tools', () => ({
   aiToolsRequestContext: jest.fn(() => 'request-context'),
 }));
 jest.mock('../../../mastra/agents/plan-adaptation.agent', () => ({
-  planAdaptationAgent: { generate: jest.fn() },
+  planAdaptationAgent: { id: 'plan-adaptation' },
 }));
 
 const user = { userId: 3, roles: ['COACH'] } as AuthUser;
@@ -75,14 +88,19 @@ function setup() {
   const adaptation = new PlanAdaptationService(
     db as unknown as PrismaService,
     memory,
+    resolver as never,
+    ai,
   );
   return {
     db,
     adaptation,
     memory,
-    service: new CoachAssistantService(adaptation, memory, {
-      run: jest.fn(),
-    } as unknown as AiToolsService),
+    service: new CoachAssistantService(
+      adaptation,
+      memory,
+      { run: jest.fn() } as unknown as AiToolsService,
+      ai,
+    ),
   };
 }
 beforeEach(() => jest.clearAllMocks());
@@ -105,7 +123,7 @@ test('consultation works without pending sessions while adaptation still rejects
       maxIncreasePercent: 0,
     }),
   ).rejects.toThrow();
-  expect(coachAssistantAgent.generate).not.toHaveBeenCalled();
+  expect(generate).not.toHaveBeenCalled();
 });
 test('answers from the calendar when no plan is selected', async () => {
   const { service, db } = setup();
@@ -134,7 +152,7 @@ test('rejects athlete-only users and unlinked athletes before invoking AI', asyn
     athleteId: 4,
     OR: [{ coachAthletes: { some: { userId: 3 } } }],
   });
-  expect(coachAssistantAgent.generate).not.toHaveBeenCalled();
+  expect(generate).not.toHaveBeenCalled();
 });
 test('rejects a plan that does not belong to the selected athlete', async () => {
   const { service, db } = setup();
@@ -146,14 +164,19 @@ test('rejects a plan that does not belong to the selected athlete', async () => 
     trainingPlanId: 1,
     athleteId: 4,
   });
-  expect(coachAssistantAgent.generate).not.toHaveBeenCalled();
+  expect(generate).not.toHaveBeenCalled();
 });
 test('answers with fresh authorized context and bounded conversation, without writes', async () => {
   const { service, db } = setup();
-  const generate = coachAssistantAgent.generate as jest.Mock;
   generate.mockResolvedValue({ text: 'Faltan las sensaciones de hoy.' });
   const result = await service.chat(user, input);
   expect(result.reply).toBe('Faltan las sensaciones de hoy.');
+  // The assistant agent, on the coach's own model for plan adaptation.
+  expect(resolver.resolveForUser).toHaveBeenCalledWith(
+    AiTask.PLAN_ADAPTATION,
+    3,
+  );
+  expect(ai.generateText.mock.calls[0][0]).toBe(coachAssistantAgent);
   // Data tools run as the requesting user, with a bounded number of steps.
   expect(generate.mock.calls[0][1]).toEqual({
     requestContext: 'request-context',
@@ -180,30 +203,25 @@ test('answers with fresh authorized context and bounded conversation, without wr
   expect(db.event.create).not.toHaveBeenCalled();
   expect(db.event.update).not.toHaveBeenCalled();
 });
-test.each(['', 'x'.repeat(8001)])(
-  'rejects unusable model replies',
-  async (text) => {
-    const { service } = setup();
-    (coachAssistantAgent.generate as jest.Mock).mockResolvedValue({ text });
-    await expect(service.chat(user, input)).rejects.toBeInstanceOf(
-      ServiceUnavailableException,
-    );
-  },
-);
-test('does not expose provider error contents', async () => {
+test.each([
+  ['an empty reply', '', AiProviderException],
+  ['an oversized reply', 'x'.repeat(8001), ServiceUnavailableException],
+])('rejects %s', async (_label, text, type) => {
   const { service } = setup();
-  (coachAssistantAgent.generate as jest.Mock).mockRejectedValue(
-    new Error('secret upstream diagnostics'),
-  );
-  try {
-    await service.chat(user, input);
-    throw new Error('Expected failure');
-  } catch (error) {
-    expect(error).toBeInstanceOf(ServiceUnavailableException);
-    expect((error as ServiceUnavailableException).getResponse()).toEqual({
-      code: 'COACH_ASSISTANT_PROVIDER',
-    });
-  }
+  generate.mockResolvedValue({ text });
+  await expect(service.chat(user, input)).rejects.toBeInstanceOf(type);
+});
+test('reports provider errors as AiService does, without their contents', async () => {
+  const { service } = setup();
+  generate.mockRejectedValue(new Error('secret upstream diagnostics'));
+  const error = await service.chat(user, input).catch((caught) => caught);
+  expect(error).toBeInstanceOf(AiProviderException);
+  expect((error as AiProviderException).getResponse()).toMatchObject({
+    code: AiErrorCode.PROVIDER_ERROR,
+  });
+  expect(
+    JSON.stringify((error as AiProviderException).getResponse()),
+  ).not.toContain('secret');
 });
 test('rejects excessive conversation, blank questions and injected permissions', () => {
   expect(

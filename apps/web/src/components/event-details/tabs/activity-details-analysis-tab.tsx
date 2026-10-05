@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuthContext } from '@/contexts/auth';
 import { m } from '@/paraglide/messages';
 import { getLocale } from '@/paraglide/runtime';
+import { aiErrorMessage } from '@/utils/ai-errors';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { Copy, Loader2 } from 'lucide-react';
@@ -21,14 +22,15 @@ import { useId, useRef, useState } from 'react';
 
 import {
   ActivityAnalysisRequest,
+  AiTask,
   SavedActivityAnalysis,
 } from '@openathlete/shared';
 
 function analysisError(error: unknown): string {
+  const ai = aiErrorMessage(error);
+  if (ai) return ai;
   if (isAxiosError(error)) {
     const code = error.response?.data?.code;
-    if (code === 'ACTIVITY_ANALYSIS_PROVIDER')
-      return m.activity_analysis_provider_error();
     if (code === 'ACTIVITY_ANALYSIS_INVALID')
       return m.activity_analysis_invalid_error();
     if (code === 'ACTIVITY_ANALYSIS_BUSY')
@@ -62,9 +64,10 @@ function Observations({ title, items }: { title: string; items: string[] }) {
 
 export function ActivityDetailsAnalysisTab({ eventId }: { eventId: number }) {
   const { user, authenticated } = useAuthContext();
-  // The analysis runs on the instance's AI keys, not on personal ones.
+  // The model and key chosen for activity analysis, or the instance's.
   const { data: aiAccess, isLoading: accessLoading } = useAiAccessQuery();
-  const hasAccess = !!aiAccess?.hostedAccess;
+  const hasAccess =
+    aiAccess?.tasks[AiTask.ACTIVITY_ANALYSIS].available ?? false;
   const queryClient = useQueryClient();
   const queryKey = ['activity-analysis', user?.userId, eventId];
   const history = useQuery({

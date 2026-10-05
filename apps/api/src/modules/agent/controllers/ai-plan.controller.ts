@@ -18,7 +18,6 @@ import {
   AiPlanContextRequest,
   AiPlanRequest,
   AiPlanWeekStepsRequest,
-  FeatureName,
   aiPlanContextRequestSchema,
   aiPlanRequestSchema,
   aiPlanWeekStepsRequestSchema,
@@ -27,7 +26,6 @@ import {
 import { JwtUser, UserTypeGuard } from 'src/modules/auth';
 import { UserTypes } from 'src/modules/auth/decorators';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
-import { FeatureAccessGuard, RequireFeature } from 'src/modules/subscription';
 
 import { PlanGenerationService } from '../services/plan-generation.service';
 
@@ -40,8 +38,6 @@ export class AiPlanController {
   constructor(private readonly service: PlanGenerationService) {}
 
   @Post('draft')
-  @UseGuards(FeatureAccessGuard)
-  @RequireFeature(FeatureName.AI_GENERATION)
   @ApiOperation({
     summary: 'Draft a training plan with AI',
     description:
@@ -89,8 +85,6 @@ export class AiPlanController {
   }
 
   @Post('week-steps')
-  @UseGuards(FeatureAccessGuard)
-  @RequireFeature(FeatureName.AI_GENERATION)
   @ApiOperation({
     summary: "Structure one week of a draft's sessions",
     description:

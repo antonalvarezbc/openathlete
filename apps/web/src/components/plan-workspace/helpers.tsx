@@ -1,10 +1,14 @@
 /* eslint-disable react-refresh/only-export-components */
 import { m } from '@/paraglide/messages';
 import { getLocale } from '@/paraglide/runtime';
+import { aiErrorMessage } from '@/utils/ai-errors';
 import { isAxiosError } from 'axios';
 import { ReactNode } from 'react';
 
 export function workspaceError(error: unknown) {
+  // No AI set up, or the key's account refused: say so, not "no access".
+  const ai = aiErrorMessage(error);
+  if (ai) return ai;
   const status = isAxiosError(error) ? error.response?.status : undefined;
   return status === 403
     ? m.adaptation_access_error()

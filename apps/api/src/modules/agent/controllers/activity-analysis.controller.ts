@@ -14,15 +14,12 @@ import { AuthGuard } from '@nestjs/passport';
 
 import {
   ActivityAnalysisRequest,
-  FeatureName,
   UpdateActivityAnalysis,
   activityAnalysisRequestSchema,
   updateActivityAnalysisSchema,
 } from '@openathlete/shared';
 
 import { AuthUser, JwtUser } from '../../auth/decorators/user.decorator';
-import { RequireFeature } from '../../subscription/decorators/require-feature.decorator';
-import { FeatureAccessGuard } from '../../subscription/guards/feature-access.guard';
 import { ActivityAnalysisService } from '../services/activity-analysis.service';
 
 @Controller('agent/ai/activity-analysis/:eventId')
@@ -49,8 +46,6 @@ export class ActivityAnalysisController {
   }
 
   @Post('generate')
-  @UseGuards(FeatureAccessGuard)
-  @RequireFeature(FeatureName.AI_GENERATION)
   generate(
     @JwtUser() user: AuthUser,
     @Param('eventId', ParseIntPipe) eventId: number,
