@@ -21,6 +21,13 @@ export type ImportGpxActivityFileDto = z.infer<
   typeof importGpxActivityFileDtoSchema
 >;
 
+/** TCX only names running and biking, so the athlete can choose the sport. */
+export const importTcxActivityFileDtoSchema = importGpxActivityFileDtoSchema;
+
+export type ImportTcxActivityFileDto = z.infer<
+  typeof importTcxActivityFileDtoSchema
+>;
+
 /** Data a file lacked, or that was left out to keep series aligned. */
 export const ACTIVITY_IMPORT_WARNINGS = [
   'FIT_INCOMPLETE_CHANNELS',
@@ -30,6 +37,10 @@ export const ACTIVITY_IMPORT_WARNINGS = [
   'GPX_INCOMPLETE_CHANNELS',
   'GPX_NO_GPS',
   'GPX_UNKNOWN_SPORT',
+  'TCX_INCOMPLETE_CHANNELS',
+  'TCX_NO_STREAM',
+  'TCX_NO_GPS',
+  'TCX_UNKNOWN_SPORT',
 ] as const;
 
 export type ActivityImportWarning = (typeof ACTIVITY_IMPORT_WARNINGS)[number];
