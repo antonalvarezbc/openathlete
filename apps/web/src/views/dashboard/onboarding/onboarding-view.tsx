@@ -19,6 +19,7 @@ import { useAuthContext } from '@/contexts/auth';
 import { m } from '@/paraglide/messages';
 import { getPath } from '@/routes/paths';
 import { AnalyticsEvent } from '@/utils/analytics-events';
+import { takeReturnTo } from '@/utils/return-to';
 import { cn } from '@/utils/shadcn';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -206,7 +207,7 @@ export function OnboardingView() {
   useEffect(() => {
     if (authenticated && !isLoadingUser && user && user.onboardingCompleted) {
       onboardingFinishedRef.current = true;
-      navigate(getPath(['dashboard']));
+      navigate(takeReturnTo(getPath(['dashboard'])));
     }
   }, [authenticated, user, isLoadingUser, navigate]);
 
@@ -215,7 +216,7 @@ export function OnboardingView() {
       onboardingFinishedRef.current = true;
       posthog?.capture('onboarding_completed', { roles: variables.roles });
       await initialize();
-      navigate(getPath(['dashboard']));
+      navigate(takeReturnTo(getPath(['dashboard'])));
     },
     onError: (error) => {
       toast.error(error.message || m.onboarding_error());

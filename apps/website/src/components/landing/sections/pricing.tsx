@@ -13,6 +13,9 @@ const GITHUB_SETUP_URL = `${GITHUB_REPO_URL}#getting-started`;
 
 export function Pricing() {
   const signupUrl = `${APP_URL}/auth/create-account`;
+  // After sign-up and onboarding (or straight away when signed in), the
+  // app opens the Supporter offer
+  const supporterUrl = `${signupUrl}?returnTo=${encodeURIComponent('/dashboard/settings?tab=subscription')}`;
 
   return (
     <Section id="pricing" surface="soft">
@@ -76,7 +79,7 @@ export function Pricing() {
             highlighted
             badge={m.landing_pricing_popular_badge()}
             ctaLabel={m.landing_pricing_supporter_cta()}
-            ctaHref={signupUrl}
+            ctaHref={supporterUrl}
           />
         </div>
       </Container>

@@ -37,6 +37,39 @@ test('says when the email already has an account', async ({
   await expect(page).toHaveURL(/\/auth\/create-account/);
 });
 
+test('brings visitors back to the page they asked for', async ({
+  page,
+  request,
+}) => {
+  const athlete = await createAthlete(request);
+
+  await page.goto('/dashboard/settings?tab=ai');
+  await expect(page).toHaveURL(/\/auth\/login/);
+  await page.fill('input[name="email"]', athlete.email);
+  await page.fill('input[name="password"]', athlete.password);
+  await page.click('button[type="submit"]');
+
+  await expect(page).toHaveURL(/\/dashboard\/settings\?tab=ai/);
+});
+
+test('follows a returnTo link, but never to another site', async ({
+  page,
+  request,
+}) => {
+  const athlete = await createAthlete(request);
+
+  await page.goto('/auth/login?returnTo=//evil.example/steal');
+  await page.fill('input[name="email"]', athlete.email);
+  await page.fill('input[name="password"]', athlete.password);
+  await page.click('button[type="submit"]');
+  await expect(page).toHaveURL(/\/dashboard/);
+  expect(new URL(page.url()).host).not.toBe('evil.example');
+
+  // Already signed in: a website link goes straight to its page
+  await page.goto('/auth/create-account?returnTo=/dashboard/settings?tab=ai');
+  await expect(page).toHaveURL(/\/dashboard\/settings\?tab=ai/);
+});
+
 test('logs in and lands on the dashboard', async ({ page, request }) => {
   const athlete = await createAthlete(request);
 

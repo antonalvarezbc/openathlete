@@ -1,7 +1,12 @@
 import { useAuthContext } from '@/contexts/auth';
 import { getPath } from '@/routes/paths';
+import {
+  RETURN_TO_PARAM,
+  safeReturnPath,
+  takeReturnTo,
+} from '@/utils/return-to';
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 type Props = {
   children: React.ReactNode;
@@ -9,6 +14,7 @@ type Props = {
 
 export default function GuestGuard({ children }: Props) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const { authenticated } = useAuthContext();
 
@@ -16,11 +22,15 @@ export default function GuestGuard({ children }: Props) {
 
   const check = useCallback(() => {
     if (authenticated) {
-      navigate(getPath(['dashboard']));
+      // Signed-in visitors following a website link go straight to it
+      navigate(
+        safeReturnPath(searchParams.get(RETURN_TO_PARAM)) ??
+          takeReturnTo(getPath(['dashboard'])),
+      );
     } else {
       setChecked(true);
     }
-  }, [authenticated, navigate]);
+  }, [authenticated, navigate, searchParams]);
 
   useEffect(() => {
     check();
