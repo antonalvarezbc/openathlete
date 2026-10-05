@@ -34,6 +34,7 @@ import {
   ContextMenuTrigger,
 } from '../ui/context-menu';
 import { CalendarEventTooltipWrapper } from './calendar-event-tooltip-wrapper';
+import { useBulkWorkoutSelection } from './contexts/bulk-workout-selection-context';
 import { useEventClipboard } from './contexts/event-clipboard-context';
 import { useEventContextMenu } from './contexts/event-context-menu-context';
 import { useCalendarContext } from './hooks/use-calendar-context';
@@ -93,7 +94,10 @@ function EventSecondLine({ event }: { event: Event }) {
 
 export function CalendarEvent({ event, wrapped }: P) {
   const posthog = usePostHog();
+  const bulk = useBulkWorkoutSelection();
+  const selectable = !!bulk?.selecting && bulk.eligible.has(event.eventId);
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    disabled: bulk?.selecting,
     id: event.eventId,
     data: {
       type: 'event',
@@ -175,7 +179,7 @@ export function CalendarEvent({ event, wrapped }: P) {
         <ContextMenuTrigger className="w-full">
           <CalendarEventTooltipWrapper
             event={event}
-            disabled={isDragging || isAnyContextMenuOpen}
+            disabled={isDragging || isAnyContextMenuOpen || bulk?.selecting}
           >
             <div
               className={cn(
@@ -184,11 +188,16 @@ export function CalendarEvent({ event, wrapped }: P) {
                 wrapped ? 'border-2' : '',
                 !isValidated ? 'opacity-60' : '',
                 isDragging ? 'opacity-30' : '',
+                selectable &&
+                  bulk?.selected.has(event.eventId) &&
+                  'ring-2 ring-inset ring-primary',
               )}
               ref={draggable ? setNodeRef : undefined}
               {...(draggable ? { ...listeners, ...attributes } : {})}
               onClick={(e) => {
-                openEventDetails(event.eventId);
+                if (bulk?.selecting) {
+                  if (selectable) bulk.toggle(event.eventId);
+                } else openEventDetails(event.eventId);
                 e.stopPropagation();
               }}
               onMouseEnter={(e) => {
@@ -202,6 +211,23 @@ export function CalendarEvent({ event, wrapped }: P) {
                 }
               }}
             >
+              {selectable && (
+                <label
+                  className="flex items-center min-h-11 gap-2 px-1 text-sm"
+                  onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  <input
+                    type="checkbox"
+                    className="size-5 accent-primary"
+                    checked={bulk.selected.has(event.eventId)}
+                    disabled={bulk.busy}
+                    onChange={() => bulk.toggle(event.eventId)}
+                    aria-label={m.bulk_workouts_toggle({ name: event.name })}
+                  />
+                  {m.bulk_workouts_toggle({ name: event.name })}
+                </label>
+              )}
               <div className="text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis px-1">
                 {event.type !== EVENT_TYPE.NOTE && (
                   <SportIcon
@@ -252,64 +278,66 @@ export function CalendarEvent({ event, wrapped }: P) {
             </div>
           </CalendarEventTooltipWrapper>
         </ContextMenuTrigger>
-        <ContextMenuContent>
-          <ContextMenuItem
-            onClick={(e) => {
-              editEvent(event.eventId);
-              e.stopPropagation();
-            }}
-          >
-            <Edit2 className="w-4 h-4 mr-2" />
-            {m.edit()}
-          </ContextMenuItem>
-          {event.type === EVENT_TYPE.TRAINING && (
+        {!bulk?.selecting && (
+          <ContextMenuContent>
             <ContextMenuItem
               onClick={(e) => {
-                createEventTemplateMutation.mutate({
-                  eventId: event.eventId,
-                });
+                editEvent(event.eventId);
                 e.stopPropagation();
               }}
             >
-              <FileText className="w-4 h-4 mr-2" />
-              {m.save_as_template()}
+              <Edit2 className="w-4 h-4 mr-2" />
+              {m.edit()}
             </ContextMenuItem>
-          )}
-          {event.type !== EVENT_TYPE.ACTIVITY && (
-            <>
+            {event.type === EVENT_TYPE.TRAINING && (
               <ContextMenuItem
                 onClick={(e) => {
-                  duplicateEventMutation.mutate({ eventId: event.eventId });
+                  createEventTemplateMutation.mutate({
+                    eventId: event.eventId,
+                  });
                   e.stopPropagation();
                 }}
               >
-                <Copy className="w-4 h-4 mr-2" />
-                {m.duplicate()}
+                <FileText className="w-4 h-4 mr-2" />
+                {m.save_as_template()}
               </ContextMenuItem>
-              <ContextMenuSeparator />
-              <ContextMenuItem
-                onClick={(e) => {
-                  copyEvent(event);
-                  e.stopPropagation();
-                }}
-              >
-                <Copy className="w-4 h-4 mr-2" />
-                {m.copy()}
-              </ContextMenuItem>
-            </>
-          )}
-          <ContextMenuSeparator />
-          <ContextMenuItem
-            variant="destructive"
-            onClick={(e) => {
-              setDeleteEventDialog(true);
-              e.stopPropagation();
-            }}
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            {m.delete_()}
-          </ContextMenuItem>
-        </ContextMenuContent>
+            )}
+            {event.type !== EVENT_TYPE.ACTIVITY && (
+              <>
+                <ContextMenuItem
+                  onClick={(e) => {
+                    duplicateEventMutation.mutate({ eventId: event.eventId });
+                    e.stopPropagation();
+                  }}
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  {m.duplicate()}
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem
+                  onClick={(e) => {
+                    copyEvent(event);
+                    e.stopPropagation();
+                  }}
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  {m.copy()}
+                </ContextMenuItem>
+              </>
+            )}
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              variant="destructive"
+              onClick={(e) => {
+                setDeleteEventDialog(true);
+                e.stopPropagation();
+              }}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {m.delete_()}
+            </ContextMenuItem>
+          </ContextMenuContent>
+        )}
       </ContextMenu>
       <ConfirmAction
         open={deleteEventDialog}

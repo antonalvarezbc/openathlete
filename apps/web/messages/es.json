@@ -1209,5 +1209,13 @@
   "data_export_include_streams": "Incluir los flujos de las actividades (GPS, frecuencia cardiaca), archivo más pesado",
   "data_export_download": "Descargar mis datos",
   "data_export_preparing": "Preparando el archivo…",
-  "data_export_failed": "La exportación ha fallado. Inténtalo más tarde."
+  "data_export_failed": "La exportación ha fallado. Inténtalo más tarde.",
+  "bulk_workouts_select": "Seleccionar entrenamientos",
+  "bulk_workouts_selected": "{count} entrenamientos seleccionados",
+  "bulk_workouts_delete": "Eliminar seleccionados",
+  "bulk_workouts_help": "Marca los entrenamientos pendientes que quieras eliminar. Las actividades realizadas y las competiciones quedan fuera de esta selección.",
+  "bulk_workouts_confirm": "Vas a eliminar {count} entrenamientos. Revisa la lista: esta acción no se puede deshacer.",
+  "bulk_workouts_toggle": "Seleccionar {name}",
+  "bulk_workouts_deleted": "Se han eliminado {count} entrenamientos.",
+  "bulk_workouts_failed": "Eliminados: {deleted}. No se pudieron eliminar: {failed}. Revisa los que siguen seleccionados antes de reintentar."
 }

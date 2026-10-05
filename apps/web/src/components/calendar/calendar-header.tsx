@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
+import { BulkWorkoutSelectButton } from './bulk-workout-select-button';
 import { useTemplateLibrarySidebar } from './contexts/template-library-sidebar-context';
 import { useCalendarContext } from './hooks/use-calendar-context';
 import { COLORED_BY, coloredByLabelMap } from './types/filter';
@@ -98,6 +99,7 @@ export function CalendarHeader() {
     <div className="flex flex-col md:flex-row md:justify-between gap-4">
       <h1 className="text-xl md:text-2xl font-semibold">{calendarTitle}</h1>
       <div className="flex flex-col md:flex-row gap-2">
+        <BulkWorkoutSelectButton iconOnlyOnMobile />
         {/* Filters row */}
         <div className="flex gap-2">
           <Button

@@ -1209,5 +1209,13 @@
   "data_export_include_streams": "Include activity streams (GPS, heart rate), for a larger file",
   "data_export_download": "Download my data",
   "data_export_preparing": "Preparing the file…",
-  "data_export_failed": "The export failed. Try again later."
+  "data_export_failed": "The export failed. Try again later.",
+  "bulk_workouts_select": "Select workouts",
+  "bulk_workouts_selected": "{count} workouts selected",
+  "bulk_workouts_delete": "Delete selected",
+  "bulk_workouts_help": "Select the uncompleted workouts to delete. Completed activities and competitions are excluded from this selection.",
+  "bulk_workouts_confirm": "You are about to delete {count} workouts. Review the list: this action cannot be undone.",
+  "bulk_workouts_toggle": "Select {name}",
+  "bulk_workouts_deleted": "Deleted {count} workouts.",
+  "bulk_workouts_failed": "Deleted: {deleted}. Could not delete: {failed}. Review the remaining selection before retrying."
 }

@@ -1209,5 +1209,13 @@
   "data_export_include_streams": "Inclure les flux des activités (GPS, fréquence cardiaque), fichier plus lourd",
   "data_export_download": "Télécharger mes données",
   "data_export_preparing": "Préparation du fichier…",
-  "data_export_failed": "L'export a échoué. Réessayez plus tard."
+  "data_export_failed": "L'export a échoué. Réessayez plus tard.",
+  "bulk_workouts_select": "Sélectionner des séances",
+  "bulk_workouts_selected": "{count} séances sélectionnées",
+  "bulk_workouts_delete": "Supprimer la sélection",
+  "bulk_workouts_help": "Sélectionnez les séances non réalisées à supprimer. Les activités réalisées et les compétitions sont exclues de cette sélection.",
+  "bulk_workouts_confirm": "Vous allez supprimer {count} séances. Vérifiez la liste : cette action est irréversible.",
+  "bulk_workouts_toggle": "Sélectionner {name}",
+  "bulk_workouts_deleted": "{count} séances supprimées.",
+  "bulk_workouts_failed": "Supprimées : {deleted}. Échecs : {failed}. Vérifiez les séances encore sélectionnées avant de réessayer."
 }
