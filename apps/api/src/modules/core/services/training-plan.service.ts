@@ -53,6 +53,24 @@ export class TrainingPlanService {
         name: true,
         startDate: true,
         endDate: true,
+        // Kept when the plan is replaced: the review lists them.
+        races: {
+          select: {
+            priority: true,
+            competition: {
+              select: {
+                event: {
+                  select: {
+                    eventId: true,
+                    name: true,
+                    startDate: true,
+                    endDate: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
   }
@@ -134,12 +152,15 @@ export class TrainingPlanService {
           if (options.replacePlanId) {
             const previous = await tx.trainingPlan.findFirst({
               where: { trainingPlanId: options.replacePlanId, athleteId },
-              include: { _count: { select: { races: true } } },
             });
             if (!previous)
               throw new ForbiddenException('You cannot replace this plan');
+            // Only the plan's sessions are replaced. Races and notes in its
+            // weeks stay in the calendar: deleting the weeks only clears
+            // their week (the foreign key sets it to null).
             const events = await tx.event.findMany({
               where: {
+                type: EVENT_TYPE.TRAINING,
                 trainingWeek: {
                   cycle: { trainingPlanId: previous.trainingPlanId },
                 },
@@ -155,12 +176,10 @@ export class TrainingPlanService {
             });
             // Preserve history, comments, completed activities and exported sessions.
             if (
-              previous._count?.races > 0 ||
               previous.startDate <= new Date() ||
               events.some(
                 (event) =>
                   event.startDate <= new Date() ||
-                  event.type !== EVENT_TYPE.TRAINING ||
                   !event.training ||
                   event.training.relatedActivityId ||
                   event.training.messageThreadId ||
@@ -187,6 +206,28 @@ export class TrainingPlanService {
                 data,
               })
             : await tx.trainingPlan.create({ data });
+          if (options.replacePlanId) {
+            // The plan keeps its id, so its race links stay. A race now
+            // outside the plan's dates is unlinked; its event is kept.
+            const links = await tx.trainingPlanRace.findMany({
+              where: { trainingPlanId: plan.trainingPlanId },
+              include: { competition: { include: { event: true } } },
+            });
+            const outside = links.filter(
+              ({ competition: { event } }) =>
+                event.startDate < data.startDate ||
+                event.endDate > data.endDate,
+            );
+            if (outside.length)
+              await tx.trainingPlanRace.deleteMany({
+                where: {
+                  trainingPlanId: plan.trainingPlanId,
+                  eventCompetitionId: {
+                    in: outside.map((link) => link.eventCompetitionId),
+                  },
+                },
+              });
+          }
           if (options.goalEventId) {
             // The goal race becomes the plan's target race, with the same
             // rules as linking it in Planning.
@@ -208,12 +249,30 @@ export class TrainingPlanService {
               throw new BadRequestException(
                 'The goal race must be inside the plan dates',
               );
-            await tx.trainingPlanRace.create({
-              data: {
+            // One target race: the goal replaces a kept one as target.
+            await tx.trainingPlanRace.updateMany({
+              where: {
+                trainingPlanId: plan.trainingPlanId,
+                priority: 'TARGET',
+                eventCompetitionId: {
+                  not: goal.competition.eventCompetitionId,
+                },
+              },
+              data: { priority: 'PREPARATORY' },
+            });
+            await tx.trainingPlanRace.upsert({
+              where: {
+                trainingPlanId_eventCompetitionId: {
+                  trainingPlanId: plan.trainingPlanId,
+                  eventCompetitionId: goal.competition.eventCompetitionId,
+                },
+              },
+              create: {
                 trainingPlanId: plan.trainingPlanId,
                 eventCompetitionId: goal.competition.eventCompetitionId,
                 priority: 'TARGET',
               },
+              update: { priority: 'TARGET' },
             });
           }
           for (const cycle of schedule.cycles) {

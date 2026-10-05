@@ -116,6 +116,21 @@ vi.mock('@/api/seo-plan', () => ({
         name: 'Future plan',
         startDate: '2099-01-05T00:00:00Z',
         endDate: '2099-03-01T00:00:00Z',
+        races: [
+          ['City 10K', '2030-11-02'],
+          ['Winter half', '2030-12-07'],
+          ['Early 5K', '2030-10-19'],
+        ].map(([name, day], index) => ({
+          priority: 'PREPARATORY',
+          competition: {
+            event: {
+              eventId: 60 + index,
+              name,
+              startDate: `${day}T08:00:00Z`,
+              endDate: `${day}T10:00:00Z`,
+            },
+          },
+        })),
       },
     ]),
   },
@@ -474,6 +489,24 @@ describe('AiPlanDialog', () => {
         ),
       ].map((option) => option.textContent?.split(' · ')[0]),
     ).toEqual(['json_plan_new', 'Future plan']);
+    // Replacing it keeps its races; one falls after the new plan's end.
+    await act(async () => {
+      const destination = dialog().querySelector<HTMLSelectElement>(
+        'select[aria-label="json_plan_destination"]',
+      )!;
+      destination.value = '2';
+      destination.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    const status = [...dialog().querySelectorAll('[role="status"]')]
+      .map((item) => item.textContent)
+      .find((text) => text?.includes('json_plan_replace_warning'));
+    expect(status).toContain(
+      'json_plan_races_kept {"races":"City 10K, Winter half, Early 5K"}',
+    );
+    // One after the new plan's end, one before its start.
+    expect(status).toContain('json_plan_race_unlinked {"name":"Winter half"}');
+    expect(status).toContain('json_plan_race_unlinked {"name":"Early 5K"}');
+    expect(status).not.toContain('json_plan_race_unlinked {"name":"City 10K"}');
   });
 
   it('shows a progress bar and the estimated time while writing', async () => {

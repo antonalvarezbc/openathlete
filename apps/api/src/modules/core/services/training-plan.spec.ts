@@ -261,7 +261,7 @@ describe('JSON import transaction boundary', () => {
           findFirst: jest.fn().mockResolvedValue(null),
           create: jest.fn().mockResolvedValue({ trainingPlanId: 9 }),
         },
-        trainingPlanRace: { create: jest.fn() },
+        trainingPlanRace: { upsert: jest.fn(), updateMany: jest.fn() },
         cycle: { create: jest.fn().mockResolvedValue({ cycleId: 1 }) },
         trainingWeek: {
           create: jest.fn().mockResolvedValue({ trainingWeekId: 1 }),
@@ -293,8 +293,19 @@ describe('JSON import transaction boundary', () => {
           where: { eventId: 40, athleteId: 3, type: 'COMPETITION' },
         }),
       );
-      expect(tx.trainingPlanRace.create).toHaveBeenCalledWith({
-        data: { trainingPlanId: 9, eventCompetitionId: 77, priority: 'TARGET' },
+      expect(tx.trainingPlanRace.upsert).toHaveBeenCalledWith({
+        where: {
+          trainingPlanId_eventCompetitionId: {
+            trainingPlanId: 9,
+            eventCompetitionId: 77,
+          },
+        },
+        create: {
+          trainingPlanId: 9,
+          eventCompetitionId: 77,
+          priority: 'TARGET',
+        },
+        update: { priority: 'TARGET' },
       });
     });
 
@@ -311,7 +322,7 @@ describe('JSON import transaction boundary', () => {
           goalEventId: 40,
         }),
       ).rejects.toThrow('inside the plan dates');
-      expect(late.tx.trainingPlanRace.create).not.toHaveBeenCalled();
+      expect(late.tx.trainingPlanRace.upsert).not.toHaveBeenCalled();
       const early = setupLink(race('2030-10-20'));
       await expect(
         early.service.importSeoPlan(user, fixture(), '2030-10-21', {
@@ -324,7 +335,185 @@ describe('JSON import transaction boundary', () => {
       const { tx, service } = setupLink(race('2030-11-02'));
       await service.importSeoPlan(user, fixture(), '2030-10-21');
       expect(tx.event.findFirst).not.toHaveBeenCalled();
-      expect(tx.trainingPlanRace.create).not.toHaveBeenCalled();
+      expect(tx.trainingPlanRace.upsert).not.toHaveBeenCalled();
+    });
+  });
+  describe('replacing a plan with races', () => {
+    // The old plan, still in the future, with two sessions in its weeks and
+    // a competition and a note there too.
+    const past = (day: string) => new Date(`${day}T08:00:00Z`);
+    const session = (eventId: number) => ({
+      eventId,
+      type: 'TRAINING',
+      startDate: past('2030-10-22'),
+      templates: [],
+      training: {
+        relatedActivityId: null,
+        messageThreadId: null as number | null,
+        workout: null,
+      },
+    });
+    const sessions = [session(101), session(102)];
+    const inWeeks = [
+      ...sessions,
+      { eventId: 900, type: 'COMPETITION', startDate: past('2030-11-02') },
+      { eventId: 901, type: 'NOTE', startDate: past('2030-10-25') },
+    ];
+    const link = (
+      eventCompetitionId: number,
+      day: string,
+      priority = 'PREPARATORY',
+    ) => ({
+      eventCompetitionId,
+      priority,
+      competition: {
+        event: {
+          name: `Race ${eventCompetitionId}`,
+          startDate: past(day),
+          endDate: new Date(`${day}T10:00:00Z`),
+        },
+      },
+    });
+    const setupReplace = (links: unknown[], goal: unknown = null) => {
+      const tx = {
+        athlete: { findFirst: jest.fn().mockResolvedValue({ athleteId: 3 }) },
+        trainingPlan: {
+          findFirst: jest.fn(
+            async ({ where }: { where: { trainingPlanId?: number } }) =>
+              where.trainingPlanId === 9
+                ? {
+                    trainingPlanId: 9,
+                    athleteId: 3,
+                    startDate: past('2030-10-14'),
+                  }
+                : null,
+          ),
+          update: jest.fn().mockResolvedValue({ trainingPlanId: 9 }),
+          create: jest.fn(),
+        },
+        trainingPlanRace: {
+          findMany: jest.fn().mockResolvedValue(links),
+          deleteMany: jest.fn(),
+          updateMany: jest.fn(),
+          upsert: jest.fn(),
+        },
+        eventTraining: { deleteMany: jest.fn() },
+        cycle: {
+          deleteMany: jest.fn(),
+          create: jest.fn().mockResolvedValue({ cycleId: 1 }),
+        },
+        trainingWeek: {
+          create: jest.fn().mockResolvedValue({ trainingWeekId: 1 }),
+        },
+        event: {
+          // Like the database: the type filter is applied.
+          findMany: jest.fn(async ({ where }: { where: { type?: string } }) =>
+            inWeeks.filter((event) => !where.type || event.type === where.type),
+          ),
+          deleteMany: jest.fn(),
+          findFirst: jest.fn().mockResolvedValue(goal),
+          create: jest.fn().mockResolvedValue({ training: null }),
+        },
+      };
+      const prisma = { $transaction: jest.fn((fn) => fn(tx)) };
+      const service = new TrainingPlanService(
+        prisma as unknown as PrismaService,
+      );
+      return { tx, service };
+    };
+    const replace = (service: TrainingPlanService, goalEventId?: number) =>
+      service.importSeoPlan(user, fixture(), '2030-10-21', {
+        replacePlanId: 9,
+        ...(goalEventId ? { goalEventId } : {}),
+      });
+
+    test('replaces only the sessions: competitions and notes stay', async () => {
+      const { tx, service } = setupReplace([link(77, '2030-11-02')]);
+      await replace(service);
+      expect(tx.event.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ type: 'TRAINING' }),
+        }),
+      );
+      expect(tx.eventTraining.deleteMany).toHaveBeenCalledWith({
+        where: { eventId: { in: [101, 102] } },
+      });
+      expect(tx.event.deleteMany).toHaveBeenCalledWith({
+        where: { eventId: { in: [101, 102] } },
+      });
+      // The plan keeps its id, so its race links stay.
+      expect(tx.trainingPlan.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { trainingPlanId: 9 } }),
+      );
+      expect(tx.trainingPlan.create).not.toHaveBeenCalled();
+      expect(tx.trainingPlanRace.deleteMany).not.toHaveBeenCalled();
+    });
+
+    test('unlinks races outside the new dates, without touching them', async () => {
+      // The new plan runs from 2030-10-21 to 2030-11-03.
+      const { tx, service } = setupReplace([
+        link(77, '2030-11-02'),
+        link(78, '2030-11-16', 'TARGET'),
+        link(79, '2030-10-20'),
+      ]);
+      await replace(service);
+      expect(tx.trainingPlanRace.deleteMany).toHaveBeenCalledWith({
+        where: { trainingPlanId: 9, eventCompetitionId: { in: [78, 79] } },
+      });
+      const deleted = tx.event.deleteMany.mock.calls.flatMap(
+        (call) => call[0].where.eventId.in,
+      );
+      expect(deleted).not.toContain(900);
+    });
+
+    test('links the goal race as the only target race', async () => {
+      const { tx, service } = setupReplace([link(77, '2030-11-02', 'TARGET')], {
+        startDate: past('2030-11-02'),
+        endDate: new Date('2030-11-02T10:00:00Z'),
+        competition: { eventCompetitionId: 80 },
+      });
+      await replace(service, 40);
+      expect(tx.trainingPlanRace.updateMany).toHaveBeenCalledWith({
+        where: {
+          trainingPlanId: 9,
+          priority: 'TARGET',
+          eventCompetitionId: { not: 80 },
+        },
+        data: { priority: 'PREPARATORY' },
+      });
+      expect(tx.trainingPlanRace.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({
+            eventCompetitionId: 80,
+            priority: 'TARGET',
+          }),
+          update: { priority: 'TARGET' },
+        }),
+      );
+    });
+
+    test('still refuses a plan that has started or has history', async () => {
+      const started = setupReplace([]);
+      started.tx.trainingPlan.findFirst.mockImplementation(
+        async ({ where }: { where: { trainingPlanId?: number } }) =>
+          where.trainingPlanId === 9
+            ? {
+                trainingPlanId: 9,
+                athleteId: 3,
+                startDate: past('2020-01-01'),
+              }
+            : null,
+      );
+      await expect(replace(started.service)).rejects.toThrow(
+        'Only future plans',
+      );
+      const commented = setupReplace([]);
+      sessions[0].training.messageThreadId = 5;
+      await expect(replace(commented.service)).rejects.toThrow(
+        'Only future plans',
+      );
+      sessions[0].training.messageThreadId = null;
+      expect(commented.tx.event.deleteMany).not.toHaveBeenCalled();
     });
   });
 });
