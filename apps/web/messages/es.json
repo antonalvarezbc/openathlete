@@ -144,6 +144,7 @@
   "use": "Usar",
   "gap": "Ritmo ajustado a la pendiente (GAP)",
   "plan": "Planificar",
+  "calendar_plan_on_day": "Planificar el {date}",
   "a": "un",
   "the": "el ",
   "morning_run": "Carrera por la mañana",

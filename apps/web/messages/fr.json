@@ -128,6 +128,7 @@
   "event_updated_successfully": "Événement mis à jour avec succès",
   "failed_to_update_event": "Échec de la mise à jour de l'événement",
   "plan": "Planifier",
+  "calendar_plan_on_day": "Planifier le {date}",
   "a": "un",
   "the": "l'",
   "morning_run": "Course matinale",

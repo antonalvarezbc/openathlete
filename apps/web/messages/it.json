@@ -144,6 +144,7 @@
   "use": "Usa",
   "gap": "GAP",
   "plan": "Pianifica",
+  "calendar_plan_on_day": "Pianifica il {date}",
   "a": "un",
   "the": "il ",
   "morning_run": "Corsa mattutina",

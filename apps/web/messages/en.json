@@ -144,6 +144,7 @@
   "use": "Use",
   "gap": "GAP",
   "plan": "Plan",
+  "calendar_plan_on_day": "Plan on {date}",
   "a": "a",
   "the": "the ",
   "morning_run": "Morning Run",
