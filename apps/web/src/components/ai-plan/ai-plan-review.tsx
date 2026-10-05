@@ -9,10 +9,16 @@ import { z } from 'zod';
 
 import {
   AI_PLAN_MAX_WEEK_SESSIONS,
+  AI_PLAN_RULES,
+  AI_PLAN_RULE_KEYS,
   AiPlanCheckFacts,
   AiPlanConflicts,
   AiPlanIssue,
+  AiPlanRuleKey,
+  AiPlanRuleNote,
+  AiPlanRules,
   SEOPlanData,
+  applyAiPlanRules,
   planWorkoutStepSchema,
 } from '@openathlete/shared';
 
@@ -22,7 +28,117 @@ export interface AiPlanReviewDraft {
   athleteId: number;
   startDate: string;
   facts: AiPlanCheckFacts;
+  rules: AiPlanRules;
+  ruleNotes: AiPlanRuleNote[];
   conflicts: AiPlanConflicts;
+}
+
+function ruleLabel(rule: AiPlanRuleKey) {
+  switch (rule) {
+    case 'growthPercent':
+      return m.ai_plan_rule_growth_percent();
+    case 'growthMinutes':
+      return m.ai_plan_rule_growth_minutes();
+    case 'maxLoadingWeeks':
+      return m.ai_plan_rule_max_loading_weeks();
+    case 'recoveryDropPercent':
+      return m.ai_plan_rule_recovery_drop();
+    case 'taperLastWeekPercent':
+      return m.ai_plan_rule_taper_last_week();
+    case 'taperWeekBeforePercent':
+      return m.ai_plan_rule_taper_week_before();
+    case 'hoursAllowancePercent':
+      return m.ai_plan_rule_hours_allowance();
+    case 'injuryMaxRpe':
+      return m.ai_plan_rule_injury_rpe();
+  }
+}
+
+/**
+ * The limits the checks use: their source, the AI's reason, and any value
+ * clamped to the safety bounds. The coach can change them within the same
+ * bounds; the checks run again on every change.
+ */
+export function AiPlanRulesEditor({
+  rules,
+  notes,
+  onChange,
+}: {
+  rules: AiPlanRules;
+  notes: AiPlanRuleNote[];
+  onChange: (rules: AiPlanRules, notes: AiPlanRuleNote[]) => void;
+}) {
+  const apply = (rule: AiPlanRuleKey, text: string) => {
+    const value = text.trim() === '' ? NaN : Number(text.replace(',', '.'));
+    if (value === rules[rule]) return;
+    const next = applyAiPlanRules([{ rule, value }], rules, 'coach');
+    onChange(
+      next.rules,
+      notes.map((note) =>
+        note.rule === rule ? next.notes.find((n) => n.rule === rule)! : note,
+      ),
+    );
+  };
+  return (
+    <section aria-label={m.ai_plan_rules()} className="space-y-2">
+      <h3 className="font-semibold">{m.ai_plan_rules()}</h3>
+      <p className="text-sm text-muted-foreground">{m.ai_plan_rules_help()}</p>
+      <ul className="space-y-3">
+        {AI_PLAN_RULE_KEYS.map((rule) => {
+          const note = notes.find((item) => item.rule === rule);
+          const { min, max } = AI_PLAN_RULES[rule];
+          return (
+            <li key={rule} className="space-y-1 text-sm" data-rule={rule}>
+              <label className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-medium">{ruleLabel(rule)}</span>
+                <input
+                  key={`${rule}-${rules[rule]}`}
+                  type="number"
+                  inputMode="numeric"
+                  min={min}
+                  max={max}
+                  step={1}
+                  defaultValue={rules[rule]}
+                  className="h-11 w-24 rounded-md border bg-background px-3 text-base"
+                  onBlur={(event) => apply(rule, event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      event.currentTarget.blur();
+                    }
+                  }}
+                />
+              </label>
+              <p className="text-muted-foreground">
+                {note?.source === 'ai'
+                  ? note.reason
+                    ? m.ai_plan_rule_source_ai({ reason: note.reason })
+                    : m.ai_plan_rule_source_ai_no_reason()
+                  : note?.source === 'coach'
+                    ? m.ai_plan_rule_source_coach()
+                    : m.ai_plan_rule_source_default()}{' '}
+                {m.ai_plan_rule_bounds({ min: String(min), max: String(max) })}
+              </p>
+              {note?.requested !== undefined && (
+                <p
+                  role="status"
+                  className="flex items-center gap-2 text-amber-700 dark:text-amber-400"
+                >
+                  <TriangleAlert className="size-4 shrink-0" />
+                  {m.ai_plan_rule_clamped({
+                    requested: Number.isFinite(note.requested)
+                      ? String(note.requested)
+                      : '—',
+                    value: String(rules[rule]),
+                  })}
+                </p>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
 }
 
 /** Weeks structured at the same time; each request is one week. */

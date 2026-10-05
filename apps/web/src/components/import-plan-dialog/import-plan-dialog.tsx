@@ -23,6 +23,7 @@ import {
 import {
   AiPlanChecks,
   AiPlanReviewDraft,
+  AiPlanRulesEditor,
   AiPlanSteps,
 } from '../ai-plan/ai-plan-review';
 import { Button } from '../ui/button';
@@ -68,6 +69,9 @@ export function ImportPlanDialog({
   const [replacePlanId, setReplacePlanId] = useState('');
   const [confirmed, setConfirmed] = useState(false);
   const [structuring, setStructuring] = useState(false);
+  // The plan's rules; the coach may change them within the safety bounds.
+  const [rules, setRules] = useState(draft?.rules);
+  const [ruleNotes, setRuleNotes] = useState(draft?.ruleNotes ?? []);
   const [startDate, setStartDate] = useState(() => {
     if (draft) return draft.startDate;
     const date = new Date();
@@ -115,8 +119,11 @@ export function ImportPlanDialog({
   }, [text, startDate, timeZone]);
   // The same checks as the API, again on every edit of an AI draft.
   const issues = useMemo(
-    () => (draft && preview.plan ? checkAiPlan(preview.plan, draft.facts) : []),
-    [draft, preview.plan],
+    () =>
+      draft && preview.plan
+        ? checkAiPlan(preview.plan, draft.facts, rules)
+        : [],
+    [draft, preview.plan, rules],
   );
   const mutation = useMutation({
     mutationFn: async (plan: SEOPlanData) => {
@@ -291,6 +298,17 @@ export function ImportPlanDialog({
           {draft && preview.plan && (
             <>
               <AiPlanChecks issues={issues} conflicts={draft.conflicts} />
+              {rules && (
+                <AiPlanRulesEditor
+                  rules={rules}
+                  notes={ruleNotes}
+                  onChange={(next, notes) => {
+                    setRules(next);
+                    setRuleNotes(notes);
+                    setConfirmed(false);
+                  }}
+                />
+              )}
               <AiPlanSteps
                 plan={preview.plan}
                 athleteId={draft.athleteId}

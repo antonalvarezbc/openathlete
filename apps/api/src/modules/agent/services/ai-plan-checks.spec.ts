@@ -1,6 +1,8 @@
 import {
   AiPlanCheckFacts,
+  AiPlanRules,
   CYCLE_PHASE,
+  DEFAULT_AI_PLAN_RULES,
   METRIC_TYPE,
   SEOPlanData,
   SPORT_TYPE,
@@ -192,6 +194,91 @@ describe('checkAiPlan', () => {
     const missing = planOf(GOOD);
     session(missing, 2).goalDuration = null;
     expect(codes(missing)).toContain('MISSING_DURATION:2');
+  });
+});
+
+describe('checkAiPlan with plan rules', () => {
+  const rules = (overrides: Partial<AiPlanRules>) => ({
+    ...DEFAULT_AI_PLAN_RULES,
+    ...overrides,
+  });
+
+  test('growth follows the plan rule', () => {
+    // 220 after 180: over the default 213 (10% + 15 min).
+    const minutes = [...GOOD];
+    minutes[1] = 220;
+    expect(codes(planOf(minutes))).toContain('PROGRESSION:2');
+    expect(
+      checkAiPlan(planOf(minutes), facts(), rules({ growthPercent: 15 })),
+    ).toEqual([]);
+    expect(
+      checkAiPlan(
+        planOf(minutes),
+        facts(),
+        rules({ growthPercent: 5, growthMinutes: 50 }),
+      ),
+    ).toEqual([]);
+  });
+
+  test('recovery follows the loading weeks and drop rules', () => {
+    // Week 4 drops 18%: recovery by default, not when 30% is required.
+    const minutes = [150, 160, 170, 140, 175, 185, 120, 80];
+    expect(checkAiPlan(planOf(minutes), facts())).toEqual([]);
+    expect(
+      codes(planOf(minutes), facts()).filter((code) =>
+        code.startsWith('NO_RECOVERY'),
+      ),
+    ).toEqual([]);
+    const strict = checkAiPlan(
+      planOf(minutes),
+      facts(),
+      rules({ maxLoadingWeeks: 2, recoveryDropPercent: 30 }),
+    );
+    expect(strict).toEqual([{ code: 'NO_RECOVERY', week: 3, limit: 2 }]);
+  });
+
+  test('a recovery week must drop as much as the rule asks', () => {
+    // Week 5 is 17% below week 4: recovery by default, not with 30%.
+    const minutes = [150, 160, 170, 180, 150, 190, 200, 210, 140, 90];
+    const tenWeeks = facts({ weeks: 10, raceDate: raceFor(10) });
+    expect(checkAiPlan(planOf(minutes), tenWeeks)).toEqual([]);
+    expect(
+      checkAiPlan(
+        planOf(minutes),
+        tenWeeks,
+        rules({ recoveryDropPercent: 30 }),
+      ),
+    ).toEqual([{ code: 'NO_RECOVERY', week: 5, limit: 4 }]);
+  });
+
+  test('taper, hours and injury intensity follow their rules', () => {
+    expect(
+      checkAiPlan(
+        planOf(GOOD),
+        facts(),
+        rules({ taperLastWeekPercent: 40, taperWeekBeforePercent: 60 }),
+      ).map((issue) => `${issue.code}:${issue.week}:${issue.limit}`),
+    ).toEqual(['NO_TAPER:8:96', 'NO_TAPER:7:144']);
+    expect(
+      codes(planOf(GOOD), facts({ weeklyHours: 3.5 })).filter((code) =>
+        code.startsWith('WEEK_TOO_LONG'),
+      ),
+    ).toEqual(['WEEK_TOO_LONG:6']);
+    expect(
+      checkAiPlan(
+        planOf(GOOD),
+        facts({ weeklyHours: 3.5 }),
+        rules({ hoursAllowancePercent: 20 }),
+      ),
+    ).toEqual([]);
+    const plan = planOf(GOOD);
+    session(plan, 1).goalRpe = 5;
+    expect(checkAiPlan(plan, facts({ injuries: 1 }))).toEqual([]);
+    expect(
+      checkAiPlan(plan, facts({ injuries: 1 }), rules({ injuryMaxRpe: 4 })),
+    ).toContainEqual(
+      expect.objectContaining({ code: 'INJURY_INTENSITY', week: 1, limit: 4 }),
+    );
   });
 });
 

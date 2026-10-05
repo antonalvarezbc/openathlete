@@ -177,23 +177,24 @@ describe('AiPlanSteps', () => {
   });
 
   it('requests no more weeks after stop, even if a week still answers', async () => {
-    // The provider ignores the cancellation and answers anyway.
+    // The provider ignores the cancellation: both weeks in flight answer
+    // only after the coach has stopped.
+    const pending: Array<() => void> = [];
     api.weekSteps.mockImplementation(
       () =>
         new Promise((resolve) =>
-          setTimeout(() => resolve({ steps: [steady, steady] }), 20),
+          pending.push(() => resolve({ steps: [steady, steady] })),
         ),
     );
     await render(4);
     await act(async () => button('ai_plan_steps_run').click());
     await waitFor(() => api.weekSteps.mock.calls.length >= 2);
     await act(async () => button('ai_plan_steps_stop').click());
+    await act(async () => pending.forEach((answer) => answer()));
     await waitFor(
       () => !!container.textContent?.includes('ai_plan_steps_stopped'),
     );
-    await act(() => new Promise((resolve) => setTimeout(resolve, 60)));
     expect(api.weekSteps).toHaveBeenCalledTimes(2);
-    expect(container.textContent).toContain('ai_plan_steps_stopped');
   });
 
   it('describes every check result', () => {

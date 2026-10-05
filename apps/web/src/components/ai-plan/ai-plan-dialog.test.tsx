@@ -6,7 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   AiPlanDraft,
+  AiPlanRuleNote,
   CYCLE_PHASE,
+  DEFAULT_AI_PLAN_RULES,
   SEOPlanData,
   SPORT_TYPE,
 } from '@openathlete/shared';
@@ -108,9 +110,19 @@ const plan = (weekMinutes = [120, 60]): SEOPlanData => ({
     },
   ],
 });
-const draft = (overrides: Partial<AiPlanDraft['facts']> = {}): AiPlanDraft => ({
+const defaultNotes = (): AiPlanRuleNote[] =>
+  Object.keys(DEFAULT_AI_PLAN_RULES).map((rule) => ({
+    rule: rule as AiPlanRuleNote['rule'],
+    source: 'default',
+  }));
+const draft = (
+  overrides: Partial<AiPlanDraft['facts']> = {},
+  extra: Partial<AiPlanDraft> = {},
+): AiPlanDraft => ({
   plan: plan(),
   issues: [],
+  rules: DEFAULT_AI_PLAN_RULES,
+  ruleNotes: defaultNotes(),
   facts: {
     startDate: '2030-10-21',
     raceDate: '2030-11-02',
@@ -125,6 +137,7 @@ const draft = (overrides: Partial<AiPlanDraft['facts']> = {}): AiPlanDraft => ({
     ...overrides,
   },
   conflicts: { sessions: 3, plans: [] },
+  ...extra,
 });
 
 describe('AiPlanDialog', () => {
@@ -347,6 +360,97 @@ describe('AiPlanDialog', () => {
       (button) => button.textContent === 'json_plan_publish',
     )!;
     expect(publish.disabled).toBe(true);
+  });
+
+  const openReview = async (value: AiPlanDraft) => {
+    api.start.mockResolvedValue({ jobId: 'job-1', state: 'queued' });
+    api.status.mockResolvedValue({
+      jobId: 'job-1',
+      state: 'done',
+      draft: value,
+    });
+    await fillValid();
+    await submit();
+    await waitFor(() =>
+      dialog()?.textContent?.includes('ai_plan_review_title'),
+    );
+  };
+  const rule = (name: string) =>
+    dialog().querySelector<HTMLElement>(`[data-rule="${name}"]`)!;
+
+  it('shows each rule in effect: default, set by the AI, or clamped', async () => {
+    const notes = defaultNotes().map((note) =>
+      note.rule === 'growthPercent'
+        ? { ...note, source: 'ai' as const, reason: 'Progresión del 15 %' }
+        : note.rule === 'taperLastWeekPercent'
+          ? { ...note, source: 'ai' as const, requested: 10 }
+          : note,
+    );
+    await openReview(
+      draft(
+        {},
+        {
+          rules: {
+            ...DEFAULT_AI_PLAN_RULES,
+            growthPercent: 15,
+            taperLastWeekPercent: 40,
+          },
+          ruleNotes: notes,
+        },
+      ),
+    );
+    expect(rule('growthPercent').querySelector('input')!.value).toBe('15');
+    expect(rule('growthPercent').textContent).toContain(
+      'ai_plan_rule_source_ai {"reason":"Progresión del 15 %"}',
+    );
+    expect(rule('taperLastWeekPercent').textContent).toContain(
+      'ai_plan_rule_clamped {"requested":"10","value":"40"}',
+    );
+    expect(rule('growthMinutes').textContent).toContain(
+      'ai_plan_rule_source_default',
+    );
+    expect(rule('growthMinutes').textContent).toContain(
+      'ai_plan_rule_bounds {"min":"0","max":"30"}',
+    );
+  });
+
+  it('re-runs the checks when the coach edits a rule, within the bounds', async () => {
+    // 120 min in week 1 with 1.8 h asked for: over the default 10% margin.
+    await openReview(draft({ weeklyHours: 1.8 }));
+    expect(dialog().textContent).toContain('ai_plan_issue_week_too_long');
+    const input = rule('hoursAllowancePercent').querySelector('input')!;
+    await act(async () => {
+      input.value = '50';
+      input.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
+      input.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+    });
+    // Limited to the 20% bound, which is enough for 120 min.
+    expect(rule('hoursAllowancePercent').querySelector('input')!.value).toBe(
+      '20',
+    );
+    expect(rule('hoursAllowancePercent').textContent).toContain(
+      'ai_plan_rule_clamped {"requested":"50","value":"20"}',
+    );
+    expect(rule('hoursAllowancePercent').textContent).toContain(
+      'ai_plan_rule_source_coach',
+    );
+    expect(dialog().textContent).toContain('ai_plan_checks_ok');
+    await act(async () => {
+      dialog()
+        .querySelector<HTMLInputElement>('input[type="checkbox"]')!
+        .click();
+    });
+    const publish = [...dialog().querySelectorAll('button')].find(
+      (button) => button.textContent === 'json_plan_publish',
+    )!;
+    expect(publish.disabled).toBe(false);
+    // A stricter rule brings the problem back.
+    const again = rule('hoursAllowancePercent').querySelector('input')!;
+    await act(async () => {
+      again.value = '0';
+      again.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+    });
+    expect(dialog().textContent).toContain('ai_plan_issue_week_too_long');
   });
 
   it('goes back to the answers when the draft fails', async () => {

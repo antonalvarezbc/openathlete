@@ -192,11 +192,93 @@ export interface AiPlanConflicts {
   }>;
 }
 
+/**
+ * Limits the checks apply to a plan. The AI may change them when the coach's
+ * methodology or notes ask for it, and the coach may edit them in the review;
+ * both always within the safety bounds below.
+ */
+export const AI_PLAN_RULES = {
+  /** A week may grow this % over the highest of the three before... */
+  growthPercent: { default: 10, min: 5, max: 20 },
+  /** ...plus these minutes */
+  growthMinutes: { default: 15, min: 0, max: 30 },
+  /** Loading weeks in a row before a recovery week */
+  maxLoadingWeeks: { default: 4, min: 2, max: 6 },
+  /** A recovery week is at least this % below the three weeks before */
+  recoveryDropPercent: { default: 15, min: 10, max: 40 },
+  /** The race week at most this % of the peak week */
+  taperLastWeekPercent: { default: 70, min: 40, max: 85 },
+  /** The week before the race week (plans of 8+ weeks) at most this % */
+  taperWeekBeforePercent: { default: 90, min: 60, max: 100 },
+  /** Weekly minutes may exceed the requested hours by this % */
+  hoursAllowancePercent: { default: 10, min: 0, max: 20 },
+  /** Highest session RPE in weeks 1 and 2 with unresolved injuries */
+  injuryMaxRpe: { default: 6, min: 3, max: 7 },
+} as const;
+
+export type AiPlanRuleKey = keyof typeof AI_PLAN_RULES;
+export const AI_PLAN_RULE_KEYS = Object.keys(AI_PLAN_RULES) as AiPlanRuleKey[];
+export type AiPlanRules = Record<AiPlanRuleKey, number>;
+
+export const DEFAULT_AI_PLAN_RULES = Object.fromEntries(
+  AI_PLAN_RULE_KEYS.map((key) => [key, AI_PLAN_RULES[key].default]),
+) as AiPlanRules;
+
+/** Where a rule in effect comes from. */
+export interface AiPlanRuleNote {
+  rule: AiPlanRuleKey;
+  source: 'default' | 'ai' | 'coach';
+  /** The AI's one-line reason, when it set the rule */
+  reason?: string;
+  /** The value asked for, when it was outside the bounds */
+  requested?: number;
+}
+
+/**
+ * Applies requested rule values: whole numbers within the safety bounds.
+ * Anything outside them is clamped and reported in the note, never silently.
+ */
+export function applyAiPlanRules(
+  requested: Array<{ rule: string; value: number; reason?: string }>,
+  base: AiPlanRules = DEFAULT_AI_PLAN_RULES,
+  source: 'ai' | 'coach' = 'ai',
+): { rules: AiPlanRules; notes: AiPlanRuleNote[] } {
+  const rules = { ...base };
+  const notes = new Map<AiPlanRuleKey, AiPlanRuleNote>();
+  for (const item of requested) {
+    if (!(AI_PLAN_RULE_KEYS as string[]).includes(item.rule)) continue;
+    const rule = item.rule as AiPlanRuleKey;
+    const { min, max } = AI_PLAN_RULES[rule];
+    const value = Number.isFinite(item.value)
+      ? Math.round(item.value)
+      : AI_PLAN_RULES[rule].default;
+    const applied = Math.min(max, Math.max(min, value));
+    rules[rule] = applied;
+    notes.set(rule, {
+      rule,
+      source,
+      ...(item.reason?.trim()
+        ? { reason: item.reason.trim().slice(0, 200) }
+        : {}),
+      ...(applied !== item.value ? { requested: item.value } : {}),
+    });
+  }
+  return {
+    rules,
+    notes: AI_PLAN_RULE_KEYS.map(
+      (rule) => notes.get(rule) ?? { rule, source: 'default' as const },
+    ),
+  };
+}
+
 export interface AiPlanDraft {
   /** In the plan import format; null when the model failed twice */
   plan: SEOPlanData | null;
   issues: AiPlanIssue[];
   facts: AiPlanCheckFacts;
+  /** The limits the checks used, and where each comes from */
+  rules: AiPlanRules;
+  ruleNotes: AiPlanRuleNote[];
   conflicts: AiPlanConflicts;
 }
 

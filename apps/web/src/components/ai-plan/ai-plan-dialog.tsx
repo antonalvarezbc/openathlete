@@ -185,6 +185,8 @@ export function AiPlanDialog({ athleteId, onClose, onImported, pollMs }: P) {
           athleteId,
           startDate: getValues('startDate'),
           facts: draft.facts,
+          rules: draft.rules,
+          ruleNotes: draft.ruleNotes,
           conflicts: draft.conflicts,
         }}
       />

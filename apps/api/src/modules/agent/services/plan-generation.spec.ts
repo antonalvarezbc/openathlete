@@ -2,9 +2,13 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 
 import {
   AI_PLAN_ISSUE_CODES,
+  AI_PLAN_RULES,
+  AI_PLAN_RULE_KEYS,
   AiPlanRequest,
   CYCLE_PHASE,
+  DEFAULT_AI_PLAN_RULES,
   SPORT_TYPE,
+  applyAiPlanRules,
   trainingPlanImportSchema,
 } from '@openathlete/shared';
 
@@ -39,8 +43,13 @@ const request: AiPlanRequest = {
 const GOOD = [180, 195, 210, 160, 220, 240, 170, 100];
 
 /** The model's answer for the given weekly minutes. */
-function answer(minutes: number[], sport = 'RUNNING'): AiPlanOutput {
+function answer(
+  minutes: number[],
+  sport = 'RUNNING',
+  rules: AiPlanOutput['rules'] = [],
+): AiPlanOutput {
   return {
+    rules,
     name: 'Plan 10K',
     description: 'Polarized build',
     cycles: [
@@ -346,6 +355,126 @@ describe('PlanGenerationService.generate', () => {
       }
     ).athlete.injuries;
     expect(injuries[0].context).toHaveLength(300);
+  });
+});
+
+describe('PlanGenerationService plan rules', () => {
+  test('uses the defaults when the AI keeps them', async () => {
+    const { service } = setup();
+    service.answers = [{ object: answer(GOOD), raw: '' }];
+    const draft = await service.generate(request);
+    expect(draft.rules).toEqual(DEFAULT_AI_PLAN_RULES);
+    expect(draft.ruleNotes.every((note) => note.source === 'default')).toBe(
+      true,
+    );
+  });
+
+  test("checks the plan with the rules the AI set from the coach's notes", async () => {
+    const { service } = setup();
+    // 20% growth in week 2 fails the default 10% but fits "15% progression".
+    const minutes = [...GOOD];
+    minutes[1] = 230;
+    service.answers = [
+      {
+        object: answer(minutes, 'RUNNING', [
+          {
+            rule: 'growthPercent',
+            value: 15,
+            reason: 'El entrenador pide un 15 %',
+          },
+          { rule: 'growthMinutes', value: 30, reason: 'Margen pedido' },
+        ]),
+        raw: '',
+      },
+    ];
+    const draft = await service.generate({
+      ...request,
+      methodologyNotes: 'progresión del 15 %',
+    });
+    expect(service.prompts).toHaveLength(1);
+    expect(draft.issues).toEqual([]);
+    expect(draft.rules).toMatchObject({ growthPercent: 15, growthMinutes: 30 });
+    expect(draft.ruleNotes).toContainEqual({
+      rule: 'growthPercent',
+      source: 'ai',
+      reason: 'El entrenador pide un 15 %',
+    });
+  });
+
+  test('clamps rules outside the safety bounds and says so', async () => {
+    const { service } = setup();
+    const minutes = [...GOOD];
+    minutes[1] = 300;
+    service.answers = [
+      {
+        object: answer(minutes, 'RUNNING', [
+          { rule: 'growthPercent', value: 60, reason: 'Aggressive' },
+          { rule: 'maxLoadingWeeks', value: 1.4, reason: '1+1' },
+          { rule: 'unknownRule', value: 3, reason: 'x' },
+        ]),
+        raw: '',
+      },
+      { object: answer(GOOD), raw: '' },
+    ];
+    const draft = await service.generate(request);
+    // The repair round sees the clamped rules: 20%, not 60%.
+    const revision = service.prompts[1].revision as {
+      rules: Record<string, number>;
+      problems: string[];
+    };
+    expect(revision.rules).toMatchObject({
+      growthPercent: 20,
+      maxLoadingWeeks: 2,
+    });
+    expect(revision.problems.join('\n')).toMatch(/week 2: 300 minutes/);
+    // The repaired answer kept the defaults.
+    expect(draft.rules).toEqual(DEFAULT_AI_PLAN_RULES);
+  });
+});
+
+describe('applyAiPlanRules', () => {
+  test('rounds, clamps and reports the value asked for', () => {
+    const { rules, notes } = applyAiPlanRules([
+      { rule: 'growthPercent', value: 60, reason: '  big  ' },
+      { rule: 'taperLastWeekPercent', value: 10, reason: '' },
+      { rule: 'injuryMaxRpe', value: 5.4, reason: 'knee' },
+      { rule: 'hoursAllowancePercent', value: Number.NaN, reason: 'x' },
+    ]);
+    expect(rules).toMatchObject({
+      growthPercent: 20,
+      taperLastWeekPercent: 40,
+      injuryMaxRpe: 5,
+      hoursAllowancePercent: 10,
+    });
+    expect(notes.find((note) => note.rule === 'growthPercent')).toEqual({
+      rule: 'growthPercent',
+      source: 'ai',
+      reason: 'big',
+      requested: 60,
+    });
+    expect(notes.find((note) => note.rule === 'taperLastWeekPercent')).toEqual({
+      rule: 'taperLastWeekPercent',
+      source: 'ai',
+      requested: 10,
+    });
+    expect(notes.find((note) => note.rule === 'injuryMaxRpe')?.requested).toBe(
+      5.4,
+    );
+    expect(
+      notes.find((note) => note.rule === 'hoursAllowancePercent')?.requested,
+    ).toBeNaN();
+    expect(notes.find((note) => note.rule === 'growthMinutes')).toEqual({
+      rule: 'growthMinutes',
+      source: 'default',
+    });
+  });
+
+  test('keeps every default within its own bounds', () => {
+    for (const key of AI_PLAN_RULE_KEYS) {
+      const { min, max } = AI_PLAN_RULES[key];
+      expect(DEFAULT_AI_PLAN_RULES[key]).toBeGreaterThanOrEqual(min);
+      expect(DEFAULT_AI_PLAN_RULES[key]).toBeLessThanOrEqual(max);
+    }
   });
 });
 

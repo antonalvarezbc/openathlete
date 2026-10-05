@@ -10,12 +10,15 @@ import {
   AiPlanIssue,
   AiPlanJobStatus,
   AiPlanRequest,
+  AiPlanRuleNote,
+  AiPlanRules,
   AiPlanWeekSteps,
   AiPlanWeekStepsRequest,
   METRIC_TYPE,
   SEOPlanData,
   aiPlanDayOffset,
   aiPlanWeekCount,
+  applyAiPlanRules,
   checkAiPlan,
   trainingPlanImportSchema,
 } from '@openathlete/shared';
@@ -247,6 +250,7 @@ export class PlanGenerationService {
           ...context.prompt,
           revision: {
             previousDraft: first.object ?? first.raw.slice(0, 60000),
+            rules: result.rules,
             problems: result.problems,
           },
         }),
@@ -259,6 +263,8 @@ export class PlanGenerationService {
       plan: result.plan,
       issues: result.issues,
       facts: context.facts,
+      rules: result.rules,
+      ruleNotes: result.ruleNotes,
       conflicts: context.conflicts,
     };
   }
@@ -267,11 +273,23 @@ export class PlanGenerationService {
     answer: ModelAnswer,
     request: AiPlanRequest,
     facts: AiPlanCheckFacts,
-  ): { plan: SEOPlanData | null; issues: AiPlanIssue[]; problems: string[] } {
+  ): {
+    plan: SEOPlanData | null;
+    issues: AiPlanIssue[];
+    problems: string[];
+    rules: AiPlanRules;
+    ruleNotes: AiPlanRuleNote[];
+  } {
+    // The model's rules, clamped to the safety bounds; the checks use them.
+    const { rules, notes: ruleNotes } = applyAiPlanRules(
+      answer.object?.rules ?? [],
+    );
     if (!answer.object)
       return {
         plan: null,
         issues: [],
+        rules,
+        ruleNotes,
         problems: [
           'The answer did not match the required format. Return the complete plan.',
         ],
@@ -283,12 +301,20 @@ export class PlanGenerationService {
       return {
         plan: null,
         issues: [],
+        rules,
+        ruleNotes,
         problems: parsed.error.issues
           .slice(0, 20)
           .map((issue) => `${issue.path.join('.')}: ${issue.message}`),
       };
-    const issues = checkAiPlan(parsed.data, facts);
-    return { plan: parsed.data, issues, problems: issues.map(describeIssue) };
+    const issues = checkAiPlan(parsed.data, facts, rules);
+    return {
+      plan: parsed.data,
+      issues,
+      rules,
+      ruleNotes,
+      problems: issues.map(describeIssue),
+    };
   }
 
   protected async callModel(prompt: string): Promise<ModelAnswer> {

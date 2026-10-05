@@ -383,6 +383,13 @@ test('AI plans are drafted on the planning model with a strict schema', async ()
   });
   providersAnswer(
     JSON.stringify({
+      rules: [
+        {
+          rule: 'growthPercent',
+          value: 15,
+          reason: 'El entrenador pide una progresión del 15 %',
+        },
+      ],
       name: 'Plan 10K',
       description: 'Base aeróbica y taper.',
       cycles: [
@@ -412,6 +419,16 @@ test('AI plans are drafted on the planning model with a strict schema', async ()
   assert.notEqual(body.text.format.strict, false);
   // Instructions and schema, before any athlete data: about 2,000 tokens.
   assert.ok(JSON.stringify(body).length < 9000, JSON.stringify(body).length);
+  // The model sets rules by name, from a closed list.
+  const schema = JSON.stringify(body.text.format.schema);
+  assert.ok(schema.includes('"taperWeekBeforePercent"'));
+  assert.deepEqual(result.object.rules, [
+    {
+      rule: 'growthPercent',
+      value: 15,
+      reason: 'El entrenador pide una progresión del 15 %',
+    },
+  ]);
 
   const plan = toImportPlan(result.object, {
     athleteId: 1,

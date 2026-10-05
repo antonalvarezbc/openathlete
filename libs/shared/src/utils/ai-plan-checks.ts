@@ -1,24 +1,17 @@
 import {
   AiPlanCheckFacts,
   AiPlanIssue,
+  AiPlanRules,
+  DEFAULT_AI_PLAN_RULES,
   aiPlanDayOffset,
 } from '../types/dtos/agent/ai-plan.dto';
 import { SEOPlanData } from '../types/dtos/seo/seo-plan.dto';
 import { METRIC_TYPE } from '../types/misc';
 
-/** A week may grow 10% over the highest of the three before, plus 15 min. */
-const PROGRESSION = 1.1;
-const PROGRESSION_SLACK_MINUTES = 15;
-/** The first week may exceed recent training by 10%, plus 30 min. */
+// The plan's rules (AI_PLAN_RULES) set the other limits.
+/** The first week may exceed recent training by the growth %, plus 30 min. */
 const FIRST_WEEK_SLACK_MINUTES = 30;
-/** A week this far below the three before counts as recovery. */
-const RECOVERY_RATIO = 0.85;
-const MAX_LOADING_WEEKS = 4;
-const TAPER_LAST_WEEK = 0.7;
-const TAPER_WEEK_BEFORE = 0.9;
-const HOURS_TOLERANCE = 1.1;
 const INJURY_WEEKS = 2;
-const INJURY_MAX_RPE = 6;
 const MAX_SESSIONS_PER_DAY = 2;
 
 /** Metrics a description may refer to, with the ones each mention needs. */
@@ -60,14 +53,19 @@ const highestBefore = (minutes: number[], index: number) =>
   Math.max(0, ...minutes.slice(Math.max(0, index - 3), index));
 
 /**
- * Deterministic checks of an AI plan draft against the request and what is
- * known about the athlete. The model is asked to fix what they find once;
- * the review dialog runs them again on every edit.
+ * Deterministic checks of an AI plan draft against the request, what is
+ * known about the athlete and the plan's rules. The model is asked to fix
+ * what they find once; the review dialog runs them again on every edit.
  */
 export function checkAiPlan(
   plan: SEOPlanData,
   facts: AiPlanCheckFacts,
+  rules: AiPlanRules = DEFAULT_AI_PLAN_RULES,
 ): AiPlanIssue[] {
+  const growth = 1 + rules.growthPercent / 100;
+  const recoveryRatio = 1 - rules.recoveryDropPercent / 100;
+  const taperLastWeek = rules.taperLastWeekPercent / 100;
+  const taperWeekBefore = rules.taperWeekBeforePercent / 100;
   const issues: AiPlanIssue[] = [];
   const weeks = plan.cycles.flatMap((cycle) => cycle.weeks);
   if (weeks.length !== facts.weeks)
@@ -100,13 +98,13 @@ export function checkAiPlan(
       if (
         facts.injuries > 0 &&
         index < INJURY_WEEKS &&
-        (session.goalRpe ?? 0) > INJURY_MAX_RPE
+        (session.goalRpe ?? 0) > rules.injuryMaxRpe
       )
         issues.push({
           code: 'INJURY_INTENSITY',
           ...at,
           value: session.goalRpe ?? 0,
-          limit: INJURY_MAX_RPE,
+          limit: rules.injuryMaxRpe,
         });
       const text = `${session.name} ${session.description}`;
       const unknownZone = [...text.matchAll(ZONE_MENTION)].some(
@@ -133,7 +131,9 @@ export function checkAiPlan(
   });
 
   const minutes = aiPlanWeekMinutes(plan);
-  const maxMinutes = Math.round(facts.weeklyHours * 60 * HOURS_TOLERANCE);
+  const maxMinutes = Math.round(
+    facts.weeklyHours * 60 * (1 + rules.hoursAllowancePercent / 100),
+  );
   minutes.forEach((value, index) => {
     if (value > maxMinutes)
       issues.push({
@@ -144,27 +144,31 @@ export function checkAiPlan(
       });
     if (index === 0) return;
     const before = highestBefore(minutes, index);
-    const limit = Math.round(before * PROGRESSION + PROGRESSION_SLACK_MINUTES);
+    const limit = Math.round(before * growth + rules.growthMinutes);
     if (before > 0 && value > limit)
       issues.push({ code: 'PROGRESSION', week: index + 1, value, limit });
   });
   if (facts.recentWeeklyMinutes != null && minutes.length) {
     const limit = Math.round(
-      facts.recentWeeklyMinutes * PROGRESSION + FIRST_WEEK_SLACK_MINUTES,
+      facts.recentWeeklyMinutes * growth + FIRST_WEEK_SLACK_MINUTES,
     );
     if (minutes[0] > limit)
       issues.push({ code: 'FIRST_WEEK', week: 1, value: minutes[0], limit });
   }
 
-  // Recovery: no more than four loading weeks in a row, before the taper.
-  if (minutes.length >= 6) {
+  // Recovery: a limited number of loading weeks in a row, before the taper.
+  if (minutes.length >= rules.maxLoadingWeeks + 2) {
     let loading = 1;
     for (let index = 1; index < minutes.length - 2; index++) {
       const recovery =
-        minutes[index] <= highestBefore(minutes, index) * RECOVERY_RATIO;
+        minutes[index] <= highestBefore(minutes, index) * recoveryRatio;
       loading = recovery ? 0 : loading + 1;
-      if (loading === MAX_LOADING_WEEKS + 1)
-        issues.push({ code: 'NO_RECOVERY', week: index + 1 });
+      if (loading === rules.maxLoadingWeeks + 1)
+        issues.push({
+          code: 'NO_RECOVERY',
+          week: index + 1,
+          limit: rules.maxLoadingWeeks,
+        });
     }
   }
 
@@ -172,19 +176,19 @@ export function checkAiPlan(
   if (minutes.length >= 4) {
     const peak = Math.max(...minutes);
     const last = minutes.length - 1;
-    if (minutes[last] > peak * TAPER_LAST_WEEK)
+    if (minutes[last] > peak * taperLastWeek)
       issues.push({
         code: 'NO_TAPER',
         week: last + 1,
         value: minutes[last],
-        limit: Math.round(peak * TAPER_LAST_WEEK),
+        limit: Math.round(peak * taperLastWeek),
       });
-    if (minutes.length >= 8 && minutes[last - 1] > peak * TAPER_WEEK_BEFORE)
+    if (minutes.length >= 8 && minutes[last - 1] > peak * taperWeekBefore)
       issues.push({
         code: 'NO_TAPER',
         week: last,
         value: minutes[last - 1],
-        limit: Math.round(peak * TAPER_WEEK_BEFORE),
+        limit: Math.round(peak * taperWeekBefore),
       });
   }
   return issues;
