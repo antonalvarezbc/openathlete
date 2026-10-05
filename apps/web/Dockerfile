@@ -1,7 +1,9 @@
 # syntax=docker/dockerfile:1.7
 
 # ---- Build stage ----
-FROM node:22.23.3-alpine AS build
+# The bundle is the same on every architecture: build it once, on the
+# builder's own platform. Emulating arm64 made the release build take hours.
+FROM --platform=$BUILDPLATFORM node:22.23.3-alpine AS build
 WORKDIR /app
 
 # Prisma (types used by libs/shared) needs OpenSSL on Alpine

@@ -16,6 +16,8 @@ jobs:
   images:
     name: Publish ${{ matrix.image }} image
     runs-on: ubuntu-latest
+    # A normal run takes about 15 minutes; never hold a release for hours
+    timeout-minutes: 45
     permissions:
       contents: read
       packages: write
