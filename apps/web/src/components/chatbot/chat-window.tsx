@@ -5,6 +5,7 @@ import {
 } from '@/api/messages';
 import { useGetMeQuery } from '@/api/user';
 import { MessageMessages } from '@/components/messages/message-messages';
+import { MessageSearch } from '@/components/messages/message-search';
 import { NewMessageThreadDialog } from '@/components/messages/new-message-thread-dialog';
 import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/ui/loader';
@@ -19,6 +20,7 @@ import { Separator } from '@/components/ui/separator';
 import { UnreadBadge } from '@/components/ui/unread-badge';
 import { useChatbot } from '@/contexts/chatbot';
 import { m } from '@/paraglide/messages';
+import type { MessageSearchTarget } from '@/utils/message-search';
 import { calculateUnreadCount } from '@/utils/messages';
 import { cn } from '@/utils/shadcn';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -38,6 +40,9 @@ export function ChatWindow() {
     useChatbot();
 
   const navigate = useNavigate();
+  const [searchTarget, setSearchTarget] = useState<MessageSearchTarget | null>(
+    null,
+  );
   const [activeMessageThreadId, setActiveMessageThreadId] = useState<
     number | null
   >(null);
@@ -190,6 +195,7 @@ export function ChatWindow() {
 
   const handleSendMessage = useCallback(
     (content: string) => {
+      setSearchTarget(null);
       sendMessageMessage(content);
     },
     [sendMessageMessage],
@@ -281,6 +287,13 @@ export function ChatWindow() {
                   )}
                 />
                 <div className="flex items-center gap-2">
+                  <MessageSearch
+                    activeThreadId={activeId}
+                    onSelect={(target) => {
+                      setSearchTarget(target);
+                      setActiveMessageThreadId(target.messageThreadId);
+                    }}
+                  />
                   <Button
                     variant="ghost"
                     size="icon"
@@ -318,6 +331,7 @@ export function ChatWindow() {
                     value={activeId?.toString() || undefined}
                     onValueChange={(value) => {
                       const id = Number.parseInt(value, 10);
+                      setSearchTarget(null);
                       setActiveMessageThreadId(id);
                     }}
                   >
@@ -367,6 +381,7 @@ export function ChatWindow() {
                 <MessageMessages
                   messageThreadId={activeId}
                   isWindowMode={true}
+                  searchTarget={searchTarget}
                 />
               ) : (
                 <div className="flex items-center justify-center min-h-full text-muted-foreground">

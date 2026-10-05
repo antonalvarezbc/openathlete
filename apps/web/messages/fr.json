@@ -1209,5 +1209,17 @@
   "data_export_include_streams": "Inclure les flux des activités (GPS, fréquence cardiaque), fichier plus lourd",
   "data_export_download": "Télécharger mes données",
   "data_export_preparing": "Préparation du fichier…",
-  "data_export_failed": "L'export a échoué. Réessayez plus tard."
+  "data_export_failed": "L'export a échoué. Réessayez plus tard.",
+  "messages_search_title": "Rechercher des messages",
+  "messages_search_description": "Recherchez par texte, expéditeur ou nom de conversation. Sélectionnez un résultat pour accéder au message.",
+  "messages_search_placeholder": "Texte, expéditeur ou conversation…",
+  "messages_search_scope": "Périmètre de recherche",
+  "messages_search_current": "Cette conversation",
+  "messages_search_all": "Toutes mes conversations",
+  "messages_search_error": "Impossible de charger les messages.",
+  "messages_search_retry": "Réessayer",
+  "messages_search_hint": "Saisissez du texte pour rechercher dans l’historique.",
+  "messages_search_count": "Résultats : {count}",
+  "messages_search_empty": "Aucun message trouvé.",
+  "messages_search_more": "Afficher plus"
 }
