@@ -1169,6 +1169,8 @@
   "json_plan_destination": "Crear o sustituir",
   "json_plan_new": "Crear un plan nuevo",
   "json_plan_replace_warning": "Se sustituirán todas las sesiones de «{name}». Solo se permiten planes futuros sin actividades vinculadas, comentarios, plantillas ni exportaciones.",
+  "json_plan_races_kept": "Carreras que se conservan: {races}. Sus eventos nunca se sustituyen.",
+  "json_plan_race_unlinked": "{name} queda fuera del nuevo plan: se mantiene en el calendario, pero se desvincula.",
   "json_plan_preview": "Vista previa del plan",
   "json_plan_steps": "Pasos de la sesión (JSON)",
   "json_plan_confirm": "He revisado el atleta, las fechas, las sesiones y la sustitución, si la he seleccionado.",

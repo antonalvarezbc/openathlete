@@ -75,6 +75,32 @@ describe('ImportPlanDialog example', () => {
     [...dialog().querySelectorAll('button')].find(
       (element) => element.textContent === name,
     )!;
+  const race = (eventId: number, name: string, day: string) => ({
+    priority: 'PREPARATORY',
+    competition: {
+      event: {
+        eventId,
+        name,
+        startDate: `${day}T08:00:00Z`,
+        endDate: `${day}T10:00:00Z`,
+      },
+    },
+  });
+  const select = (label: string, value: string, kind = 'select') =>
+    act(async () => {
+      const element = dialog().querySelector<
+        HTMLSelectElement | HTMLInputElement
+      >(`${kind}[aria-label="${label}"]`)!;
+      Object.getOwnPropertyDescriptor(
+        kind === 'select'
+          ? HTMLSelectElement.prototype
+          : HTMLInputElement.prototype,
+        'value',
+      )!.set!.call(element, value);
+      element.dispatchEvent(
+        new Event(kind === 'select' ? 'change' : 'input', { bubbles: true }),
+      );
+    });
   const type = (value: string) =>
     act(async () => {
       Object.getOwnPropertyDescriptor(
@@ -101,6 +127,44 @@ describe('ImportPlanDialog example', () => {
     const confirm = vi.spyOn(window, 'confirm');
     await act(async () => button('json_plan_example_load').click());
     expect(confirm).not.toHaveBeenCalled();
+  });
+
+  it('says which races of the replaced plan are kept or unlinked', async () => {
+    seoPlan.listPlans.mockResolvedValue([
+      {
+        trainingPlanId: 3,
+        name: 'Old plan',
+        startDate: '2030-10-07T00:00:00Z',
+        endDate: '2030-12-01T00:00:00Z',
+        races: [
+          // Inside the new plan's three weeks from 2030-10-21
+          race(1, 'Spring 10K', '2030-11-08'),
+          race(2, 'Autumn half', '2030-12-07'),
+        ],
+      },
+    ]);
+    await render();
+    await act(async () => button('json_plan_example_load').click());
+    await select('training_plan_start_date', '2030-10-21', 'input');
+    await select('athlete', '7');
+    for (
+      let tries = 0;
+      tries < 100 && !dialog().querySelector('option[value="3"]');
+      tries++
+    )
+      await act(() => new Promise((resolve) => setTimeout(resolve, 5)));
+    await select('json_plan_destination', '3');
+
+    const status = dialog().querySelector('[role="status"]')!;
+    expect(status.textContent).toContain('json_plan_replace_warning');
+    expect(status.textContent).toContain('json_plan_races_kept');
+    // Only the race after the new plan's end is unlinked.
+    expect(
+      [...status.querySelectorAll('p')].filter(
+        (item) => item.textContent === 'json_plan_race_unlinked',
+      ),
+    ).toHaveLength(1);
+    seoPlan.listPlans.mockResolvedValue([]);
   });
 
   it('asks before replacing JSON already in the box', async () => {

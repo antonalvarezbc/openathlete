@@ -1169,6 +1169,8 @@
   "json_plan_destination": "Create or replace",
   "json_plan_new": "Create a new plan",
   "json_plan_replace_warning": "All sessions in “{name}” will be replaced. Only future plans without activities, comments, templates or exports can be replaced.",
+  "json_plan_races_kept": "Races kept: {races}. Their events are never replaced.",
+  "json_plan_race_unlinked": "{name} falls outside the new plan: it stays in the calendar but is unlinked.",
   "json_plan_preview": "Plan preview",
   "json_plan_steps": "Workout steps (JSON)",
   "json_plan_confirm": "I have reviewed the athlete, dates, sessions and replacement, if selected.",

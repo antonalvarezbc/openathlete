@@ -63,6 +63,18 @@ export class SeoPlanAPI {
       name: string;
       startDate: string;
       endDate: string;
+      /** Linked races: kept when the plan is replaced */
+      races?: Array<{
+        priority: 'TARGET' | 'PREPARATORY';
+        competition: {
+          event: {
+            eventId: number;
+            name: string;
+            startDate: string;
+            endDate: string;
+          };
+        };
+      }>;
     }>
   > {
     return (await client.get(`/seo-plan/athletes/${athleteId}/plans`)).data;

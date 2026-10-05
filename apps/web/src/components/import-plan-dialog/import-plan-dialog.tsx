@@ -162,6 +162,18 @@ export function ImportPlanDialog({
   const selectedPlan = plans.data?.find(
     (plan) => String(plan.trainingPlanId) === replacePlanId,
   );
+  // Replacing keeps the plan's races; those outside the new dates are
+  // unlinked, as the import does, but stay in the calendar.
+  const keptRaces = (selectedPlan?.races ?? []).map(
+    ({ competition: { event } }) => event,
+  );
+  const unlinkedRaces = preview.schedule
+    ? keptRaces.filter(
+        (race) =>
+          new Date(race.startDate) < preview.schedule!.startDate ||
+          new Date(race.endDate) > preview.schedule!.endDate,
+      )
+    : [];
   const dateLabel = (date: Date | string) =>
     new Date(date).toLocaleDateString(getLocale(), { timeZone });
   // The example fills the box so the preview shows what it would create.
@@ -385,9 +397,24 @@ export function ImportPlanDialog({
             </label>
           )}
           {selectedPlan && (
-            <p className="text-sm" role="status">
-              {m.json_plan_replace_warning({ name: selectedPlan.name })}
-            </p>
+            <div className="space-y-1 text-sm" role="status">
+              <p>{m.json_plan_replace_warning({ name: selectedPlan.name })}</p>
+              {keptRaces.length > 0 && (
+                <p>
+                  {m.json_plan_races_kept({
+                    races: keptRaces.map((race) => race.name).join(', '),
+                  })}
+                </p>
+              )}
+              {unlinkedRaces.map((race) => (
+                <p
+                  key={race.eventId}
+                  className="text-amber-700 dark:text-amber-400"
+                >
+                  {m.json_plan_race_unlinked({ name: race.name })}
+                </p>
+              ))}
+            </div>
           )}
           {preview.plan && preview.schedule && (
             <section aria-label={m.json_plan_preview()} className="space-y-3">
