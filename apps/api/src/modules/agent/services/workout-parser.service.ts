@@ -3,15 +3,17 @@ import { createHash } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 
 import {
+  AiTask,
   CreateWorkoutStepDto,
   METRIC_TYPE,
   SPORT_TYPE,
 } from '@openathlete/shared';
 
 import { workoutParserAgent } from 'src/mastra/agents';
+import { AiModelResolverService, AiService } from 'src/modules/ai';
+import type { ResolvedAiModel } from 'src/modules/ai/services/ai-model-resolver.service';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
-import { isTerminalAiFailure } from './ai-failure';
 import {
   buildZonesContext,
   fetchAthleteMetrics,
@@ -54,9 +56,10 @@ export type WrittenWorkout = {
 
 /**
  * Turns a workout written in words ("15' calentar + 3x8' a 4:35/km...") into
- * structured steps with a small model and a minimal prompt. The same text for
- * the same athlete and context is answered from memory, without a model call.
- * Nothing is saved, and the coach memory is not touched.
+ * structured steps with a small model and a minimal prompt, on the model the
+ * user picked for written workouts. The same text for the same athlete,
+ * context and model is answered from memory, without a model call. Nothing
+ * is saved, and the coach memory is not touched.
  */
 @Injectable()
 export class WorkoutParserService {
@@ -65,53 +68,58 @@ export class WorkoutParserService {
     { value: WrittenWorkout; expires: number }
   >();
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly resolver: AiModelResolverService,
+    private readonly ai: AiService,
+  ) {}
+
+  /** The user's model for written workouts (their key, else the instance's). */
+  resolveModel(userId: number): Promise<ResolvedAiModel> {
+    return this.resolver.resolveForUser(AiTask.WORKOUT_PARSER, userId);
+  }
 
   /** `session`: also ask for a name and the sport. */
   protected async callModel(
+    model: ResolvedAiModel,
     prompt: string,
     session: boolean,
   ): Promise<ParsedWorkout & Partial<ParsedSession>> {
-    const result = await withRetry(
+    // An invalid answer may be fixed by another try (isRetryableAiError).
+    return withRetry(
       () =>
-        workoutParserAgent.generate(prompt, {
-          structuredOutput: {
-            schema: session ? parsedSessionSchema : parsedWorkoutSchema,
-          },
-          abortSignal: AbortSignal.timeout(60_000),
-        }),
+        this.ai.generateObject(
+          workoutParserAgent,
+          model,
+          prompt,
+          session ? parsedSessionSchema : parsedWorkoutSchema,
+          { timeoutMs: 60_000 },
+        ),
       2,
       1000,
-      // An invalid answer may be fixed by another try; quota, key and
-      // timeout errors won't.
-      (error) => !isTerminalAiFailure(error),
     );
-    if (!result.object) throw new Error('No structured workout returned');
-    return result.object;
   }
 
   /** The steps of a session whose sport is known. */
-  async parse(input: {
-    text: string;
-    sport: string;
-    athleteId?: number;
-  }): Promise<CreateWorkoutStepDto[]> {
-    return (await this.convert(input)).steps;
+  async parse(
+    input: { text: string; sport: string; athleteId?: number },
+    model: ResolvedAiModel,
+  ): Promise<CreateWorkoutStepDto[]> {
+    return (await this.convert(input, model)).steps;
   }
 
   /** A new session from text alone: steps, a name and the sport. */
-  parseSession(input: {
-    text: string;
-    athleteId?: number;
-  }): Promise<WrittenWorkout> {
-    return this.convert(input);
+  parseSession(
+    input: { text: string; athleteId?: number },
+    model: ResolvedAiModel,
+  ): Promise<WrittenWorkout> {
+    return this.convert(input, model);
   }
 
-  private async convert(input: {
-    text: string;
-    sport?: string;
-    athleteId?: number;
-  }): Promise<WrittenWorkout> {
+  private async convert(
+    input: { text: string; sport?: string; athleteId?: number },
+    model: ResolvedAiModel,
+  ): Promise<WrittenWorkout> {
     const text = input.text.trim().replace(/\s+/g, ' ');
     let zones: string | undefined;
     let zoneIds: number[] = [];
@@ -143,14 +151,16 @@ export class WorkoutParserService {
       metrics,
     });
 
-    // The prompt holds every input, so it is the cache key.
+    // The prompt holds every input, so it is the cache key, with the model.
     const key = createHash('sha256')
-      .update(`${input.athleteId ?? 0}\n${prompt}`)
+      .update(
+        `${input.athleteId ?? 0}\n${model.provider}/${model.modelId}\n${prompt}`,
+      )
       .digest('hex');
     const hit = this.cache.get(key);
     if (hit && hit.expires > Date.now()) return structuredClone(hit.value);
 
-    const parsed = await this.callModel(prompt, !input.sport);
+    const parsed = await this.callModel(model, prompt, !input.sport);
     const value: WrittenWorkout = {
       steps: parsedWorkoutToSteps(parsed, zoneIds),
     };

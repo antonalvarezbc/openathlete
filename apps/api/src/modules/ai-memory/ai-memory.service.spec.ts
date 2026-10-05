@@ -1,11 +1,21 @@
+import { AiTask } from '@openathlete/shared';
+
 import { aiMemoryConsolidationAgent } from '../../mastra/agents/ai-memory-consolidation.agent';
+import { aiResolverStandIn, aiServiceStandIn } from '../ai/ai.testing';
 import { PrismaService } from '../prisma/services/prisma.service';
 import { AI_MEMORY_LIMITS, clip } from './ai-memory.limits';
 import { AiMemoryService, aiMemoryPromptSection } from './ai-memory.service';
 
 jest.mock('../../mastra/agents/ai-memory-consolidation.agent', () => ({
-  aiMemoryConsolidationAgent: { generate: jest.fn() },
+  aiMemoryConsolidationAgent: { id: 'ai-memory-consolidation' },
 }));
+jest.mock('../ai', () => ({
+  AiModelResolverService: class {},
+  AiService: class {},
+}));
+
+// The model, behind a stand-in AiService on the coach's own settings.
+const generate = jest.fn();
 
 const date = new Date('2026-09-20T10:00:00Z');
 const note = (id: number, content = `note ${id}`) => ({
@@ -45,10 +55,18 @@ function setup(mode: 'OFF' | 'COMPACT' | 'EXTENDED' = 'COMPACT') {
       typeof arg === 'function' ? arg(db) : Promise.all(arg as unknown[]),
     ),
   };
+  const resolver = aiResolverStandIn();
+  const ai = aiServiceStandIn(generate);
   return {
     db,
     link,
-    service: new AiMemoryService(db as unknown as PrismaService),
+    resolver,
+    ai,
+    service: new AiMemoryService(
+      db as unknown as PrismaService,
+      resolver as never,
+      ai,
+    ),
   };
 }
 
@@ -130,21 +148,25 @@ describe('AiMemoryService', () => {
   });
 
   it('consolidates older notes once enough are waiting, keeping the newest', async () => {
-    const { service, db } = setup('COMPACT');
+    const { service, db, resolver, ai } = setup('COMPACT');
     const limits = AI_MEMORY_LIMITS.COMPACT;
     const notes = Array.from({ length: limits.consolidateAfter }, (_, i) =>
       note(i + 1),
     );
     db.aiMemoryNote.findMany.mockResolvedValue(notes);
-    (aiMemoryConsolidationAgent.generate as jest.Mock).mockResolvedValue({
+    generate.mockResolvedValue({
       text: '- Knee sensitive after long descents',
     });
 
     await service.consolidate(5);
 
-    const prompt = JSON.parse(
-      (aiMemoryConsolidationAgent.generate as jest.Mock).mock.calls[0][0],
+    // The coach's memory, on the coach's own model for memory.
+    expect(resolver.tryResolveForUser).toHaveBeenCalledWith(
+      AiTask.AI_MEMORY,
+      1,
     );
+    expect(ai.generateText.mock.calls[0][0]).toBe(aiMemoryConsolidationAgent);
+    const prompt = JSON.parse(generate.mock.calls[0][0]);
     expect(prompt.maxChars).toBe(limits.summaryChars);
     expect(prompt.newNotes).toHaveLength(notes.length - limits.notes);
     expect(db.coachAthlete.updateMany).toHaveBeenCalledWith(
@@ -171,11 +193,23 @@ describe('AiMemoryService', () => {
     db.aiMemoryNote.findMany.mockResolvedValue(
       Array.from({ length: 6 }, (_, i) => note(i + 1)),
     );
-    (aiMemoryConsolidationAgent.generate as jest.Mock).mockResolvedValue({
+    generate.mockResolvedValue({
       text: 'summary',
     });
     db.coachAthlete.updateMany.mockResolvedValue({ count: 0 });
     await service.consolidate(5);
+    expect(db.aiMemoryNote.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('leaves the notes waiting when the coach has no AI for memory', async () => {
+    const { service, db, resolver } = setup('COMPACT');
+    db.aiMemoryNote.findMany.mockResolvedValue(
+      Array.from({ length: 6 }, (_, i) => note(i + 1)),
+    );
+    resolver.tryResolveForUser.mockResolvedValue(null);
+    await service.consolidate(5);
+    expect(generate).not.toHaveBeenCalled();
+    expect(db.coachAthlete.updateMany).not.toHaveBeenCalled();
     expect(db.aiMemoryNote.deleteMany).not.toHaveBeenCalled();
   });
 

@@ -6,7 +6,6 @@ import { AuthGuard } from '@nestjs/passport';
 import {
   CoachAssistantChatRequest,
   CoachAssistantContextRequest,
-  FeatureName,
   coachAssistantChatSchema,
   coachAssistantContextSchema,
 } from '@openathlete/shared';
@@ -14,7 +13,6 @@ import {
 import { UserTypes } from '../../auth/decorators/user-type.decorator';
 import { AuthUser, JwtUser } from '../../auth/decorators/user.decorator';
 import { UserTypeGuard } from '../../auth/guards/user-type.guard';
-import { FeatureAccessGuard, RequireFeature } from '../../subscription';
 import { CoachAssistantService } from '../services/coach-assistant.service';
 
 @Controller('agent/ai/coach-assistant')
@@ -33,8 +31,6 @@ export class CoachAssistantController {
   }
 
   @Post('chat')
-  @UseGuards(FeatureAccessGuard)
-  @RequireFeature(FeatureName.AI_GENERATION)
   chat(
     @JwtUser() user: AuthUser,
     @Body(new ZodValidationPipe(coachAssistantChatSchema))

@@ -1,5 +1,13 @@
-import { METRIC_TYPE } from '@openathlete/shared';
+import { AiErrorCode, AiTask, METRIC_TYPE } from '@openathlete/shared';
 
+import { workoutParserAgent } from 'src/mastra/agents';
+
+import {
+  AiInvalidAnswerException,
+  AiProviderException,
+} from '../../ai/ai.errors';
+import type { AiModelResolverService } from '../../ai/services/ai-model-resolver.service';
+import type { AiService } from '../../ai/services/ai.service';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import {
   ParsedWorkout,
@@ -14,6 +22,11 @@ import {
 import { WorkoutParserService } from './workout-parser.service';
 
 jest.mock('src/mastra/agents', () => ({ workoutParserAgent: {} }));
+// The module barrel loads Mastra's registry; the service only needs the classes.
+jest.mock('src/modules/ai', () => ({
+  AiModelResolverService: class {},
+  AiService: class {},
+}));
 
 const step = (
   type: ParsedWorkout['blocks'][number]['step'] extends infer S
@@ -193,10 +206,21 @@ describe('prompt size', () => {
   });
 });
 
+// The user's model for written workouts, as the resolver returns it.
+const smallModel = {
+  task: AiTask.WORKOUT_PARSER,
+  source: 'own_key',
+  userId: 3,
+  provider: 'anthropic',
+  modelId: 'claude-haiku-4-5',
+  credentialId: 9,
+  config: { id: 'anthropic/claude-haiku-4-5', apiKey: 'sk-ant-user' },
+} as const;
+
 describe('WorkoutParserService', () => {
   class TestParser extends WorkoutParserService {
     model = jest.fn().mockResolvedValue(example);
-    protected callModel(prompt: string, session: boolean) {
+    protected callModel(_model: unknown, prompt: string, session: boolean) {
       return this.model(prompt, session);
     }
   }
@@ -224,17 +248,24 @@ describe('WorkoutParserService', () => {
     };
     return {
       prisma,
-      service: new TestParser(prisma as unknown as PrismaService),
+      service: new TestParser(
+        prisma as unknown as PrismaService,
+        {} as AiModelResolverService,
+        {} as AiService,
+      ),
     };
   };
 
   it('reads no athlete data for a plain text', async () => {
     const { service, prisma } = setup();
-    await service.parse({
-      text: "3x8' a 4:35/km",
-      sport: 'RUNNING',
-      athleteId: 7,
-    });
+    await service.parse(
+      {
+        text: "3x8' a 4:35/km",
+        sport: 'RUNNING',
+        athleteId: 7,
+      },
+      smallModel,
+    );
     expect(prisma.trainingZone.findMany).not.toHaveBeenCalled();
     expect(prisma.athleteMetric.findMany).not.toHaveBeenCalled();
     expect(service.model).toHaveBeenCalledWith(
@@ -250,7 +281,10 @@ describe('WorkoutParserService', () => {
       name: "  3x8' a umbral  ",
       sport: 'running',
     });
-    const session = await service.parseSession({ text: "3x8' a 4:35/km" });
+    const session = await service.parseSession(
+      { text: "3x8' a 4:35/km" },
+      smallModel,
+    );
     expect(service.model.mock.calls[0][1]).toBe(true);
     expect(session).toMatchObject({ name: "3x8' a umbral", sport: 'RUNNING' });
     expect(session.steps).toHaveLength(3);
@@ -260,24 +294,33 @@ describe('WorkoutParserService', () => {
       name: '',
       sport: 'Quidditch',
     });
-    const unknown = await service.parseSession({ text: "4x4' fuerte" });
+    const unknown = await service.parseSession(
+      { text: "4x4' fuerte" },
+      smallModel,
+    );
     expect(unknown.name).toBeUndefined();
     expect(unknown.sport).toBeUndefined();
     // Sessions with a known sport get only steps.
-    const steps = await service.parse({
-      text: "4x4' fuerte",
-      sport: 'RUNNING',
-    });
+    const steps = await service.parse(
+      {
+        text: "4x4' fuerte",
+        sport: 'RUNNING',
+      },
+      smallModel,
+    );
     expect(Array.isArray(steps)).toBe(true);
   });
 
   it('adds only the zones or metrics the text refers to', async () => {
     const { service, prisma } = setup();
-    await service.parse({
-      text: "20' en Z2 + 5' al 90% FCmax",
-      sport: 'RUNNING',
-      athleteId: 7,
-    });
+    await service.parse(
+      {
+        text: "20' en Z2 + 5' al 90% FCmax",
+        sport: 'RUNNING',
+        athleteId: 7,
+      },
+      smallModel,
+    );
     const prompt: string = service.model.mock.calls[0][0];
     expect(prompt).toContain('Zone ID 26 Z2: 130-145');
     expect(prompt).toContain('Metrics: HR_MAX 190');
@@ -286,32 +329,115 @@ describe('WorkoutParserService', () => {
 
   it('answers the same text again without calling the model', async () => {
     const { service } = setup();
-    const first = await service.parse({
-      text: "3x8'   a 4:35/km",
-      sport: 'RUNNING',
-      athleteId: 7,
-    });
+    const first = await service.parse(
+      {
+        text: "3x8'   a 4:35/km",
+        sport: 'RUNNING',
+        athleteId: 7,
+      },
+      smallModel,
+    );
     // Whitespace differences do not matter.
-    const second = await service.parse({
-      text: "3x8' a 4:35/km",
-      sport: 'RUNNING',
-      athleteId: 7,
-    });
+    const second = await service.parse(
+      {
+        text: "3x8' a 4:35/km",
+        sport: 'RUNNING',
+        athleteId: 7,
+      },
+      smallModel,
+    );
     expect(service.model).toHaveBeenCalledTimes(1);
     expect(second).toEqual(first);
     // Callers get their own copy.
     expect(second).not.toBe(first);
     // Another athlete or sport is a new conversion.
-    await service.parse({
-      text: "3x8' a 4:35/km",
-      sport: 'RUNNING',
-      athleteId: 8,
-    });
-    await service.parse({
-      text: "3x8' a 4:35/km",
-      sport: 'CYCLING',
-      athleteId: 7,
-    });
+    await service.parse(
+      {
+        text: "3x8' a 4:35/km",
+        sport: 'RUNNING',
+        athleteId: 8,
+      },
+      smallModel,
+    );
+    await service.parse(
+      {
+        text: "3x8' a 4:35/km",
+        sport: 'CYCLING',
+        athleteId: 7,
+      },
+      smallModel,
+    );
     expect(service.model).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('WorkoutParserService on the user model', () => {
+  const setup = (generateObject: jest.Mock) => {
+    const resolver = {
+      resolveForUser: jest.fn().mockResolvedValue(smallModel),
+    };
+    const service = new WorkoutParserService(
+      {} as PrismaService,
+      resolver as unknown as AiModelResolverService,
+      { generateObject } as unknown as AiService,
+    );
+    return { service, resolver };
+  };
+
+  it("resolves the user's model for written workouts", async () => {
+    const { service, resolver } = setup(jest.fn());
+    await expect(service.resolveModel(3)).resolves.toBe(smallModel);
+    expect(resolver.resolveForUser).toHaveBeenCalledWith(
+      AiTask.WORKOUT_PARSER,
+      3,
+    );
+  });
+
+  it('runs the parser agent through AiService on that model', async () => {
+    const generateObject = jest.fn().mockResolvedValue(example);
+    const { service } = setup(generateObject);
+    await service.parse({ text: "20' suave", sport: 'RUNNING' }, smallModel);
+    expect(generateObject).toHaveBeenCalledWith(
+      workoutParserAgent,
+      smallModel,
+      "Sport: RUNNING\nText: 20' suave",
+      expect.anything(),
+      { timeoutMs: 60_000 },
+    );
+  });
+
+  it('tries an invalid answer once more, never an empty account', async () => {
+    const invalid = jest
+      .fn()
+      .mockRejectedValueOnce(new AiInvalidAnswerException('{}', false))
+      .mockResolvedValue(example);
+    await setup(invalid).service.parse(
+      { text: "30' Z2", sport: 'RUNNING' },
+      smallModel,
+    );
+    expect(invalid).toHaveBeenCalledTimes(2);
+
+    const quota = jest
+      .fn()
+      .mockRejectedValue(
+        new AiProviderException(AiErrorCode.QUOTA_EXCEEDED, 'quota', 429),
+      );
+    await expect(
+      setup(quota).service.parse(
+        { text: "40' Z2", sport: 'RUNNING' },
+        smallModel,
+      ),
+    ).rejects.toBeInstanceOf(AiProviderException);
+    expect(quota).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not share answers between models', async () => {
+    const generateObject = jest.fn().mockResolvedValue(example);
+    const { service } = setup(generateObject);
+    const input = { text: "50' Z2", sport: 'RUNNING' };
+    await service.parse(input, smallModel);
+    await service.parse(input, smallModel);
+    await service.parse(input, { ...smallModel, modelId: 'claude-sonnet-5-5' });
+    expect(generateObject).toHaveBeenCalledTimes(2);
   });
 });

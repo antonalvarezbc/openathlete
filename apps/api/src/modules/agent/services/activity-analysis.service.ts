@@ -3,7 +3,6 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
-  ServiceUnavailableException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 
@@ -11,17 +10,19 @@ import { CoachActivityAnalysis, Prisma } from '@openathlete/database';
 import {
   ActivityAnalysisRequest,
   ActivityAnalysisResult,
+  AiTask,
   SavedActivityAnalysis,
   UpdateActivityAnalysis,
   activityAnalysisResultSchema,
 } from '@openathlete/shared';
 
-import { EVENT_MODIFICATION_MODEL } from '../../../common/constants/ai-models.constant';
 import {
   ACTIVITY_ANALYSIS_PROMPT_VERSION,
   activityAnalysisAgent,
 } from '../../../mastra/agents/activity-analysis.agent';
+import { AiModelResolverService, AiService } from '../../ai';
 import { AiMemoryService } from '../../ai-memory/ai-memory.service';
+import { AiInvalidAnswerException } from '../../ai/ai.errors';
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { buildActivityAnalysisContext } from './activity-analysis-context';
@@ -33,6 +34,8 @@ export class ActivityAnalysisService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly memory: AiMemoryService,
+    private readonly resolver: AiModelResolverService,
+    private readonly ai: AiService,
   ) {}
 
   private async authorize(
@@ -131,6 +134,11 @@ export class ActivityAnalysisService {
     eventId: number,
     request: ActivityAnalysisRequest,
   ) {
+    // The coach's own AI settings, checked before anything else.
+    const model = await this.resolver.resolveForUser(
+      AiTask.ACTIVITY_ANALYSIS,
+      user.userId,
+    );
     const key = `${user.userId}:${eventId}`;
     if (this.pending.has(key))
       throw new ConflictException({ code: 'ACTIVITY_ANALYSIS_BUSY' });
@@ -143,30 +151,20 @@ export class ActivityAnalysisService {
       );
       let output: unknown;
       try {
-        const result = await activityAnalysisAgent.generate(
+        output = await this.ai.generateObject(
+          activityAnalysisAgent,
+          model,
           JSON.stringify(data),
-          {
-            structuredOutput: { schema: activityAnalysisResultSchema },
-            providerOptions: { openai: { strictJsonSchema: false } },
-            maxSteps: 1,
-            abortSignal: AbortSignal.timeout(120_000),
-          },
+          activityAnalysisResultSchema,
         );
-        output = result.object;
       } catch (error) {
-        // Never expose provider response bodies, request headers or credentials.
-        if (
-          error instanceof Error &&
-          (error.name === 'AI_NoObjectGeneratedError' ||
-            error.name === 'ZodError' ||
-            error.message.includes('Structured output validation failed'))
-        )
+        // Provider errors reach the coach as AiService reports them, without
+        // provider bodies, headers or keys.
+        if (error instanceof AiInvalidAnswerException)
           throw new UnprocessableEntityException({
             code: 'ACTIVITY_ANALYSIS_INVALID',
           });
-        throw new ServiceUnavailableException({
-          code: 'ACTIVITY_ANALYSIS_PROVIDER',
-        });
+        throw error;
       }
       const parsed = activityAnalysisResultSchema.safeParse(output);
       if (!parsed.success)
@@ -188,7 +186,7 @@ export class ActivityAnalysisService {
             contextSnapshot: JSON.parse(
               JSON.stringify(data),
             ) as Prisma.InputJsonObject,
-            model: EVENT_MODIFICATION_MODEL,
+            model: `${model.provider}/${model.modelId}`,
             promptVersion: ACTIVITY_ANALYSIS_PROMPT_VERSION,
           },
         });

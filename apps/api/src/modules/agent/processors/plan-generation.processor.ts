@@ -5,10 +5,11 @@ import { Logger } from '@nestjs/common';
 
 import { AiPlanDraft } from '@openathlete/shared';
 
-import { classifyAiFailure, encodeAiFailure } from '../services/ai-failure';
+import { redactAiError } from '../../ai/ai.errors';
+import type { ResolvedAiModel } from '../../ai/services/ai-model-resolver.service';
+import { encodeAiFailure, planFailure } from '../services/ai-failure';
 import {
   PLAN_GENERATION_QUEUE,
-  PLAN_MODEL,
   PlanGenerationJob,
   PlanGenerationService,
 } from '../services/plan-generation.service';
@@ -24,20 +25,28 @@ export class PlanGenerationProcessor extends WorkerHost {
 
   async process(job: Job<PlanGenerationJob>): Promise<AiPlanDraft> {
     await job.updateProgress({ stage: 'generating' });
+    let model: ResolvedAiModel | undefined;
     try {
-      return await this.service.generate(job.data.request, (stage) =>
+      // The keys of whoever asked, resolved here: they never enter the queue.
+      model = await this.service.resolveModel(job.data.userId);
+      return await this.service.generate(model, job.data.request, (stage) =>
         job.updateProgress({ stage }),
       );
     } catch (error) {
       // Never the prompt or keys: the reason, the model and the error.
-      const failure = classifyAiFailure(error);
+      const failure = planFailure(error);
       this.logger.error(
-        `AI plan draft failed: task=PLAN_GENERATION model=${PLAN_MODEL} ` +
-          `reason=${failure.reason} status=${failure.status ?? '-'} ` +
-          `code=${failure.code ?? '-'} error=${failure.name}: ${failure.message}`,
+        `AI plan draft failed: task=PLAN_GENERATION ` +
+          `model=${model ? `${model.provider}/${model.modelId}` : '-'} ` +
+          `source=${model?.source ?? '-'} reason=${failure.reason} ` +
+          `detail=${failure.detail ?? '-'} error=${redactAiError(
+            error instanceof Error
+              ? `${error.name}: ${error.message}`
+              : String(error),
+          )}`,
       );
       // The status endpoint reads the reason back from the failed reason.
-      throw new UnrecoverableError(encodeAiFailure(failure));
+      throw new UnrecoverableError(encodeAiFailure(failure, model?.source));
     }
   }
 }

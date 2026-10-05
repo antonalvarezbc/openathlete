@@ -2,22 +2,27 @@ import { INestApplication } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Test } from '@nestjs/testing';
 
-import { FeatureAccessGuard } from '../../subscription';
+import { AiErrorCode, AiTask } from '@openathlete/shared';
+
+import { AiNotConfiguredException } from '../../ai/ai.errors';
 import { PlanGenerationService } from '../services/plan-generation.service';
 import { AiPlanController } from './ai-plan.controller';
 
 jest.mock('../../../mastra/agents/plan-generation.agent', () => ({
-  planGenerationAgent: { generate: jest.fn() },
+  planGenerationAgent: { id: 'plan-generation' },
 }));
 jest.mock('src/mastra/agents', () => ({ workoutParserAgent: {} }));
+jest.mock('../../ai', () => ({
+  AiModelResolverService: class {},
+  AiService: class {},
+}));
 
-// Local HTTP exercises the real DTO pipes, role guard and AI access guard;
-// the service is covered by plan-generation.spec.ts. No LLM requests.
+// Local HTTP exercises the real DTO pipes and role guard; the service, which
+// checks the coach's AI settings, is covered by plan-generation.spec.ts.
 describe('AI plan HTTP boundary', () => {
   let app: INestApplication;
   let origin: string;
   let roles: string[];
-  let aiAllowed = true;
   const service = {
     start: jest.fn().mockResolvedValue({ jobId: 'x', state: 'queued' }),
     status: jest.fn().mockResolvedValue({ jobId: 'x', state: 'running' }),
@@ -50,8 +55,6 @@ describe('AI plan HTTP boundary', () => {
           return true;
         },
       })
-      .overrideGuard(FeatureAccessGuard)
-      .useValue({ canActivate: () => aiAllowed })
       .compile();
     app = module.createNestApplication();
     await app.listen(0, '127.0.0.1');
@@ -62,7 +65,6 @@ describe('AI plan HTTP boundary', () => {
   });
   beforeEach(() => {
     roles = ['COACH'];
-    aiAllowed = true;
     jest.clearAllMocks();
   });
   const post = (path: string, body: unknown) =>
@@ -90,9 +92,18 @@ describe('AI plan HTTP boundary', () => {
     expect((await post('draft', draft)).status).toBe(201);
   });
 
-  test('needs AI access to generate, not to follow a draft', async () => {
-    aiAllowed = false;
-    expect((await post('draft', draft)).status).toBe(403);
+  test('needs AI configured to generate, not to follow a draft', async () => {
+    service.start.mockRejectedValueOnce(
+      new AiNotConfiguredException(AiTask.PLAN_GENERATION),
+    );
+    service.weekSteps.mockRejectedValueOnce(
+      new AiNotConfiguredException(AiTask.WORKOUT_PARSER),
+    );
+    const refused = await post('draft', draft);
+    expect(refused.status).toBe(403);
+    expect(await refused.json()).toMatchObject({
+      code: AiErrorCode.NOT_CONFIGURED,
+    });
     expect(
       (
         await post('week-steps', {
@@ -104,8 +115,6 @@ describe('AI plan HTTP boundary', () => {
     expect(
       (await fetch(`${origin}/agent/ai/plans/draft/${jobId}`)).status,
     ).toBe(200);
-    expect(service.start).not.toHaveBeenCalled();
-    expect(service.weekSteps).not.toHaveBeenCalled();
   });
 
   test('refuses plans over 24 weeks, bad job ids and oversized weeks', async () => {
@@ -132,8 +141,7 @@ describe('AI plan HTTP boundary', () => {
     expect(service.start).not.toHaveBeenCalled();
   });
 
-  test('shows races and the AI context without AI access, to coaches', async () => {
-    aiAllowed = false;
+  test('shows races and the AI context to coaches, AI or not', async () => {
     const races = await fetch(`${origin}/agent/ai/plans/races?athleteId=4`);
     expect(races.status).toBe(200);
     expect(service.upcomingRaces).toHaveBeenCalledWith(expect.anything(), 4);

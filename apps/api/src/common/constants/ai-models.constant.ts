@@ -90,22 +90,10 @@ export function hostedModelFor(
   );
 }
 
-/*
- * The agents below run on the instance keys only; they are not AI settings
- * tasks yet. These constants use process.env because the agents are created
- * at module initialization, before ConfigService is available.
- */
-
-/** Default provider of the agents below: 'openai' (default) or 'anthropic'. */
+/** Provider of the instance keys: 'openai' (default) or 'anthropic'. */
 export const AI_PROVIDER = (process.env.AI_PROVIDER || 'openai')
   .trim()
   .toLowerCase();
-
-const instanceModel = (variable: string, fallback: string) =>
-  process.env[variable] ||
-  process.env.AI_MODEL_DEFAULT ||
-  providerDefault(process.env) ||
-  fallback;
 
 /**
  * Provider for voice note transcription: 'openai' (Whisper, default) or
@@ -152,34 +140,3 @@ export function getAiModelApiKeyEnvVar(model: string): string | undefined {
       return undefined;
   }
 }
-
-/**
- * Model of the activity analysis, plan adaptation and coach assistant agents
- * (named after event modification, whose variable it shares).
- * Fallback: 'openai/gpt-5.1'
- */
-export const EVENT_MODIFICATION_MODEL = instanceModel(
-  'AI_MODEL_EVENT_MODIFICATION',
-  'openai/gpt-5.1',
-);
-
-/**
- * Model that consolidates AI memory notes into the coach–athlete summary.
- * It only runs every few notes; a small model is enough here.
- * Fallback: 'openai/gpt-4o-mini'
- */
-export const AI_MEMORY_MODEL = instanceModel(
-  'AI_MODEL_MEMORY',
-  'openai/gpt-4o-mini',
-);
-
-/**
- * Model that turns a workout written in plain words into structured steps.
- * A short, well-defined task: a small model keeps it cheap and fast.
- * Fallback: 'openai/gpt-5-mini', or Claude Haiku with AI_PROVIDER=anthropic
- */
-export const WORKOUT_PARSER_MODEL =
-  process.env.AI_MODEL_WORKOUT_PARSER ||
-  (AI_PROVIDER === 'anthropic'
-    ? 'anthropic/claude-haiku-4-5'
-    : 'openai/gpt-5-mini');

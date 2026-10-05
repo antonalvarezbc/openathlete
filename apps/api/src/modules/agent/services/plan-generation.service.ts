@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 
 import {
+  AiErrorCode,
   AiPlanAthleteContext,
   AiPlanCheckFacts,
   AiPlanConflicts,
@@ -25,6 +26,7 @@ import {
   AiPlanUpcomingRace,
   AiPlanWeekSteps,
   AiPlanWeekStepsRequest,
+  AiTask,
   METRIC_TYPE,
   SEOPlanData,
   aiPlanDayOffset,
@@ -34,23 +36,22 @@ import {
   trainingPlanImportSchema,
 } from '@openathlete/shared';
 
-import { EVENT_MODIFICATION_MODEL } from '../../../common/constants/ai-models.constant';
 import { planGenerationAgent } from '../../../mastra/agents/plan-generation.agent';
+import { AiModelResolverService, AiService } from '../../ai';
+import {
+  AiInvalidAnswerException,
+  AiProviderException,
+} from '../../ai/ai.errors';
+import type { ResolvedAiModel } from '../../ai/services/ai-model-resolver.service';
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PrismaService } from '../../prisma/services/prisma.service';
-import {
-  AiPlanFailureError,
-  classifyAiFailure,
-  decodeAiFailure,
-  shouldRetryAiCall,
-} from './ai-failure';
+import { AiPlanFailureError, decodeAiFailure } from './ai-failure';
 import {
   buildZonesContext,
   fetchAthleteMetrics,
   fetchAthleteZones,
   formatZonesByType,
   resolveAiEventAthleteId,
-  withRetry,
 } from './event-ai-helpers';
 import {
   AiPlanOutput,
@@ -72,8 +73,6 @@ const AVERAGE_WEEKS = 4;
 /** Sessions of one week structured at the same time. */
 const STEP_CONCURRENCY = 3;
 const MODEL_TIMEOUT_MS = 10 * 60_000;
-/** Logged with failures: the instance model plans run on. */
-export const PLAN_MODEL = EVENT_MODIFICATION_MODEL;
 const REFERENCE_METRICS = [
   METRIC_TYPE.HR_MAX,
   METRIC_TYPE.HR_REST,
@@ -98,8 +97,6 @@ type ModelAnswer = {
  * Claude and GPT models.
  */
 export const PLAN_MAX_OUTPUT_TOKENS = 64_000;
-
-const TRUNCATED = /truncated|finished with reason "length"/i;
 
 /** The instant a civil date starts in a time zone. */
 function startOfDay(date: string, timeZone: string): Date {
@@ -181,37 +178,6 @@ async function mapLimit<T, R>(
 }
 
 /** The model's own text from a structured output error, nothing else. */
-function rawModelText(error: unknown): string {
-  let current: unknown = error;
-  for (
-    let depth = 0;
-    depth < 4 && current && typeof current === 'object';
-    depth++
-  ) {
-    const item = current as {
-      details?: { value?: unknown };
-      name?: string;
-      text?: unknown;
-      cause?: unknown;
-    };
-    const raw =
-      item.details?.value ??
-      (item.name === 'AI_NoObjectGeneratedError' ? item.text : undefined);
-    if (typeof raw === 'string' && raw.length) return raw;
-    current = item.cause;
-  }
-  return '';
-}
-
-const isOutputError = (error: unknown) =>
-  error instanceof Error &&
-  (error.message.includes('Structured output validation failed') ||
-    TRUNCATED.test(error.message) ||
-    error.name === 'AI_NoObjectGeneratedError' ||
-    ('cause' in error &&
-      error.cause instanceof Error &&
-      error.cause.name === 'ZodError'));
-
 /**
  * Drafts a training plan with AI for a coach to review: one structured call
  * for the whole plan, automatic checks, and one repair round when they find
@@ -225,6 +191,8 @@ export class PlanGenerationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly workoutParser: WorkoutParserService,
+    private readonly resolver: AiModelResolverService,
+    private readonly ai: AiService,
     @InjectQueue(PLAN_GENERATION_QUEUE)
     private readonly queue: Queue<PlanGenerationJob, AiPlanDraft>,
   ) {}
@@ -237,6 +205,9 @@ export class PlanGenerationService {
     await resolveAiEventAthleteId(this.prisma, user, request.athleteId);
     if (request.goalEventId)
       await this.goalEvent(request.athleteId, request.goalEventId);
+    // Fails at once without AI; the job resolves the model again, as keys
+    // never go into the queue.
+    await this.resolveModel(user.userId);
     const job = await this.queue.add(
       'generate',
       { userId: user.userId, request },
@@ -263,8 +234,17 @@ export class PlanGenerationService {
   }
 
   /**
+   * The model plans run on for this user: their key and their choice for
+   * plan drafts, else the instance's when they may use it.
+   */
+  resolveModel(userId: number): Promise<ResolvedAiModel> {
+    return this.resolver.resolveForUser(AiTask.PLAN_GENERATION, userId);
+  }
+
+  /**
    * Structured steps for one week's sessions, from their descriptions. A
-   * session that cannot be structured keeps its description only.
+   * session that cannot be structured keeps its description only; a rejected
+   * key or an exhausted account would fail them all, so it fails the week.
    */
   async weekSteps(
     user: AuthUser,
@@ -275,23 +255,28 @@ export class PlanGenerationService {
       user,
       request.athleteId,
     );
+    const model = await this.workoutParser.resolveModel(user.userId);
     const steps = await mapLimit(
       request.sessions,
       STEP_CONCURRENCY,
       async (session) => {
         try {
-          const parsed = await this.workoutParser.parse({
-            text: session.text,
-            sport: session.sport,
-            athleteId,
-          });
+          const parsed = await this.workoutParser.parse(
+            { text: session.text, sport: session.sport, athleteId },
+            model,
+          );
           return parsed.length ? parsed : null;
         } catch (error) {
-          const failure = classifyAiFailure(error);
-          this.logger.warn(
-            `A session could not be structured: task=WORKOUT_STRUCTURE reason=${failure.reason} ` +
-              `status=${failure.status ?? '-'} error=${failure.name}: ${failure.message}`,
-          );
+          if (
+            error instanceof AiProviderException &&
+            (error.code === AiErrorCode.CREDENTIAL_REJECTED ||
+              error.code === AiErrorCode.QUOTA_EXCEEDED)
+          )
+            throw error;
+          // AiService logged the provider's side already.
+          const code =
+            error instanceof AiProviderException ? error.code : 'ERROR';
+          this.logger.warn(`A session could not be structured: ${code}`);
           return null;
         }
       },
@@ -378,17 +363,19 @@ export class PlanGenerationService {
     return event.eventId;
   }
 
-  /** Runs in the plan-generation job. */
+  /** Runs in the plan-generation job, on the model resolved for its user. */
   async generate(
+    model: ResolvedAiModel,
     request: AiPlanRequest,
     onStage: (stage: 'repairing') => Promise<unknown> = async () => undefined,
   ): Promise<AiPlanDraft> {
     const context = await this.context(request);
-    const first = await this.callModel(JSON.stringify(context.prompt));
+    const first = await this.callModel(model, JSON.stringify(context.prompt));
     let result = this.evaluate(first, request, context.facts);
     if (!result.plan || result.problems.length) {
       await onStage('repairing');
       const second = await this.callModel(
+        model,
         JSON.stringify({
           ...context.prompt,
           revision: {
@@ -404,7 +391,7 @@ export class PlanGenerationService {
       if (!result.plan) {
         const truncated = !!(first.truncated || second.truncated);
         this.logger.warn(
-          `AI plan draft invalid after the repair round: model=${PLAN_MODEL} ` +
+          `AI plan draft invalid after the repair round: model=${model.provider}/${model.modelId} ` +
             `truncated=${truncated} answer=${first.raw.length}/${second.raw.length} chars ` +
             `problems=${JSON.stringify(result.problems.slice(0, 3))}`,
         );
@@ -472,34 +459,32 @@ export class PlanGenerationService {
     };
   }
 
-  protected async callModel(prompt: string): Promise<ModelAnswer> {
+  /**
+   * One plan from the model. An answer that is not a plan goes to the repair
+   * round with its text; provider errors fail the job.
+   */
+  protected async callModel(
+    model: ResolvedAiModel,
+    prompt: string,
+  ): Promise<ModelAnswer> {
     try {
-      const result = await withRetry(
-        () =>
-          planGenerationAgent.generate(prompt, {
-            structuredOutput: { schema: aiPlanOutputSchema },
-            modelSettings: { maxOutputTokens: PLAN_MAX_OUTPUT_TOKENS },
-            abortSignal: AbortSignal.timeout(MODEL_TIMEOUT_MS),
-          }),
-        3,
-        2000,
-        // Rate limits and outages pass; quota, key and invalid answers don't
-        // (the repair round handles those).
-        shouldRetryAiCall,
+      const object = await this.ai.generateObject(
+        planGenerationAgent,
+        model,
+        prompt,
+        aiPlanOutputSchema,
+        {
+          timeoutMs: MODEL_TIMEOUT_MS,
+          maxOutputTokens: PLAN_MAX_OUTPUT_TOKENS,
+        },
       );
-      const parsed = aiPlanOutputSchema.safeParse(result.object);
-      return {
-        object: parsed.success ? parsed.data : null,
-        raw: typeof result.text === 'string' ? result.text : '',
-        truncated: result.finishReason === 'length',
-      };
+      return { object, raw: JSON.stringify(object) };
     } catch (error) {
-      // A malformed answer gets the repair round; provider errors fail the job.
-      if (isOutputError(error))
+      if (error instanceof AiInvalidAnswerException)
         return {
           object: null,
-          raw: rawModelText(error),
-          truncated: TRUNCATED.test((error as Error).message),
+          raw: error.rawText,
+          truncated: error.truncated,
         };
       throw error;
     }

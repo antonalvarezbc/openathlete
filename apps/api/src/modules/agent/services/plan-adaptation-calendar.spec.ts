@@ -9,6 +9,7 @@ import {
 } from '@openathlete/shared';
 
 import { disabledAiMemory } from '../../ai-memory/ai-memory.testing';
+import { aiResolverStandIn, aiServiceStandIn } from '../../ai/ai.testing';
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { adaptationWeek } from './adaptation-dates';
@@ -16,7 +17,11 @@ import { PlanAdaptationService } from './plan-adaptation.service';
 import { validateAdaptation } from './plan-adaptation.validation';
 
 jest.mock('../../../mastra/agents/plan-adaptation.agent', () => ({
-  planAdaptationAgent: { generate: jest.fn() },
+  planAdaptationAgent: { id: 'plan-adaptation' },
+}));
+jest.mock('../../ai', () => ({
+  AiModelResolverService: class {},
+  AiService: class {},
 }));
 
 const user = { userId: 3, roles: ['COACH'] } as AuthUser;
@@ -110,6 +115,8 @@ function setup(
   const service = new PlanAdaptationService(
     db as unknown as PrismaService,
     disabledAiMemory(),
+    aiResolverStandIn() as never,
+    aiServiceStandIn(jest.fn()),
   );
   const context = (input: Partial<PlanAdaptationRequest> = {}) =>
     service.context(

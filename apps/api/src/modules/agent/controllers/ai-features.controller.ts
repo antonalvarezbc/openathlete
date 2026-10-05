@@ -14,7 +14,6 @@ import { SportType } from '@openathlete/database';
 import {
   CreateWorkoutStepDto,
   EVENT_TYPE,
-  FeatureName,
   GenerateEventDto,
   GenerateEventResponseDto,
   GenerateWorkoutStructureDto,
@@ -33,7 +32,6 @@ import {
 import { JwtUser, UserTypeGuard } from 'src/modules/auth';
 import { UserTypes } from 'src/modules/auth/decorators';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
-import { FeatureAccessGuard, RequireFeature } from 'src/modules/subscription';
 
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { resolveAiEventAthleteId } from '../services/event-ai-helpers';
@@ -687,8 +685,7 @@ export class AIFeaturesController {
     return result;
   }
 
-  @UseGuards(AuthGuard('jwt'), UserTypeGuard, FeatureAccessGuard)
-  @RequireFeature(FeatureName.AI_GENERATION)
+  @UseGuards(AuthGuard('jwt'), UserTypeGuard)
   @ApiBearerAuth()
   @Post('events/structure')
   @ApiOperation({
@@ -704,14 +701,15 @@ export class AIFeaturesController {
     const athleteId = dto.athleteId
       ? await resolveAiEventAthleteId(this.prisma, user, dto.athleteId)
       : undefined;
+    const model = await this.workoutParser.resolveModel(user.userId);
     const text = dto.instructions || dto.description || dto.name || '';
-    if (!dto.sport) return this.workoutParser.parseSession({ text, athleteId });
+    if (!dto.sport)
+      return this.workoutParser.parseSession({ text, athleteId }, model);
     return {
-      steps: await this.workoutParser.parse({
-        text,
-        sport: dto.sport,
-        athleteId,
-      }),
+      steps: await this.workoutParser.parse(
+        { text, sport: dto.sport, athleteId },
+        model,
+      ),
     };
   }
 }

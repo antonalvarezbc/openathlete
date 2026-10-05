@@ -5,7 +5,6 @@ import { AuthGuard } from '@nestjs/passport';
 
 import {
   ApplyPlanAdaptation,
-  FeatureName,
   PlanAdaptationRequest,
   RefinePlanAdaptation,
   applyPlanAdaptationSchema,
@@ -15,7 +14,6 @@ import {
 
 import { JwtUser } from '../../auth';
 import { AuthUser } from '../../auth/decorators/user.decorator';
-import { FeatureAccessGuard, RequireFeature } from '../../subscription';
 import { PlanAdaptationService } from '../services/plan-adaptation.service';
 
 @Controller('agent/ai/plan-adaptation')
@@ -33,8 +31,6 @@ export class PlanAdaptationController {
   }
 
   @Post('propose')
-  @UseGuards(FeatureAccessGuard)
-  @RequireFeature(FeatureName.AI_GENERATION)
   propose(
     @JwtUser() user: AuthUser,
     @Body(new ZodValidationPipe(planAdaptationRequestSchema))
@@ -44,8 +40,6 @@ export class PlanAdaptationController {
   }
 
   @Post('refine')
-  @UseGuards(FeatureAccessGuard)
-  @RequireFeature(FeatureName.AI_GENERATION)
   refine(
     @JwtUser() user: AuthUser,
     @Body(new ZodValidationPipe(refinePlanAdaptationSchema))

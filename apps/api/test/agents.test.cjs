@@ -28,11 +28,26 @@ const {
   rpeOutputSchema,
 } = require('../dist/mastra/agents');
 const { AiService } = require('../dist/modules/ai/services/ai.service');
-// Agents outside the AI settings tasks, run on the instance keys
+// The coach features' agents, run on the model of their own AI task
 const {
   workoutParserAgent,
   planGenerationAgent,
 } = require('../dist/mastra/agents');
+const {
+  planAdaptationAgent,
+} = require('../dist/mastra/agents/plan-adaptation.agent');
+const {
+  coachAssistantAgent,
+} = require('../dist/mastra/agents/coach-assistant.agent');
+const {
+  activityAnalysisAgent,
+} = require('../dist/mastra/agents/activity-analysis.agent');
+const {
+  aiMemoryConsolidationAgent,
+} = require('../dist/mastra/agents/ai-memory-consolidation.agent');
+const {
+  PlanGenerationService,
+} = require('../dist/modules/agent/services/plan-generation.service');
 const {
   aiPlanOutputSchema,
   toImportPlan,
@@ -134,9 +149,9 @@ function providersAnswer(text, status = 200) {
   };
 }
 
-function model(config, source = 'own_key') {
+function model(config, source = 'own_key', task = 'EVENT_GENERATION') {
   return {
-    task: 'EVENT_GENERATION',
+    task,
     source,
     userId: 1,
     provider: 'test',
@@ -152,6 +167,10 @@ before(() => {
   // Mastra warns about the recursive repeat block schema
   console.warn = () => undefined;
   console.error = () => undefined;
+  // AiService logs every failure the tests provoke
+  require(
+    require.resolve('@nestjs/common', { paths: [__dirname] }),
+  ).Logger.overrideLogger([]);
 });
 
 afterEach(() => {
@@ -256,7 +275,55 @@ test('the application module graph loads', () => {
   assert.doesNotThrow(() => require('../dist/modules/app.module'));
 });
 
-test('written workouts are parsed with a small model and strict schema', async () => {
+// The coach features and the AI task each one runs on
+const COACH_AGENTS = [
+  ['PLAN_GENERATION', planGenerationAgent],
+  ['PLAN_ADAPTATION', planAdaptationAgent],
+  ['PLAN_ADAPTATION', coachAssistantAgent],
+  ['ACTIVITY_ANALYSIS', activityAnalysisAgent],
+  ['WORKOUT_PARSER', workoutParserAgent],
+  ['AI_MEMORY', aiMemoryConsolidationAgent],
+];
+
+for (const [task, agent] of COACH_AGENTS) {
+  test(`${agent.id} (${task}) runs on the user's key, whatever the provider`, async () => {
+    // The model comes from the resolver, never from the agent
+    assert.equal(agent.model, undefined);
+    providersAnswer('Fine.');
+
+    await ai.generateText(
+      agent,
+      model(
+        { id: 'openai/gpt-5.1', apiKey: 'sk-user-openai' },
+        'own_key',
+        task,
+      ),
+      'Hi',
+    );
+    await ai.generateText(
+      agent,
+      model(
+        { id: 'anthropic/claude-opus-5-5', apiKey: 'sk-ant-user' },
+        'own_key',
+        task,
+      ),
+      'Hi',
+    );
+
+    const [openai, anthropic] = requests;
+    assert.equal(openai.headers.get('authorization'), 'Bearer sk-user-openai');
+    assert.equal(anthropic.headers.get('x-api-key'), 'sk-ant-user');
+    for (const { headers } of requests)
+      assert.doesNotMatch(JSON.stringify([...headers]), /sk-instance/);
+    // The assistant reads athlete data through its tools
+    assert.equal(
+      Boolean(openai.body.tools?.length),
+      agent === coachAssistantAgent,
+    );
+  });
+}
+
+test('written workouts are parsed on the small model, with a short request', async () => {
   const rest = {
     type: 'INTERVAL_REST',
     duration: 'TIME',
@@ -309,20 +376,24 @@ test('written workouts are parsed with a small model and strict schema', async (
     }),
   );
 
-  const result = await workoutParserAgent.generate(
+  const parsed = await ai.generateObject(
+    workoutParserAgent,
+    model(
+      { id: 'openai/gpt-5-mini', apiKey: 'sk-user-openai' },
+      'own_key',
+      'WORKOUT_PARSER',
+    ),
     "Sport: RUNNING\nText: 15-20' calentar + 3x8' a RPE 6-7, recuperación 3' trote muy suave + enfriar",
-    { structuredOutput: { schema: parsedWorkoutSchema } },
+    parsedWorkoutSchema,
   );
 
   const { body } = requests[0];
   assert.equal(body.model, 'gpt-5-mini');
-  // No recursion and no optional fields: OpenAI can enforce the schema.
   assert.equal(body.text.format.type, 'json_schema');
-  assert.notEqual(body.text.format.strict, false);
   // Small fixed part: instructions plus schema stay well below 1,500 tokens.
   assert.ok(JSON.stringify(body).length < 6000, JSON.stringify(body).length);
 
-  const steps = parsedWorkoutToSteps(result.object);
+  const steps = parsedWorkoutToSteps(parsed);
   assert.deepEqual(
     steps.map((step) => step.stepType),
     ['WARMUP', 'REPEAT', 'COOLDOWN'],
@@ -333,7 +404,7 @@ test('written workouts are parsed with a small model and strict schema', async (
   ]);
 });
 
-test('a new session from text also gets a name and the sport, still strict', async () => {
+test('a new session from text also gets a name and the sport, on Anthropic', async () => {
   providersAnswer(
     JSON.stringify({
       name: '3x8 umbral',
@@ -358,20 +429,36 @@ test('a new session from text also gets a name and the sport, still strict', asy
     }),
   );
 
-  const result = await workoutParserAgent.generate("Text: 3x8' a 4:35/km", {
-    structuredOutput: { schema: parsedSessionSchema },
-  });
+  const session = await ai.generateObject(
+    workoutParserAgent,
+    model(
+      { id: 'anthropic/claude-haiku-4-5', apiKey: 'sk-ant-user' },
+      'own_key',
+      'WORKOUT_PARSER',
+    ),
+    "Text: 3x8' a 4:35/km",
+    parsedSessionSchema,
+  );
 
   const { body } = requests[0];
-  assert.notEqual(body.text.format.strict, false);
+  assert.equal(body.output_config.format.type, 'json_schema');
   // The sport is free text: the schema does not list every sport.
-  assert.ok(!JSON.stringify(body.text.format.schema).includes('TRAIL_RUNNING'));
+  assert.ok(
+    !JSON.stringify(body.output_config.format.schema).includes('TRAIL_RUNNING'),
+  );
   assert.ok(JSON.stringify(body).length < 6000, JSON.stringify(body).length);
-  assert.equal(result.object.name, '3x8 umbral');
-  assert.equal(result.object.sport, 'RUNNING');
+  assert.equal(session.name, '3x8 umbral');
+  assert.equal(session.sport, 'RUNNING');
 });
 
-test('AI plans are drafted on the planning model with a strict schema', async () => {
+const planner = new PlanGenerationService(null, null, null, ai, null);
+const planModel = model(
+  { id: 'openai/gpt-5.1', apiKey: 'sk-user-openai' },
+  'own_key',
+  'PLAN_GENERATION',
+);
+
+test("AI plans are drafted on the user's planning model, with room for a whole plan", async () => {
   const session = (day, minutes) => ({
     day,
     sport: 'RUNNING',
@@ -407,22 +494,22 @@ test('AI plans are drafted on the planning model with a strict schema', async ()
     }),
   );
 
-  const result = await planGenerationAgent.generate('{}', {
-    structuredOutput: { schema: aiPlanOutputSchema },
-  });
+  const { object } = await planner.callModel(planModel, '{}');
 
-  const { body } = requests[0];
-  // Same instance model as plan adaptation
+  const [{ headers, body }] = requests;
+  assert.equal(headers.get('authorization'), 'Bearer sk-user-openai');
   assert.equal(body.model, 'gpt-5.1');
-  // Every field required and no recursion: OpenAI can enforce the schema.
+  assert.equal(body.max_output_tokens, 64000);
   assert.equal(body.text.format.type, 'json_schema');
-  assert.notEqual(body.text.format.strict, false);
   // Instructions and schema, before any athlete data: about 2,000 tokens.
   assert.ok(JSON.stringify(body).length < 9000, JSON.stringify(body).length);
   // The model sets rules by name, from a closed list.
-  const schema = JSON.stringify(body.text.format.schema);
-  assert.ok(schema.includes('"taperWeekBeforePercent"'));
-  assert.deepEqual(result.object.rules, [
+  assert.ok(
+    JSON.stringify(body.text.format.schema).includes(
+      '"taperWeekBeforePercent"',
+    ),
+  );
+  assert.deepEqual(object.rules, [
     {
       rule: 'growthPercent',
       value: 15,
@@ -430,7 +517,7 @@ test('AI plans are drafted on the planning model with a strict schema', async ()
     },
   ]);
 
-  const plan = toImportPlan(result.object, {
+  const plan = toImportPlan(object, {
     athleteId: 1,
     goal: { name: '10K', date: '2030-11-02', sport: 'RUNNING' },
     startDate: '2030-10-21',
@@ -443,6 +530,39 @@ test('AI plans are drafted on the planning model with a strict schema', async ()
   assert.equal(trainingPlanImportSchema.safeParse(plan).success, true);
   assert.equal(plan.cycles[0].weeks[1].sessions[1].dayOfWeek, 6);
   assert.equal(plan.cycles[0].weeks[1].sessions[1].goalDuration, 3600);
+});
+
+test('a plan cut off by the token limit comes back for the repair round', async () => {
+  const cut = '{"rules": [], "name": "Plan 10K", "cycles": [{"name": "Ba';
+  globalThis.fetch = async (url, init) => {
+    const body = JSON.parse(init.body);
+    requests.push({ url: String(url), body });
+    return json({
+      id: 'resp_1',
+      object: 'response',
+      created_at: 1759500000,
+      status: 'incomplete',
+      incomplete_details: { reason: 'max_output_tokens' },
+      model: body.model,
+      output: [
+        {
+          type: 'message',
+          id: 'msg_1',
+          status: 'incomplete',
+          role: 'assistant',
+          content: [{ type: 'output_text', text: cut, annotations: [] }],
+        },
+      ],
+      usage: { input_tokens: 10, output_tokens: 64000, total_tokens: 64010 },
+    });
+  };
+
+  const answer = await planner.callModel(planModel, '{}');
+
+  assert.equal(requests.length, 1);
+  assert.equal(answer.object, null);
+  assert.equal(answer.truncated, true);
+  assert.equal(answer.raw, cut);
 });
 
 /** Every keyword in a JSON schema, except property names. */
@@ -487,6 +607,15 @@ const PORTABLE_KEYWORDS = new Set([
   'description',
 ]);
 
+const assertPortable = (schema) => {
+  assert.deepEqual(
+    [...schemaKeywords(schema)].filter((key) => !PORTABLE_KEYWORDS.has(key)),
+    [],
+  );
+  assertClosedObjects(schema);
+};
+
+/** Requests of a user without keys, on the instance configured by `env`. */
 function providerRequests(env) {
   const { execFileSync } = require('node:child_process');
   const output = execFileSync(
@@ -504,97 +633,150 @@ function providerRequests(env) {
   return JSON.parse(String(output));
 }
 
-test('on Anthropic, plans use native structured output, a token limit and no sampling settings', () => {
+test('without keys of their own, users get the instance models and keys of AI_PROVIDER=anthropic', () => {
   // The instance as configured in production
-  const { plan, parser } = providerRequests({
+  const { plan, parser, planModel, parserModel } = providerRequests({
     AI_PROVIDER: 'anthropic',
     AI_MODEL_DEFAULT: 'anthropic/claude-opus-5-5',
   });
-  // No hidden retries: a 400 is final for plans; the parser keeps its one
-  // retry of answers that may be fixed by another try.
+  assert.deepEqual(planModel, {
+    source: 'hosted',
+    provider: 'anthropic',
+    modelId: 'claude-opus-5-5',
+  });
+  // AI_MODEL_DEFAULT is for the main model: the parser stays small.
+  assert.deepEqual(parserModel, {
+    source: 'hosted',
+    provider: 'anthropic',
+    modelId: 'claude-haiku-4-5',
+  });
+  // A 400 is final: neither Mastra nor the services replay it.
   assert.equal(plan.length, 1);
-  assert.equal(parser.length, 2);
+  assert.equal(parser.length, 1);
+  assert.equal(plan[0].key, 'sk-instance-anthropic');
+  assert.equal(parser[0].key, 'sk-instance-anthropic');
 
   const planBody = plan[0].body;
   assert.ok(plan[0].url.endsWith('/messages'));
-  assert.equal(planBody.model, 'claude-opus-5-5');
   // Room for the plan and the thinking tokens that count as output.
   assert.equal(planBody.max_tokens, 64000);
   // Opus 5 refuses forced tool use and sampling settings.
   for (const key of ['temperature', 'top_p', 'top_k', 'tools', 'tool_choice'])
     assert.equal(planBody[key], undefined, key);
   assert.equal(planBody.output_config.format.type, 'json_schema');
-  const planSchema = planBody.output_config.format.schema;
-  assert.deepEqual(
-    [...schemaKeywords(planSchema)].filter(
-      (key) => !PORTABLE_KEYWORDS.has(key),
-    ),
-    [],
-  );
+  assertPortable(planBody.output_config.format.schema);
   // No nullable unions in the plan schema.
-  assert.ok(!JSON.stringify(planSchema).includes('"null"'));
-  assertClosedObjects(planSchema);
+  assert.ok(
+    !JSON.stringify(planBody.output_config.format.schema).includes('"null"'),
+  );
 
   const parserBody = parser[0].body;
-  assert.equal(parserBody.model, 'claude-haiku-4-5');
   for (const key of ['temperature', 'top_p', 'tools', 'tool_choice'])
     assert.equal(parserBody[key], undefined, key);
-  const parserSchema = parserBody.output_config.format.schema;
-  assert.deepEqual(
-    [...schemaKeywords(parserSchema)].filter(
-      (key) => !PORTABLE_KEYWORDS.has(key),
-    ),
-    [],
-  );
-  assertClosedObjects(parserSchema);
+  assertPortable(parserBody.output_config.format.schema);
 });
 
-test('on OpenAI, plans use strict structured output with the same token limit', () => {
-  const { plan, parser } = providerRequests({});
+test('on the OpenAI defaults, plans get the same token limit and portable output', () => {
+  const { plan, parser, planModel, parserModel } = providerRequests({});
+  assert.equal(planModel.modelId, 'gpt-5.1');
+  assert.equal(parserModel.modelId, 'gpt-5-mini');
   assert.equal(plan.length, 1);
+  assert.equal(plan[0].key, 'Bearer sk-instance-openai');
   const body = plan[0].body;
-  assert.equal(body.model, 'gpt-5.1');
   assert.equal(body.max_output_tokens, 64000);
   assert.equal(body.temperature, undefined);
   assert.equal(body.text.format.type, 'json_schema');
-  assert.notEqual(body.text.format.strict, false);
-  assert.deepEqual(
-    [...schemaKeywords(body.text.format.schema)].filter(
-      (key) => !PORTABLE_KEYWORDS.has(key),
-    ),
-    [],
-  );
-  assertClosedObjects(body.text.format.schema);
-  assertClosedObjects(parser[0].body.text.format.schema);
+  // Strict mode off for every task, as for upstream's.
+  assert.equal(body.text.format.strict, false);
+  assertPortable(body.text.format.schema);
+  assertPortable(parser[0].body.text.format.schema);
 });
 
-test('an account without credit is called once, not retried', async () => {
-  for (const agent of [planGenerationAgent, workoutParserAgent]) {
-    requests = [];
+test('each coach feature keeps its own instance model variable', () => {
+  const { planModel, parserModel } = providerRequests({
+    AI_MODEL_EVENT_MODIFICATION: 'openai/gpt-5.1',
+    AI_MODEL_PLAN_GENERATION: 'anthropic/claude-sonnet-4-5',
+    AI_MODEL_WORKOUT_PARSER: 'openai/gpt-5-nano',
+  });
+  assert.equal(
+    `${planModel.provider}/${planModel.modelId}`,
+    'anthropic/claude-sonnet-4-5',
+  );
+  assert.equal(
+    `${parserModel.provider}/${parserModel.modelId}`,
+    'openai/gpt-5-nano',
+  );
+});
+
+for (const [provider, config, status, error] of [
+  [
+    'OpenAI',
+    { id: 'openai/gpt-5.1', apiKey: 'sk-user-openai' },
+    429,
+    {
+      error: {
+        message:
+          'You have no credits remaining. Add credits to continue using the API at https://platform.openai.com/settings/organization/billing/.',
+        type: 'insufficient_quota',
+        code: 'insufficient_quota',
+      },
+    },
+  ],
+  [
+    'Anthropic',
+    { id: 'anthropic/claude-opus-5-5', apiKey: 'sk-ant-user' },
+    400,
+    {
+      type: 'error',
+      error: {
+        type: 'invalid_request_error',
+        message:
+          'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.',
+      },
+    },
+  ],
+]) {
+  test(`an ${provider} account without credit is called once and reported as such`, async () => {
     globalThis.fetch = async (url, init) => {
       requests.push({ url: String(url), body: JSON.parse(init.body) });
-      return json(
-        {
-          error: {
-            message:
-              'You have no credits remaining. Add credits to continue using the API at https://platform.openai.com/settings/organization/billing/.',
-            type: 'insufficient_quota',
-            code: 'insufficient_quota',
-          },
-        },
-        429,
-      );
+      return json(error, status);
     };
-    await assert.rejects(
-      agent.generate('{}', {
-        structuredOutput: {
-          schema:
-            agent === planGenerationAgent
-              ? aiPlanOutputSchema
-              : parsedWorkoutSchema,
-        },
-      }),
+    for (const [task, agent] of COACH_AGENTS) {
+      requests = [];
+      await assert.rejects(
+        ai.generateText(agent, model(config, 'own_key', task), 'Hi'),
+        (failure) => failure.code === 'AI_QUOTA_EXCEEDED',
+      );
+      assert.equal(requests.length, 1, agent.id);
+    }
+  });
+}
+
+test('a rate limit is still retried, with the delays of Mastra', async () => {
+  globalThis.fetch = async (url, init) => {
+    requests.push({ url: String(url), body: JSON.parse(init.body) });
+    return json(
+      {
+        type: 'error',
+        error: { type: 'rate_limit_error', message: 'Rate limit reached' },
+      },
+      429,
     );
-    assert.equal(requests.length, 1, agent.id);
-  }
+  };
+  const started = Date.now();
+  await assert.rejects(
+    ai.generateText(
+      planAdaptationAgent,
+      model(
+        { id: 'anthropic/claude-opus-5-5', apiKey: 'sk-ant-user' },
+        'own_key',
+        'PLAN_ADAPTATION',
+      ),
+      'Hi',
+    ),
+    (failure) =>
+      failure.code === 'AI_QUOTA_EXCEEDED' && failure.kind === 'rate_limit',
+  );
+  assert.equal(requests.length, 3);
+  assert.ok(Date.now() - started >= 5000, String(Date.now() - started));
 });
