@@ -34,9 +34,16 @@ import {
   trainingPlanImportSchema,
 } from '@openathlete/shared';
 
+import { EVENT_MODIFICATION_MODEL } from '../../../common/constants/ai-models.constant';
 import { planGenerationAgent } from '../../../mastra/agents/plan-generation.agent';
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PrismaService } from '../../prisma/services/prisma.service';
+import {
+  AiPlanFailureError,
+  classifyAiFailure,
+  decodeAiFailure,
+  shouldRetryAiCall,
+} from './ai-failure';
 import {
   buildZonesContext,
   fetchAthleteMetrics,
@@ -65,6 +72,8 @@ const AVERAGE_WEEKS = 4;
 /** Sessions of one week structured at the same time. */
 const STEP_CONCURRENCY = 3;
 const MODEL_TIMEOUT_MS = 10 * 60_000;
+/** Logged with failures: the instance model plans run on. */
+export const PLAN_MODEL = EVENT_MODIFICATION_MODEL;
 const REFERENCE_METRICS = [
   METRIC_TYPE.HR_MAX,
   METRIC_TYPE.HR_REST,
@@ -76,7 +85,21 @@ const REFERENCE_METRICS = [
   METRIC_TYPE.VO2MAX,
 ];
 
-type ModelAnswer = { object: AiPlanOutput | null; raw: string };
+type ModelAnswer = {
+  object: AiPlanOutput | null;
+  raw: string;
+  /** The model hit the output limit before finishing */
+  truncated?: boolean;
+};
+
+/**
+ * Room for the longest plan, 24 weeks of 7 sessions (about 12,000 tokens),
+ * plus the thinking or reasoning tokens that count as output on current
+ * Claude and GPT models.
+ */
+export const PLAN_MAX_OUTPUT_TOKENS = 64_000;
+
+const TRUNCATED = /truncated|finished with reason "length"/i;
 
 /** The instant a civil date starts in a time zone. */
 function startOfDay(date: string, timeZone: string): Date {
@@ -183,6 +206,7 @@ function rawModelText(error: unknown): string {
 const isOutputError = (error: unknown) =>
   error instanceof Error &&
   (error.message.includes('Structured output validation failed') ||
+    TRUNCATED.test(error.message) ||
     error.name === 'AI_NoObjectGeneratedError' ||
     ('cause' in error &&
       error.cause instanceof Error &&
@@ -228,7 +252,8 @@ export class PlanGenerationService {
     const state = await job.getState();
     if (state === 'completed')
       return { jobId, state: 'done', draft: job.returnvalue };
-    if (state === 'failed') return { jobId, state: 'failed' };
+    if (state === 'failed')
+      return { jobId, state: 'failed', ...decodeAiFailure(job.failedReason) };
     if (state === 'active') {
       const stage = (job.progress as { stage?: AiPlanJobStatus['stage'] })
         ?.stage;
@@ -262,8 +287,10 @@ export class PlanGenerationService {
           });
           return parsed.length ? parsed : null;
         } catch (error) {
+          const failure = classifyAiFailure(error);
           this.logger.warn(
-            `A session could not be structured: ${error instanceof Error ? error.name : 'error'}`,
+            `A session could not be structured: task=WORKOUT_STRUCTURE reason=${failure.reason} ` +
+              `status=${failure.status ?? '-'} error=${failure.name}: ${failure.message}`,
           );
           return null;
         }
@@ -374,6 +401,18 @@ export class PlanGenerationService {
       const revised = this.evaluate(second, request, context.facts);
       // Keep the first draft if the repair broke the format.
       if (revised.plan || !result.plan) result = revised;
+      if (!result.plan) {
+        const truncated = !!(first.truncated || second.truncated);
+        this.logger.warn(
+          `AI plan draft invalid after the repair round: model=${PLAN_MODEL} ` +
+            `truncated=${truncated} answer=${first.raw.length}/${second.raw.length} chars ` +
+            `problems=${JSON.stringify(result.problems.slice(0, 3))}`,
+        );
+        throw new AiPlanFailureError(
+          'INVALID_ANSWER',
+          truncated ? 'TRUNCATED' : undefined,
+        );
+      }
     }
     return {
       plan: result.plan,
@@ -439,19 +478,29 @@ export class PlanGenerationService {
         () =>
           planGenerationAgent.generate(prompt, {
             structuredOutput: { schema: aiPlanOutputSchema },
+            modelSettings: { maxOutputTokens: PLAN_MAX_OUTPUT_TOKENS },
             abortSignal: AbortSignal.timeout(MODEL_TIMEOUT_MS),
           }),
-        2,
+        3,
+        2000,
+        // Rate limits and outages pass; quota, key and invalid answers don't
+        // (the repair round handles those).
+        shouldRetryAiCall,
       );
       const parsed = aiPlanOutputSchema.safeParse(result.object);
       return {
         object: parsed.success ? parsed.data : null,
         raw: typeof result.text === 'string' ? result.text : '',
+        truncated: result.finishReason === 'length',
       };
     } catch (error) {
       // A malformed answer gets the repair round; provider errors fail the job.
       if (isOutputError(error))
-        return { object: null, raw: rawModelText(error) };
+        return {
+          object: null,
+          raw: rawModelText(error),
+          truncated: TRUNCATED.test((error as Error).message),
+        };
       throw error;
     }
   }

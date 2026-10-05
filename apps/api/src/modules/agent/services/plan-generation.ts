@@ -34,7 +34,8 @@ const sessionSchema = z.object({
   description: z.string(),
   minutes: z.number().int(),
   rpe: z.number(),
-  distanceKm: z.number().nullable(),
+  /** 0 when distance does not matter: no nullable types in the schema */
+  distanceKm: z.number(),
 });
 
 export const aiPlanOutputSchema = z.object({
@@ -111,7 +112,7 @@ schedule.weekStarts[k-1]; "day" is the weekday of the session within that week.
   no methodology, choose one for the goal and athlete and explain it in the plan description.
 
 Each session: name (short), sport (exact value from request.sports), minutes (whole session),
-rpe (0-10, the whole session), distanceKm (null unless distance matters), and description: the
+rpe (0-10, the whole session), distanceKm (0 unless distance matters), and description: the
 workout written as a coach writes it, with every block and its duration, for example
 "15' warm-up + 5x4' Z4, 3' easy + 10' cool-down". Refer only to zones named in athlete.zones
 and metrics listed in athlete.metrics; otherwise describe intensity with RPE or feel.

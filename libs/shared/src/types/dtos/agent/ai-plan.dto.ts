@@ -362,11 +362,32 @@ export interface AiPlanDraft {
   conflicts: AiPlanConflicts;
 }
 
+/**
+ * Why a draft failed. Most are about the instance's AI account, not the
+ * coach's answers: QUOTA (no credit left), AUTH (key rejected or missing),
+ * RATE_LIMIT, UNAVAILABLE (provider down), TIMEOUT, PROVIDER_ERROR (other
+ * provider errors) and INVALID_ANSWER (no valid plan after the repair).
+ */
+export const AI_PLAN_FAILURE_REASONS = [
+  'QUOTA',
+  'AUTH',
+  'RATE_LIMIT',
+  'UNAVAILABLE',
+  'TIMEOUT',
+  'PROVIDER_ERROR',
+  'INVALID_ANSWER',
+] as const;
+export type AiPlanFailureReason = (typeof AI_PLAN_FAILURE_REASONS)[number];
+
 export interface AiPlanJobStatus {
   jobId: string;
   state: 'queued' | 'running' | 'done' | 'failed';
   /** The repair round runs when the automatic checks find problems. */
   stage?: 'generating' | 'repairing';
+  /** Only when failed */
+  reason?: AiPlanFailureReason;
+  /** A short, safe hint: the provider's HTTP status or error code */
+  detail?: string;
   draft?: AiPlanDraft;
 }
 

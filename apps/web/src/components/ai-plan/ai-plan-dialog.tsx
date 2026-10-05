@@ -30,6 +30,7 @@ import { toast } from 'sonner';
 
 import {
   AI_PLAN_METHODOLOGIES,
+  AiPlanFailureReason,
   AiPlanRequest,
   SPORT_TYPE,
   aiPlanContextRequestSchema,
@@ -121,6 +122,28 @@ function FieldError({ message }: { message?: string }) {
       {text}
     </span>
   ) : null;
+}
+
+/** Why the draft failed: mostly the instance's AI account, not the answers. */
+function failureText(reason?: AiPlanFailureReason) {
+  switch (reason) {
+    case 'QUOTA':
+      return m.ai_plan_failed_quota();
+    case 'AUTH':
+      return m.ai_plan_failed_auth();
+    case 'RATE_LIMIT':
+      return m.ai_plan_failed_rate_limit();
+    case 'UNAVAILABLE':
+      return m.ai_plan_failed_unavailable();
+    case 'TIMEOUT':
+      return m.ai_plan_failed_timeout();
+    case 'INVALID_ANSWER':
+      return m.ai_plan_failed_invalid();
+    case 'PROVIDER_ERROR':
+      return m.ai_plan_failed_provider();
+    default:
+      return m.ai_plan_failed();
+  }
 }
 
 interface P {
@@ -323,9 +346,14 @@ export function AiPlanDialog({ athleteId, onClose, onImported, pollMs }: P) {
         ) : (
           <form onSubmit={submit} className="space-y-4" noValidate>
             {failed && (
-              <p role="alert" className="text-sm text-destructive">
-                {m.ai_plan_failed()}
-              </p>
+              <div role="alert" className="space-y-1 text-sm text-destructive">
+                <p>{failureText(status?.reason)}</p>
+                {status?.detail && (
+                  <p className="text-xs text-muted-foreground">
+                    {m.ai_plan_failed_detail({ detail: status.detail })}
+                  </p>
+                )}
+              </div>
             )}
             {races.length > 0 && (
               <Field label={m.ai_plan_goal_pick()}>

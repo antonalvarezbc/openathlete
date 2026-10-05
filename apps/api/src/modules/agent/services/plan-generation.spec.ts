@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 
@@ -16,10 +17,14 @@ import {
   trainingPlanImportSchema,
 } from '@openathlete/shared';
 
+import { planGenerationAgent } from '../../../mastra/agents/plan-generation.agent';
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { AiPlanOutput, describeIssue, toImportPlan } from './plan-generation';
-import { PlanGenerationService } from './plan-generation.service';
+import {
+  PLAN_MAX_OUTPUT_TOKENS,
+  PlanGenerationService,
+} from './plan-generation.service';
 import { WorkoutParserService } from './workout-parser.service';
 
 jest.mock('../../../mastra/agents/plan-generation.agent', () => ({
@@ -76,7 +81,7 @@ function answer(
               description: "10' warm-up + 20' easy",
               minutes: total / days.length,
               rpe: 4,
-              distanceKm: null,
+              distanceKm: 0,
             })),
           };
         }),
@@ -93,7 +98,11 @@ const coach = {
 } as AuthUser;
 
 class TestService extends PlanGenerationService {
-  answers: Array<{ object: AiPlanOutput | null; raw: string }> = [];
+  answers: Array<{
+    object: AiPlanOutput | null;
+    raw: string;
+    truncated?: boolean;
+  }> = [];
   prompts: Array<Record<string, unknown>> = [];
   protected async callModel(prompt: string) {
     this.prompts.push(JSON.parse(prompt));
@@ -367,18 +376,32 @@ describe('PlanGenerationService.generate', () => {
     expect(draft.plan).not.toBeNull();
   });
 
-  test('returns no plan when both answers are unusable', async () => {
+  test('fails as an invalid answer when both answers are unusable, and logs why', async () => {
     const { service } = setup();
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
     service.answers = [
-      { object: null, raw: '{"name":' },
+      { object: null, raw: '{"name":', truncated: true },
       { object: null, raw: '' },
     ];
-    const draft = await service.generate(request);
-    expect(draft.plan).toBeNull();
+    await expect(service.generate(request)).rejects.toMatchObject({
+      name: 'AiPlanFailureError',
+      reason: 'INVALID_ANSWER',
+      detail: 'TRUNCATED',
+    });
     // The raw text of a malformed answer is what the repair sees.
     expect(
       (service.prompts[1].revision as { previousDraft: string }).previousDraft,
     ).toBe('{"name":');
+    const logged = warn.mock.calls.map((call) => String(call[0])).join('\n');
+    expect(logged).toMatch(/invalid after the repair round/);
+    expect(logged).toMatch(/model=\S+/);
+    expect(logged).toMatch(/truncated=true answer=8\/0 chars/);
+    expect(logged).toMatch(/problems=\[".*required format/);
+    // Never the prompt.
+    expect(logged).not.toContain('weekStarts');
+    warn.mockRestore();
   });
 
   test('treats no recent activity as unknown and counts injuries', async () => {
@@ -669,6 +692,76 @@ describe('PlanGenerationService race context', () => {
   });
 });
 
+describe('PlanGenerationService model call', () => {
+  // The real call, with the agent replaced.
+  const generate = planGenerationAgent.generate as jest.Mock;
+  const real = () =>
+    new PlanGenerationService(
+      null as never,
+      null as never,
+      null as never,
+    ) as unknown as {
+      callModel: (prompt: string) => Promise<{
+        object: unknown;
+        raw: string;
+        truncated?: boolean;
+      }>;
+    };
+  beforeEach(() => generate.mockReset());
+
+  test('asks for a structured plan with room for the longest one', async () => {
+    generate.mockResolvedValue({
+      // Whole minutes, as the output schema requires
+      object: answer([180, 120]),
+      text: '{}',
+      finishReason: 'stop',
+    });
+    const result = await real().callModel('{}');
+    expect(result.truncated).toBe(false);
+    expect(result.object).not.toBeNull();
+    expect(generate.mock.calls[0][1]).toMatchObject({
+      modelSettings: { maxOutputTokens: PLAN_MAX_OUTPUT_TOKENS },
+    });
+    // 24 weeks of 7 sessions (~12k tokens) plus thinking.
+    expect(PLAN_MAX_OUTPUT_TOKENS).toBeGreaterThanOrEqual(48_000);
+  });
+
+  test('notices an answer cut by the output limit', async () => {
+    generate.mockResolvedValueOnce({
+      object: null,
+      text: '{"rules":[],"name":"P',
+      finishReason: 'length',
+    });
+    await expect(real().callModel('{}')).resolves.toMatchObject({
+      object: null,
+      truncated: true,
+    });
+    generate.mockRejectedValueOnce(
+      new Error(
+        'Structured output was truncated because the model finished with reason "length".',
+      ),
+    );
+    await expect(real().callModel('{}')).resolves.toMatchObject({
+      object: null,
+      truncated: true,
+    });
+  });
+
+  test('does not call again when the account has no credit', async () => {
+    generate.mockRejectedValue(
+      Object.assign(new Error('You have no credits remaining.'), {
+        name: 'AI_APICallError',
+        statusCode: 429,
+        data: { error: { code: 'insufficient_quota' } },
+      }),
+    );
+    await expect(real().callModel('{}')).rejects.toMatchObject({
+      statusCode: 429,
+    });
+    expect(generate).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('PlanGenerationService jobs', () => {
   test('queues a draft only for a linked athlete', async () => {
     const { service, prisma, queue } = setup();
@@ -715,9 +808,26 @@ describe('PlanGenerationService jobs', () => {
     await expect(service.status(coach, 'a')).resolves.toMatchObject({
       state: 'queued',
     });
-    queue.getJob.mockResolvedValue(job('failed'));
-    await expect(service.status(coach, 'a')).resolves.toMatchObject({
+    queue.getJob.mockResolvedValue(
+      job('failed', {
+        failedReason:
+          'AI_PLAN_FAILED {"reason":"QUOTA","detail":"429 insufficient_quota"}',
+      }),
+    );
+    await expect(service.status(coach, 'a')).resolves.toEqual({
+      jobId: 'a',
       state: 'failed',
+      reason: 'QUOTA',
+      detail: '429 insufficient_quota',
+    });
+    // A failure the worker did not classify, such as a stalled job.
+    queue.getJob.mockResolvedValue(
+      job('failed', { failedReason: 'job stalled more than allowable limit' }),
+    );
+    await expect(service.status(coach, 'a')).resolves.toEqual({
+      jobId: 'a',
+      state: 'failed',
+      reason: 'PROVIDER_ERROR',
     });
     queue.getJob.mockResolvedValue({
       ...job('completed'),

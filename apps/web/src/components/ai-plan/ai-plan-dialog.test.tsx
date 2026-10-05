@@ -655,6 +655,37 @@ describe('AiPlanDialog', () => {
     await fillValid();
     await submit();
     await waitFor(() => dialog().textContent!.includes('ai_plan_failed'));
+    expect(dialog().querySelector('[role="alert"]')!.textContent).toBe(
+      'ai_plan_failed',
+    );
     expect((field('ai_plan_goal_name') as HTMLInputElement).value).toBe('10K');
+  });
+
+  it.each([
+    ['QUOTA', '429 insufficient_quota', 'ai_plan_failed_quota'],
+    ['AUTH', '401 invalid_api_key', 'ai_plan_failed_auth'],
+    ['RATE_LIMIT', '429 rate_limit_exceeded', 'ai_plan_failed_rate_limit'],
+    ['UNAVAILABLE', '529 overloaded_error', 'ai_plan_failed_unavailable'],
+    ['TIMEOUT', undefined, 'ai_plan_failed_timeout'],
+    ['INVALID_ANSWER', 'TRUNCATED', 'ai_plan_failed_invalid'],
+    ['PROVIDER_ERROR', '404 model_not_found', 'ai_plan_failed_provider'],
+  ])('explains a %s failure', async (reason, detail, message) => {
+    api.start.mockResolvedValue({ jobId: 'job-1', state: 'queued' });
+    api.status.mockResolvedValue({
+      jobId: 'job-1',
+      state: 'failed',
+      reason,
+      ...(detail ? { detail } : {}),
+    });
+    await fillValid();
+    await submit();
+    await waitFor(() => !!dialog().querySelector('[role="alert"]'));
+    const alert = dialog().querySelector('[role="alert"]')!.textContent;
+    expect(alert).toContain(message);
+    if (detail)
+      expect(alert).toContain(
+        `ai_plan_failed_detail ${JSON.stringify({ detail })}`,
+      );
+    else expect(alert).not.toContain('ai_plan_failed_detail');
   });
 });

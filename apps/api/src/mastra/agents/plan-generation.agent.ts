@@ -9,4 +9,7 @@ export const planGenerationAgent = new Agent({
   name: 'plan-generation',
   model: EVENT_MODIFICATION_MODEL,
   instructions: PLAN_GENERATION_INSTRUCTIONS,
+  // No hidden retries: the default error processors retry quota and key
+  // errors too. Callers retry rate limits and outages (shouldRetryAiCall).
+  errorProcessorDefaults: false,
 });
