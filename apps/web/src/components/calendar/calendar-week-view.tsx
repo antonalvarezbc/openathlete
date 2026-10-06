@@ -65,7 +65,11 @@ export function CalendarWeekView({ isLoading }: { isLoading?: boolean }) {
     );
 
   return (
-    <div className="flex flex-col gap-3 px-4 md:px-0">
+    <div
+      data-calendar-week
+      className="flex flex-col gap-3 px-4 md:px-0"
+      aria-busy={isLoading}
+    >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
         <div className="min-w-0 flex-1">
           <CalendarWeekPlanBar />

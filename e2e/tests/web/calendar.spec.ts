@@ -1,5 +1,16 @@
 import { type Page, expect, test } from '@playwright/test';
 
+import { createAthlete } from '../../support/api';
+import { signIn } from '../../support/browser';
+
+// Planning is for coaches in this fork: each test signs in an athlete who
+// coaches their own profile instead of the shared athlete-only account.
+test.use({ storageState: { cookies: [], origins: [] } });
+
+test.beforeEach(async ({ page, request }) => {
+  await signIn(page, await createAthlete(request, { selfCoached: true }));
+});
+
 // Planning a session must not depend on knowing the right click
 async function emptyDay(page: Page) {
   await page.goto('/dashboard/calendar');
