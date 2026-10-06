@@ -1256,8 +1256,8 @@
   "activity_alert_retry": "Retry",
   "activity_alert_automatic": "Automatic notification",
   "activity_alert_uploaded": "New activity available",
-  "activity_alert_comment_updated": "The athlete added or updated a comment",
-  "activity_alert_rpe_updated": "The athlete updated the RPE",
+  "activity_alert_comment_updated": "Activity comment updated",
+  "activity_alert_rpe_updated": "Activity RPE updated",
   "activity_alert_rpe_removed": "RPE removed",
   "activity_alert_open": "Open activity",
   "activity_alert_unavailable": "The activity is no longer available or you do not have access."

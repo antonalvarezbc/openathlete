@@ -1256,8 +1256,8 @@
   "activity_alert_retry": "Réessayer",
   "activity_alert_automatic": "Notification automatique",
   "activity_alert_uploaded": "Nouvelle activité disponible",
-  "activity_alert_comment_updated": "L’athlète a ajouté ou modifié un commentaire",
-  "activity_alert_rpe_updated": "L’athlète a modifié le RPE",
+  "activity_alert_comment_updated": "Commentaire de l’activité mis à jour",
+  "activity_alert_rpe_updated": "RPE de l’activité mis à jour",
   "activity_alert_rpe_removed": "RPE supprimé",
   "activity_alert_open": "Ouvrir l’activité",
   "activity_alert_unavailable": "L’activité n’est plus disponible ou vous n’y avez pas accès."
