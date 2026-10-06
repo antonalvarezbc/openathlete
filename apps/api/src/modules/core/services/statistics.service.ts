@@ -1,4 +1,10 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { subject } from '@casl/ability';
+
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 
 import {
   Athlete,
@@ -6,8 +12,7 @@ import {
   EventActivity,
   EventType,
 } from '@openathlete/database';
-import { SPORT_TYPE } from '@openathlete/shared';
-import { GetStatisticsForPeriodDto } from '@openathlete/shared';
+import { GetStatisticsForPeriodDto, SPORT_TYPE } from '@openathlete/shared';
 
 import { CaslAbilityFactory } from 'src/modules/auth';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
@@ -56,16 +61,28 @@ export class StatisticsService {
     };
   }
 
+  /**
+   * Checks the user may read this athlete. Asking CASL about 'Athlete' in
+   * general would let anyone read any athlete's statistics by id.
+   */
+  private async assertCanRead(user: AuthUser, athleteId: number) {
+    const athlete = await this.prisma.athlete.findUnique({
+      where: { athleteId },
+    });
+    if (!athlete) throw new NotFoundException('Athlete not found');
+    const ability = await this.abilities.getFor({ user });
+    if (!ability.can('read', subject('Athlete', athlete))) {
+      throw new ForbiddenException('Not allowed to access this athlete');
+    }
+  }
+
   async getStatisticsForPeriod(
     user: AuthUser,
     athleteId: Athlete['athleteId'],
     startDate: Date,
     endDate: Date,
   ): Promise<GetStatisticsForPeriodDto> {
-    const ability = await this.abilities.getFor({ user });
-    if (!ability.can('read', 'Athlete')) {
-      throw new ForbiddenException('Not allowed to access this athlete');
-    }
+    await this.assertCanRead(user, athleteId);
 
     const events = await this.prisma.event.findMany({
       where: {
