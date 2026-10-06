@@ -711,7 +711,10 @@ export class EventService {
             kind,
             actorUserId: user.userId,
             deliveryKey: `edit:${eventId}:${updatedEvent.updatedAt.toISOString()}`,
-            rpe: 'rpe' in rest && rest.rpe != null ? rest.rpe * 10 : null,
+            rpe:
+              'rpe' in rest && rest.rpe != null
+                ? Math.round(rest.rpe * 10)
+                : null,
           }),
         );
       if (

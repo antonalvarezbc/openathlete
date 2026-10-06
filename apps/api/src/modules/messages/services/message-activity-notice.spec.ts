@@ -71,6 +71,7 @@ it('announces new activity comments only after authorizing and saving them', asy
         actorUserId: 8,
         eventId: 9,
         kind: 'COMMENT',
+        sourceThreadId: 2,
       }),
     }),
   );

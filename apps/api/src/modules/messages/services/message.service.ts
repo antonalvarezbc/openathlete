@@ -109,6 +109,7 @@ export class MessageService {
           kind: 'COMMENT',
           actorUserId: user.userId,
           deliveryKey: `message:${message.messageId}:${message.updatedAt.toISOString()}`,
+          sourceThreadId: message.messageThreadId,
         }),
       );
   }

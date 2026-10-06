@@ -20,6 +20,13 @@ export const ACTIVITY_NOTICE_SELECT = {
   eventName: true,
   rpe: true,
 } satisfies Prisma.ActivityChatNoticeSelect;
+const MESSAGE_INCLUDE = {
+  activityNotice: { select: ACTIVITY_NOTICE_SELECT },
+  sender: {
+    select: { userId: true, firstName: true, lastName: true, email: true },
+  },
+  readReceipts: true,
+} satisfies Prisma.MessageInclude;
 const settingsSelect = {
   notifyComments: true,
   notifyRpe: true,
@@ -163,6 +170,17 @@ export class CoachActivityNoticeService {
           },
         });
         if (!current) return null;
+        // Coaches take part in activity threads: they already got the comment
+        if (
+          payload.sourceThreadId &&
+          (await tx.messageThreadParticipant.findFirst({
+            where: {
+              messageThreadId: payload.sourceThreadId,
+              userId: coachUserId,
+            },
+          }))
+        )
+          return null;
         const deliveryKey = `${payload.kind}:${payload.deliveryKey}`;
         if (
           await tx.activityChatNotice.findUnique({
@@ -191,6 +209,38 @@ export class CoachActivityNoticeService {
           },
         });
         if (!enabled) return null; // Remember suppression so retries are not backfilled after enabling.
+        const coach = await tx.user.findUniqueOrThrow({
+          where: { userId: coachUserId },
+          select: { language: true },
+        });
+        const prefix = (labels[coach.language] ?? labels.EN)[payload.kind];
+        const content = `${prefix}: ${current.name}`;
+        // Successive edits refresh the notice the coach has not read yet
+        // instead of piling up one message per save
+        if (payload.kind !== 'ACTIVITY') {
+          const unread = await tx.activityChatNotice.findFirst({
+            where: {
+              coachUserId,
+              eventId: payload.eventId,
+              kind: payload.kind,
+              message: {
+                is: { readReceipts: { none: { userId: coachUserId } } },
+              },
+            },
+            orderBy: { id: 'desc' },
+          });
+          if (unread?.messageId) {
+            await tx.activityChatNotice.update({
+              where: { id: unread.id },
+              data: { eventName: stored.eventName, rpe: stored.rpe },
+            });
+            return tx.message.update({
+              where: { messageId: unread.messageId },
+              data: { content },
+              include: MESSAGE_INCLUDE,
+            });
+          }
+        }
         const participants = [coachUserId, athleteUserId];
         let thread = await tx.messageThread.findFirst({
           where: {
@@ -213,30 +263,14 @@ export class CoachActivityNoticeService {
               },
             },
           });
-        const coach = await tx.user.findUniqueOrThrow({
-          where: { userId: coachUserId },
-          select: { language: true },
-        });
-        const prefix = (labels[coach.language] ?? labels.EN)[payload.kind];
         const created = await tx.message.create({
           data: {
             messageThreadId: thread.messageThreadId,
             senderId: athleteUserId,
-            content: `${prefix}: ${current.name}`,
+            content,
             activityNotice: { connect: { id: stored.id } },
           },
-          include: {
-            activityNotice: { select: ACTIVITY_NOTICE_SELECT },
-            sender: {
-              select: {
-                userId: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
-            readReceipts: true,
-          },
+          include: MESSAGE_INCLUDE,
         });
         await tx.messageThread.update({
           where: { messageThreadId: thread.messageThreadId },

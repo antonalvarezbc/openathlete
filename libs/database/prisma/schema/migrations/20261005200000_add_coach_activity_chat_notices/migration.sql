@@ -5,7 +5,7 @@ CREATE TABLE "public"."coach_activity_alert_settings" (
     "athlete_id" INTEGER NOT NULL,
     "notify_comments" BOOLEAN NOT NULL DEFAULT true,
     "notify_rpe" BOOLEAN NOT NULL DEFAULT true,
-    "notify_new_activities" BOOLEAN NOT NULL DEFAULT true,
+    "notify_new_activities" BOOLEAN NOT NULL DEFAULT false,
 
     CONSTRAINT "coach_activity_alert_settings_pkey" PRIMARY KEY ("id")
 );

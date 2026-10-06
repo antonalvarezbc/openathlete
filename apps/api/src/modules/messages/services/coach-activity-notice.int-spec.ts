@@ -125,6 +125,29 @@ describe('activity notices in PostgreSQL', () => {
     ).toBe(0);
     expect(await prisma.messageThread.count()).toBe(1);
   });
+  it('refreshes an unread notice, and starts a new one once the coach read it', async () => {
+    const notices = () =>
+      prisma.message.findMany({
+        where: { activityNotice: { isNot: null } },
+        include: { activityNotice: true },
+        orderBy: { messageId: 'asc' },
+      });
+    await service.deliver(notice);
+    await service.deliver({ ...notice, deliveryKey: 'second-save', rpe: 8 });
+    const [first, ...others] = await notices();
+    expect(others).toHaveLength(0);
+    expect(first.activityNotice?.rpe).toBe(8);
+
+    await prisma.messageReadReceipt.create({
+      data: { messageId: first.messageId, userId: COACH_USER_ID },
+    });
+    await service.deliver({ ...notice, deliveryKey: 'third-save', rpe: 9 });
+    expect((await notices()).map((m) => m.activityNotice?.rpe)).toEqual([8, 9]);
+  });
+  it('does not repeat a comment the coach already got in the activity thread', async () => {
+    await service.deliver({ ...notice, kind: 'COMMENT', sourceThreadId: 3801 });
+    expect(await prisma.activityChatNotice.count()).toBe(0);
+  });
   it('checks the current coach role even when a relationship still exists', async () => {
     await prisma.user.update({
       where: { userId: COACH_USER_ID },

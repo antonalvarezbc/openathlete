@@ -3,16 +3,17 @@ title: Activity notifications in coach conversations
 description: Configure per-athlete chat notices for comments, RPE and new activities.
 ---
 
-
 Coaches can choose **Settings → Athletes → Chat notifications** for each linked athlete.
 The three independent switches control athlete comments/responses, changes to
-RPE, and new activities. All are enabled initially. Preferences belong to the
+RPE, and new activities. Comments and RPE are on by default; new activities are
+off, since a coach with many athletes would get a message for every synced
+workout. Preferences belong to the
 requesting coach and apply to future changes; switching them off keeps existing
 chat history.
 
-Notifications appear as clearly marked automatic entries in the one-to-one
-conversation between that coach and athlete. The athlete can also see these
-entries. Each has an **Open activity** button, and RPE notices display the
+Notifications appear as automatic entries, centered in the one-to-one
+conversation between that coach and athlete, apart from the messages people
+write. The athlete can also see these entries. Each has an **Open activity** button, and RPE notices display the
 reported value on the 0–10 scale. Opening checks normal activity permissions;
 deleted activities retain a notice with an unavailable link. No arbitrary URLs
 or HTML supplied by users are interpreted as links.
@@ -24,6 +25,12 @@ or HTML supplied by users are interpreted as links.
   and changed questionnaire answers submitted by its owner.
 - A newly created manual activity or newly uploaded FIT/GPX file.
 - Newly stored activities from ordinary official-provider import jobs.
+
+Coaches who take part in the activity thread already get the comments posted
+there, so those comments do not create a notice for them. While a notice is
+unread, further changes of the same kind on the same activity update it instead
+of adding new entries; once the coach has read it, the next change starts a new
+one.
 
 Coach-authored feedback, unchanged values, repeated imports, enrichment of an
 existing FIT and load recalculation do not create additional notices. The
@@ -50,6 +57,8 @@ Regular manually authored messages retain their existing notification behavior.
   a coach. Unique delivery keys prevent duplicates. Disabled notices retain a
   suppression record, and deleting a chat does not allow retries to recreate it.
 - WebSocket inbox subscription works without an already open conversation.
+- Deleting the athlete account deletes the notices about their activities,
+  which copy the activity name and RPE.
 
 The feature uses the application's asynchronous event mechanism. Delivery errors
 are logged without failing the activity update. It is not a durable outbox:

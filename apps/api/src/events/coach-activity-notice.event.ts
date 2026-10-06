@@ -9,6 +9,8 @@ export class CoachActivityNoticeEvent {
       deliveryKey: string;
       actorUserId?: number;
       rpe?: number | null;
+      // Thread the comment was written in: its participants already saw it
+      sourceThreadId?: number;
     },
   ) {}
 }
