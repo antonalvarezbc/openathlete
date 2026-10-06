@@ -11,7 +11,7 @@ import { computeRecords } from '../helpers/record';
  * Bump when computeRecords changes: activities computed with an older
  * version are recomputed in the background (RecordsBackfillService).
  */
-export const RECORDS_VERSION = 1;
+export const RECORDS_VERSION = 2;
 
 @Injectable()
 export class ActivityRecordsService {

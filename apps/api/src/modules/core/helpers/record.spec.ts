@@ -26,7 +26,7 @@ function speedRecords(stream: ReturnType<typeof route>) {
   return new Map(
     computeRecords(stream)
       .filter((record) => record.type === 'SPEED')
-      .map((record) => [record.distance, record.value]),
+      .map((record) => [record.distance!, record.value]),
   );
 }
 
@@ -78,13 +78,52 @@ describe('speed records', () => {
   });
 });
 
-describe('average records', () => {
-  test('averages the samples of the best stretch', () => {
-    const stream = route(repeat(100, [10, 50]));
-    const watts = stream.time.map((_, i) => (i >= 40 && i <= 60 ? 300 : 150));
-    const power400 = computeRecords({ ...stream, watts }).find(
-      (record) => record.type === 'POWER' && record.distance === 400,
+describe('duration records', () => {
+  const durationRecords = (
+    records: ReturnType<typeof computeRecords>,
+    type: string,
+  ) =>
+    new Map(
+      records
+        .filter((record) => record.type === type)
+        .map((record) => [record.duration!, record.value]),
     );
-    expect(power400?.value).toBe(300);
+
+  test('finds the best power over each duration, without a GPS route', () => {
+    // One sample per second for 10 minutes: 400 W from 60 s to 359 s
+    const time = Array.from({ length: 601 }, (_, i) => i);
+    const watts = time.map((t) => (t >= 60 && t < 360 ? 400 : 200));
+    const power = durationRecords(computeRecords({ time, watts }), 'POWER');
+    expect(power.get(5)).toBe(400);
+    expect(power.get(300)).toBe(400);
+    expect(power.get(600)).toBeCloseTo(300, 0);
+    expect(power.has(1200)).toBe(false);
+    expect(
+      computeRecords({ time, watts }).every((r) => r.distance === null),
+    ).toBe(true);
+  });
+
+  test('weighs samples by the time they cover', () => {
+    // 300 bpm for one second, then 150 bpm sampled every 5 s
+    const time = [0, 1, 6, 11, 16, 21, 26, 31];
+    const heartrate = [300, 150, 150, 150, 150, 150, 150, 150];
+    const records = durationRecords(
+      computeRecords({ time, heartrate }),
+      'HEARTRATE',
+    );
+    expect(records.get(30)).toBeCloseTo((300 + 150 * 29) / 30, 5);
+  });
+
+  test('counts a long gap in the samples as zero', () => {
+    // 20 s at 300 W, a 10 minute dropout, then 20 s at 300 W
+    const time = [
+      ...Array.from({ length: 21 }, (_, i) => i),
+      ...Array.from({ length: 21 }, (_, i) => 620 + i),
+    ];
+    const watts = time.map(() => 300);
+    const power = durationRecords(computeRecords({ time, watts }), 'POWER');
+    expect(power.get(15)).toBe(300);
+    // At most 15 s of the dropout borrow the last sample
+    expect(power.get(600)).toBeLessThan(300 * (55 / 600) + 1e-9);
   });
 });

@@ -1259,5 +1259,9 @@
   "activity_alert_rpe_updated": "RPE de la actividad actualizado",
   "activity_alert_rpe_removed": "RPE eliminado",
   "activity_alert_open": "Abrir actividad",
-  "activity_alert_unavailable": "La actividad ya no está disponible o no tienes acceso."
+  "activity_alert_unavailable": "La actividad ya no está disponible o no tienes acceso.",
+  "records_help": "Mejores marcas en cada distancia o duración, obtenidas de las actividades registradas.",
+  "records_by_distance": "El mejor en cada distancia, en {unit}",
+  "records_by_duration": "La mejor media en cada duración, en {unit}",
+  "records_open_activity": "Abrir la actividad"
 }

@@ -1,16 +1,51 @@
 import { useGetRecordSportsQuery, useGetRecordsQuery } from '@/api/record';
-import { RecordsChart } from '@/components/charts/records-chart';
+import { EventDetails } from '@/components/event-details/event-details';
+import { RECORD_METRICS } from '@/components/records/record-metrics';
+import { RecordsCurveChart } from '@/components/records/records-curve-chart';
+import { RecordsTable } from '@/components/records/records-table';
 import { SportSelect } from '@/components/sport-select/sport-select';
-import { Card, CardContent } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { SkeletonChart } from '@/components/ui/skeleton';
 import { useAthleteInfo } from '@/hooks/use-athlete-info';
 import { m } from '@/paraglide/messages';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { SPORT_TYPE } from '@openathlete/shared';
 
 interface P {
   athleteId?: number;
+}
+
+/** All time, then this season and the previous one (calendar years, UTC). */
+function usePeriods() {
+  return useMemo(() => {
+    const year = new Date().getUTCFullYear();
+    const start = (y: number) => new Date(Date.UTC(y, 0, 1));
+    return [
+      { key: 'allTime', label: m.all_time(), color: 'var(--chart-1)' },
+      {
+        key: 'thisYear',
+        label: `${year}`,
+        color: 'var(--chart-2)',
+        from: start(year),
+        to: start(year + 1),
+      },
+      {
+        key: 'lastYear',
+        label: `${year - 1}`,
+        color: 'var(--chart-4)',
+        from: start(year - 1),
+        to: start(year),
+      },
+    ];
+  }, []);
 }
 
 export function RecordsView({ athleteId }: P) {
@@ -23,11 +58,18 @@ export function RecordsView({ athleteId }: P) {
     chosenSport && sports?.includes(chosenSport)
       ? chosenSport
       : (sports?.[0] ?? null);
-  const { data: records, isPending: isLoadingRecords } = useGetRecordsQuery(
-    sport ?? undefined,
+  const [allTime, thisYear, lastYear] = usePeriods();
+  const query = (period: { from?: Date; to?: Date }) => ({
+    sport: sport ?? undefined,
     athleteId,
-    { enabled: sport !== null },
-  );
+    from: period.from,
+    to: period.to,
+  });
+  const enabled = { enabled: sport !== null };
+  const allTimeRecords = useGetRecordsQuery(query(allTime), enabled);
+  const thisYearRecords = useGetRecordsQuery(query(thisYear), enabled);
+  const lastYearRecords = useGetRecordsQuery(query(lastYear), enabled);
+  const [openEventId, setOpenEventId] = useState<number | null>(null);
   const { athlete, isCurrentUser } = useAthleteInfo({ athleteId });
 
   const pageTitle = isCurrentUser
@@ -36,38 +78,81 @@ export function RecordsView({ athleteId }: P) {
         firstName: athlete?.user?.firstName || '',
         lastName: athlete?.user?.lastName || '',
       });
-  const isLoading = isLoadingSports || (sport !== null && isLoadingRecords);
+  const isLoading =
+    isLoadingSports || (sport !== null && allTimeRecords.isPending);
+  const periods = [
+    { ...allTime, records: allTimeRecords.data ?? [] },
+    { ...thisYear, records: thisYearRecords.data ?? [] },
+    { ...lastYear, records: lastYearRecords.data ?? [] },
+  ];
+  const metrics = RECORD_METRICS.filter((metric) =>
+    periods[0].records.some((record) => record.type === metric.type),
+  );
 
   return (
-    <div className="w-full p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-      <h1 className="text-2xl font-semibold col-span-2 md:block hidden">
-        {pageTitle}
-      </h1>
-      {sports && sports.length > 0 && (
-        <Card className="col-span-2">
+    <div className="w-full p-4 md:p-8 flex flex-col gap-4">
+      <h1 className="text-2xl font-semibold md:block hidden">{pageTitle}</h1>
+      <div className="flex flex-wrap items-center gap-3">
+        {sports && sports.length > 0 && (
+          <SportSelect
+            selected={sport}
+            onChange={setChosenSport}
+            sports={sports}
+            allowAll={false}
+          />
+        )}
+        <p className="text-sm text-muted-foreground">{m.records_help()}</p>
+      </div>
+      {isLoading ? (
+        <SkeletonChart className="h-[400px]" />
+      ) : sport === null || metrics.length === 0 ? (
+        <Card>
           <CardContent>
-            <SportSelect
-              selected={sport}
-              onChange={setChosenSport}
-              sports={sports}
-              allowAll={false}
-            />
+            <p className="text-lg font-semibold">
+              {m.no_records_found({ sport: '' })}
+            </p>
           </CardContent>
         </Card>
+      ) : (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          {metrics.map((metric) => (
+            <Card key={metric.type} data-records-metric={metric.type}>
+              <CardHeader>
+                <CardTitle>{metric.title(sport)}</CardTitle>
+                <CardDescription>
+                  {metric.axis === 'distance'
+                    ? m.records_by_distance({ unit: metric.unit(sport) })
+                    : m.records_by_duration({ unit: metric.unit(sport) })}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4">
+                <RecordsCurveChart
+                  metric={metric}
+                  sport={sport}
+                  series={periods}
+                />
+                <RecordsTable
+                  metric={metric}
+                  sport={sport}
+                  columns={periods}
+                  onOpenActivity={setOpenEventId}
+                />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
-      <Card className="col-span-2">
-        <CardContent>
-          {isLoading ? (
-            <SkeletonChart className="h-[500px]" />
-          ) : records && records.length > 0 ? (
-            <RecordsChart records={records} className="h-[500px]" />
-          ) : (
-            <h1 className="text-2xl font-semibold">
-              {m.no_records_found({ sport: '' })}
-            </h1>
-          )}
-        </CardContent>
-      </Card>
+      <Dialog
+        open={openEventId !== null}
+        onOpenChange={(open) => !open && setOpenEventId(null)}
+      >
+        <DialogContent mobileFullscreen className="sm:max-w-6xl">
+          <DialogTitle className="sr-only">
+            {m.records_open_activity()}
+          </DialogTitle>
+          {openEventId !== null && <EventDetails eventId={openEventId} />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

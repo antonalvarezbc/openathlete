@@ -21,9 +21,10 @@ import { GapChart } from '../../charts/gap-chart';
 import { HeartrateChart } from '../../charts/heartrate-chart';
 import { HeartrateDistributionChart } from '../../charts/heartrate-distribution-chart';
 import { PowerChart } from '../../charts/power-chart';
-import { RecordsChart } from '../../charts/records-chart';
 import { SegmentsChart } from '../../charts/segments-chart';
 import { SpeedChart } from '../../charts/speed-chart';
+import { ActivityRecordsCharts } from '../../records/activity-records-charts';
+import { ChartRecord } from '../../records/record-metrics';
 import { Button } from '../../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import {
@@ -294,16 +295,10 @@ export function ActivityDetailsOverviewTab({
                       </Card>
                     )}
                     {event.records && !!event.records.length && (
-                      <>
-                        <Card className="col-span-2">
-                          <CardHeader>
-                            <CardTitle>{m.records()}</CardTitle>
-                          </CardHeader>
-                          <CardContent className="p-0">
-                            <RecordsChart records={event.records} />
-                          </CardContent>
-                        </Card>
-                      </>
+                      <ActivityRecordsCharts
+                        records={event.records as ChartRecord[]}
+                        sport={event.sport}
+                      />
                     )}
                   </>
                 );

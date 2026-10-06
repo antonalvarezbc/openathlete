@@ -18,50 +18,12 @@ const TARGET_DISTANCES = [
   100000, // 100km
 ];
 
-// Longer streams are sampled down to this many points before the search
-const MAX_POINTS_WITHOUT_SAMPLING = 5000;
+// Durations for power and heart rate records (in seconds)
+const TARGET_DURATIONS = [5, 15, 30, 60, 120, 300, 600, 1200, 1800, 3600, 7200];
 
-/**
- * Sample arrays to reduce size while preserving start and end points
- * Uses linear interpolation to maintain accuracy
- */
-function sampleArray<T>(arr: T[], targetSize: number): T[] {
-  if (arr.length <= targetSize) {
-    return arr;
-  }
-
-  const sampled: T[] = [arr[0]]; // Always keep first point
-  const step = (arr.length - 1) / (targetSize - 1);
-
-  for (let i = 1; i < targetSize - 1; i++) {
-    const index = i * step;
-    const lower = Math.floor(index);
-    const upper = Math.ceil(index);
-    const fraction = index - lower;
-
-    if (lower === upper || fraction === 0) {
-      sampled.push(arr[lower]);
-    } else if (typeof arr[0] === 'number') {
-      // Interpolate numbers
-      const lowerVal = arr[lower] as number;
-      const upperVal = arr[upper] as number;
-      sampled.push((lowerVal + (upperVal - lowerVal) * fraction) as T);
-    } else if (Array.isArray(arr[0])) {
-      // Interpolate arrays (like latlng)
-      const lowerVal = arr[lower] as number[];
-      const upperVal = arr[upper] as number[];
-      const interpolated = lowerVal.map(
-        (val, idx) => val + (upperVal[idx] - val) * fraction,
-      );
-      sampled.push(interpolated as T);
-    } else {
-      sampled.push(arr[lower]);
-    }
-  }
-
-  sampled.push(arr[arr.length - 1]); // Always keep last point
-  return sampled;
-}
+// A sample stands for the time until the next one, but no longer than this:
+// a longer gap is a pause or a dropout, counted as zero
+const MAX_SAMPLE_HOLD = 15;
 
 /**
  * Calculate cumulative distances from latlng stream
@@ -90,7 +52,7 @@ function calculateCumulativeDistances(latlngStream: number[][]): number[] {
 
 type ComputedRecord = Pick<
   PrismaRecord,
-  'distance' | 'value' | 'startDuration' | 'endDuration' | 'type'
+  'distance' | 'duration' | 'value' | 'startDuration' | 'endDuration' | 'type'
 >;
 
 /**
@@ -149,6 +111,7 @@ function bestStretches(
     records.push({
       type,
       distance: targetDistance,
+      duration: null,
       value: best.value,
       startDuration: Math.round(timeStream[best.stretch.left]),
       endDuration: Math.round(at(timeStream, best.stretch)),
@@ -171,37 +134,59 @@ function computeSpeedRecords(
   });
 }
 
-/** Best average of a sampled value (power, heart rate, cadence). */
-function computeAverageRecords(
+/**
+ * Best average of a sampled value (power, heart rate) over each duration,
+ * weighted by time so that irregular sampling does not tip the balance.
+ */
+function computeDurationRecords(
   type: RecordType,
   timeStream: number[],
-  cumulativeDistances: number[],
   valueStream: number[],
 ): ComputedRecord[] {
-  const length = Math.min(valueStream.length, cumulativeDistances.length);
-  const sums = [0];
-  const counts = [0];
-  for (let i = 0; i < length; i++) {
-    const valid = Number.isFinite(valueStream[i]);
-    sums.push(sums[i] + (valid ? valueStream[i] : 0));
-    counts.push(counts[i] + (valid ? 1 : 0));
+  const length = Math.min(timeStream.length, valueStream.length);
+  if (length < 2) return [];
+  const value = (i: number) =>
+    Number.isFinite(valueStream[i]) ? valueStream[i] : 0;
+  const hold = (i: number) =>
+    i + 1 < length
+      ? Math.min(timeStream[i + 1] - timeStream[i], MAX_SAMPLE_HOLD)
+      : 0;
+  // integral[i]: value accumulated from the first sample to sample i
+  const integral = [0];
+  for (let i = 1; i < length; i++) {
+    integral.push(integral[i - 1] + value(i - 1) * hold(i - 1));
   }
-  return bestStretches(
-    type,
-    timeStream,
-    cumulativeDistances.slice(0, length),
-    ({ left, right }) => {
-      const count = counts[right + 1] - counts[left];
-      if (count === 0) return null;
-      const average = (sums[right + 1] - sums[left]) / count;
-      return { value: average, rank: average };
-    },
-  );
+  const integralAt = (i: number, t: number) =>
+    integral[i] + value(i) * Math.min(t - timeStream[i], hold(i));
+
+  const records: ComputedRecord[] = [];
+  for (const duration of TARGET_DURATIONS) {
+    let best: { value: number; start: number } | null = null;
+    let last = 0;
+    for (let first = 0; first < length; first++) {
+      const end = timeStream[first] + duration;
+      if (end > timeStream[length - 1]) break;
+      while (last + 1 < length && timeStream[last + 1] <= end) last++;
+      const average = (integralAt(last, end) - integral[first]) / duration;
+      if (!best || average > best.value) {
+        best = { value: average, start: timeStream[first] };
+      }
+    }
+    if (!best || best.value <= 0) continue;
+    records.push({
+      type,
+      distance: null,
+      duration,
+      value: best.value,
+      startDuration: Math.round(best.start),
+      endDuration: Math.round(best.start + duration),
+    });
+  }
+  return records;
 }
 
-/** Most climbing or descending over each distance. */
-function computeElevationRecords(
-  type: 'ELEVATION_GAIN' | 'ELEVATION_LOSS',
+/** Most climbing over each distance. */
+function computeElevationGainRecords(
   timeStream: number[],
   cumulativeDistances: number[],
   altitude: number[],
@@ -210,88 +195,49 @@ function computeElevationRecords(
   const cumulative = [0];
   for (let i = 1; i < length; i++) {
     const diff = altitude[i] - altitude[i - 1];
-    const change = Number.isFinite(diff)
-      ? type === 'ELEVATION_GAIN'
-        ? Math.max(diff, 0)
-        : Math.max(-diff, 0)
-      : 0;
-    cumulative.push(cumulative[i - 1] + change);
+    cumulative.push(cumulative[i - 1] + (diff > 0 ? diff : 0));
   }
   return bestStretches(
-    type,
+    'ELEVATION_GAIN',
     timeStream,
     cumulativeDistances.slice(0, length),
     (stretch) => {
-      const change = at(cumulative, stretch) - cumulative[stretch.left];
-      return { value: change, rank: change };
+      const gain = at(cumulative, stretch) - cumulative[stretch.left];
+      return { value: gain, rank: gain };
     },
   );
 }
 
 /**
- * Main function to compute all records from an activity stream
+ * Records of an activity: pace and climbing by distance (they need the GPS
+ * route), power and heart rate by duration (indoor sessions have them too).
  */
 export const computeRecords = (stream: ActivityStream): ComputedRecord[] => {
-  const { time, latlng, altitude, heartrate, cadence, watts } = stream;
+  const { time, latlng, altitude, heartrate, watts } = stream;
+  if (!time || time.length === 0) return [];
 
-  // Early exit if no essential data
-  if (!time || !latlng || time.length === 0 || latlng.length === 0) {
-    return [];
+  const records = [
+    ...(watts?.length ? computeDurationRecords('POWER', time, watts) : []),
+    ...(heartrate?.length
+      ? computeDurationRecords('HEARTRATE', time, heartrate)
+      : []),
+  ];
+
+  // Distance records require a route aligned with time
+  if (
+    !latlng ||
+    latlng.length !== time.length ||
+    !latlng.some(isValidGpsPoint)
+  ) {
+    return records;
   }
-
-  // GPS-derived records require a route aligned with time
-  if (latlng.length !== time.length || !latlng.some(isValidGpsPoint)) {
-    return [];
-  }
-
-  // Computed before sampling: interpolating across a GPS gap would invent
-  // positions
-  let cumulativeDistances = calculateCumulativeDistances(latlng);
-
-  // Sample streams if they're too large to reduce memory usage and computation time
-  let timeStream = time;
-  let altitudeStream = altitude;
-  let heartrateStream = heartrate;
-  let cadenceStream = cadence;
-  let wattsStream = watts;
-
-  if (timeStream.length > MAX_POINTS_WITHOUT_SAMPLING) {
-    const targetSize = MAX_POINTS_WITHOUT_SAMPLING;
-    timeStream = sampleArray(timeStream, targetSize);
-    cumulativeDistances = sampleArray(cumulativeDistances, targetSize);
-    if (altitudeStream)
-      altitudeStream = sampleArray(altitudeStream, targetSize);
-    if (heartrateStream) {
-      heartrateStream = sampleArray(heartrateStream, targetSize);
-    }
-    if (cadenceStream) cadenceStream = sampleArray(cadenceStream, targetSize);
-    if (wattsStream) wattsStream = sampleArray(wattsStream, targetSize);
-  }
-
-  const averages = (
-    type: RecordType,
-    values: number[] | undefined,
-  ): ComputedRecord[] =>
-    values?.length
-      ? computeAverageRecords(type, timeStream, cumulativeDistances, values)
-      : [];
-  const elevation = (type: 'ELEVATION_GAIN' | 'ELEVATION_LOSS') =>
-    altitudeStream?.length
-      ? computeElevationRecords(
-          type,
-          timeStream,
-          cumulativeDistances,
-          altitudeStream,
-        )
-      : [];
-
+  const cumulativeDistances = calculateCumulativeDistances(latlng);
   return [
-    ...computeSpeedRecords(timeStream, cumulativeDistances),
-    ...averages('POWER', wattsStream),
-    ...averages('HEARTRATE', heartrateStream),
-    ...averages('CADENCE', cadenceStream),
-    ...elevation('ELEVATION_GAIN'),
-    ...elevation('ELEVATION_LOSS'),
+    ...computeSpeedRecords(time, cumulativeDistances),
+    ...(altitude?.length
+      ? computeElevationGainRecords(time, cumulativeDistances, altitude)
+      : []),
+    ...records,
   ];
 };
 

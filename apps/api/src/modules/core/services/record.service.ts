@@ -6,12 +6,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import {
-  Athlete,
-  Record as PrismaRecord,
-  RecordType,
-  SportType,
-} from '@openathlete/database';
+import { Athlete, SportType } from '@openathlete/database';
+import { BestRecordDto, RECORD_TYPE } from '@openathlete/shared';
 
 import { CaslAbilityFactory } from 'src/modules/auth';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
@@ -67,52 +63,61 @@ export class RecordService {
     return rows.map((row) => row.sport);
   }
 
+  /**
+   * Best record at each distance or duration, for one sport, among the
+   * activities between `from` (included) and `to` (excluded).
+   */
   async getRecords(
     user: AuthUser,
-    sport?: SportType,
-    athleteId?: Athlete['athleteId'],
-  ): Promise<PrismaRecord[]> {
+    {
+      sport,
+      athleteId,
+      from,
+      to,
+    }: {
+      sport?: SportType;
+      athleteId?: Athlete['athleteId'];
+      from?: Date;
+      to?: Date;
+    },
+  ): Promise<BestRecordDto[]> {
     const targetAthleteId = await this.targetAthleteId(user, athleteId);
 
     const records = await this.prisma.record.findMany({
       where: {
         athleteId: targetAthleteId,
-        ...(sport && {
-          eventActivity: {
-            sport,
-          },
-        }),
+        ...(sport && { eventActivity: { sport } }),
+        ...((from || to) && { date: { gte: from, lt: to } }),
+      },
+      include: {
+        eventActivity: {
+          select: { eventId: true, event: { select: { name: true } } },
+        },
       },
     });
 
-    const bestRecords = records.reduce(
-      (acc, record) => {
-        const { type, distance } = record;
-        if (!acc[type]) {
-          acc[type] = {};
-        }
-        if (!acc[type][distance]) {
-          acc[type][distance] = record;
-        } else {
-          if (record.type === 'SPEED') {
-            if (record.value < acc[type][distance].value) {
-              acc[type][distance] = record;
-            }
-          } else {
-            if (record.value > acc[type][distance].value) {
-              acc[type][distance] = record;
-            }
-          }
-        }
-        return acc;
-      },
-      {} as Record<RecordType, Record<string, PrismaRecord>>,
-    );
+    const best = new Map<string, (typeof records)[number]>();
+    for (const record of records) {
+      const key = `${record.type}:${record.distance ?? ''}:${record.duration ?? ''}`;
+      const current = best.get(key);
+      // Pace records hold a time: lower is better
+      const better =
+        !current ||
+        (record.type === 'SPEED'
+          ? record.value < current.value
+          : record.value > current.value);
+      if (better) best.set(key, record);
+    }
 
-    const bestRecordsArray = Object.values(bestRecords).flatMap((type) =>
-      Object.values(type),
-    );
-
-    return bestRecordsArray;
+    return [...best.values()].map((record) => ({
+      recordId: record.recordId,
+      type: record.type as RECORD_TYPE,
+      distance: record.distance,
+      duration: record.duration,
+      value: record.value,
+      date: record.date,
+      eventId: record.eventActivity?.eventId ?? null,
+      activityName: record.eventActivity?.event.name ?? null,
+    }));
   }
 }
