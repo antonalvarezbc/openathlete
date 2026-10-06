@@ -30,4 +30,20 @@ export class ActivityImportAPI {
     );
     return res.data;
   }
+
+  /**
+   * One TCX activity. Without `sport`, the API uses the activity's own
+   * (TCX only names running and biking).
+   */
+  static async importTcx(file: File, name: string, sport?: SPORT_TYPE) {
+    const body = new FormData();
+    body.append('file', file);
+    body.append('name', name);
+    if (sport) body.append('sport', sport);
+    const res = await client.post<ImportedActivityDto>(
+      routes.activityImport.tcx,
+      body,
+    );
+    return res.data;
+  }
 }

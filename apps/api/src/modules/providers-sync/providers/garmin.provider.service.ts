@@ -69,6 +69,7 @@ import {
   ImportedActivity,
   ProviderImportCapability,
 } from '../base';
+import { providerRedirectUri } from '../base/provider-urls';
 
 type MetricRecord = {
   type: MetricType;
@@ -124,7 +125,11 @@ export class GarminProviderService
       tokenUrl: 'https://diauth.garmin.com/di-oauth2-service/oauth/token',
       clientId: this.configService.get('GARMIN_CLIENT_ID') || '',
       clientSecret: this.configService.get('GARMIN_CLIENT_SECRET') || '',
-      redirectUri: this.configService.get('GARMIN_REDIRECT_URI') || '',
+      redirectUri: providerRedirectUri(
+        this.configService.get('GARMIN_REDIRECT_URI'),
+        this.configService.get('APP_URL'),
+        'garmin',
+      ),
       scopes: [],
     };
   }

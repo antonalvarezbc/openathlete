@@ -538,3 +538,94 @@ describe('Manual GPX import', () => {
     expect(again).toMatchObject({ alreadyImported: true, name: 'Rodaje' });
   });
 });
+
+describe('Manual TCX import', () => {
+  // Three synthetic points, one minute apart, ~111 m apart, in one lap.
+  const tcxFile = (sport = 'Running', name = 'run.tcx') => {
+    const points = [0, 1, 2]
+      .map(
+        (i) =>
+          `<Trackpoint><Time>2020-01-02T09:0${i}:00Z</Time><Position><LatitudeDegrees>${43 + i * 0.001}</LatitudeDegrees><LongitudeDegrees>-8</LongitudeDegrees></Position><AltitudeMeters>${10 + i * 5}</AltitudeMeters></Trackpoint>`,
+      )
+      .join('');
+    const buffer = Buffer.from(
+      `<?xml version="1.0"?><TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"><Activities><Activity Sport="${sport}"><Id>2020-01-02T09:00:00Z</Id><Lap StartTime="2020-01-02T09:00:00Z"><TotalTimeSeconds>120</TotalTimeSeconds><DistanceMeters>230</DistanceMeters><Track>${points}</Track></Lap></Activity></Activities></TrainingCenterDatabase>`,
+    );
+    return { originalname: name, buffer, size: buffer.length };
+  };
+
+  test('stores a TCX like a FIT file, with its own source, sport and laps', async () => {
+    const { db, queue, service } = setup();
+    const result = await service.importTcx(athlete, tcxFile(), 'Rodaje');
+    const data = db.event.create.mock.calls[0][0].data;
+    expect(data).toMatchObject({
+      athleteId: 4,
+      type: 'ACTIVITY',
+      name: 'Rodaje',
+      startDate: new Date('2020-01-02T09:00:00Z'),
+      endDate: new Date('2020-01-02T09:02:00Z'),
+    });
+    expect(data.activity.create).toMatchObject({
+      sport: 'RUNNING',
+      provider: null,
+      // The lap's own distance and timer time
+      distance: 230,
+      movingTime: 120,
+      elevationGain: 10,
+    });
+    expect(data.activity.create.externalId).toMatch(
+      /^tcx-manual:4:[a-f0-9]{64}$/,
+    );
+    expect(data.activity.create.segments.create).toHaveLength(1);
+    expect(queue.addActivityProcessingJob).toHaveBeenCalledWith(80, 90, true);
+    expect(result).toMatchObject({ eventId: 90, warnings: [] });
+  });
+
+  test('uses the sport the athlete chose', async () => {
+    const { db, service } = setup();
+    await service.importTcx(
+      athlete,
+      tcxFile('Other'),
+      'Rodaje',
+      'HIKING' as never,
+    );
+    expect(db.event.create.mock.calls[0][0].data.activity.create.sport).toBe(
+      'HIKING',
+    );
+  });
+
+  test('applies the same ownership, file and duplicate rules', async () => {
+    const { db, service } = setup();
+    await expect(
+      service.importTcx(athlete, tcxFile('Running', 'run.gpx'), 'Rodaje'),
+    ).rejects.toThrow('TCX_INVALID');
+    await expect(
+      service.importTcx(
+        athlete,
+        { ...tcxFile(), size: MAX_MANUAL_FIT_BYTES + 1 },
+        'Rodaje',
+      ),
+    ).rejects.toBeInstanceOf(PayloadTooLargeException);
+    db.event.findFirst.mockResolvedValue({ eventId: 42 });
+    await expect(
+      service.importTcx(athlete, tcxFile(), 'Rodaje'),
+    ).rejects.toThrow('TCX_DUPLICATE_TIME');
+    db.athlete.findUnique.mockResolvedValue(null);
+    await expect(
+      service.importTcx(athlete, tcxFile(), 'Rodaje'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(db.event.create).not.toHaveBeenCalled();
+  });
+
+  test('a GPX sent as TCX is refused as invalid', async () => {
+    const { service } = setup();
+    const gpx = Buffer.from('<?xml version="1.0"?><gpx version="1.1"/>');
+    await expect(
+      service.importTcx(
+        athlete,
+        { originalname: 'run.tcx', buffer: gpx, size: gpx.length },
+        'Rodaje',
+      ),
+    ).rejects.toThrow('TCX_INVALID');
+  });
+});

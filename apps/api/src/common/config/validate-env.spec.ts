@@ -21,6 +21,17 @@ describe('validateEnv', () => {
     expect(env.BREVO_FROM_EMAIL).toBeUndefined();
   });
 
+  it('removes empty variables from process.env, which ConfigService reads first', () => {
+    process.env.TRUST_PROXY = '';
+    try {
+      validateEnv({ ...required, TRUST_PROXY: '' });
+
+      expect('TRUST_PROXY' in process.env).toBe(false);
+    } finally {
+      delete process.env.TRUST_PROXY;
+    }
+  });
+
   it('still rejects invalid non-empty values', () => {
     expect(() =>
       validateEnv({ ...required, GARMIN_REDIRECT_URI: 'not a url' }),

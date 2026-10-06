@@ -18,6 +18,7 @@ import {
   activityFileKind,
   fileActivityName,
   gpxTrackName,
+  tcxActivityName,
 } from './activity-file';
 import { ImportFitDialog } from './import-fit-dialog';
 
@@ -29,6 +30,7 @@ vi.mock('@/utils/axios', () => ({
     activityImport: {
       fit: '/activity-import/fit',
       gpx: '/activity-import/gpx',
+      tcx: '/activity-import/tcx',
     },
   },
 }));
@@ -53,6 +55,7 @@ vi.mock('@/paraglide/runtime', () => ({ getLocale: () => 'en' }));
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
 
+const TCX = `<?xml version="1.0"?><TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"><Activities><Activity Sport="Other"><Id>2026-10-03T07:00:00Z</Id><Lap StartTime="2026-10-03T07:00:00Z"/><Notes>Hill repeats</Notes></Activity></Activities></TrainingCenterDatabase>`;
 const GPX = `<?xml version="1.0"?><gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1"><metadata><name>Export</name></metadata><trk><name>Morning Run</name><trkseg/></trk></gpx>`;
 
 beforeAll(() => {
@@ -67,11 +70,23 @@ beforeAll(() => {
 });
 
 describe('activity files', () => {
-  it('accepts FIT and GPX by extension', () => {
+  it('accepts FIT, GPX and TCX by extension', () => {
     expect(activityFileKind('a.FIT')).toBe('fit');
     expect(activityFileKind('run.gpx')).toBe('gpx');
-    expect(activityFileKind('run.tcx')).toBeNull();
+    expect(activityFileKind('run.TCX')).toBe('tcx');
+    expect(activityFileKind('run.kml')).toBeNull();
     expect(fileActivityName('Rodaje largo.GPX')).toBe('Rodaje largo');
+    expect(fileActivityName('Tirada.tcx')).toBe('Tirada');
+  });
+
+  it('reads the notes of a TCX activity', () => {
+    expect(tcxActivityName(TCX)).toBe('Hill repeats');
+    expect(
+      tcxActivityName(
+        '<TrainingCenterDatabase><Activities><Activity/></Activities></TrainingCenterDatabase>',
+      ),
+    ).toBe('');
+    expect(tcxActivityName('not xml <')).toBe('');
   });
 
   it('reads the track name, not the export metadata', () => {
@@ -145,6 +160,7 @@ describe('ImportFitDialog', () => {
   const fit = (name: string, size = 10) =>
     new File([new Uint8Array(size)], name);
   const gpx = (name: string) => new File([GPX], name);
+  const tcx = (name: string) => new File([TCX], name);
   const sportSelect = () =>
     dialog().querySelector<HTMLSelectElement>('select[name="sport"]');
   const nameInput = () =>
@@ -232,14 +248,14 @@ describe('ImportFitDialog', () => {
     expect(failed.textContent).toContain('fit_import_duplicate_time');
   });
 
-  it('leaves out files that are not FIT or GPX or are too large', async () => {
+  it('leaves out files that are not FIT, GPX or TCX or are too large', async () => {
     await choose(
       fit('ride.fit'),
-      fit('route.tcx'),
+      fit('route.kml'),
       fit('huge.fit', MAX_ACTIVITY_FILE_BYTES + 1),
     );
     expect(dialog().querySelector('[role="alert"]')!.textContent).toBe(
-      'fit_import_skipped {"files":"route.tcx, huge.fit"}',
+      'fit_import_skipped {"files":"route.kml, huge.fit"}',
     );
     // The valid file stays selected.
     expect(nameInput()!.value).toBe('ride');
@@ -327,6 +343,60 @@ describe('ImportFitDialog', () => {
     ].map((item) => item.textContent);
     expect(errors[0]).toContain('gpx_import_no_time');
     expect(errors[1]).toContain('gpx_import_invalid');
+  });
+
+  it('suggests the TCX notes and sends the chosen sport to its endpoint', async () => {
+    api.post.mockResolvedValue(
+      imported(9, 'Hill repeats', { warnings: ['TCX_NO_GPS'] }),
+    );
+    await choose(tcx('activity_123.tcx'));
+    await waitFor(() => nameInput()!.value !== 'activity_123');
+    expect(nameInput()!.value).toBe('Hill repeats');
+    // TCX only names running and biking: the sport can be chosen
+    expect(sportSelect()).not.toBeNull();
+    await act(async () => {
+      const select = sportSelect()!;
+      select.value = 'HIKING';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await submit();
+
+    expect(sent(0)).toMatchObject({
+      url: '/activity-import/tcx',
+      name: 'Hill repeats',
+      sport: 'HIKING',
+    });
+    expect(dialog().textContent).toContain('tcx_import_no_gps');
+  });
+
+  it('sends a batch of FIT and TCX files to their endpoints', async () => {
+    api.post
+      .mockResolvedValueOnce(imported(1, 'ride'))
+      .mockResolvedValueOnce(imported(2, 'Hill repeats'));
+    await choose(fit('ride.fit'), tcx('activity_123.tcx'));
+    await submit();
+    expect(sent(0)).toMatchObject({ url: '/activity-import/fit', sport: null });
+    // In a batch a TCX is named after its notes
+    expect(sent(1)).toMatchObject({
+      url: '/activity-import/tcx',
+      name: 'Hill repeats',
+      sport: null,
+    });
+  });
+
+  it('explains TCX files the API refuses', async () => {
+    api.post
+      .mockRejectedValueOnce(failure(400, 'TCX_NO_TIME'))
+      .mockRejectedValueOnce(failure(400, 'TCX_MULTISPORT_UNSUPPORTED'))
+      .mockRejectedValueOnce(failure(400, 'TCX_INVALID'));
+    await choose(tcx('course.tcx'), tcx('triathlon.tcx'), tcx('broken.tcx'));
+    await submit();
+    const errors = [
+      ...dialog().querySelectorAll('[data-import-result="error"]'),
+    ].map((item) => item.textContent);
+    expect(errors[0]).toContain('tcx_import_no_time');
+    expect(errors[1]).toContain('fit_import_multisport');
+    expect(errors[2]).toContain('tcx_import_invalid');
   });
 
   it('explains files the API refuses', async () => {

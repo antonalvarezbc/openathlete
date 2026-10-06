@@ -77,9 +77,11 @@ export function Hero() {
       />
 
       <Container className="relative z-10">
-        <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-16 xl:gap-20">
+        {/* minmax(0, 1fr): without it the column grows to its widest
+            unbreakable content and the hero overflows on phones */}
+        <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)] items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-16 xl:gap-20">
           <motion.div
-            className="mx-auto max-w-xl text-center lg:mx-0 lg:max-w-none lg:text-left"
+            className="mx-auto min-w-0 max-w-xl text-center lg:mx-0 lg:max-w-none lg:text-left"
             variants={containerVariants}
             initial="hidden"
             animate="visible"
@@ -88,13 +90,13 @@ export function Hero() {
               variants={itemVariants}
               className="flex justify-center lg:justify-start"
             >
-              <span className="inline-flex items-center rounded-full border border-border/80 bg-muted/30 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground shadow-sm backdrop-blur-sm">
+              <span className="inline-flex max-w-full items-center rounded-full border border-border/80 bg-muted/30 px-3 py-1 text-center text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground shadow-sm backdrop-blur-sm sm:tracking-[0.18em]">
                 {m.landing_hero_eyebrow()}
               </span>
             </motion.div>
 
             <motion.h1
-              className="mt-5 text-balance text-3xl font-semibold tracking-tight text-foreground sm:text-4xl md:text-[2.65rem] md:leading-[1.14]"
+              className="mt-5 text-balance break-words text-[1.75rem] font-semibold leading-tight tracking-tight text-foreground sm:text-4xl md:text-[2.65rem] md:leading-[1.14]"
               variants={titleVariants}
             >
               <span className="bg-gradient-to-br from-foreground via-foreground to-foreground/65 bg-clip-text text-transparent">
@@ -134,7 +136,7 @@ export function Hero() {
             >
               <Button
                 size="default"
-                className="group relative h-11 overflow-hidden px-6 shadow-md sm:h-10"
+                className="group relative h-auto min-h-11 overflow-hidden whitespace-normal px-6 py-2.5 text-center shadow-md sm:h-10 sm:min-h-0 sm:whitespace-nowrap sm:py-2"
                 asChild
               >
                 <a href={signupUrl}>

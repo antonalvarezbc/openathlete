@@ -56,6 +56,7 @@ import {
   ImportedActivity,
   ProviderImportCapability,
 } from '../base/provider-import.interface';
+import { providerRedirectUri } from '../base/provider-urls';
 import { InvalidRefreshTokenError } from '../errors/invalid-refresh-token.error';
 
 type MetricRecord = {
@@ -158,7 +159,11 @@ export class SuuntoProviderService
       tokenUrl: 'https://cloudapi-oauth.suunto.com/oauth/token',
       clientId: this.configService.get('SUUNTO_CLIENT_ID') || '',
       clientSecret: this.configService.get('SUUNTO_CLIENT_SECRET') || '',
-      redirectUri: this.configService.get('SUUNTO_REDIRECT_URI') || '',
+      redirectUri: providerRedirectUri(
+        this.configService.get('SUUNTO_REDIRECT_URI'),
+        this.configService.get('APP_URL'),
+        'suunto',
+      ),
       scopes: [], // Suunto OAuth2 doesn't use scopes in authorization URL
     };
   }

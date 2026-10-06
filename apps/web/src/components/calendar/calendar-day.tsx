@@ -1,35 +1,28 @@
-import { useAiTaskAvailable } from '@/api/ai-settings';
-import { useDuplicateEventMutation } from '@/api/event';
 import { m } from '@/paraglide/messages';
 import { getLocale } from '@/paraglide/runtime';
+import { getDateLocale } from '@/utils/locales';
 import { cn } from '@/utils/shadcn';
 import { useDroppable } from '@dnd-kit/core';
 import { format } from 'date-fns';
-import {
-  Activity,
-  Award,
-  ClipboardPaste,
-  FileText,
-  StickyNote,
-} from 'lucide-react';
-import { useState } from 'react';
-import { toast } from 'sonner';
+import { Plus } from 'lucide-react';
+import { useRef, useState } from 'react';
 
-import { AiTask, EVENT_TYPE, Event } from '@openathlete/shared';
+import { Event } from '@openathlete/shared';
 
 import { AiSetupDialog } from '../ai-settings';
 import {
   ContextMenu,
   ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
   ContextMenuTrigger,
 } from '../ui/context-menu';
-import { SparklesIcon } from '../ui/sparkles-icon';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '../ui/dropdown-menu';
 import { CalendarCycleSegment } from './calendar-cycle-segment';
+import { CalendarDayActions } from './calendar-day-actions';
 import { CalendarEvent } from './calendar-event';
-import { useEventClipboard } from './contexts/event-clipboard-context';
 import { useCalendarContext } from './hooks/use-calendar-context';
 import { CycleDaySegment } from './utils/cycle-day-layout';
 
@@ -48,29 +41,18 @@ export function CalendarDay({
 }: P) {
   const {
     displayedMonth,
-    createEvent,
     allowCreate,
-    createEventFromTemplate,
-    createEventWithAI,
     dragSelection,
     setDragSelection,
     createCycle,
     cycleResize,
     setCycleResize,
   } = useCalendarContext();
-  const { clipboard, hasClipboard } = useEventClipboard();
-  const { available: hasAIAccess } = useAiTaskAvailable(
-    AiTask.EVENT_GENERATION,
-  );
   const [aiSetupOpen, setAiSetupOpen] = useState(false);
-  const duplicateEventMutation = useDuplicateEventMutation({
-    onSuccess: () => {
-      toast.success(m.event_created_successfully());
-    },
-    onError: () => {
-      toast.error(m.failed_to_create_event());
-    },
-  });
+  const [menuOpen, setMenuOpen] = useState(false);
+  // A left press on this day's empty area that has not left the day yet:
+  // released here, it is a click (planning menu); elsewhere, a drag (cycle)
+  const pressRef = useRef<{ x: number; y: number } | null>(null);
   const dayOfMonth = day.getDate();
   const isToday = day.toDateString() === new Date().toDateString();
   const isCurrentMonth =
@@ -109,6 +91,7 @@ export function CalendarDay({
     }
 
     if (e.button === 0 && allowCreate) {
+      pressRef.current = { x: e.clientX, y: e.clientY };
       // Left click - start drag selection for cycles
       const startDate = new Date(day);
       startDate.setHours(0, 0, 0, 0);
@@ -157,40 +140,45 @@ export function CalendarDay({
   };
 
   const handleMouseUp = () => {
-    if (dragSelection && dragSelection.startDate !== dragSelection.endDate) {
-      // Normalize dates - ensure startDate <= endDate regardless of drag direction
-      const normalizedStart = new Date(
-        Math.min(
-          dragSelection.startDate.getTime(),
-          dragSelection.endDate.getTime(),
-        ),
-      );
-      const normalizedEnd = new Date(
-        Math.max(
-          dragSelection.startDate.getTime(),
-          dragSelection.endDate.getTime(),
-        ),
-      );
+    const pressedHere = pressRef.current !== null;
+    pressRef.current = null;
+    if (!dragSelection) return;
 
-      normalizedStart.setHours(0, 0, 0, 0);
-      normalizedEnd.setHours(23, 59, 59, 999);
-
-      // Create cycle with the normalized date range
-      createCycle(normalizedStart, normalizedEnd);
+    // Released without leaving the day it was pressed on: a click, which
+    // opens the planning menu as a right click would
+    if (pressedHere) {
       setDragSelection(null);
+      setMenuOpen(true);
+      return;
     }
+
+    // A drag ends on this day. The day itself is the end of the range: the
+    // selection state may not have caught up with a fast pointer yet.
+    const start = dragSelection.startDate.getTime();
+    const end = day.getTime();
+    const normalizedStart = new Date(Math.min(start, end));
+    const normalizedEnd = new Date(Math.max(start, end));
+    normalizedStart.setHours(0, 0, 0, 0);
+    normalizedEnd.setHours(23, 59, 59, 999);
+
+    createCycle(normalizedStart, normalizedEnd);
+    setDragSelection(null);
   };
 
   return (
     <div
       className={cn(
-        'min-h-32 flex-1 [&:not(:last-child)]:border-r-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30 select-none',
+        'group/day min-h-32 flex-1 [&:not(:last-child)]:border-r-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30 select-none',
         variant === 'week' && 'min-w-0 min-h-64 border-b md:border-b-0',
         isOver ? 'bg-gray-100 dark:bg-gray-800/50' : '',
         isInDragSelection ? 'bg-blue-50 dark:bg-blue-950/30' : '',
       )}
       onMouseDown={handleMouseDown}
       onMouseEnter={handleMouseEnter}
+      onMouseLeave={() => {
+        // Leaving the day turns the press into a drag
+        pressRef.current = null;
+      }}
       onMouseUp={handleMouseUp}
       ref={setNodeRef}
     >
@@ -201,7 +189,7 @@ export function CalendarDay({
         >
           <div
             className={cn(
-              'flex justify-center p-2 text-sm font-medium text-gray-600',
+              'relative flex justify-center p-2 text-sm font-medium text-gray-600',
               {
                 'text-red-500 font-bold': isToday,
                 'text-gray-400': !isCurrentMonth,
@@ -210,13 +198,43 @@ export function CalendarDay({
           >
             <span>
               {variant === 'week'
-                ? day.toLocaleDateString(getLocale(), {
+                ? day.toLocaleDateString(getDateLocale(getLocale()), {
                     weekday: 'short',
                     day: 'numeric',
                     month: 'short',
                   })
                 : dayOfMonth}
             </span>
+            {allowCreate && (
+              <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+                <DropdownMenuTrigger asChild>
+                  {/* Shown on hover and keyboard focus; the anchor of the
+                      menu a simple click on the day opens */}
+                  <button
+                    type="button"
+                    data-calendar-day-plan
+                    aria-label={m.calendar_plan_on_day({
+                      date: day.toLocaleDateString(getDateLocale(getLocale()), {
+                        weekday: 'long',
+                        day: 'numeric',
+                        month: 'long',
+                      }),
+                    })}
+                    onMouseDown={(event) => event.stopPropagation()}
+                    className="absolute right-1 top-1 flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:opacity-100 group-hover/day:opacity-100 data-[state=open]:opacity-100"
+                  >
+                    <Plus className="size-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <CalendarDayActions
+                    day={day}
+                    menu="dropdown"
+                    onAiSetupNeeded={() => setAiSetupOpen(true)}
+                  />
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
 
           {/* Cycles display - positioned for cross-cell rendering */}
@@ -250,83 +268,11 @@ export function CalendarDay({
         </ContextMenuTrigger>
         {allowCreate && (
           <ContextMenuContent className="w-64">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <ContextMenuItem
-                    disabled={!hasClipboard}
-                    onClick={() => {
-                      if (!clipboard) return;
-                      const originalStartDate = new Date(clipboard.startDate);
-                      const originalEndDate = new Date(clipboard.endDate);
-                      const duration =
-                        originalEndDate.getTime() - originalStartDate.getTime();
-
-                      const newStartDate = new Date(day);
-                      newStartDate.setHours(
-                        originalStartDate.getHours(),
-                        originalStartDate.getMinutes(),
-                        originalStartDate.getSeconds(),
-                        originalStartDate.getMilliseconds(),
-                      );
-
-                      const newEndDate = new Date(
-                        newStartDate.getTime() + duration,
-                      );
-
-                      duplicateEventMutation.mutate({
-                        eventId: clipboard.eventId,
-                        body: {
-                          startDate: newStartDate,
-                          endDate: newEndDate,
-                        },
-                      });
-                    }}
-                  >
-                    <ClipboardPaste className="w-4 h-4 mr-2" />
-                    {m.paste()}
-                  </ContextMenuItem>
-                </div>
-              </TooltipTrigger>
-              {!hasClipboard && (
-                <TooltipContent>{m.nothing_to_paste()}</TooltipContent>
-              )}
-            </Tooltip>
-            <ContextMenuSeparator />
-            <ContextMenuItem
-              onClick={() => {
-                if (hasAIAccess) {
-                  createEventWithAI(day);
-                } else {
-                  setAiSetupOpen(true);
-                }
-              }}
-            >
-              <SparklesIcon className="w-4 h-4 mr-2" />
-              {m.create_with_ai()}
-            </ContextMenuItem>
-            <ContextMenuSeparator />
-            <ContextMenuItem onClick={() => createEventFromTemplate(day)}>
-              <FileText className="w-4 h-4 mr-2" />
-              {m.set_a_template()}
-            </ContextMenuItem>
-            <ContextMenuSeparator />
-            <ContextMenuItem
-              onClick={() => createEvent(day, EVENT_TYPE.TRAINING)}
-            >
-              <Activity className="w-4 h-4 mr-2" />
-              {m.plan_a_training()}
-            </ContextMenuItem>
-            <ContextMenuItem
-              onClick={() => createEvent(day, EVENT_TYPE.COMPETITION)}
-            >
-              <Award className="w-4 h-4 mr-2" />
-              {m.plan_a_competition()}
-            </ContextMenuItem>
-            <ContextMenuItem onClick={() => createEvent(day, EVENT_TYPE.NOTE)}>
-              <StickyNote className="w-4 h-4 mr-2" />
-              {m.plan_a_note()}
-            </ContextMenuItem>
+            <CalendarDayActions
+              day={day}
+              menu="context"
+              onAiSetupNeeded={() => setAiSetupOpen(true)}
+            />
           </ContextMenuContent>
         )}
       </ContextMenu>

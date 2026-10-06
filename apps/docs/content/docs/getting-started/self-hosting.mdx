@@ -5,56 +5,45 @@ description: Deploy your own OpenAthlete instance
 
 OpenAthlete is designed to be self-hosted, giving you full control over your data and privacy.
 
-## Docker Compose (recommended)
+## Quick start
 
-Requirements: a server with `git`, `docker` and the `docker compose` plugin.
-
-1. Clone the repository:
+Requirements: a Linux server (or any machine) with [Docker](https://docs.docker.com/engine/install/) and its Compose plugin. 1 GB of RAM is enough: the whole stack uses about 250 MB at rest.
 
 ```bash
-git clone https://github.com/openathleteorg/openathlete.git
-cd openathlete
+curl -fsSL https://raw.githubusercontent.com/openathleteorg/openathlete/main/scripts/install.sh | sh
 ```
 
-2. Create your configuration. `docker compose` reads the `.env` file at the repository root:
+The script creates an `openathlete` folder with `docker-compose.yml` and a `.env` holding new random secrets, downloads the images and starts OpenAthlete on `http://localhost`. Open it and create your account: the first account is a regular one, there is no default admin.
+
+To serve your own domain over HTTPS, point its DNS to the server, then:
 
 ```bash
-cp .env.example .env
+curl -fsSL https://raw.githubusercontent.com/openathleteorg/openathlete/main/scripts/install.sh | sh -s -- --domain openathlete.example.org
 ```
 
-3. Fill in the two required secrets, each with its own random value:
+[Caddy](https://caddyserver.com) then obtains and renews the certificate on its own; ports 80 and 443 must be reachable. Behind your own reverse proxy instead, use `--url https://openathlete.example.org` and forward to the port of the web container (`WEB_PORT`).
+
+<Callout type="warn">
+Keep a copy of `.env`. Without `HASH_PEPPER`, no existing password can be checked.
+</Callout>
+
+### How it fits together
+
+- **One address.** The web container serves the app and forwards `/api` and `/socket.io` to the API, so `APP_URL` is the only address to configure: email links, allowed origins and device callback URLs follow it.
+- **Images.** The Compose file runs the published multi-architecture images (amd64, arm64): `ghcr.io/openathleteorg/openathlete-api` and `ghcr.io/openathleteorg/openathlete-web`. `OPENATHLETE_VERSION=1` follows every 1.x release; set it to a version such as `1.1.0` to upgrade only when you choose.
+- **Data.** PostgreSQL and Redis are only reachable from the other containers. Database migrations run when the API starts.
+
+### Without the script
 
 ```bash
-openssl rand -base64 48   # paste as JWT_SECRET_KEY
-openssl rand -base64 48   # paste as HASH_PEPPER
+mkdir openathlete && cd openathlete
+curl -fsSLO https://raw.githubusercontent.com/openathleteorg/openathlete/main/docker-compose.yml
+curl -fsSL https://raw.githubusercontent.com/openathleteorg/openathlete/main/.env.example -o .env
 ```
 
-4. Set the public URLs if you are not running on `localhost`:
+In `.env`, set `JWT_SECRET_KEY`, `HASH_PEPPER` and `POSTGRES_PASSWORD` (each `openssl rand -hex 32`) and `APP_URL`, then run `docker compose up -d`.
 
-```properties
-APP_URL=https://openathlete.example.org          # where users open the app
-API_PUBLIC_URL=https://api.openathlete.example.org # where browsers reach the API
-CORS_ORIGINS=https://openathlete.example.org
-```
-
-5. Start the stack:
-
-```bash
-docker compose up -d --build
-```
-
-The web app listens on port 80 and the API on port 3000 (change them with `WEB_PORT` and `API_PORT`). PostgreSQL and Redis are only reachable from the server itself.
-
-Database migrations run automatically when the API starts. The first account you create is a regular account; there is no default admin.
-
-### Prebuilt images
-
-Each release publishes multi-architecture images (amd64 and arm64) to GitHub Container Registry:
-
-- `ghcr.io/openathleteorg/openathlete-api`
-- `ghcr.io/openathleteorg/openathlete-web`
-
-They take the same variables as the Compose setup; the web image reads `API_PUBLIC_URL` when it starts. Pin a version tag (for example `1.2.3` or `1.2`) rather than `latest` to control upgrades.
+To build the images from a clone of the repository instead: `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build`. Building takes a few minutes and much more memory than running the images.
 
 ### Optional features
 
@@ -70,6 +59,19 @@ Leave a variable empty to disable the feature:
 Without Stripe, the instance sells nothing and limits nobody: every account can coach any number of athletes. With Stripe, free accounts coach up to 5 athletes and the Supporter subscription (`STRIPE_PRICE_SUPPORTER_MONTHLY`, `STRIPE_PRICE_SUPPORTER_YEARLY`) removes the limit and includes AI on the instance keys.
 
 Every API variable is documented in `apps/api/.env.example`.
+
+### Device sync
+
+Each provider needs an app registered in its developer program. Users can always import FIT and GPX files instead (Settings > Connectors).
+
+| Provider | Developer program | Callback URL to declare |
+| --- | --- | --- |
+| Strava | [strava.com/settings/api](https://www.strava.com/settings/api), open to anyone (limited to a few athletes until Strava reviews the app) | Authorization domain: your domain |
+| Polar | [admin.polaraccesslink.com](https://admin.polaraccesslink.com), open to anyone | `APP_URL/auth/callback/polar` |
+| Garmin | [Garmin Connect Developer Program](https://developer.garmin.com/gc-developer-program/), business approval required | `APP_URL/auth/callback/garmin` |
+| Suunto | [Suunto API Zone](https://apizone.suunto.com), partner approval required | `APP_URL/auth/callback/suunto` |
+
+Set the client ID and secret in `.env` (`STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`...). Callback URLs default to `APP_URL/auth/callback/<provider>` and webhooks to `APP_URL/api/provider/<provider>/webhook`; the `*_REDIRECT_URI` and `POLAR_WEBHOOK_URL` variables override them.
 
 Activities from connected devices, including historical imports, are fetched by background jobs that run inside the API container (`ENABLE_ACTIVITY_IMPORT` and `ENABLE_ACTIVITY_PROCESSING`, both on by default). To run them in a separate worker instead, start a second API container with these two variables set to `true` and `SKIP_MIGRATIONS=true`, and set them to `false` on the API.
 
@@ -94,20 +96,27 @@ For background features (post-activity questions, feedback analysis, load estima
 
 ### HTTPS and reverse proxies
 
-Put the web app and the API behind a TLS-terminating reverse proxy (Caddy, Traefik, nginx, Coolify). The API trusts `X-Forwarded-For` only from proxies on private networks, which covers a proxy on the same host or Docker network. If another public proxy sits in front (for example Cloudflare), set `TRUST_PROXY` to the number of proxy hops so rate limiting sees real client IPs.
+The `https` profile runs Caddy with automatic certificates (see the quick start). With your own proxy (Traefik, nginx, Coolify...), forward the whole domain to the web container and keep `WEB_PORT` on localhost, for example `WEB_PORT=127.0.0.1:8080`. The API trusts `X-Forwarded-For` only from proxies on private networks, which covers a proxy on the same host or Docker network. If another public proxy sits in front (for example Cloudflare), set `TRUST_PROXY` to the number of proxy hops so rate limiting sees real client IPs.
 
 ### Updating
 
+Run the install script again, or:
+
 ```bash
-git pull
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 ```
 
-<Callout type="warn">
-**Upgrading an instance started before October 2026:** `JWT_SECRET_KEY` and `HASH_PEPPER` used to have built-in defaults and are now required.
+Read the [release notes](https://github.com/openathleteorg/openathlete/releases) first: they list new variables and anything to change.
 
-- Set a new random `JWT_SECRET_KEY`. The API refuses to start with the former default, which was public. Users are simply logged out.
-- Keep `HASH_PEPPER=dev-pepper-change-in-production-min-32-chars` if your instance used the default. Changing the pepper invalidates every existing password.
+<Callout type="warn">
+**Upgrading a setup from before version 1.1** (built from a clone with `docker compose up -d --build`):
+
+- Replace `docker-compose.yml` with the new one: it runs the published images. Keep your `.env` and your data, which lives in Docker volumes.
+- Remove `API_PUBLIC_URL` and `CORS_ORIGINS` from `.env`: the app now reaches the API under `APP_URL/api`. If you keep a separate API address, the API port is now published on localhost only: set `API_PORT=3000` to publish it on every interface as before.
+- Leave `POSTGRES_PASSWORD` empty: your database was created with the former default.
+- PostgreSQL (5433) and Redis (6379) are no longer published on the host; use `docker compose exec` for backups.
+- `JWT_SECRET_KEY` and `HASH_PEPPER` are required. Keep `HASH_PEPPER=dev-pepper-change-in-production-min-32-chars` if your instance used that former default: changing the pepper invalidates every password.
 </Callout>
 
 ## Manual deployment
@@ -148,17 +157,31 @@ server {
 
 ## Backups
 
-Back up the PostgreSQL database regularly, for example with `pg_dump`, and keep your `.env` somewhere safe: losing `HASH_PEPPER` means no existing password can be verified.
+Back up the database regularly, and keep `.env` somewhere safe:
+
+```bash
+docker compose exec -T postgres pg_dump -U openathlete -Fc openathlete > openathlete-$(date +%F).dump
+```
+
+To restore a dump into a fresh instance:
+
+```bash
+docker compose up -d postgres
+docker compose exec -T postgres pg_restore -U openathlete -d openathlete --clean --if-exists < openathlete-2026-10-05.dump
+docker compose up -d
+```
 
 ## Troubleshooting
 
 **The API container keeps restarting.** Run `docker compose logs api`: the API lists every invalid or missing variable at startup.
 
-**CORS errors in the browser.** `CORS_ORIGINS` must contain the exact URL users open, including the scheme and port.
+**CORS or WebSocket errors in the browser.** `APP_URL` must be the exact address users open, including the scheme and port. With a separate API address, `CORS_ORIGINS` must list it too.
 
 **Links in emails point to the wrong host.** Set `APP_URL` to the public URL of the web app.
 
-**The web app calls the wrong API URL.** Check `API_PUBLIC_URL`, then restart the web container: `docker compose up -d web`.
+**The web app calls the wrong API URL.** Remove `API_PUBLIC_URL` from `.env` (the app then uses `/api`), then recreate the web container: `docker compose up -d --force-recreate web`.
+
+**Device connection fails with a redirect error.** The callback URL declared at the provider must match `APP_URL/auth/callback/<provider>` exactly.
 
 ## Next steps
 

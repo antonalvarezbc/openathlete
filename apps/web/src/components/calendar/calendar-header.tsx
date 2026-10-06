@@ -4,13 +4,27 @@ import { m } from '@/paraglide/messages';
 import { getLocale } from '@/paraglide/runtime';
 import { getDateLocale } from '@/utils/locales';
 import { addDays, getISOWeek } from 'date-fns';
-import { BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  BookOpen,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+} from 'lucide-react';
 import { useState } from 'react';
 
 import { EVENT_TYPE, Event, SPORT_TYPE } from '@openathlete/shared';
 
+import { AiSetupDialog } from '../ai-settings';
 import { SportSelect } from '../sport-select/sport-select';
 import { Button } from '../ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../ui/dropdown-menu';
 import {
   Select,
   SelectContent,
@@ -18,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
+import { CalendarDayActions } from './calendar-day-actions';
 import { CalendarViewToggle } from './calendar-view-toggle';
 import { useTemplateLibrarySidebar } from './contexts/template-library-sidebar-context';
 import { useCalendarContext } from './hooks/use-calendar-context';
@@ -38,8 +53,10 @@ export function CalendarHeader() {
     nextWeek,
     prevWeek,
     goToCurrentWeek,
+    allowCreate,
   } = useCalendarContext();
   const isWeek = view === 'week';
+  const [aiSetupOpen, setAiSetupOpen] = useState(false);
   const [sportFilter, setSportFilter] = useState<SPORT_TYPE | null>(null);
   const { athlete, isCurrentUser } = useAthleteInfo({ athleteId });
   const { open, setOpen, mainSidebarWasOpen, setMainSidebarWasOpen } =
@@ -65,6 +82,17 @@ export function CalendarHeader() {
         month: 'long',
         year: 'numeric',
       });
+
+  // Today when it is shown, otherwise the first day of the week or month
+  const now = new Date();
+  const planningDay = isWeek
+    ? now >= weekStart && now < addDays(weekStart, 7)
+      ? now
+      : weekStart
+    : displayedMonth.getMonth() === now.getMonth() &&
+        displayedMonth.getFullYear() === now.getFullYear()
+      ? now
+      : new Date(displayedMonth.getFullYear(), displayedMonth.getMonth(), 1);
 
   const calendarTitle = isCurrentUser
     ? m.calendar_of({ month: displayedMonthString })
@@ -124,6 +152,32 @@ export function CalendarHeader() {
         <CalendarViewToggle />
         {/* Filters row */}
         <div className="flex gap-2">
+          {allowCreate && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button data-calendar-plan-trigger>
+                  <Plus className="size-4" />
+                  {m.plan()}
+                  <ChevronDown className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-64">
+                <DropdownMenuLabel className="font-normal text-muted-foreground">
+                  {planningDay.toLocaleDateString(getDateLocale(getLocale()), {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                  })}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <CalendarDayActions
+                  day={planningDay}
+                  menu="dropdown"
+                  onAiSetupNeeded={() => setAiSetupOpen(true)}
+                />
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           <Button
             variant={open ? 'default' : 'outline'}
             onClick={handleTemplateLibraryToggle}
@@ -194,6 +248,11 @@ export function CalendarHeader() {
           </Button>
         </div>
       </div>
+      <AiSetupDialog
+        open={aiSetupOpen}
+        onOpenChange={setAiSetupOpen}
+        analyticsSource="calendar_header"
+      />
     </div>
   );
 }

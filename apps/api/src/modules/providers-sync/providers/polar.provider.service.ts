@@ -55,6 +55,7 @@ import {
   ImportedActivity,
   ProviderImportCapability,
 } from '../base/provider-import.interface';
+import { providerRedirectUri, providerWebhookUrl } from '../base/provider-urls';
 
 const POLAR_API_BASE = 'https://www.polaraccesslink.com/v3';
 const POLAR_OAUTH_AUTHORIZE = 'https://flow.polar.com/oauth2/authorization';
@@ -81,7 +82,11 @@ export class PolarProviderService
       tokenUrl: POLAR_OAUTH_TOKEN,
       clientId: this.configService.get('POLAR_CLIENT_ID') || '',
       clientSecret: this.configService.get('POLAR_CLIENT_SECRET') || '',
-      redirectUri: this.configService.get('POLAR_REDIRECT_URI') || '',
+      redirectUri: providerRedirectUri(
+        this.configService.get('POLAR_REDIRECT_URI'),
+        this.configService.get('APP_URL'),
+        'polar',
+      ),
       scopes: ['accesslink.read_all'],
     };
   }
@@ -483,7 +488,11 @@ export class PolarProviderService
       return;
     }
 
-    const webhookUrl = this.configService.get('POLAR_WEBHOOK_URL');
+    const webhookUrl = providerWebhookUrl(
+      this.configService.get('POLAR_WEBHOOK_URL'),
+      this.configService.get('APP_URL'),
+      'polar',
+    );
     if (!webhookUrl) {
       this.logger.warn(
         'POLAR_WEBHOOK_URL not configured, skipping webhook creation. Webhooks will not work until configured.',
