@@ -92,7 +92,13 @@ describe('message search dialog', () => {
     await act(async () => button('messages_search_all').click());
     expect(document.body.textContent).toContain('Recuperación reciente');
     await act(async () => button('Recuperación reciente').click());
-    expect(select).toHaveBeenCalledWith({ messageThreadId: 2, messageId: 22 });
+    // The result is handed over once the dialog has closed
+    await vi.waitFor(() =>
+      expect(select).toHaveBeenCalledWith({
+        messageThreadId: 2,
+        messageId: 22,
+      }),
+    );
   });
   it('disables current scope without a selected conversation', async () => {
     await open();
