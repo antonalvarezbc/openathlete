@@ -892,9 +892,8 @@ export class EventService {
       select: { resolutionM: true, provider: true, samples: true },
     });
 
-    if (!weather) {
-      throw new NotFoundException('Weather not found');
-    }
+    // Not fetched yet, or not available offline: nothing to show, no error
+    if (!weather) return null;
 
     return {
       resolutionM: weather.resolutionM,
