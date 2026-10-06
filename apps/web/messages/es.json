@@ -1214,5 +1214,17 @@
   "data_export_include_streams": "Incluir los flujos de las actividades (GPS, frecuencia cardiaca), archivo más pesado",
   "data_export_download": "Descargar mis datos",
   "data_export_preparing": "Preparando el archivo…",
-  "data_export_failed": "La exportación ha fallado. Inténtalo más tarde."
+  "data_export_failed": "La exportación ha fallado. Inténtalo más tarde.",
+  "messages_search_title": "Buscar mensajes",
+  "messages_search_description": "Busca por texto, remitente o nombre del chat. Pulsa un resultado para ir al mensaje.",
+  "messages_search_placeholder": "Texto, remitente o chat…",
+  "messages_search_scope": "Dónde buscar",
+  "messages_search_current": "Este chat",
+  "messages_search_all": "Todos mis chats",
+  "messages_search_error": "No se han podido cargar los mensajes.",
+  "messages_search_retry": "Reintentar",
+  "messages_search_hint": "Escribe para buscar en el historial de mensajes.",
+  "messages_search_count": "Resultados: {count}",
+  "messages_search_empty": "No se han encontrado mensajes.",
+  "messages_search_more": "Mostrar más"
 }

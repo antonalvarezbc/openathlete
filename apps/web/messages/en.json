@@ -1214,5 +1214,17 @@
   "data_export_include_streams": "Include activity streams (GPS, heart rate), for a larger file",
   "data_export_download": "Download my data",
   "data_export_preparing": "Preparing the file…",
-  "data_export_failed": "The export failed. Try again later."
+  "data_export_failed": "The export failed. Try again later.",
+  "messages_search_title": "Search messages",
+  "messages_search_description": "Search by text, sender or chat name. Select a result to jump to the message.",
+  "messages_search_placeholder": "Text, sender or chat…",
+  "messages_search_scope": "Search scope",
+  "messages_search_current": "This chat",
+  "messages_search_all": "All my chats",
+  "messages_search_error": "Messages could not be loaded.",
+  "messages_search_retry": "Retry",
+  "messages_search_hint": "Type to search the message history.",
+  "messages_search_count": "Results: {count}",
+  "messages_search_empty": "No messages found.",
+  "messages_search_more": "Show more"
 }
