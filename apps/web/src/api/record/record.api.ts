@@ -15,4 +15,12 @@ export class RecordAPI {
     });
     return res.data;
   }
+
+  /** Sports that have records, the most frequent first. */
+  static async getRecordSports(athleteId?: number): Promise<SPORT_TYPE[]> {
+    const res = await client.get(routes.record.getRecordSports, {
+      params: { athleteId },
+    });
+    return res.data;
+  }
 }

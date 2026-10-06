@@ -8,10 +8,18 @@ import { recordKeys } from './record.keys';
 export const useGetRecordsQuery = (
   sport?: SPORT_TYPE,
   athleteId?: number,
-  opt?: QueryOptions<Awaited<ReturnType<typeof RecordAPI.getRecords>>>,
+  opt?: QueryOptions<Awaited<ReturnType<typeof RecordAPI.getRecords>>> & {
+    enabled?: boolean;
+  },
 ) =>
   useQuery({
     ...opt,
     queryFn: () => RecordAPI.getRecords(sport, athleteId),
     queryKey: [recordKeys.getRecords, sport, athleteId],
+  });
+
+export const useGetRecordSportsQuery = (athleteId?: number) =>
+  useQuery({
+    queryFn: () => RecordAPI.getRecordSports(athleteId),
+    queryKey: [recordKeys.getRecordSports, athleteId],
   });

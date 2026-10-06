@@ -85,6 +85,7 @@ export const routes = {
   },
   record: {
     getRecords: '/record',
+    getRecordSports: '/record/sports',
   },
   equipment: {
     getMyEquipment: '/equipment',

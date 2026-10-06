@@ -14,7 +14,6 @@
   "calendar_of_athlete": "Calendario de {firstName} {lastName} de {month}",
   "all_sports": "Todos los deportes",
   "no_records_found": "No hay marcas personales {sport}",
-  "for_this_sport": "para este deporte",
   "planned_done": "Planificado + realizado",
   "planned": "Planificado",
   "done": "Realizado",

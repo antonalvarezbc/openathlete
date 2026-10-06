@@ -17,6 +17,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '../ui/chart';
+import { recordsChartData } from './records-chart-data';
 
 interface P {
   records: RecordType[];
@@ -26,55 +27,7 @@ interface P {
 export function RecordsChart({ records, className }: P) {
   const [hiddenLines, setHiddenLines] = useState<Set<RECORD_TYPE>>(new Set());
   const [hoveredLine, setHoveredLine] = useState<RECORD_TYPE | null>(null);
-  const chartData = useMemo(() => {
-    const groupedByDistance = records.reduce(
-      (acc, record) => {
-        const distance = record.distance || 0;
-
-        if (!acc[distance]) {
-          acc[distance] = {
-            POWER: 0,
-            HEARTRATE: 0,
-            SPEED: 0,
-            CADENCE: 0,
-            ELEVATION_GAIN: 0,
-            ELEVATION_LOSS: 0,
-          };
-        }
-
-        acc[distance][record.type] = record.value;
-
-        if (record.type === 'SPEED') {
-          acc[distance][record.type] = record.distance / record.value;
-        }
-        if (
-          record.type === 'ELEVATION_GAIN' ||
-          record.type === 'ELEVATION_LOSS'
-        ) {
-          const duration =
-            (record.endDuration || 1) - (record.startDuration || 0);
-          acc[distance][record.type] = record.value / (duration / 3600);
-        }
-
-        return acc;
-      },
-      {} as Record<number, { [key in RECORD_TYPE]: number }>,
-    );
-
-    const sortedData = Object.entries(groupedByDistance)
-      .sort(([a], [b]) => Number(a) - Number(b))
-      .map(([distance, values]) => ({
-        distance: Number(distance),
-        POWER: values[RECORD_TYPE.POWER] || 0,
-        HEARTRATE: values[RECORD_TYPE.HEARTRATE] || 0,
-        SPEED: values[RECORD_TYPE.SPEED] || 0,
-        CADENCE: values[RECORD_TYPE.CADENCE] || 0,
-        ELEVATION_GAIN: values[RECORD_TYPE.ELEVATION_GAIN] || 0,
-        ELEVATION_LOSS: values[RECORD_TYPE.ELEVATION_LOSS] || 0,
-      }));
-
-    return sortedData;
-  }, [records]);
+  const chartData = useMemo(() => recordsChartData(records), [records]);
 
   const xAxisTicks = useMemo(() => {
     return chartData.map((d) => d.distance);
@@ -218,6 +171,7 @@ export function RecordsChart({ records, className }: P) {
           yAxisId="POWER"
           stroke="var(--chart-2)"
           dot={true}
+          connectNulls
           strokeWidth={
             hoveredLine === null || hoveredLine === RECORD_TYPE.POWER ? 2 : 0.5
           }
@@ -236,6 +190,7 @@ export function RecordsChart({ records, className }: P) {
           yAxisId="SPEED"
           stroke="var(--chart-3)"
           dot={true}
+          connectNulls
           strokeWidth={
             hoveredLine === null || hoveredLine === RECORD_TYPE.SPEED ? 2 : 0.5
           }
@@ -254,6 +209,7 @@ export function RecordsChart({ records, className }: P) {
           yAxisId="HEARTRATE"
           stroke="var(--chart-4)"
           dot={true}
+          connectNulls
           strokeWidth={
             hoveredLine === null || hoveredLine === RECORD_TYPE.HEARTRATE
               ? 2
@@ -274,6 +230,7 @@ export function RecordsChart({ records, className }: P) {
           yAxisId="CADENCE"
           stroke="var(--chart-5)"
           dot={true}
+          connectNulls
           strokeWidth={
             hoveredLine === null || hoveredLine === RECORD_TYPE.CADENCE
               ? 2
@@ -294,6 +251,7 @@ export function RecordsChart({ records, className }: P) {
           yAxisId="ELEVATION_GAIN"
           stroke="var(--chart-4)"
           dot={true}
+          connectNulls
           strokeWidth={
             hoveredLine === null || hoveredLine === RECORD_TYPE.ELEVATION_GAIN
               ? 2
@@ -315,6 +273,7 @@ export function RecordsChart({ records, className }: P) {
           yAxisId="ELEVATION_LOSS"
           stroke="var(--chart-3)"
           dot={true}
+          connectNulls
           strokeWidth={
             hoveredLine === null || hoveredLine === RECORD_TYPE.ELEVATION_LOSS
               ? 2
