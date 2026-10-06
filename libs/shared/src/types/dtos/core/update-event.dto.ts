@@ -46,6 +46,9 @@ const activityEventUpdateSchema = baseEventUpdateSchema.extend({
   sport: z.nativeEnum(SPORT_TYPE).optional(),
   description: z.string().optional(),
   rpe: z.number().optional().nullable(),
+  /** One of the athlete's equipment, null to detach it */
+  equipmentId: z.number().int().positive().optional().nullable(),
+  isRace: z.boolean().optional(),
 });
 
 export const updateEventDtoSchema = z.union([

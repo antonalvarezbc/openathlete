@@ -68,6 +68,7 @@ export const EVENT_INCLUDES = {
       description: true,
       records: true,
       equipmentId: true,
+      isRace: true,
       feedbackSkipped: true,
       equipment: {
         select: {

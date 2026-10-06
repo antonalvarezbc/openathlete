@@ -68,6 +68,9 @@ export const activityEventFormSchema = baseEventFormSchema.extend({
   }),
   description: z.string().optional(),
   rpe: z.number().optional().nullable(),
+  /** An equipment id, or 'none' */
+  equipment: z.string().optional(),
+  isRace: z.boolean().optional(),
 });
 
 // Discriminated union for all event types
@@ -79,3 +82,23 @@ export const eventFormSchema = z.discriminatedUnion('type', [
 ]);
 
 export type EventFormValues = z.infer<typeof eventFormSchema>;
+
+/** The equipment select's value for an activity without equipment */
+export const NO_EQUIPMENT = 'none';
+
+/**
+ * The select holds strings: turns the activity's equipment into the id the
+ * API expects, null to detach it. Leaves other events untouched.
+ */
+export function withEquipmentId<T extends object>(
+  values: T,
+): Omit<T, 'equipment'> & { equipmentId?: number | null } {
+  if (!('equipment' in values) || values.equipment === undefined) {
+    return values;
+  }
+  const { equipment, ...rest } = values as T & { equipment: string };
+  return {
+    ...rest,
+    equipmentId: equipment === NO_EQUIPMENT ? null : Number(equipment),
+  };
+}

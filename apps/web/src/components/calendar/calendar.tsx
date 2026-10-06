@@ -802,15 +802,14 @@ export function Calendar({
                 event={events?.find(
                   (event) => event.eventId === editEventDialog,
                 )}
+                onDeleted={() => setEventDetailsOpened(null)}
               />
               <CalendarEventDetailsDialog
                 open={eventDetailsOpened !== null}
                 onClose={() => setEventDetailsOpened(null)}
                 event={events?.find((e) => e.eventId === eventDetailsOpened)}
-                onEditEvent={() => {
-                  setEditEventDialog(eventDetailsOpened);
-                  setEventDetailsOpened(null);
-                }}
+                // Opens over the details, which show the change once saved
+                onEditEvent={() => setEditEventDialog(eventDetailsOpened)}
               />
               <CreateEventFromTemplateDialog
                 open={createEventFromTemplateDialog !== null}

@@ -1,10 +1,13 @@
 import { useAiAccessQuery } from '@/api/ai-settings';
+import { useGetMyAthleteQuery } from '@/api/athlete';
+import { useDeleteEventMutation } from '@/api/event';
 import { SparklesIcon } from '@/components/ui/sparkles-icon';
 import { m } from '@/paraglide/messages';
-import { eventTypeLabelMap } from '@/utils/label-map/core';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 
 import { AiTask } from '@openathlete/shared';
 import type {
@@ -18,6 +21,7 @@ import { EVENT_TYPE } from '@openathlete/shared';
 
 import { AiSetupDialog } from '../ai-settings';
 import { useCalendarContext } from '../calendar/hooks/use-calendar-context';
+import { ConfirmAction } from '../confirm-action/confirm-action';
 import { FormProvider } from '../hook-form';
 import { RHFCheckbox } from '../hook-form/rhf-checkbox';
 import { Button } from '../ui/button';
@@ -49,7 +53,23 @@ type P =
       onClose: () => void;
       event?: Event;
       isTemplate?: boolean;
+      /** After the event is deleted from the dialog */
+      onDeleted?: () => void;
     };
+
+/** Whole sentences: "Edit" + "a" + type reads wrong in every language */
+const EDIT_TITLES: Record<EVENT_TYPE, () => string> = {
+  [EVENT_TYPE.TRAINING]: () => m.event_dialog_edit_training(),
+  [EVENT_TYPE.COMPETITION]: () => m.event_dialog_edit_competition(),
+  [EVENT_TYPE.NOTE]: () => m.event_dialog_edit_note(),
+  [EVENT_TYPE.ACTIVITY]: () => m.event_dialog_edit_activity(),
+};
+const PLAN_TITLES: Record<EVENT_TYPE, () => string> = {
+  [EVENT_TYPE.TRAINING]: () => m.event_dialog_plan_training(),
+  [EVENT_TYPE.COMPETITION]: () => m.event_dialog_plan_competition(),
+  [EVENT_TYPE.NOTE]: () => m.event_dialog_plan_note(),
+  [EVENT_TYPE.ACTIVITY]: () => m.event_dialog_plan_activity(),
+};
 
 export function CreateEventDialog({ open, onClose, ...rest }: P) {
   const { athleteId } = useCalendarContext();
@@ -135,6 +155,13 @@ export function CreateEventDialog({ open, onClose, ...rest }: P) {
       setValue('endDate', end, { shouldValidate: false });
     }
   }, [startDateValue, goalDurationValue, hasStepsWithDuration, type, setValue]);
+
+  const isTemplate = edit && 'isTemplate' in rest && !!rest.isTemplate;
+  const { data: myAthlete } = useGetMyAthleteQuery();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const deleteEventMutation = useDeleteEventMutation({
+    onError: () => toast.error(m.failed_to_delete_event()),
+  });
 
   // AI modification/generation dialog state
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
@@ -287,13 +314,11 @@ export function CreateEventDialog({ open, onClose, ...rest }: P) {
         <DialogHeader>
           <DialogTitle className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-2">
             <div className="flex items-center gap-2 grow text-sm md:text-base">
-              {edit && 'isTemplate' in rest && rest.isTemplate
+              {isTemplate
                 ? m.edit_template()
                 : edit
-                  ? m.edit()
-                  : m.plan()}{' '}
-              {edit && 'isTemplate' in rest && rest.isTemplate ? '' : m.a()}{' '}
-              {eventTypeLabelMap[type as keyof typeof eventTypeLabelMap]}
+                  ? EDIT_TITLES[type]()
+                  : PLAN_TITLES[type]()}
             </div>
             {type === EVENT_TYPE.TRAINING && (
               <div className="flex items-center gap-2 md:pr-4 md:-translate-y-4 w-full md:w-auto">
@@ -328,10 +353,17 @@ export function CreateEventDialog({ open, onClose, ...rest }: P) {
             type={type}
             hasStepsWithDuration={hasStepsWithDuration}
             startDateValue={startDateValue}
+            endDateValue={watch('endDate')}
+            canChooseEquipment={
+              edit &&
+              'event' in rest &&
+              !!myAthlete &&
+              rest.event?.athleteId === myAthlete.athleteId
+            }
             goalDistanceValue={goalDistanceValue}
             goalDurationValue={goalDurationValue}
             setValue={setValue}
-            isTemplate={edit && 'isTemplate' in rest && rest.isTemplate}
+            isTemplate={isTemplate}
           />
 
           <WorkoutSection
@@ -345,9 +377,20 @@ export function CreateEventDialog({ open, onClose, ...rest }: P) {
 
           <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4">
             <Button type="submit" className="flex-1" isLoading={isSubmitting}>
-              {edit ? m.edit() : m.create()} {m.the()}
-              {eventTypeLabelMap[type as keyof typeof eventTypeLabelMap]}
+              {edit ? m.save() : m.create()}
             </Button>
+            {edit && !isTemplate && 'event' in rest && rest.event && (
+              <Button
+                type="button"
+                variant="outline"
+                className="text-destructive"
+                onClick={() => setConfirmDelete(true)}
+                data-event-delete
+              >
+                <Trash2 className="h-4 w-4" />
+                {m.delete_()}
+              </Button>
+            )}
             {create && (
               <RHFCheckbox
                 name="saveAsTemplate"
@@ -374,6 +417,30 @@ export function CreateEventDialog({ open, onClose, ...rest }: P) {
         onOpenChange={setAiSetupOpen}
         analyticsSource="event_dialog"
       />
+      {edit && 'event' in rest && rest.event && (
+        <ConfirmAction
+          open={confirmDelete}
+          onClose={() => setConfirmDelete(false)}
+          onConfirm={() => {
+            const eventId = rest.event!.eventId;
+            deleteEventMutation.mutate(eventId, {
+              onSuccess: () => {
+                setConfirmDelete(false);
+                onClose();
+                rest.onDeleted?.();
+              },
+            });
+          }}
+          title={m.delete_event()}
+          message={
+            type === EVENT_TYPE.ACTIVITY
+              ? m.confirm_delete_activity()
+              : m.confirm_delete_event()
+          }
+          confirmText={m.delete_()}
+          isLoading={deleteEventMutation.isPending}
+        />
+      )}
     </Dialog>
   );
 }

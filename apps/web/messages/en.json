@@ -1269,5 +1269,17 @@
   "weekly_volume_title": "Weekly volume",
   "weekly_volume_description": "Last {weeks} weeks, by sport, in {unit}",
   "other_sports": "Other sports",
-  "week_of": "Week of {date}"
+  "week_of": "Week of {date}",
+  "event_dialog_edit_training": "Edit the training",
+  "event_dialog_edit_competition": "Edit the competition",
+  "event_dialog_edit_note": "Edit the note",
+  "event_dialog_edit_activity": "Edit the activity",
+  "event_dialog_plan_training": "Plan a training",
+  "event_dialog_plan_competition": "Plan a competition",
+  "event_dialog_plan_note": "Add a note",
+  "event_dialog_plan_activity": "Add an activity",
+  "activity_is_race": "It was a race",
+  "activity_race_badge": "Race",
+  "confirm_delete_activity": "Delete this activity? Its records and training load go with it. Importing it again from your device or file brings it back.",
+  "failed_to_delete_event": "The event could not be deleted. Try again."
 }

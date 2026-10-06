@@ -1,7 +1,7 @@
 import { EVENT_TYPE, Event, SPORT_TYPE } from '@openathlete/shared';
 import type { CreateEventDto } from '@openathlete/shared';
 
-import type { EventFormValues } from './event-form-schemas';
+import { type EventFormValues, NO_EQUIPMENT } from './event-form-schemas';
 
 type CreateProps = {
   date?: Date;
@@ -59,6 +59,10 @@ export function getFormDefaultValues(
         ...base,
         sport: props.event.sport,
         rpe: props.event.rpe ?? null,
+        equipment: props.event.equipmentId
+          ? String(props.event.equipmentId)
+          : NO_EQUIPMENT,
+        isRace: props.event.isRace,
       } as EventFormValues;
     }
 

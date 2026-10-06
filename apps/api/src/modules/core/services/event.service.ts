@@ -425,11 +425,43 @@ export class EventService {
     const workout =
       data.type === EVENT_TYPE.TRAINING ? data.workout : undefined;
 
-    const { type, endDate, startDate, name, athleteId, ...rest } = data;
+    const {
+      type,
+      startDate,
+      endDate: requestedEndDate,
+      name,
+      athleteId,
+      ...rest
+    } = data;
+    let endDate = requestedEndDate;
 
     if ('workout' in rest) {
       delete rest.workout;
     }
+
+    if (event.type === 'ACTIVITY') {
+      // An activity lasts what was recorded: moving it keeps its duration
+      if (startDate && !endDate) {
+        endDate = new Date(
+          startDate.getTime() +
+            (event.endDate.getTime() - event.startDate.getTime()),
+        );
+      }
+      if ('equipmentId' in rest && rest.equipmentId != null) {
+        const equipment = await this.prisma.equipment.findFirst({
+          where: { equipmentId: rest.equipmentId, athleteId: event.athleteId! },
+        });
+        if (!equipment) {
+          throw new BadRequestException(
+            "The equipment does not belong to the activity's athlete",
+          );
+        }
+      }
+    }
+    const activityMoved =
+      event.type === 'ACTIVITY' &&
+      !!startDate &&
+      startDate.getTime() !== event.startDate.getTime();
 
     // Check if RPE is being updated on an activity
     const isRpeUpdate =
@@ -586,8 +618,17 @@ export class EventService {
       );
     }
 
-    // If RPE was updated on an activity, trigger training load recalculation (skip for templates)
-    if (!isTemplate && isRpeUpdate && event.activity) {
+    // Records and daily loads are dated by the activity
+    if (!isTemplate && activityMoved && event.activity) {
+      await this.prisma.record.updateMany({
+        where: { eventActivityId: event.activity.eventActivityId },
+        data: { date: startDate },
+      });
+    }
+
+    // If RPE was updated on an activity, or it moved to another day, trigger
+    // training load recalculation (skip for templates)
+    if (!isTemplate && (isRpeUpdate || activityMoved) && event.activity) {
       this.eventEmitter.emit(
         ActivityImportedEvent.SLUG,
         new ActivityImportedEvent({

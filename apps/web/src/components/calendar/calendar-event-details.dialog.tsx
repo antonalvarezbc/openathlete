@@ -6,6 +6,7 @@ import {
   eventTypeLabelMap,
 } from '@/utils/label-map/core';
 import { cn } from '@/utils/shadcn';
+import { Trophy } from 'lucide-react';
 
 import { EVENT_TYPE, Event } from '@openathlete/shared';
 
@@ -52,6 +53,12 @@ export function CalendarEventDetailsDialog({
               {event && (
                 <Badge className="text-xs">
                   {eventTypeLabelMap[event.type]}
+                </Badge>
+              )}
+              {event?.type === EVENT_TYPE.ACTIVITY && event.isRace && (
+                <Badge variant="outline" className="text-xs" data-race-badge>
+                  <Trophy className="h-3 w-3" />
+                  {m.activity_race_badge()}
                 </Badge>
               )}
               {event?.type === EVENT_TYPE.ACTIVITY &&

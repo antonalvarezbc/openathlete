@@ -1269,5 +1269,17 @@
   "weekly_volume_title": "Volume settimanale",
   "weekly_volume_description": "Ultime {weeks} settimane, per sport, in {unit}",
   "other_sports": "Altri sport",
-  "week_of": "Settimana del {date}"
+  "week_of": "Settimana del {date}",
+  "event_dialog_edit_training": "Modifica l’allenamento",
+  "event_dialog_edit_competition": "Modifica la competizione",
+  "event_dialog_edit_note": "Modifica la nota",
+  "event_dialog_edit_activity": "Modifica l’attività",
+  "event_dialog_plan_training": "Pianifica un allenamento",
+  "event_dialog_plan_competition": "Pianifica una competizione",
+  "event_dialog_plan_note": "Aggiungi una nota",
+  "event_dialog_plan_activity": "Aggiungi un’attività",
+  "activity_is_race": "Era una gara",
+  "activity_race_badge": "Gara",
+  "confirm_delete_activity": "Eliminare questa attività? I suoi record e il carico di allenamento vengono eliminati con lei. Importarla di nuovo dal dispositivo o da un file la riporta.",
+  "failed_to_delete_event": "Impossibile eliminare l’evento. Riprova."
 }

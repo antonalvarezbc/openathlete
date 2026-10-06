@@ -11,7 +11,14 @@ import {
 } from '@/utils/color';
 import { cn } from '@/utils/shadcn';
 import { useDraggable } from '@dnd-kit/core';
-import { ActivityIcon, Copy, Edit2, FileText, Trash2 } from 'lucide-react';
+import {
+  ActivityIcon,
+  Copy,
+  Edit2,
+  FileText,
+  Trash2,
+  Trophy,
+} from 'lucide-react';
 import { usePostHog } from 'posthog-js/react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -241,6 +248,12 @@ export function CalendarEvent({ event, wrapped, detailed = false }: P) {
                   <SportIcon
                     sport={event.sport}
                     className="inline-block mr-1"
+                  />
+                )}
+                {event.type === EVENT_TYPE.ACTIVITY && event.isRace && (
+                  <Trophy
+                    className="inline-block h-3.5 w-3.5 mr-1 text-amber-500"
+                    aria-label={m.activity_race_badge()}
                   />
                 )}
                 {event.type === EVENT_TYPE.ACTIVITY && event.rpe !== null && (
