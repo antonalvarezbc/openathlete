@@ -101,7 +101,7 @@ export class EventService {
       training: EventTraining | null;
       note: EventNote | null;
       activity:
-        | (Omit<EventActivity, 'stream'> & {
+        | (Omit<EventActivity, 'stream' | 'recordsVersion'> & {
             segments?: ActivitySegment[];
             feedbackQuestions?: Array<{
               activityFeedbackQuestionId: number;
@@ -1307,7 +1307,7 @@ export class EventService {
       competition: EventCompetition | null;
       training: EventTraining | null;
       note: EventNote | null;
-      activity: Omit<EventActivity, 'stream'> | null;
+      activity: Omit<EventActivity, 'stream' | 'recordsVersion'> | null;
     },
   ): Promise<boolean> {
     if (!event.athleteId) return true; // No athlete, consider validated

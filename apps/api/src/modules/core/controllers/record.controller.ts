@@ -159,4 +159,37 @@ export class RecordController {
   ) {
     return this.recordService.getRecords(user, sport as SportType, athleteId);
   }
+
+  @UseGuards(AuthGuard('jwt'), UserTypeGuard)
+  @ApiBearerAuth()
+  @Get('sports')
+  @ApiOperation({
+    summary: 'Sports that have records',
+    description:
+      'Sports for which the athlete has records, the one with the most activities first. Clients show one sport at a time: mixing sports on one records curve is meaningless.',
+  })
+  @ApiQuery({
+    name: 'athleteId',
+    type: Number,
+    description:
+      "Optional athlete ID. If not provided, uses authenticated user's athlete.",
+    required: false,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Sport types, most frequent first',
+    schema: {
+      type: 'array',
+      items: { type: 'string', enum: Object.values(SportType) },
+    },
+  })
+  @ApiResponse({ status: 403, description: 'Not allowed to read the athlete' })
+  @ApiResponse({ status: 404, description: 'Athlete not found' })
+  getRecordSports(
+    @JwtUser() user: AuthUser,
+    @Query('athleteId', new ParseIntPipe({ optional: true }))
+    athleteId?: Athlete['athleteId'],
+  ) {
+    return this.recordService.getRecordSports(user, athleteId);
+  }
 }

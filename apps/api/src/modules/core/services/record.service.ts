@@ -24,38 +24,55 @@ export class RecordService {
     private readonly abilities: CaslAbilityFactory,
   ) {}
 
+  /** The athlete whose records the user asked for, once allowed to read them. */
+  private async targetAthleteId(
+    user: AuthUser,
+    athleteId?: Athlete['athleteId'],
+  ): Promise<number> {
+    if (!athleteId) {
+      if (!user.athlete?.athleteId) {
+        throw new NotFoundException('Athlete not found');
+      }
+      return user.athlete.athleteId;
+    }
+
+    const athlete = await this.prisma.athlete.findUnique({
+      where: { athleteId },
+    });
+    if (!athlete) {
+      throw new NotFoundException('Athlete not found');
+    }
+    const ability = await this.abilities.getFor({ user });
+    if (!ability.can('read', subject('Athlete', athlete))) {
+      throw new ForbiddenException('Not allowed to access this athlete');
+    }
+    return athleteId;
+  }
+
+  /**
+   * Sports with records, the most frequent first: a records curve only
+   * makes sense for one sport.
+   */
+  async getRecordSports(
+    user: AuthUser,
+    athleteId?: Athlete['athleteId'],
+  ): Promise<SportType[]> {
+    const targetAthleteId = await this.targetAthleteId(user, athleteId);
+    const rows = await this.prisma.$queryRaw<{ sport: SportType }[]>`
+      SELECT a.sport FROM record r
+      JOIN event_activity a ON a.event_activity_id = r.event_activity_id
+      WHERE r.athlete_id = ${targetAthleteId}
+      GROUP BY a.sport
+      ORDER BY count(DISTINCT a.event_activity_id) DESC, a.sport`;
+    return rows.map((row) => row.sport);
+  }
+
   async getRecords(
     user: AuthUser,
     sport?: SportType,
     athleteId?: Athlete['athleteId'],
   ): Promise<PrismaRecord[]> {
-    const ability = await this.abilities.getFor({ user });
-
-    // Determine which athlete's records to fetch
-    let targetAthleteId: number;
-
-    if (athleteId) {
-      // Check if user can access this athlete's data
-      const athlete = await this.prisma.athlete.findUnique({
-        where: { athleteId: athleteId },
-      });
-
-      if (!athlete) {
-        throw new NotFoundException('Athlete not found');
-      }
-
-      if (!ability.can('read', subject('Athlete', athlete))) {
-        throw new ForbiddenException('Not allowed to access this athlete');
-      }
-
-      targetAthleteId = athleteId;
-    } else {
-      // Use current user's athlete ID
-      if (!user.athlete?.athleteId) {
-        throw new NotFoundException('Athlete not found');
-      }
-      targetAthleteId = user.athlete.athleteId;
-    }
+    const targetAthleteId = await this.targetAthleteId(user, athleteId);
 
     const records = await this.prisma.record.findMany({
       where: {

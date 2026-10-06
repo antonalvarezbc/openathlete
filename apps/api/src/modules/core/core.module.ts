@@ -31,6 +31,7 @@ import {
 } from './services';
 import { ActivityDetailService } from './services/activity-detail.service';
 import { ActivityFeedbackService } from './services/activity-feedback.service';
+import { ActivityRecordsService } from './services/activity-records.service';
 import { AthleteSettingsService } from './services/athlete-settings.service';
 import { AthleteService } from './services/athlete.service';
 import { CoachService } from './services/coach.service';
@@ -44,6 +45,7 @@ import { ActivityPipelineService } from './services/pipeline/activity-pipeline.s
 import {
   GapProcessor,
   NormalizationProcessor,
+  RecordsProcessor,
   TrainingMatchProcessor,
   WeatherProcessor,
 } from './services/pipeline/processors';
@@ -107,7 +109,9 @@ import { WeatherService } from './services/weather/weather.service';
     ActivityDetailService,
     ActivityFileParserService,
     // Pipeline and processors
+    ActivityRecordsService,
     GapProcessor,
+    RecordsProcessor,
     WeatherProcessor,
     NormalizationProcessor,
     TrainingMatchProcessor,
@@ -115,18 +119,21 @@ import { WeatherService } from './services/weather/weather.service';
       provide: ActivityPipelineService,
       useFactory: (
         gap: GapProcessor,
+        records: RecordsProcessor,
         weather: WeatherProcessor,
         normalization: NormalizationProcessor,
         trainingMatch: TrainingMatchProcessor,
       ) =>
         new ActivityPipelineService([
           gap,
+          records,
           weather,
           normalization,
           trainingMatch,
         ]),
       inject: [
         GapProcessor,
+        RecordsProcessor,
         WeatherProcessor,
         NormalizationProcessor,
         TrainingMatchProcessor,
@@ -135,6 +142,7 @@ import { WeatherService } from './services/weather/weather.service';
   ],
   exports: [
     EventService,
+    ActivityRecordsService,
     ActivityPipelineService,
     ActivityDetailService,
     TrainingLoadService,

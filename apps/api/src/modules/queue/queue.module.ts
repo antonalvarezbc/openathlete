@@ -15,6 +15,7 @@ import { ActivityProcessingProcessor } from './processors/activity-processing.pr
 import { ProviderFullImportProcessor } from './processors/provider-full-import.processor';
 import { TrainingLoadEstimationProcessor } from './processors/training-load-estimation.processor';
 import { QueueService } from './queue.service';
+import { RecordsBackfillService } from './services/records-backfill.service';
 import { TrainingLoadEstimationService } from './services/training-load-estimation.service';
 
 function parseRedisUrl(redisUrl: string): {
@@ -301,7 +302,7 @@ function parseRedisUrl(redisUrl: string): {
       ? [ActivityImportProcessor, ProviderFullImportProcessor]
       : []),
     ...(process.env.ENABLE_ACTIVITY_PROCESSING === 'true'
-      ? [ActivityProcessingProcessor]
+      ? [ActivityProcessingProcessor, RecordsBackfillService]
       : []),
     ...(process.env.ENABLE_TRAINING_LOAD_ESTIMATION === 'true'
       ? [TrainingLoadEstimationProcessor]
