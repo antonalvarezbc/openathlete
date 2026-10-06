@@ -171,7 +171,7 @@ export class EquipmentService {
       throw new NotFoundException('Athlete not found');
     }
 
-    return await this.prisma.equipment.findMany({
+    const equipment = await this.prisma.equipment.findMany({
       where: {
         athleteId: athlete.athleteId,
       },
@@ -179,6 +179,19 @@ export class EquipmentService {
         createdAt: 'desc',
       },
     });
+    // The distance comes from the activities it is attached to: moving it
+    // to another activity, or deleting one, keeps the total right
+    const distances = await this.prisma.eventActivity.groupBy({
+      by: ['equipmentId'],
+      where: { equipmentId: { in: equipment.map((e) => e.equipmentId) } },
+      _sum: { distance: true },
+    });
+    return equipment.map((item) => ({
+      ...item,
+      totalDistance:
+        distances.find((d) => d.equipmentId === item.equipmentId)?._sum
+          .distance ?? 0,
+    }));
   }
 
   async getDefaultEquipmentForSport(
