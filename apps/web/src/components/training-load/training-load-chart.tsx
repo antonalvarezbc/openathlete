@@ -15,10 +15,13 @@ import { getDateFnsLocale } from '@/utils/locales';
 import { format } from 'date-fns';
 import { useMemo } from 'react';
 import {
-  Area,
+  Bar,
+  CartesianGrid,
   ComposedChart,
   Line,
-  ResponsiveContainer,
+  LineChart,
+  ReferenceArea,
+  ReferenceLine,
   XAxis,
   YAxis,
 } from 'recharts';
@@ -28,6 +31,49 @@ interface TrainingLoadChartProps {
   endDate?: Date;
   defaultCalculationType?: TrainingLoadCalculationType;
   athleteId?: number;
+}
+
+const COLORS = {
+  load: 'var(--chart-5)',
+  ctl: 'var(--chart-1)',
+  atl: 'var(--chart-2)',
+  tsb: 'var(--chart-3)',
+};
+
+// Same thresholds as the API's training status (training-formulas.constants)
+const TSB_OVERREACHING = -10;
+const TSB_DETRAINING = 25;
+const TSB_ZONES = [
+  { key: 'overtraining', color: '#ef4444', label: () => m.overtraining() },
+  { key: 'optimal', color: '#22c55e', label: () => m.optimal_zone() },
+  { key: 'detraining', color: '#3b82f6', label: () => m.detraining() },
+] as const;
+
+type Series = keyof typeof COLORS;
+
+function Legend({
+  items,
+}: {
+  items: { key: string; color: string; label: string; value?: number }[];
+}) {
+  return (
+    <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+      {items.map((item) => (
+        <li key={item.key} className="flex items-center gap-1.5">
+          <span
+            className="h-2.5 w-2.5 shrink-0 rounded-sm"
+            style={{ backgroundColor: item.color }}
+          />
+          <span className="text-muted-foreground">{item.label}</span>
+          {item.value !== undefined && (
+            <span className="font-mono font-medium tabular-nums">
+              {item.value.toFixed(1)}
+            </span>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 export function TrainingLoadChart({
@@ -54,26 +100,77 @@ export function TrainingLoadChart({
     finalEndDate,
     athleteId,
   );
-  const chartData = useMemo(() => {
-    if (!history) return [];
-    return history
-      .filter((item) => {
-        // Validate date
-        return item.date instanceof Date && !Number.isNaN(item.date.getTime());
-      })
-      .map((item) => ({
-        date: item.date.getTime(),
-        dateLabel: format(item.date, 'dd MMM', { locale: dateFnsLocale }),
-        load: item.load,
-        atl: item.atl,
-        ctl: item.ctl,
-        tsb: item.tsb,
-      }));
-  }, [history, dateFnsLocale]);
+  const chartData = useMemo(
+    () =>
+      (history ?? [])
+        .filter(
+          (item) =>
+            item.date instanceof Date && !Number.isNaN(item.date.getTime()),
+        )
+        .map((item) => ({
+          date: item.date.getTime(),
+          load: item.load,
+          atl: item.atl,
+          ctl: item.ctl,
+          tsb: item.tsb,
+        })),
+    [history],
+  );
+
+  const labels: Record<Series, string> = {
+    load: m.daily_load(),
+    ctl: m.fitness_ctl(),
+    atl: m.fatigue_atl(),
+    tsb: m.tsb_balance(),
+  };
+  const config = Object.fromEntries(
+    (Object.keys(COLORS) as Series[]).map((key) => [
+      key,
+      { label: labels[key], color: COLORS[key] },
+    ]),
+  );
+  // Values at the end of the period, shown next to each legend entry
+  const latest = chartData[chartData.length - 1];
+  const tickDate = (value: number) =>
+    format(new Date(value), 'dd MMM', { locale: dateFnsLocale });
+  const tooltip = (
+    <ChartTooltip
+      content={
+        <ChartTooltipContent
+          labelFormatter={(_, payload) => {
+            const date = payload?.[0]?.payload?.date;
+            return typeof date === 'number'
+              ? format(new Date(date), 'dd MMMM yyyy', {
+                  locale: dateFnsLocale,
+                })
+              : '';
+          }}
+          formatter={(value, name) => (
+            <div className="flex w-full items-center gap-2 text-xs text-muted-foreground">
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-sm"
+                style={{ backgroundColor: COLORS[name as Series] }}
+              />
+              {labels[name as Series]}
+              <span className="ml-auto font-mono font-medium tabular-nums text-foreground">
+                {Number(value).toFixed(1)}
+              </span>
+            </div>
+          )}
+        />
+      }
+    />
+  );
+
+  const tsbValues = chartData.map((point) => point.tsb);
+  const tsbDomain: [number, number] = [
+    Math.floor(Math.min(TSB_OVERREACHING - 10, ...tsbValues) / 10) * 10,
+    Math.ceil(Math.max(TSB_DETRAINING + 10, ...tsbValues) / 10) * 10,
+  ];
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardHeader className="space-y-0 pb-2">
         <CardTitle className="text-base font-medium">
           {m.training_load_history()}
         </CardTitle>
@@ -84,149 +181,128 @@ export function TrainingLoadChart({
             <Loader size="lg" />
           </div>
         ) : chartData.length > 0 ? (
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 text-sm flex-wrap">
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: 'hsl(var(--chart-5))' }}
-                />
-                <span className="text-muted-foreground">{m.weekly_load()}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: 'hsl(var(--chart-1))' }}
-                />
-                <span className="text-muted-foreground">{m.fitness_ctl()}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: 'hsl(var(--chart-2))' }}
-                />
-                <span className="text-muted-foreground">{m.fatigue_atl()}</span>
-              </div>
-            </div>
-            <ChartContainer
-              config={{
-                load: {
-                  label: m.load(),
-                  color: 'hsl(var(--chart-5))',
-                },
-                ctl: {
-                  label: m.fitness_ctl(),
-                  color: 'hsl(var(--chart-1))',
-                },
-                atl: {
-                  label: m.fatigue_atl(),
-                  color: 'hsl(var(--chart-2))',
-                },
-                tsb: {
-                  label: m.tsb_balance(),
-                  color: 'hsl(var(--chart-3))',
-                },
-              }}
-              className="h-[450px] w-full"
-            >
-              <ResponsiveContainer width="100%" height="100%">
+          <div className="space-y-6">
+            <div className="space-y-3" data-training-load-chart>
+              <Legend
+                items={(['load', 'ctl', 'atl'] as const).map((key) => ({
+                  key,
+                  color: COLORS[key],
+                  label: labels[key],
+                  value: latest?.[key],
+                }))}
+              />
+              <ChartContainer config={config} className="h-[320px] w-full">
                 <ComposedChart
                   data={chartData}
-                  margin={{ top: 20, right: 20, left: 0, bottom: 0 }}
+                  margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
                 >
+                  <CartesianGrid vertical={false} />
                   <XAxis
                     dataKey="date"
                     type="number"
-                    domain={['dataMin', 'dataMax']}
-                    tickFormatter={(value) => {
-                      try {
-                        const timestamp =
-                          typeof value === 'number' ? value : Number(value);
-                        if (Number.isNaN(timestamp)) return '';
-                        return format(new Date(timestamp), 'dd MMM', {
-                          locale: dateFnsLocale,
-                        });
-                      } catch (error) {
-                        console.error('Error formatting tick:', value, error);
-                        return '';
-                      }
-                    }}
                     scale="time"
-                    stroke="hsl(var(--border))"
+                    domain={['dataMin', 'dataMax']}
+                    tickFormatter={tickDate}
+                    tick={{ fontSize: 11 }}
                   />
-                  <YAxis stroke="hsl(var(--border))" />
-
-                  <ChartTooltip
-                    content={
-                      <ChartTooltipContent
-                        labelFormatter={(value) => {
-                          try {
-                            const timestamp =
-                              typeof value === 'number' ? value : Number(value);
-                            if (Number.isNaN(timestamp)) return String(value);
-                            return format(new Date(timestamp), 'dd MMMM yyyy', {
-                              locale: dateFnsLocale,
-                            });
-                          } catch (error) {
-                            console.error(
-                              'Error formatting date:',
-                              value,
-                              error,
-                            );
-                            return String(value);
-                          }
-                        }}
-                        formatter={(value, name) => {
-                          const label =
-                            name === 'load'
-                              ? m.load()
-                              : name === 'ctl'
-                                ? m.fitness_ctl()
-                                : name === 'atl'
-                                  ? m.fatigue_atl()
-                                  : name === 'tsb'
-                                    ? m.tsb_balance()
-                                    : name;
-                          return [
-                            `${(value as number).toFixed(1)}`,
-                            label as string,
-                          ];
-                        }}
-                      />
-                    }
-                  />
-
-                  <Area
-                    type="linear"
+                  <YAxis width={40} tick={{ fontSize: 11 }} />
+                  {tooltip}
+                  <Bar
                     dataKey="load"
-                    stroke="none"
-                    fill="#a855f7"
-                    fillOpacity={0.2}
-                    name="load"
+                    fill={COLORS.load}
+                    fillOpacity={0.45}
+                    radius={[2, 2, 0, 0]}
+                    isAnimationActive={false}
                   />
-
                   <Line
-                    type="linear"
+                    type="monotone"
                     dataKey="ctl"
-                    stroke="#3b82f6"
+                    stroke={COLORS.ctl}
                     strokeWidth={2.5}
                     dot={false}
-                    activeDot={{ r: 6 }}
-                    name="ctl"
+                    isAnimationActive={false}
                   />
-
                   <Line
-                    type="linear"
+                    type="monotone"
                     dataKey="atl"
-                    stroke="#f97316"
+                    stroke={COLORS.atl}
                     strokeWidth={2.5}
                     dot={false}
-                    activeDot={{ r: 6 }}
-                    name="atl"
+                    isAnimationActive={false}
                   />
                 </ComposedChart>
-              </ResponsiveContainer>
-            </ChartContainer>
+              </ChartContainer>
+            </div>
+
+            <div className="space-y-3" data-tsb-chart>
+              <Legend
+                items={[
+                  {
+                    key: 'tsb',
+                    color: COLORS.tsb,
+                    label: labels.tsb,
+                    value: latest?.tsb,
+                  },
+                  ...TSB_ZONES.map((zone) => ({
+                    key: zone.key,
+                    color: `${zone.color}33`,
+                    label: zone.label(),
+                  })),
+                ]}
+              />
+              <ChartContainer config={config} className="h-[200px] w-full">
+                <LineChart
+                  data={chartData}
+                  margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                >
+                  <ReferenceArea
+                    y1={tsbDomain[0]}
+                    y2={TSB_OVERREACHING}
+                    fill={TSB_ZONES[0].color}
+                    fillOpacity={0.1}
+                    ifOverflow="hidden"
+                  />
+                  <ReferenceArea
+                    y1={TSB_OVERREACHING}
+                    y2={TSB_DETRAINING}
+                    fill={TSB_ZONES[1].color}
+                    fillOpacity={0.1}
+                    ifOverflow="hidden"
+                  />
+                  <ReferenceArea
+                    y1={TSB_DETRAINING}
+                    y2={tsbDomain[1]}
+                    fill={TSB_ZONES[2].color}
+                    fillOpacity={0.1}
+                    ifOverflow="hidden"
+                  />
+                  <ReferenceLine y={0} stroke="var(--border)" />
+                  <XAxis
+                    dataKey="date"
+                    type="number"
+                    scale="time"
+                    domain={['dataMin', 'dataMax']}
+                    tickFormatter={tickDate}
+                    tick={{ fontSize: 11 }}
+                  />
+                  <YAxis
+                    width={40}
+                    tick={{ fontSize: 11 }}
+                    domain={tsbDomain}
+                    ticks={[TSB_OVERREACHING, 0, TSB_DETRAINING]}
+                  />
+                  {tooltip}
+                  <Line
+                    type="monotone"
+                    dataKey="tsb"
+                    stroke={COLORS.tsb}
+                    strokeWidth={2.5}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                </LineChart>
+              </ChartContainer>
+            </div>
           </div>
         ) : (
           <div className="py-8 text-center text-sm text-muted-foreground">

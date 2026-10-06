@@ -1,31 +1,34 @@
 import { useGetStatisticsForPeriodQuery } from '@/api/statistics';
 import { SportDistributionChart } from '@/components/charts/sport-distribution-chart';
 import { StatisticsGlobals } from '@/components/statistics-globals/statistics-globals';
+import { statisticsPeriod } from '@/components/statistics-period-select/statistics-period';
 import { StatisticsPeriodSelect } from '@/components/statistics-period-select/statistics-period-select';
 import { TrainingLoadChart } from '@/components/training-load';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton, SkeletonChart } from '@/components/ui/skeleton';
+import { WeeklyVolumeChart } from '@/components/weekly-volume/weekly-volume-chart';
 import { useAthleteInfo } from '@/hooks/use-athlete-info';
 import { m } from '@/paraglide/messages';
 import { useState } from 'react';
 
-import {
-  formatDistance,
-  formatDuration,
-  getWeekPeriod,
-} from '@openathlete/shared';
+import { formatDistance, formatDuration } from '@openathlete/shared';
 
 interface P {
   athleteId: number;
 }
 
 export function StatisticsView({ athleteId }: P) {
-  const [period, setPeriod] = useState<{ start: Date; end: Date }>(
-    getWeekPeriod(new Date()),
+  const [period, setPeriod] = useState<{ start: Date; end: Date }>(() =>
+    statisticsPeriod('days7'),
   );
   const { data: statistics, isPending: isLoadingStatistics } =
     useGetStatisticsForPeriodQuery(athleteId, period.start, period.end);
   const { athlete, isCurrentUser } = useAthleteInfo({ athleteId });
+
+  // Ranked by time: each sport keeps its color in every chart
+  const colorOrder = [...(statistics?.sports ?? [])]
+    .sort((a, b) => b.duration - a.duration)
+    .map((sport) => sport.sport);
 
   const pageTitle = isCurrentUser
     ? m.my_statistics()
@@ -92,6 +95,7 @@ export function StatisticsView({ athleteId }: P) {
                 <CardContent className="p-0">
                   <SportDistributionChart
                     sports={statistics.sports}
+                    colorOrder={colorOrder}
                     keyToUse="duration"
                     formatter={(value: number) => `${formatDuration(value)}`}
                   />
@@ -106,6 +110,7 @@ export function StatisticsView({ athleteId }: P) {
                 <CardContent className="p-0">
                   <SportDistributionChart
                     sports={statistics.sports}
+                    colorOrder={colorOrder}
                     keyToUse="distance"
                     formatter={(value: number) => `${formatDistance(value)} km`}
                   />
@@ -120,8 +125,11 @@ export function StatisticsView({ athleteId }: P) {
                 <CardContent className="p-0">
                   <SportDistributionChart
                     sports={statistics.sports}
+                    colorOrder={colorOrder}
                     keyToUse="elevationGain"
-                    formatter={(value: number) => `${value} d+`}
+                    formatter={(value: number) =>
+                      `${Math.round(value)} ${m.meters()}`
+                    }
                   />
                 </CardContent>
               </Card>
@@ -134,6 +142,7 @@ export function StatisticsView({ athleteId }: P) {
                 <CardContent className="p-0">
                   <SportDistributionChart
                     sports={statistics.sports}
+                    colorOrder={colorOrder}
                     keyToUse="count"
                     formatter={(value: number) =>
                       `${value} ${value > 1 ? m.activities() : m.activity()}`
@@ -143,6 +152,9 @@ export function StatisticsView({ athleteId }: P) {
               </Card>
             </>
           )}
+          <div className="col-span-1 md:col-span-2">
+            <WeeklyVolumeChart athleteId={athleteId} />
+          </div>
           <div className="col-span-1 md:col-span-2">
             <TrainingLoadChart
               startDate={period.start}

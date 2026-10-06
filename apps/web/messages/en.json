@@ -1263,5 +1263,11 @@
   "records_help": "Best efforts over each distance or duration, taken from recorded activities.",
   "records_by_distance": "Best over each distance, in {unit}",
   "records_by_duration": "Best average over each duration, in {unit}",
-  "records_open_activity": "Open activity"
+  "records_open_activity": "Open activity",
+  "last_7_days": "7 days",
+  "daily_load": "Daily load",
+  "weekly_volume_title": "Weekly volume",
+  "weekly_volume_description": "Last {weeks} weeks, by sport, in {unit}",
+  "other_sports": "Other sports",
+  "week_of": "Week of {date}"
 }

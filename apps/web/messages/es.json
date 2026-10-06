@@ -1263,5 +1263,11 @@
   "records_help": "Mejores marcas en cada distancia o duración, obtenidas de las actividades registradas.",
   "records_by_distance": "El mejor en cada distancia, en {unit}",
   "records_by_duration": "La mejor media en cada duración, en {unit}",
-  "records_open_activity": "Abrir la actividad"
+  "records_open_activity": "Abrir la actividad",
+  "last_7_days": "7 días",
+  "daily_load": "Carga diaria",
+  "weekly_volume_title": "Volumen semanal",
+  "weekly_volume_description": "Últimas {weeks} semanas, por deporte, en {unit}",
+  "other_sports": "Otros deportes",
+  "week_of": "Semana del {date}"
 }

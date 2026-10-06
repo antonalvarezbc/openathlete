@@ -24,3 +24,4 @@ export * from './athlete-settings.dto';
 export * from './provider-preferences.dto';
 export * from './injury.dto';
 export * from './records.dto';
+export * from './weekly-volume.dto';
