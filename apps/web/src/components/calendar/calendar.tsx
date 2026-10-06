@@ -56,7 +56,9 @@ import { AiSetupDialog } from '../ai-settings';
 import { CreateCycleDialog } from '../create-cycle-dialog';
 import { CreateEventDialog } from '../create-event-dialog';
 import { CreateEventFromTemplateDialog } from '../create-event-from-template-dialog/create-event-from-template.dialog';
+import { BulkWorkoutSelectButton } from './bulk-workout-select-button';
 import { CalendarBody } from './calendar-body';
+import { CalendarBulkDelete } from './calendar-bulk-delete';
 import { CalendarEventDetailsDialog } from './calendar-event-details.dialog';
 import { CalendarHeader } from './calendar-header';
 import { CalendarMobileList } from './calendar-mobile-list';
@@ -713,13 +715,18 @@ export function Calendar({
       <EventClipboardProvider>
         <EventContextMenuProvider>
           <CalendarContext.Provider value={memoizedValue}>
-            {!isMobile || view === 'week' ? (
-              <CalendarHeader />
-            ) : (
-              <div className="px-4">
-                <CalendarViewToggle />
-              </div>
-            )}
+            <CalendarBulkDelete
+              header={
+                !isMobile || view === 'week' ? (
+                  <CalendarHeader />
+                ) : (
+                  <div className="flex flex-wrap gap-2 px-4">
+                    <CalendarViewToggle />
+                    <BulkWorkoutSelectButton />
+                  </div>
+                )
+              }
+            >
             <div className={isMobile ? 'w-full flex-1' : 'relative'}>
               {view === 'week' ? (
                 <CalendarWeekView isLoading={isLoading} />
@@ -832,6 +839,7 @@ export function Calendar({
                 setEditCycleDialog(cycleId);
               }}
             />
+            </CalendarBulkDelete>
           </CalendarContext.Provider>
         </EventContextMenuProvider>
       </EventClipboardProvider>
