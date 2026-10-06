@@ -275,8 +275,10 @@ export function CalendarEvent({ event, wrapped, detailed }: P) {
               )}
               <div
                 className={cn(
-                  'text-sm font-medium overflow-hidden px-1',
-                  detailed ? 'break-words' : 'whitespace-nowrap text-ellipsis',
+                  'text-sm font-medium px-1',
+                  detailed
+                    ? 'whitespace-normal break-words'
+                    : 'whitespace-nowrap overflow-hidden text-ellipsis',
                 )}
               >
                 {event.type !== EVENT_TYPE.NOTE && (

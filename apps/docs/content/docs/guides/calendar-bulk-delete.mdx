@@ -1,0 +1,21 @@
+---
+title: Delete multiple planned workouts
+description: Select and delete uncompleted training sessions from a coach calendar.
+---
+
+In the coach space, open an athlete's calendar and choose **Select workouts**.
+Select the sessions, then choose **Delete selected**. Review the names and dates
+in the confirmation dialog before deleting.
+
+Only uncompleted training sessions can be selected. Completed activities,
+sessions linked to completed activities, competitions and notes are excluded.
+Changing athlete or month clears selection. Filtering hides and deselects
+excluded sessions.
+
+Requests run one at a time through the existing event deletion API, including its
+authorization and provider export cleanup. If some deletions fail, the calendar
+reports how many succeeded and keeps the failed sessions selected for retry.
+The batch is not atomic: successful deletions are not rolled back.
+Canceling the confirmation does not delete anything.
+
+On mobile, the selection toolbar stays visible while scrolling.

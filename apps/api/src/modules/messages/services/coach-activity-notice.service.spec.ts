@@ -10,7 +10,6 @@ import { CoachActivityNoticeService } from './coach-activity-notice.service';
 const coach: AuthUser = {
   userId: 3,
   email: 'coach@example.invalid',
-  roles: ['COACH'],
   athlete: null,
 };
 const payload: CoachActivityNoticeEvent['payload'] = {
@@ -36,8 +35,13 @@ function fixture() {
     },
     activityChatNotice: {
       findUnique: jest.fn().mockResolvedValue(null),
-      create: jest.fn().mockResolvedValue({ id: 1 }),
+      findFirst: jest.fn().mockResolvedValue(null),
+      create: jest
+        .fn()
+        .mockImplementation(({ data }) => Promise.resolve({ id: 1, ...data })),
+      update: jest.fn(),
     },
+    messageThreadParticipant: { findFirst: jest.fn().mockResolvedValue(null) },
     messageThread: {
       findFirst: jest.fn().mockResolvedValue({ messageThreadId: 10 }),
       create: jest.fn().mockResolvedValue({ messageThreadId: 11 }),
@@ -49,6 +53,9 @@ function fixture() {
         messageThreadId: 10,
         createdAt: new Date(),
       }),
+      update: jest
+        .fn()
+        .mockResolvedValue({ messageId: 6, messageThreadId: 10 }),
     },
     user: {
       findUniqueOrThrow: jest.fn().mockResolvedValue({ language: 'ES' }),
@@ -169,8 +176,22 @@ describe('coach activity chat notices', () => {
       expect(db.$transaction).not.toHaveBeenCalled();
     },
   );
+  it('keeps new activities quiet unless the coach opts in', async () => {
+    const { service, tx } = fixture();
+    await service.deliver({
+      ...payload,
+      kind: 'ACTIVITY',
+      actorUserId: undefined,
+    });
+    expect(tx.activityChatNotice.create).toHaveBeenCalledTimes(1);
+    expect(tx.message.create).not.toHaveBeenCalled();
+  });
   it('announces imported activities without impersonating a user-written chat message', async () => {
     const { service, tx } = fixture();
+    tx.coachActivityAlertSettings.findUnique.mockResolvedValue({
+      ...defaultCoachActivityAlertSettings,
+      notifyNewActivities: true,
+    });
     await service.deliver({
       ...payload,
       kind: 'ACTIVITY',
@@ -210,6 +231,37 @@ describe('coach activity chat notices', () => {
       [4, 8],
     ]);
   });
+  it('refreshes the unread notice for the same activity instead of adding one', async () => {
+    const { service, tx, emitter } = fixture();
+    tx.activityChatNotice.findFirst.mockResolvedValue({ id: 9, messageId: 6 });
+    await service.deliver({ ...payload, rpe: 8 });
+    expect(tx.activityChatNotice.findFirst.mock.calls[0][0].where).toEqual({
+      coachUserId: 3,
+      eventId: 42,
+      kind: 'RPE',
+      message: { is: { readReceipts: { none: { userId: 3 } } } },
+    });
+    expect(tx.activityChatNotice.update).toHaveBeenCalledWith({
+      where: { id: 9 },
+      data: { eventName: 'Trail', rpe: 8 },
+    });
+    expect(tx.message.create).not.toHaveBeenCalled();
+    expect(tx.message.update.mock.calls[0][0].where).toEqual({ messageId: 6 });
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'activity.chat.delivered',
+      expect.objectContaining({ userIds: [3, 8] }),
+    );
+  });
+  it('skips coaches who already saw the comment in its own thread', async () => {
+    const { service, tx } = fixture();
+    tx.messageThreadParticipant.findFirst.mockResolvedValue({ userId: 3 });
+    await service.deliver({ ...payload, kind: 'COMMENT', sourceThreadId: 77 });
+    expect(tx.messageThreadParticipant.findFirst).toHaveBeenCalledWith({
+      where: { messageThreadId: 77, userId: 3 },
+    });
+    expect(tx.activityChatNotice.create).not.toHaveBeenCalled();
+    expect(tx.message.create).not.toHaveBeenCalled();
+  });
   it('stores an RPE removal as null rather than zero', async () => {
     const { service, tx } = fixture();
     await service.deliver({ ...payload, rpe: null });
@@ -224,18 +276,11 @@ describe('coach-specific preferences', () => {
       defaultCoachActivityAlertSettings,
     );
     expect(db.coachAthlete.findFirst).toHaveBeenCalledWith({
-      where: { userId: 3, athleteId: 5 },
+      where: { userId: 3, athleteId: 5, user: { roles: { has: 'COACH' } } },
     });
   });
   it('does not let an athlete or unrelated coach change preferences', async () => {
     const { service, tx } = fixture();
-    await expect(
-      service.updateSettings(
-        { ...coach, roles: ['ATHLETE'] },
-        5,
-        defaultCoachActivityAlertSettings,
-      ),
-    ).rejects.toThrow();
     tx.coachAthlete.findFirst.mockResolvedValue(null);
     await expect(
       service.updateSettings(coach, 5, defaultCoachActivityAlertSettings),
@@ -254,7 +299,7 @@ describe('coach-specific preferences', () => {
         update: {
           notifyComments: true,
           notifyRpe: false,
-          notifyNewActivities: true,
+          notifyNewActivities: false,
         },
       }),
     );

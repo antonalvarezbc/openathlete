@@ -15,8 +15,10 @@ model Record {
   recordId Int @id @default(autoincrement()) @map("record_id")
 
   // fields
-  /// Distance in meters at which this record was achieved
-  distance      Float
+  /// Distance in meters the record covers: pace and climbing records
+  distance      Float?
+  /// Duration in seconds the record covers: power and heart rate records
+  duration      Int?
   /// Date when the record was achieved
   date          DateTime
   /// Start duration in seconds (for time-based records, when the segment started)

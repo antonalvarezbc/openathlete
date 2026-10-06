@@ -2,8 +2,13 @@
 export function canBulkDeleteWorkout(event: {
   type: string;
   relatedActivity?: unknown;
+  relatedActivityId?: number | null;
 }) {
-  return event.type === 'TRAINING' && !event.relatedActivity;
+  return (
+    event.type === 'TRAINING' &&
+    !event.relatedActivity &&
+    !event.relatedActivityId
+  );
 }
 
 /** Keep requests sequential: existing deletion can also remove provider exports. */

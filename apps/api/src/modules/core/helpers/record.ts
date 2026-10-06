@@ -18,56 +18,12 @@ const TARGET_DISTANCES = [
   100000, // 100km
 ];
 
-// Tolerance for finding segments close to target distance (2% above target only)
-// Segments must be at least targetDistance, but can be up to 2% longer
-const DISTANCE_TOLERANCE_RATIO = 0.02;
+// Durations for power and heart rate records (in seconds)
+const TARGET_DURATIONS = [5, 15, 30, 60, 120, 300, 600, 1200, 1800, 3600, 7200];
 
-// Maximum number of points to process without sampling
-// If stream has more points, we'll sample it down to this limit
-// Reduced from 10000 to 5000 to improve performance for large activities
-const MAX_POINTS_WITHOUT_SAMPLING = 5000;
-
-/**
- * Sample arrays to reduce size while preserving start and end points
- * Uses linear interpolation to maintain accuracy
- */
-function sampleArray<T>(arr: T[], targetSize: number): T[] {
-  if (arr.length <= targetSize) {
-    return arr;
-  }
-
-  const sampled: T[] = [arr[0]]; // Always keep first point
-  const step = (arr.length - 1) / (targetSize - 1);
-
-  for (let i = 1; i < targetSize - 1; i++) {
-    const index = i * step;
-    const lower = Math.floor(index);
-    const upper = Math.ceil(index);
-    const fraction = index - lower;
-
-    if (lower === upper || fraction === 0) {
-      sampled.push(arr[lower]);
-    } else if (typeof arr[0] === 'number') {
-      // Interpolate numbers
-      const lowerVal = arr[lower] as number;
-      const upperVal = arr[upper] as number;
-      sampled.push((lowerVal + (upperVal - lowerVal) * fraction) as T);
-    } else if (Array.isArray(arr[0])) {
-      // Interpolate arrays (like latlng)
-      const lowerVal = arr[lower] as number[];
-      const upperVal = arr[upper] as number[];
-      const interpolated = lowerVal.map(
-        (val, idx) => val + (upperVal[idx] - val) * fraction,
-      );
-      sampled.push(interpolated as T);
-    } else {
-      sampled.push(arr[lower]);
-    }
-  }
-
-  sampled.push(arr[arr.length - 1]); // Always keep last point
-  return sampled;
-}
+// A sample stands for the time until the next one, but no longer than this:
+// a longer gap is a pause or a dropout, counted as zero
+const MAX_SAMPLE_HOLD = 15;
 
 /**
  * Calculate cumulative distances from latlng stream
@@ -94,682 +50,194 @@ function calculateCumulativeDistances(latlngStream: number[][]): number[] {
   return cumulativeDistances;
 }
 
+type ComputedRecord = Pick<
+  PrismaRecord,
+  'distance' | 'duration' | 'value' | 'startDuration' | 'endDuration' | 'type'
+>;
+
 /**
- * Find all segments of approximately targetDistance length and return the best one
- * Optimized version using sliding window approach with step size to reduce computation
- * For ELEVATION: returns the segment with maximum gain/loss (absolute value)
- * For SPEED: returns the segment with minimum normalized time
- * For other metrics: returns the segment with best average value
+ * A stretch of exactly targetDistance starting at a recorded point. It ends
+ * between `right - 1` and `right`, `fraction` of the way: positions are
+ * interpolated there, so the result no longer depends on a point happening
+ * to fall at the target distance, which sparse recordings rarely provide.
  */
-function findBestSegmentForDistance(
+type Stretch = { left: number; right: number; fraction: number };
+
+function* stretchesOf(
   cumulativeDistances: number[],
-  timeStream: number[],
   targetDistance: number,
-  computeValue: (
-    left: number,
-    right: number,
-    actualDistance: number,
-  ) => {
-    value: number;
-    isValid: boolean;
-  },
-  compareValues: (current: number, best: number) => boolean, // returns true if current is better than best
-): {
-  value: number;
-  start: number;
-  end: number;
-  distance: number;
-} | null {
-  let bestValue = null as {
-    value: number;
-    start: number;
-    end: number;
-    distance: number;
-  } | null;
-
-  const tolerance = targetDistance * DISTANCE_TOLERANCE_RATIO;
-  const minDistance = targetDistance; // Must be at least targetDistance
-  const maxDistance = targetDistance + tolerance;
-
-  // Use step size to reduce computation: check every Nth point instead of every point
-  // Step size increases with stream length to maintain performance
-  const stepSize = Math.max(1, Math.floor(cumulativeDistances.length / 2000));
-  const perfectDistanceThreshold = targetDistance * 0.001; // 0.1% tolerance for "perfect" match
-
+): Generator<Stretch> {
   let right = 0;
-
-  for (let left = 0; left < cumulativeDistances.length; left += stepSize) {
-    // Find the right boundary where cumulativeDistances[right] - cumulativeDistances[left] >= minDistance
+  for (let left = 0; left < cumulativeDistances.length; left++) {
     while (
       right < cumulativeDistances.length &&
-      cumulativeDistances[right] - cumulativeDistances[left] < minDistance
+      cumulativeDistances[right] - cumulativeDistances[left] < targetDistance
     ) {
       right++;
     }
-
-    // Early exit if we found a perfect match
-    if (bestValue) {
-      const distanceDiff = Math.abs(bestValue.distance - targetDistance);
-      if (distanceDiff < perfectDistanceThreshold) {
-        // Found a very close match, continue searching but with early exit optimization
-        // We'll still check a few more segments but can exit early if we find another perfect match
-      }
-    }
-
-    // Check all segments within tolerance and find the best one by value
-    for (let r = right; r < cumulativeDistances.length; r++) {
-      const actualDistance = cumulativeDistances[r] - cumulativeDistances[left];
-
-      if (actualDistance > maxDistance) {
-        break; // Too far, stop searching
-      }
-
-      if (actualDistance >= minDistance) {
-        const result = computeValue(left, r, actualDistance);
-
-        if (result.isValid) {
-          const shouldUpdate =
-            bestValue === null || compareValues(result.value, bestValue.value);
-
-          if (shouldUpdate) {
-            bestValue = {
-              value: result.value,
-              start: timeStream[left],
-              end: timeStream[r],
-              distance: actualDistance,
-            };
-
-            // Early exit if we found a perfect match (within 0.1% of target)
-            const distanceDiff = Math.abs(actualDistance - targetDistance);
-            if (distanceDiff < perfectDistanceThreshold) {
-              // Perfect match found, but continue to see if we can find a better value
-              // (distance is perfect, but value might be better)
-            }
-          }
-        }
-      }
-    }
+    if (right === cumulativeDistances.length) return;
+    // right > left, since a stretch of zero length never reaches the target
+    const before = cumulativeDistances[right - 1] - cumulativeDistances[left];
+    const step = cumulativeDistances[right] - cumulativeDistances[right - 1];
+    yield { left, right, fraction: (targetDistance - before) / step };
   }
+}
 
-  return bestValue;
+/** A cumulative series read at the end of a stretch. */
+function at(series: number[], { right, fraction }: Stretch): number {
+  return series[right - 1] + (series[right] - series[right - 1]) * fraction;
 }
 
 /**
- * Generic function to compute distance-based records for any stream
- * For SPEED: finds minimum time (normalized to target distance)
- * For other metrics: finds maximum/minimum average value
- * Optimized to use pre-calculated cumulativeDistances and avoid array allocations
+ * Best stretch for each target distance, `score` returning the value to
+ * keep (higher is better), or null when the stretch has no data.
  */
-const computeDistanceBasedRecords = (
+function bestStretches(
+  type: RecordType,
   timeStream: number[],
   cumulativeDistances: number[],
+  score: (stretch: Stretch) => { value: number; rank: number } | null,
+): ComputedRecord[] {
+  const records: ComputedRecord[] = [];
+  for (const targetDistance of TARGET_DISTANCES) {
+    let best: { value: number; rank: number; stretch: Stretch } | null = null;
+    for (const stretch of stretchesOf(cumulativeDistances, targetDistance)) {
+      const result = score(stretch);
+      if (result && (!best || result.rank > best.rank)) {
+        best = { ...result, stretch };
+      }
+    }
+    if (!best) continue;
+    records.push({
+      type,
+      distance: targetDistance,
+      duration: null,
+      value: best.value,
+      startDuration: Math.round(timeStream[best.stretch.left]),
+      endDuration: Math.round(at(timeStream, best.stretch)),
+    });
+  }
+  return records;
+}
+
+/**
+ * Fastest time over each distance. Pauses stay in: elapsed time only makes
+ * a stretch slower, so the fastest one avoids them on its own.
+ */
+function computeSpeedRecords(
+  timeStream: number[],
+  cumulativeDistances: number[],
+): ComputedRecord[] {
+  return bestStretches('SPEED', timeStream, cumulativeDistances, (stretch) => {
+    const time = at(timeStream, stretch) - timeStream[stretch.left];
+    return time > 0 ? { value: time, rank: -time } : null;
+  });
+}
+
+/**
+ * Best average of a sampled value (power, heart rate) over each duration,
+ * weighted by time so that irregular sampling does not tip the balance.
+ */
+function computeDurationRecords(
+  type: RecordType,
+  timeStream: number[],
   valueStream: number[],
-  recordType: RecordType,
-  computeMax: boolean = false, // true for max average, false for min average
-): Pick<
-  PrismaRecord,
-  'distance' | 'value' | 'startDuration' | 'endDuration' | 'type'
->[] => {
-  if (
-    !timeStream ||
-    !cumulativeDistances ||
-    !valueStream ||
-    timeStream.length === 0 ||
-    cumulativeDistances.length === 0 ||
-    valueStream.length === 0
-  ) {
-    return [];
+): ComputedRecord[] {
+  const length = Math.min(timeStream.length, valueStream.length);
+  if (length < 2) return [];
+  const value = (i: number) =>
+    Number.isFinite(valueStream[i]) ? valueStream[i] : 0;
+  const hold = (i: number) =>
+    i + 1 < length
+      ? Math.min(timeStream[i + 1] - timeStream[i], MAX_SAMPLE_HOLD)
+      : 0;
+  // integral[i]: value accumulated from the first sample to sample i
+  const integral = [0];
+  for (let i = 1; i < length; i++) {
+    integral.push(integral[i - 1] + value(i - 1) * hold(i - 1));
   }
+  const integralAt = (i: number, t: number) =>
+    integral[i] + value(i) * Math.min(t - timeStream[i], hold(i));
 
-  const records: Pick<
-    PrismaRecord,
-    'distance' | 'value' | 'startDuration' | 'endDuration' | 'type'
-  >[] = [];
-
-  const totalDistance = cumulativeDistances[cumulativeDistances.length - 1];
-
-  for (const targetDistance of TARGET_DISTANCES) {
-    if (totalDistance < targetDistance) {
-      continue;
-    }
-
-    if (recordType === 'SPEED') {
-      // For SPEED: find minimum time, normalized to target distance
-      const segment = findBestSegmentForDistance(
-        cumulativeDistances,
-        timeStream,
-        targetDistance,
-        (left, right, actualDistance) => {
-          const segmentTime = timeStream[right] - timeStream[left];
-
-          // Check for pauses (optimized: early exit)
-          for (let i = left + 1; i <= right; i++) {
-            if (timeStream[i] - timeStream[i - 1] > 5) {
-              return { value: 0, isValid: false };
-            }
-          }
-
-          // Normalize time to target distance
-          const normalizedTime =
-            segmentTime * (targetDistance / actualDistance);
-          return { value: normalizedTime, isValid: true };
-        },
-        (current, best) => current < best, // smaller time is better
-      );
-
-      if (segment) {
-        records.push({
-          value: segment.value,
-          type: 'SPEED',
-          distance: targetDistance,
-          startDuration: segment.start,
-          endDuration: segment.end,
-        });
-      }
-    } else {
-      // For other metrics: find best average value
-      // Optimized: calculate average without creating intermediate array
-      const segment = findBestSegmentForDistance(
-        cumulativeDistances,
-        timeStream,
-        targetDistance,
-        (left, right) => {
-          // Calculate sum directly without creating array
-          let sum = 0;
-          let count = 0;
-          const maxIndex = Math.min(right, valueStream.length - 1);
-
-          for (let i = left; i <= maxIndex; i++) {
-            if (i >= 0 && i < valueStream.length) {
-              sum += valueStream[i];
-              count++;
-            }
-          }
-
-          if (count === 0) {
-            return { value: 0, isValid: false };
-          }
-
-          const average = sum / count;
-          return { value: average, isValid: true };
-        },
-        computeMax
-          ? (current, best) => current > best // larger is better
-          : (current, best) => current < best, // smaller is better
-      );
-
-      if (segment) {
-        records.push({
-          value: segment.value,
-          type: recordType,
-          distance: targetDistance,
-          startDuration: segment.start,
-          endDuration: segment.end,
-        });
+  const records: ComputedRecord[] = [];
+  for (const duration of TARGET_DURATIONS) {
+    let best: { value: number; start: number } | null = null;
+    let last = 0;
+    for (let first = 0; first < length; first++) {
+      const end = timeStream[first] + duration;
+      if (end > timeStream[length - 1]) break;
+      while (last + 1 < length && timeStream[last + 1] <= end) last++;
+      const average = (integralAt(last, end) - integral[first]) / duration;
+      if (!best || average > best.value) {
+        best = { value: average, start: timeStream[first] };
       }
     }
+    if (!best || best.value <= 0) continue;
+    records.push({
+      type,
+      distance: null,
+      duration,
+      value: best.value,
+      startDuration: Math.round(best.start),
+      endDuration: Math.round(best.start + duration),
+    });
   }
-
   return records;
-};
+}
 
-const computeSpeedRecords = (
+/** Most climbing over each distance. */
+function computeElevationGainRecords(
   timeStream: number[],
   cumulativeDistances: number[],
-): Pick<
-  PrismaRecord,
-  'distance' | 'value' | 'startDuration' | 'endDuration' | 'type'
->[] => {
-  if (!timeStream || timeStream.length === 0) {
-    return [];
-  }
-
-  return computeDistanceBasedRecords(
-    timeStream,
-    cumulativeDistances,
-    timeStream,
-    'SPEED',
-    false,
-  );
-};
-
-const computePowerRecords = (
-  timeStream: number[],
-  cumulativeDistances: number[],
-  watts: number[],
-): Pick<
-  PrismaRecord,
-  'distance' | 'value' | 'startDuration' | 'endDuration' | 'type'
->[] => {
-  if (!timeStream || !watts || timeStream.length === 0 || watts.length === 0) {
-    return [];
-  }
-
-  return computeDistanceBasedRecords(
-    timeStream,
-    cumulativeDistances,
-    watts,
-    'POWER',
-    true,
-  );
-};
-
-const computeHeartRateRecords = (
-  timeStream: number[],
-  cumulativeDistances: number[],
-  heartrate: number[],
-): Pick<
-  PrismaRecord,
-  'distance' | 'value' | 'startDuration' | 'endDuration' | 'type'
->[] => {
-  if (
-    !timeStream ||
-    !heartrate ||
-    timeStream.length === 0 ||
-    heartrate.length === 0
-  ) {
-    return [];
-  }
-
-  return computeDistanceBasedRecords(
-    timeStream,
-    cumulativeDistances,
-    heartrate,
-    'HEARTRATE',
-    true,
-  );
-};
-
-const computeCadenceRecords = (
-  timeStream: number[],
-  cumulativeDistances: number[],
-  cadence: number[],
-): Pick<
-  PrismaRecord,
-  'distance' | 'value' | 'startDuration' | 'endDuration' | 'type'
->[] => {
-  if (
-    !timeStream ||
-    !cadence ||
-    timeStream.length === 0 ||
-    cadence.length === 0
-  ) {
-    return [];
-  }
-
-  return computeDistanceBasedRecords(
-    timeStream,
-    cumulativeDistances,
-    cadence,
-    'CADENCE',
-    true,
-  );
-};
-
-/**
- * Pre-calculate elevation gains/losses between consecutive points
- * Also calculate cumulative sums for O(1) range queries
- * This avoids recalculating the same values multiple times
- */
-function calculateElevationChanges(altitude: number[]): {
-  gains: number[];
-  losses: number[];
-  cumulativeGains: number[];
-  cumulativeLosses: number[];
-} {
-  const gains: number[] = [0]; // First point has no change
-  const losses: number[] = [0];
-  const cumulativeGains: number[] = [0];
-  const cumulativeLosses: number[] = [0];
-
-  for (let i = 1; i < altitude.length; i++) {
+  altitude: number[],
+): ComputedRecord[] {
+  const length = Math.min(altitude.length, cumulativeDistances.length);
+  const cumulative = [0];
+  for (let i = 1; i < length; i++) {
     const diff = altitude[i] - altitude[i - 1];
-    const gain = diff > 0 ? diff : 0;
-    const loss = diff < 0 ? -diff : 0;
-    gains.push(gain);
-    losses.push(loss);
-    cumulativeGains.push(cumulativeGains[i - 1] + gain);
-    cumulativeLosses.push(cumulativeLosses[i - 1] + loss);
+    cumulative.push(cumulative[i - 1] + (diff > 0 ? diff : 0));
   }
-
-  return { gains, losses, cumulativeGains, cumulativeLosses };
+  return bestStretches(
+    'ELEVATION_GAIN',
+    timeStream,
+    cumulativeDistances.slice(0, length),
+    (stretch) => {
+      const gain = at(cumulative, stretch) - cumulative[stretch.left];
+      return { value: gain, rank: gain };
+    },
+  );
 }
 
 /**
- * Compute elevation gain records over specified distances
- * Optimized to use pre-calculated cumulativeDistances and elevation gains
+ * Records of an activity: pace and climbing by distance (they need the GPS
+ * route), power and heart rate by duration (indoor sessions have them too).
  */
-const computeElevationGainRecords = (
-  timeStream: number[],
-  cumulativeDistances: number[],
-  altitude: number[],
-): Pick<
-  PrismaRecord,
-  'distance' | 'value' | 'startDuration' | 'endDuration' | 'type'
->[] => {
+export const computeRecords = (stream: ActivityStream): ComputedRecord[] => {
+  const { time, latlng, altitude, heartrate, watts } = stream;
+  if (!time || time.length === 0) return [];
+
+  const records = [
+    ...(watts?.length ? computeDurationRecords('POWER', time, watts) : []),
+    ...(heartrate?.length
+      ? computeDurationRecords('HEARTRATE', time, heartrate)
+      : []),
+  ];
+
+  // Distance records require a route aligned with time
   if (
-    !timeStream ||
-    !cumulativeDistances ||
-    !altitude ||
-    timeStream.length === 0 ||
-    cumulativeDistances.length === 0 ||
-    altitude.length === 0
+    !latlng ||
+    latlng.length !== time.length ||
+    !latlng.some(isValidGpsPoint)
   ) {
-    return [];
+    return records;
   }
-
-  // Pre-calculate elevation gains with cumulative sums for O(1) queries
-  const { cumulativeGains } = calculateElevationChanges(altitude);
-
-  const records: Pick<
-    PrismaRecord,
-    'distance' | 'value' | 'startDuration' | 'endDuration' | 'type'
-  >[] = [];
-
-  const totalDistance = cumulativeDistances[cumulativeDistances.length - 1];
-
-  for (const targetDistance of TARGET_DISTANCES) {
-    if (totalDistance < targetDistance) {
-      continue;
-    }
-
-    // Find the segment with maximum elevation gain that is closest to targetDistance
-    let bestGain = -Infinity;
-    let bestStart = 0;
-    let bestEnd = 0;
-    let bestActualDistance = 0;
-
-    const tolerance = targetDistance * DISTANCE_TOLERANCE_RATIO;
-    const minDistance = targetDistance;
-    const maxDistance = targetDistance + tolerance;
-
-    // Use step size to reduce computation
-    const stepSize = Math.max(1, Math.floor(cumulativeDistances.length / 2000));
-
-    let right = 0;
-
-    for (let left = 0; left < cumulativeDistances.length; left += stepSize) {
-      // Find right boundary
-      while (
-        right < cumulativeDistances.length &&
-        cumulativeDistances[right] - cumulativeDistances[left] < minDistance
-      ) {
-        right++;
-      }
-
-      // Check all segments within tolerance
-      for (let r = right; r < cumulativeDistances.length; r++) {
-        const actualDistance =
-          cumulativeDistances[r] - cumulativeDistances[left];
-
-        if (actualDistance > maxDistance) {
-          break;
-        }
-
-        if (actualDistance >= minDistance) {
-          // Calculate elevation gain using cumulative sums (O(1) instead of O(n))
-          // cumulativeGains[i] contains sum of gains from point 1 to i
-          // To get gains from left+1 to r: cumulativeGains[r] - cumulativeGains[left]
-          const startIndex = Math.max(
-            0,
-            Math.min(left, cumulativeGains.length - 1),
-          );
-          const endIndex = Math.min(r, cumulativeGains.length - 1);
-          const elevGain =
-            endIndex >= 0 && startIndex >= 0 && endIndex >= startIndex
-              ? cumulativeGains[endIndex] - cumulativeGains[startIndex]
-              : 0;
-
-          // Normalize gain to target distance for fair comparison
-          const normalizedGain = elevGain * (targetDistance / actualDistance);
-
-          // Find the segment with best normalized gain, preferring those closer to targetDistance when gain is similar
-          const distanceDiff = Math.abs(actualDistance - targetDistance);
-          const currentBestDistanceDiff = Math.abs(
-            bestActualDistance - targetDistance,
-          );
-
-          const isBetter =
-            normalizedGain > bestGain ||
-            (normalizedGain === bestGain &&
-              distanceDiff < currentBestDistanceDiff);
-
-          if (isBetter) {
-            bestGain = normalizedGain;
-            bestStart = timeStream[left];
-            bestEnd = timeStream[r];
-            bestActualDistance = actualDistance;
-          }
-        }
-      }
-    }
-
-    if (bestGain > -Infinity) {
-      records.push({
-        value: bestGain,
-        type: 'ELEVATION_GAIN',
-        distance: targetDistance,
-        startDuration: bestStart,
-        endDuration: bestEnd,
-      });
-    }
-  }
-
-  return records;
-};
-
-/**
- * Compute elevation loss records over specified distances
- * Optimized to use pre-calculated cumulativeDistances and elevation losses
- */
-const computeElevationLossRecords = (
-  timeStream: number[],
-  cumulativeDistances: number[],
-  altitude: number[],
-): Pick<
-  PrismaRecord,
-  'distance' | 'value' | 'startDuration' | 'endDuration' | 'type'
->[] => {
-  if (
-    !timeStream ||
-    !cumulativeDistances ||
-    !altitude ||
-    timeStream.length === 0 ||
-    cumulativeDistances.length === 0 ||
-    altitude.length === 0
-  ) {
-    return [];
-  }
-
-  // Pre-calculate elevation losses with cumulative sums for O(1) queries
-  const { cumulativeLosses } = calculateElevationChanges(altitude);
-
-  const records: Pick<
-    PrismaRecord,
-    'distance' | 'value' | 'startDuration' | 'endDuration' | 'type'
-  >[] = [];
-
-  const totalDistance = cumulativeDistances[cumulativeDistances.length - 1];
-
-  for (const targetDistance of TARGET_DISTANCES) {
-    if (totalDistance < targetDistance) {
-      continue;
-    }
-
-    // Find the segment with maximum elevation loss that is closest to targetDistance
-    let bestLoss = -Infinity;
-    let bestStart = 0;
-    let bestEnd = 0;
-    let bestActualDistance = 0;
-
-    const tolerance = targetDistance * DISTANCE_TOLERANCE_RATIO;
-    const minDistance = targetDistance;
-    const maxDistance = targetDistance + tolerance;
-
-    // Use step size to reduce computation
-    const stepSize = Math.max(1, Math.floor(cumulativeDistances.length / 2000));
-
-    let right = 0;
-
-    for (let left = 0; left < cumulativeDistances.length; left += stepSize) {
-      // Find right boundary
-      while (
-        right < cumulativeDistances.length &&
-        cumulativeDistances[right] - cumulativeDistances[left] < minDistance
-      ) {
-        right++;
-      }
-
-      // Check all segments within tolerance
-      for (let r = right; r < cumulativeDistances.length; r++) {
-        const actualDistance =
-          cumulativeDistances[r] - cumulativeDistances[left];
-
-        if (actualDistance > maxDistance) {
-          break;
-        }
-
-        if (actualDistance >= minDistance) {
-          // Calculate elevation loss using cumulative sums (O(1) instead of O(n))
-          // cumulativeLosses[i] contains sum of losses from point 1 to i
-          // To get losses from left+1 to r: cumulativeLosses[r] - cumulativeLosses[left]
-          const startIndex = Math.max(
-            0,
-            Math.min(left, cumulativeLosses.length - 1),
-          );
-          const endIndex = Math.min(r, cumulativeLosses.length - 1);
-          const elevLoss =
-            endIndex >= 0 && startIndex >= 0 && endIndex >= startIndex
-              ? cumulativeLosses[endIndex] - cumulativeLosses[startIndex]
-              : 0;
-
-          // Normalize loss to target distance for fair comparison
-          const normalizedLoss = elevLoss * (targetDistance / actualDistance);
-
-          // Find the segment with best normalized loss, preferring those closer to targetDistance when loss is similar
-          const distanceDiff = Math.abs(actualDistance - targetDistance);
-          const currentBestDistanceDiff = Math.abs(
-            bestActualDistance - targetDistance,
-          );
-
-          const isBetter =
-            normalizedLoss > bestLoss ||
-            (normalizedLoss === bestLoss &&
-              distanceDiff < currentBestDistanceDiff);
-
-          if (isBetter) {
-            bestLoss = normalizedLoss;
-            bestStart = timeStream[left];
-            bestEnd = timeStream[r];
-            bestActualDistance = actualDistance;
-          }
-        }
-      }
-    }
-
-    if (bestLoss > -Infinity) {
-      records.push({
-        value: bestLoss,
-        type: 'ELEVATION_LOSS',
-        distance: targetDistance,
-        startDuration: bestStart,
-        endDuration: bestEnd,
-      });
-    }
-  }
-
-  return records;
-};
-
-/**
- * Main function to compute all records from an activity stream
- * Optimized to:
- * - Sample large streams to reduce memory usage
- * - Calculate cumulativeDistances once and reuse
- * - Pre-calculate elevation changes
- * - Avoid unnecessary array allocations
- */
-export const computeRecords = (
-  stream: ActivityStream,
-): Pick<
-  PrismaRecord,
-  'distance' | 'value' | 'startDuration' | 'endDuration' | 'type'
->[] => {
-  const { time, latlng, altitude, heartrate, cadence, watts } = stream;
-
-  // Early exit if no essential data
-  if (!time || !latlng || time.length === 0 || latlng.length === 0) {
-    return [];
-  }
-
-  // GPS-derived records require a route aligned with time
-  if (latlng.length !== time.length || !latlng.some(isValidGpsPoint)) {
-    return [];
-  }
-
-  // Computed before sampling: interpolating across a GPS gap would invent
-  // positions
-  let cumulativeDistances = calculateCumulativeDistances(latlng);
-
-  // Sample streams if they're too large to reduce memory usage and computation time
-  let timeStream = time;
-  let altitudeStream = altitude;
-  let heartrateStream = heartrate;
-  let cadenceStream = cadence;
-  let wattsStream = watts;
-
-  const needsSampling = timeStream.length > MAX_POINTS_WITHOUT_SAMPLING;
-  if (needsSampling) {
-    const targetSize = MAX_POINTS_WITHOUT_SAMPLING;
-    timeStream = sampleArray(timeStream, targetSize);
-    cumulativeDistances = sampleArray(cumulativeDistances, targetSize);
-    if (altitudeStream) {
-      altitudeStream = sampleArray(altitudeStream, targetSize);
-    }
-    if (heartrateStream) {
-      heartrateStream = sampleArray(heartrateStream, targetSize);
-    }
-    if (cadenceStream) {
-      cadenceStream = sampleArray(cadenceStream, targetSize);
-    }
-    if (wattsStream) {
-      wattsStream = sampleArray(wattsStream, targetSize);
-    }
-  }
-
-  // Compute all record types using the pre-calculated cumulativeDistances
-  const speedRecords = computeSpeedRecords(timeStream, cumulativeDistances);
-  const powerRecords = wattsStream
-    ? computePowerRecords(timeStream, cumulativeDistances, wattsStream)
-    : [];
-  const heartRateRecords = heartrateStream
-    ? computeHeartRateRecords(timeStream, cumulativeDistances, heartrateStream)
-    : [];
-  const cadenceRecords = cadenceStream
-    ? computeCadenceRecords(timeStream, cumulativeDistances, cadenceStream)
-    : [];
-  const elevationGainRecords = altitudeStream
-    ? computeElevationGainRecords(
-        timeStream,
-        cumulativeDistances,
-        altitudeStream,
-      )
-    : [];
-  const elevationLossRecords = altitudeStream
-    ? computeElevationLossRecords(
-        timeStream,
-        cumulativeDistances,
-        altitudeStream,
-      )
-    : [];
-
+  const cumulativeDistances = calculateCumulativeDistances(latlng);
   return [
-    ...speedRecords,
-    ...powerRecords,
-    ...heartRateRecords,
-    ...cadenceRecords,
-    ...elevationGainRecords,
-    ...elevationLossRecords,
+    ...computeSpeedRecords(time, cumulativeDistances),
+    ...(altitude?.length
+      ? computeElevationGainRecords(time, cumulativeDistances, altitude)
+      : []),
+    ...records,
   ];
 };
 

@@ -21,11 +21,20 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 interface P {
   selected: SPORT_TYPE | null;
   onChange: (sport: SPORT_TYPE | null) => void;
+  /** Sports to offer, all of them by default */
+  sports?: SPORT_TYPE[];
+  /** Whether "All sports" is offered */
+  allowAll?: boolean;
 }
 
 const ALL_SPORTS = Object.values(SPORT_TYPE);
 
-export function SportSelect({ selected, onChange }: P) {
+export function SportSelect({
+  selected,
+  onChange,
+  sports = ALL_SPORTS,
+  allowAll = true,
+}: P) {
   const [open, setOpen] = useState(false);
   const allSportsLabel = m.all_sports();
 
@@ -61,23 +70,25 @@ export function SportSelect({ selected, onChange }: P) {
           <CommandInput autoFocus placeholder={m.search_sports()} />
           <CommandList>
             <CommandEmpty>{m.no_sport_found()}</CommandEmpty>
+            {allowAll && (
+              <CommandGroup>
+                <CommandItem
+                  value="all-sports"
+                  keywords={[allSportsLabel]}
+                  onSelect={() => handleSelect(null)}
+                >
+                  <Check
+                    className={cn(
+                      'mr-2 h-4 w-4',
+                      selected === null ? 'opacity-100' : 'opacity-0',
+                    )}
+                  />
+                  {allSportsLabel}
+                </CommandItem>
+              </CommandGroup>
+            )}
             <CommandGroup>
-              <CommandItem
-                value="all-sports"
-                keywords={[allSportsLabel]}
-                onSelect={() => handleSelect(null)}
-              >
-                <Check
-                  className={cn(
-                    'mr-2 h-4 w-4',
-                    selected === null ? 'opacity-100' : 'opacity-0',
-                  )}
-                />
-                {allSportsLabel}
-              </CommandItem>
-            </CommandGroup>
-            <CommandGroup>
-              {ALL_SPORTS.map((sportType) => (
+              {sports.map((sportType) => (
                 <CommandItem
                   key={sportType}
                   value={sportType}

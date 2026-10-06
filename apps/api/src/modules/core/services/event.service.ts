@@ -109,7 +109,7 @@ export class EventService {
       training: EventTraining | null;
       note: EventNote | null;
       activity:
-        | (Omit<EventActivity, 'stream'> & {
+        | (Omit<EventActivity, 'stream' | 'recordsVersion'> & {
             segments?: ActivitySegment[];
             feedbackQuestions?: Array<{
               activityFeedbackQuestionId: number;
@@ -810,7 +810,10 @@ export class EventService {
             kind,
             actorUserId: user.userId,
             deliveryKey: `edit:${eventId}:${updatedEvent.updatedAt.toISOString()}`,
-            rpe: 'rpe' in rest && rest.rpe != null ? rest.rpe * 10 : null,
+            rpe:
+              'rpe' in rest && rest.rpe != null
+                ? Math.round(rest.rpe * 10)
+                : null,
           }),
         );
       if (
@@ -1405,7 +1408,7 @@ export class EventService {
       competition: EventCompetition | null;
       training: EventTraining | null;
       note: EventNote | null;
-      activity: Omit<EventActivity, 'stream'> | null;
+      activity: Omit<EventActivity, 'stream' | 'recordsVersion'> | null;
     },
   ): Promise<boolean> {
     if (!event.athleteId) return true; // No athlete, consider validated

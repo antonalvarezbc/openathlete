@@ -1,3 +1,5 @@
+import { ZodValidationPipe } from 'nestjs-zod';
+
 import {
   BadRequestException,
   Controller,
@@ -16,6 +18,11 @@ import {
 } from '@nestjs/swagger';
 
 import { Athlete, SportType } from '@openathlete/database';
+import {
+  GetWeeklyVolumeQueryDto,
+  WEEKLY_VOLUME_MAX_WEEKS,
+  getWeeklyVolumeQuerySchema,
+} from '@openathlete/shared';
 
 import { UserTypeGuard } from 'src/modules/auth';
 import { AuthUser, JwtUser } from 'src/modules/auth/decorators/user.decorator';
@@ -163,6 +170,35 @@ export class StatisticsController {
       athleteId,
       startDate,
       endDate,
+    );
+  }
+
+  @UseGuards(AuthGuard('jwt'), UserTypeGuard)
+  @ApiBearerAuth()
+  @Get('weekly-volume')
+  @ApiOperation({
+    summary: 'Weekly training volume',
+    description:
+      'Time, distance, elevation gain and activity count of each of the last weeks (Monday to Sunday, UTC), by sport. Weeks without activity are included, empty.',
+  })
+  @ApiQuery({ name: 'athleteId', type: Number })
+  @ApiQuery({
+    name: 'weeks',
+    type: Number,
+    required: false,
+    description: `Weeks to return, the current one included (default 26, at most ${WEEKLY_VOLUME_MAX_WEEKS})`,
+  })
+  @ApiResponse({ status: 403, description: 'Not allowed to read the athlete' })
+  @ApiResponse({ status: 404, description: 'Athlete not found' })
+  getWeeklyVolume(
+    @JwtUser() user: AuthUser,
+    @Query(new ZodValidationPipe(getWeeklyVolumeQuerySchema))
+    query: GetWeeklyVolumeQueryDto,
+  ) {
+    return this.statisticsService.getWeeklyVolume(
+      user,
+      query.athleteId,
+      query.weeks,
     );
   }
 }

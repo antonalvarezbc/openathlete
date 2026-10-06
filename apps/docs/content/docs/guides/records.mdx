@@ -1,0 +1,40 @@
+---
+title: Records
+description: Best efforts by distance and duration, compared across seasons.
+---
+
+**Records** shows your best efforts for one sport at a time, the one you
+practise most by default. Runs and rides never share a curve.
+
+Each kind of record has its own chart and table:
+
+| Record | Read along | Unit |
+| --- | --- | --- |
+| Pace (running, walking...) or speed (cycling...) | distance, from 400 m to 100 km | the sport's pace or speed unit |
+| Heart rate | duration, from 5 s to 2 h | bpm, best average |
+| Power | duration, from 5 s to 2 h | watts, best average |
+| Elevation gain | distance | metres climbed |
+
+The table gives the date of each record and the activity it comes from:
+select it to open the activity. The chart and the table compare all time
+with the current season and the previous one (calendar years).
+
+## How records are computed
+
+Records come from the recorded stream of each activity, whatever the source:
+connected devices or imported FIT, GPX and TCX files.
+
+- Distance records need a GPS route. Each stretch ends exactly at the target
+  distance, so they do not depend on how often the device recorded a point.
+  Stops stay in the elapsed time: they make a stretch slower, never faster.
+- Duration records weigh each sample by the time it covers. A gap of more than
+  15 seconds between two samples counts as zero, so a dropout cannot hold a
+  high value. Indoor sessions without GPS get power and heart rate records too.
+
+A longer distance can occasionally show a faster pace than a shorter one: when
+a stop splits a run, every short stretch may include it while the full
+distance spreads it out.
+
+When the computation improves, the records of existing activities are
+recomputed in the background after the update: they can take a few minutes to
+settle on a large history.

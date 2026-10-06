@@ -87,6 +87,7 @@ export const routes = {
   },
   record: {
     getRecords: '/record',
+    getRecordSports: '/record/sports',
   },
   equipment: {
     getMyEquipment: '/equipment',
@@ -149,6 +150,7 @@ export const routes = {
       startDate: string,
       endDate: string,
     ) => `/statistics?athleteId=${athleteId}&start=${startDate}&end=${endDate}`,
+    getWeeklyVolume: '/statistics/weekly-volume',
   },
   progression: {
     getFirstActivityDate: (athleteId: number, sport?: string) =>

@@ -23,7 +23,9 @@ export function useCalendarData({
 }: CalendarData) {
   const isMobile = useIsMobile();
   const [displayedMonth, setDisplayedMonth] = useState(
-    defaultMonth || new Date(),
+    view === 'week'
+      ? localWeekStart(defaultMonth || new Date())
+      : defaultMonth || new Date(),
   );
   const [weekStart, setWeekStart] = useState(() =>
     localWeekStart(defaultMonth || new Date()),
@@ -48,14 +50,18 @@ export function useCalendarData({
 
   const nextMonth = useCallback(() => {
     const nextMonth = new Date(
-      displayedMonth.setMonth(displayedMonth.getMonth() + 1),
+      displayedMonth.getFullYear(),
+      displayedMonth.getMonth() + 1,
+      1,
     );
     setDisplayedMonth(nextMonth);
   }, [displayedMonth]);
 
   const prevMonth = useCallback(() => {
     const prevMonth = new Date(
-      displayedMonth.setMonth(displayedMonth.getMonth() - 1),
+      displayedMonth.getFullYear(),
+      displayedMonth.getMonth() - 1,
+      1,
     );
     setDisplayedMonth(prevMonth);
   }, [displayedMonth]);

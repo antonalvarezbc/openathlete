@@ -5,7 +5,7 @@ model CoachActivityAlertSettings {
   athleteId Int @map("athlete_id")
   notifyComments Boolean @default(true) @map("notify_comments")
   notifyRpe Boolean @default(true) @map("notify_rpe")
-  notifyNewActivities Boolean @default(true) @map("notify_new_activities")
+  notifyNewActivities Boolean @default(false) @map("notify_new_activities")
   coach User @relation(fields: [coachUserId], references: [userId], onDelete: Cascade)
   athlete Athlete @relation(fields: [athleteId], references: [athleteId], onDelete: Cascade)
   @@unique([coachUserId, athleteId])

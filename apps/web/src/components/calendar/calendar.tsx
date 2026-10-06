@@ -533,6 +533,9 @@ export function Calendar({
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
+      view,
+      setView,
+      calendarData.weekStart,
       calendarData.displayedMonth,
       calendarData.weekStart,
       calendarData.events,

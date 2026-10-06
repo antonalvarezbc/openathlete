@@ -14,7 +14,8 @@ export const defaultCoachActivityAlertSettings: CoachActivityAlertSettingsDto =
   {
     notifyComments: true,
     notifyRpe: true,
-    notifyNewActivities: true,
+    // A coach with many athletes would get a message for every synced workout
+    notifyNewActivities: false,
   };
 export interface ActivityChatNoticeDto {
   kind: string;

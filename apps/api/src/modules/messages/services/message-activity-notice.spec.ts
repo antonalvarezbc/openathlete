@@ -10,7 +10,6 @@ const user: AuthUser = {
   userId: 8,
   email: 'test@example.invalid',
   athlete: { athleteId: 5 },
-  roles: ['ATHLETE'],
 };
 function setup() {
   const row = {
@@ -72,6 +71,7 @@ it('announces new activity comments only after authorizing and saving them', asy
         actorUserId: 8,
         eventId: 9,
         kind: 'COMMENT',
+        sourceThreadId: 2,
       }),
     }),
   );

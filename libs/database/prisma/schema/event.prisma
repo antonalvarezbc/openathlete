@@ -179,6 +179,9 @@ model EventActivity {
   sport                  SportType
   /// Time-series data stream (GPS, heart rate, power, etc.) stored as JSON
   stream                 Json?
+  /// Version of the record computation its records come from: older ones
+  /// are recomputed in the background
+  recordsVersion         Int                @default(0) @map("records_version")
   /// Activity description/notes
   description            String             @default("")
   /// Average Grade Adjusted Pace (GAP) speed in m/s (normalized for elevation)

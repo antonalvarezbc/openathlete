@@ -5,11 +5,8 @@ import { Inject, Logger, Optional, forwardRef } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { ConnectorProvider, EventActivity } from '@openathlete/database';
-import { CompressedActivityStream } from '@openathlete/shared';
 
 import { CoachActivityNoticeEvent } from '../../../events/coach-activity-notice.event';
-import { uncompressActivityStream } from '../../core/helpers/activity-stream';
-import { computeRecords } from '../../core/helpers/record';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import {
   GarminProviderService,
@@ -126,35 +123,10 @@ export class ActivityImportProcessor extends WorkerHost {
 
       const activityWithStream = await this.prisma.eventActivity.findUnique({
         where: { eventActivityId: savedActivity.eventActivityId },
-        select: {
-          stream: true,
-          event: { select: { athleteId: true } },
-          provider: true,
-        },
+        select: { stream: true },
       });
 
-      if (activityWithStream?.stream && activityWithStream.event) {
-        const compressedStream =
-          activityWithStream.stream as CompressedActivityStream;
-        const stream = uncompressActivityStream(compressedStream);
-
-        if (stream) {
-          const records = computeRecords(stream);
-
-          if (records.length > 0 && activityWithStream.event.athleteId) {
-            await this.prisma.record.createMany({
-              data: records.map((record) => ({
-                ...record,
-                eventActivityId: savedActivity.eventActivityId,
-                athleteId: activityWithStream.event.athleteId!,
-                date: new Date(),
-              })),
-              skipDuplicates: true,
-            });
-          }
-        }
-      }
-
+      // Records are computed by the processing pipeline queued below
       await job.updateProgress(90);
 
       if (

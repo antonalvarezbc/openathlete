@@ -22,3 +22,9 @@ export const useGetStatisticsForPeriodQuery = (
       endDate,
     ],
   });
+
+export const useGetWeeklyVolumeQuery = (athleteId: number, weeks: number) =>
+  useQuery({
+    queryFn: () => StatisticsAPI.getWeeklyVolume(athleteId, weeks),
+    queryKey: [statisticsKeys.getWeeklyVolume, athleteId, weeks],
+  });

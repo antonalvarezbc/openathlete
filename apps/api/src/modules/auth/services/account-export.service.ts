@@ -71,6 +71,18 @@ export class AccountExportService {
     write('coaching', await this.coaching(userId));
     write('templates', await this.templates(userId));
     write('messages', await this.messages(userId));
+    write(
+      'activityAlertSettings',
+      await this.prisma.coachActivityAlertSettings.findMany({
+        where: { coachUserId: userId },
+        select: {
+          athleteId: true,
+          notifyComments: true,
+          notifyRpe: true,
+          notifyNewActivities: true,
+        },
+      }),
+    );
     write('aiAssistant', await this.aiAssistant(userId));
     write('aiSettings', await this.aiSettings(userId));
     write('accessTokens', await this.accessTokens(userId));
@@ -207,7 +219,7 @@ export class AccountExportService {
   /** Messages the user wrote; other people's messages are theirs. */
   private async messages(userId: number) {
     return this.prisma.message.findMany({
-      where: { senderId: userId },
+      where: { senderId: userId, activityNotice: null },
       select: { messageThreadId: true, content: true, createdAt: true },
       orderBy: { createdAt: 'asc' },
     });
