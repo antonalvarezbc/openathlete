@@ -38,7 +38,7 @@ test('each day has a plan button for the mouse and the keyboard', async ({
 test('the calendar bar has a Plan button', async ({ page }) => {
   await page.goto('/dashboard/calendar');
 
-  await page.locator('[data-calendar-plan-trigger]').click();
+  await page.locator('[data-calendar-header-plan]').click();
   await page.getByRole('menuitem', { name: 'Plan a competition' }).click();
 
   await expect(page.getByRole('dialog')).toBeVisible();

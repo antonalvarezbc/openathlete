@@ -130,7 +130,7 @@ export function CalendarHeader() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row lg:flex-wrap lg:justify-between gap-4">
+    <div className="flex flex-col gap-4 px-4 md:px-0 lg:flex-row lg:flex-wrap lg:justify-between">
       <div className="min-w-0">
         <h1 className="text-xl md:text-2xl font-semibold">{calendarTitle}</h1>
         {isWeek && (
@@ -151,11 +151,15 @@ export function CalendarHeader() {
       <div className="flex flex-col md:flex-row md:flex-wrap gap-2">
         <CalendarViewToggle />
         {/* Filters row */}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {allowCreate && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button data-calendar-plan-trigger>
+                {/* Phones have the planning bar above the calendar */}
+                <Button
+                  className="hidden md:inline-flex"
+                  data-calendar-header-plan
+                >
                   <Plus className="size-4" />
                   {m.plan()}
                   <ChevronDown className="size-4" />
