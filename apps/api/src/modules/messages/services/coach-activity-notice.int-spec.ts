@@ -50,6 +50,9 @@ describe('activity notices in PostgreSQL', () => {
       `TRUNCATE ${tables.map((t) => `"${t.table_name}"`).join(', ')} RESTART IDENTITY CASCADE`,
     );
     for (const sql of accountFixtureSql) await prisma.$executeRawUnsafe(sql);
+    // Start from a coach who has neither notices nor preferences yet
+    await prisma.activityChatNotice.deleteMany();
+    await prisma.coachActivityAlertSettings.deleteMany();
     await prisma.user.update({
       where: { userId: COACH_USER_ID },
       data: { roles: ['COACH'] },

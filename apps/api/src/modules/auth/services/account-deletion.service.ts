@@ -106,6 +106,9 @@ export class AccountDeletionService {
     };
 
     await tx.eventTemplate.deleteMany({ where: inEvents });
+    // Coaches' notices copy the activity name and RPE: the foreign key only
+    // clears event_id, which would leave those copies behind
+    await tx.activityChatNotice.deleteMany({ where: inEvents });
 
     await tx.activityFeedbackQuestion.deleteMany({ where: inActivities });
     await tx.activityFeedbackEmbedding.deleteMany({ where: inActivities });

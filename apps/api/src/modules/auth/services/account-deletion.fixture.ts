@@ -81,6 +81,11 @@ export const accountFixtureSql = [
   `INSERT INTO message (message_id, content, message_thread_id, sender_id, updated_at) VALUES (5001, 'Nice run', 3802, 1002, ${now}), (5002, 'Thanks', 3802, 1001, ${now})`,
   `INSERT INTO message_read_receipt (message_id, user_id) VALUES (5001, 1001), (5002, 1002)`,
 
+  // The coach's notice about the activity and their alert preferences: both
+  // hold the athlete's data, so they go with the account
+  `INSERT INTO activity_chat_notice (coach_user_id, delivery_key, kind, event_name, rpe, event_id) VALUES (1002, 'RPE:fixture', 'RPE', 'Run', 6, 3002)`,
+  `INSERT INTO coach_activity_alert_settings (coach_user_id, athlete_id) VALUES (1002, 2001)`,
+
   // AI provider keys and model choices (the coach keeps theirs)
   `INSERT INTO ai_credential (ai_credential_id, provider, label, encrypted_api_key, api_key_hint, user_id, updated_at) VALUES (7001, 'openai', 'OpenAI', 'v1:a:b:c', '••••1234', 1001, ${now}), (7002, 'anthropic', 'Anthropic', 'v1:a:b:c', '••••5678', 1002, ${now})`,
   `INSERT INTO ai_model_preference (task, model_id, user_id, ai_credential_id, updated_at) VALUES ('DEFAULT', 'gpt-5.1', 1001, 7001, ${now}), ('DEFAULT', 'claude-sonnet-4-5', 1002, 7002, ${now})`,
