@@ -30,9 +30,15 @@ interface P {
   day: Date;
   events: Event[];
   cycleSegments?: CycleDaySegment[];
+  variant?: 'month' | 'week';
 }
 
-export function CalendarDay({ day, events, cycleSegments = [] }: P) {
+export function CalendarDay({
+  day,
+  events,
+  cycleSegments = [],
+  variant = 'month',
+}: P) {
   const {
     displayedMonth,
     allowCreate,
@@ -49,7 +55,8 @@ export function CalendarDay({ day, events, cycleSegments = [] }: P) {
   const pressRef = useRef<{ x: number; y: number } | null>(null);
   const dayOfMonth = day.getDate();
   const isToday = day.toDateString() === new Date().toDateString();
-  const isCurrentMonth = day.getMonth() === displayedMonth.getMonth();
+  const isCurrentMonth =
+    variant === 'week' || day.getMonth() === displayedMonth.getMonth();
   const { isOver, setNodeRef } = useDroppable({
     id: day.toISOString(),
   });
@@ -162,6 +169,7 @@ export function CalendarDay({ day, events, cycleSegments = [] }: P) {
     <div
       className={cn(
         'group/day min-h-32 flex-1 [&:not(:last-child)]:border-r-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30 select-none',
+        variant === 'week' && 'min-w-0 min-h-64 border-b md:border-b-0',
         isOver ? 'bg-gray-100 dark:bg-gray-800/50' : '',
         isInDragSelection ? 'bg-blue-50 dark:bg-blue-950/30' : '',
       )}
@@ -188,7 +196,15 @@ export function CalendarDay({ day, events, cycleSegments = [] }: P) {
               },
             )}
           >
-            <span>{dayOfMonth}</span>
+            <span>
+              {variant === 'week'
+                ? day.toLocaleDateString(getDateLocale(getLocale()), {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short',
+                  })
+                : dayOfMonth}
+            </span>
             {allowCreate && (
               <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
                 <DropdownMenuTrigger asChild>
@@ -242,7 +258,11 @@ export function CalendarDay({ day, events, cycleSegments = [] }: P) {
             {events
               .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
               .map((event) => (
-                <CalendarEvent key={event.eventId} event={event} />
+                <CalendarEvent
+                  key={event.eventId}
+                  event={event}
+                  detailed={variant === 'week'}
+                />
               ))}
           </div>
         </ContextMenuTrigger>
