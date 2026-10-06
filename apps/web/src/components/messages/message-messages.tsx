@@ -6,6 +6,7 @@ import { useWindowVisibility } from '@/hooks/use-window-visibility';
 import { m } from '@/paraglide/messages';
 import { getLocale } from '@/paraglide/runtime';
 import { getDateLocale } from '@/utils/locales';
+import type { MessageSearchTarget } from '@/utils/message-search';
 import { cn } from '@/utils/shadcn';
 import { CheckCheck } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -19,6 +20,7 @@ import { ActivityChatNotice } from './activity-chat-notice';
 interface MessageMessagesProps {
   messageThreadId: number;
   isWindowMode?: boolean;
+  searchTarget?: MessageSearchTarget | null;
 }
 
 function MessageBubble({
@@ -30,6 +32,7 @@ function MessageBubble({
   onSaveEdit,
   totalParticipantCount,
   isWindowMode,
+  highlighted,
 }: {
   message: Message;
   currentUserId?: number;
@@ -39,6 +42,7 @@ function MessageBubble({
   onSaveEdit: (content: string) => void;
   totalParticipantCount?: number;
   isWindowMode?: boolean;
+  highlighted?: boolean;
 }) {
   const isUser = message.senderId === currentUserId;
   const [editContent, setEditContent] = useState(message.content);
@@ -78,8 +82,13 @@ function MessageBubble({
 
   return (
     <div
+      data-message-id={message.messageId}
+      data-search-match={highlighted || undefined}
+      tabIndex={-1}
       className={cn(
-        'flex w-full mb-4',
+        'flex w-full mb-4 rounded-2xl',
+        highlighted &&
+          'ring-2 ring-primary ring-offset-2 ring-offset-background',
         isUser ? 'justify-end' : 'justify-start',
       )}
     >
@@ -172,7 +181,9 @@ function MessageBubble({
 export function MessageMessages({
   messageThreadId,
   isWindowMode,
+  searchTarget,
 }: MessageMessagesProps) {
+  const handledSearchTarget = useRef<MessageSearchTarget | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
@@ -207,10 +218,27 @@ export function MessageMessages({
   }, [messages, currentUser, messageThreadId, isVisibleAndFocused]);
 
   useEffect(() => {
-    requestAnimationFrame(() => {
+    const frame = requestAnimationFrame(() => {
+      if (searchTarget?.messageThreadId === messageThreadId) {
+        if (handledSearchTarget.current === searchTarget) return;
+        const match = messages?.some(
+          (message) => message.messageId === searchTarget.messageId,
+        )
+          ? scrollRef.current?.querySelector<HTMLElement>(
+              `[data-message-id="${searchTarget.messageId}"]`,
+            )
+          : null;
+        if (match) {
+          match.scrollIntoView({ behavior: 'auto', block: 'center' });
+          match.focus({ preventScroll: true });
+          handledSearchTarget.current = searchTarget;
+          return;
+        }
+      }
       messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
     });
-  }, [messages]);
+    return () => cancelAnimationFrame(frame);
+  }, [messages, messageThreadId, searchTarget]);
 
   const handleStartEdit = (messageId: number) => {
     setEditingMessageId(messageId);
@@ -257,6 +285,10 @@ export function MessageMessages({
           onSaveEdit={(content) => handleSaveEdit(message.messageId, content)}
           totalParticipantCount={thread?.participants?.length}
           isWindowMode={isWindowMode}
+          highlighted={
+            searchTarget?.messageThreadId === messageThreadId &&
+            searchTarget.messageId === message.messageId
+          }
         />
       ))}
 

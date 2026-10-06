@@ -7,7 +7,10 @@ import { useUseEventTemplateMutation } from '@/api/event-template';
 import { eventKeys } from '@/api/event/event.keys';
 import { useWeeklyLoadSummaryQuery } from '@/api/training-load';
 import { trainingLoadKeys } from '@/api/training-load/training-load.keys';
-import { useCalendarData } from '@/components/calendar/hooks/use-calendar-data';
+import {
+  CalendarView,
+  useCalendarData,
+} from '@/components/calendar/hooks/use-calendar-data';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -53,10 +56,14 @@ import { AiSetupDialog } from '../ai-settings';
 import { CreateCycleDialog } from '../create-cycle-dialog';
 import { CreateEventDialog } from '../create-event-dialog';
 import { CreateEventFromTemplateDialog } from '../create-event-from-template-dialog/create-event-from-template.dialog';
+import { BulkWorkoutSelectButton } from './bulk-workout-select-button';
 import { CalendarBody } from './calendar-body';
+import { CalendarBulkDelete } from './calendar-bulk-delete';
 import { CalendarEventDetailsDialog } from './calendar-event-details.dialog';
 import { CalendarHeader } from './calendar-header';
 import { CalendarMobileList } from './calendar-mobile-list';
+import { CalendarViewToggle } from './calendar-view-toggle';
+import { CalendarWeekView } from './calendar-week-view';
 import { CalendarWeeklyLoadChart } from './calendar-weekly-load-chart';
 import { CalendarContext } from './contexts/calendar-context';
 import { EventClipboardProvider } from './contexts/event-clipboard-context';
@@ -85,7 +92,22 @@ export function Calendar({
   const posthog = usePostHog();
   const isMobile = useIsMobile();
   const [planningDate, setPlanningDate] = useState(() => new Date());
-  const calendarData = useCalendarData({ events });
+  const [view, setViewState] = useState<CalendarView>(() => {
+    const requested = new URLSearchParams(window.location.search).get('view');
+    return (requested ?? getItem('calendar_view')) === 'week'
+      ? 'week'
+      : 'month';
+  });
+  const calendarData = useCalendarData({ events, view });
+  const { goToWeek, displayedMonth } = calendarData;
+  const setView = useCallback(
+    (next: CalendarView) => {
+      if (next === 'week') goToWeek(displayedMonth);
+      setViewState(next);
+      setItem('calendar_view', next);
+    },
+    [goToWeek, displayedMonth],
+  );
   const { data: cycles } = useGetMyCyclesQuery(undefined, athleteId);
   const { available: hasAIAccess } = useAiTaskAvailable(
     AiTask.EVENT_GENERATION,
@@ -409,6 +431,8 @@ export function Calendar({
   const memoizedValue = useMemo<CalendarContextType>(
     () => ({
       ...calendarData,
+      view,
+      setView,
       events: calendarData.events.filter(filter),
       cycles: cycles || [],
       createEvent: (date, type) => {
@@ -443,6 +467,9 @@ export function Calendar({
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
+      view,
+      setView,
+      calendarData.weekStart,
       calendarData.displayedMonth,
       calendarData.events,
       cycles,
@@ -688,117 +715,135 @@ export function Calendar({
       <EventClipboardProvider>
         <EventContextMenuProvider>
           <CalendarContext.Provider value={memoizedValue}>
-            {!isMobile && <CalendarHeader />}
-            <div className={isMobile ? 'w-full flex-1' : 'relative'}>
-              {isMobile ? (
-                <div className="w-full h-full">
-                  <CalendarMobileList isLoading={isLoading} />
-                </div>
-              ) : (
-                <>
-                  <div
-                    className={isLoading ? 'opacity-50 transition-opacity' : ''}
-                  >
-                    <CalendarBody />
+            <CalendarBulkDelete
+              header={
+                !isMobile || view === 'week' ? (
+                  <CalendarHeader />
+                ) : (
+                  <div className="flex flex-wrap gap-2 px-4">
+                    <CalendarViewToggle />
+                    <BulkWorkoutSelectButton />
                   </div>
-                  {isLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm rounded-lg z-10">
-                      <div className="flex flex-col items-center gap-2">
-                        <Loader size="lg" />
-                        <p className="text-sm text-muted-foreground">
-                          {m.loading()}
-                        </p>
-                      </div>
+                )
+              }
+            >
+              <div className={isMobile ? 'w-full flex-1' : 'relative'}>
+                {view === 'week' ? (
+                  <CalendarWeekView isLoading={isLoading} />
+                ) : isMobile ? (
+                  <div className="w-full h-full">
+                    <CalendarMobileList isLoading={isLoading} />
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      className={
+                        isLoading ? 'opacity-50 transition-opacity' : ''
+                      }
+                    >
+                      <CalendarBody />
                     </div>
-                  )}
-                </>
+                    {isLoading && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm rounded-lg z-10">
+                        <div className="flex flex-col items-center gap-2">
+                          <Loader size="lg" />
+                          <p className="text-sm text-muted-foreground">
+                            {m.loading()}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+              {!isMobile && view === 'month' && (
+                <CalendarWeeklyLoadChart
+                  weeks={calendarData.displayedWeeks}
+                  displayedMonth={calendarData.displayedMonth}
+                  weeklyLoadSummary={weeklyLoadSummaryMap}
+                  isLoading={weeklyLoadSummaryLoading}
+                  hasScheduledActivities={hasScheduledActivitiesWithinSixtyDays}
+                />
               )}
-            </div>
-            {!isMobile && (
-              <CalendarWeeklyLoadChart
-                weeks={calendarData.displayedWeeks}
-                displayedMonth={calendarData.displayedMonth}
-                weeklyLoadSummary={weeklyLoadSummaryMap}
-                isLoading={weeklyLoadSummaryLoading}
-                hasScheduledActivities={hasScheduledActivitiesWithinSixtyDays}
+              <CreateEventDialog
+                key={createEventDialog?.date?.toDateString()}
+                open={createEventDialog !== null}
+                onClose={() => {
+                  setCreateEventDialog(null);
+                }}
+                date={createEventDialog?.date}
+                type={createEventDialog?.type}
+                prefilledData={createEventDialog?.prefilledData}
               />
-            )}
-            <CreateEventDialog
-              key={createEventDialog?.date?.toDateString()}
-              open={createEventDialog !== null}
-              onClose={() => {
-                setCreateEventDialog(null);
-              }}
-              date={createEventDialog?.date}
-              type={createEventDialog?.type}
-              prefilledData={createEventDialog?.prefilledData}
-            />
-            <AiSetupDialog
-              open={aiSetupOpen}
-              onOpenChange={setAiSetupOpen}
-              analyticsSource="calendar_mobile"
-            />
-            <AIGenerateEventDialog
-              open={aiGenerateEventDialog !== null}
-              onClose={() => {
-                setAIGenerateEventDialog(null);
-              }}
-              date={aiGenerateEventDialog || new Date()}
-              onEventGenerated={(event) => {
-                setAIGenerateEventDialog(null);
-                setCreateEventDialog({
-                  date: event.startDate,
-                  type: event.type,
-                  prefilledData: event,
-                });
-              }}
-            />
-            <CreateEventDialog
-              key={editEventDialog}
-              open={editEventDialog !== null}
-              onClose={() => setEditEventDialog(null)}
-              event={events?.find((event) => event.eventId === editEventDialog)}
-            />
-            <CalendarEventDetailsDialog
-              open={eventDetailsOpened !== null}
-              onClose={() => setEventDetailsOpened(null)}
-              event={events?.find((e) => e.eventId === eventDetailsOpened)}
-              onEditEvent={() => {
-                setEditEventDialog(eventDetailsOpened);
-                setEventDetailsOpened(null);
-              }}
-            />
-            <CreateEventFromTemplateDialog
-              open={createEventFromTemplateDialog !== null}
-              onClose={() => setCreateEventFromTemplateDialog(null)}
-              date={createEventFromTemplateDialog || undefined}
-            />
-            <CreateCycleDialog
-              key={`create-cycle-${createCycleDialog?.startDate?.toDateString()}`}
-              open={createCycleDialog !== null}
-              onClose={() => setCreateCycleDialog(null)}
-              startDate={createCycleDialog?.startDate}
-              endDate={createCycleDialog?.endDate}
-            />
-            <CreateCycleDialog
-              key={`edit-cycle-${editCycleDialog}`}
-              open={editCycleDialog !== null}
-              onClose={() => setEditCycleDialog(null)}
-              cycle={(cycles || []).find(
-                (cycle) => cycle.cycleId === editCycleDialog,
-              )}
-            />
-            <CycleDetailsDialog
-              open={viewCycleDialog !== null}
-              onClose={() => setViewCycleDialog(null)}
-              cycle={(cycles || []).find(
-                (cycle) => cycle.cycleId === viewCycleDialog,
-              )}
-              onEditCycle={(cycleId) => {
-                setViewCycleDialog(null);
-                setEditCycleDialog(cycleId);
-              }}
-            />
+              <AiSetupDialog
+                open={aiSetupOpen}
+                onOpenChange={setAiSetupOpen}
+                analyticsSource="calendar_mobile"
+              />
+              <AIGenerateEventDialog
+                open={aiGenerateEventDialog !== null}
+                onClose={() => {
+                  setAIGenerateEventDialog(null);
+                }}
+                date={aiGenerateEventDialog || new Date()}
+                onEventGenerated={(event) => {
+                  setAIGenerateEventDialog(null);
+                  setCreateEventDialog({
+                    date: event.startDate,
+                    type: event.type,
+                    prefilledData: event,
+                  });
+                }}
+              />
+              <CreateEventDialog
+                key={editEventDialog}
+                open={editEventDialog !== null}
+                onClose={() => setEditEventDialog(null)}
+                event={events?.find(
+                  (event) => event.eventId === editEventDialog,
+                )}
+              />
+              <CalendarEventDetailsDialog
+                open={eventDetailsOpened !== null}
+                onClose={() => setEventDetailsOpened(null)}
+                event={events?.find((e) => e.eventId === eventDetailsOpened)}
+                onEditEvent={() => {
+                  setEditEventDialog(eventDetailsOpened);
+                  setEventDetailsOpened(null);
+                }}
+              />
+              <CreateEventFromTemplateDialog
+                open={createEventFromTemplateDialog !== null}
+                onClose={() => setCreateEventFromTemplateDialog(null)}
+                date={createEventFromTemplateDialog || undefined}
+              />
+              <CreateCycleDialog
+                key={`create-cycle-${createCycleDialog?.startDate?.toDateString()}`}
+                open={createCycleDialog !== null}
+                onClose={() => setCreateCycleDialog(null)}
+                startDate={createCycleDialog?.startDate}
+                endDate={createCycleDialog?.endDate}
+              />
+              <CreateCycleDialog
+                key={`edit-cycle-${editCycleDialog}`}
+                open={editCycleDialog !== null}
+                onClose={() => setEditCycleDialog(null)}
+                cycle={(cycles || []).find(
+                  (cycle) => cycle.cycleId === editCycleDialog,
+                )}
+              />
+              <CycleDetailsDialog
+                open={viewCycleDialog !== null}
+                onClose={() => setViewCycleDialog(null)}
+                cycle={(cycles || []).find(
+                  (cycle) => cycle.cycleId === viewCycleDialog,
+                )}
+                onEditCycle={(cycleId) => {
+                  setViewCycleDialog(null);
+                  setEditCycleDialog(cycleId);
+                }}
+              />
+            </CalendarBulkDelete>
           </CalendarContext.Provider>
         </EventContextMenuProvider>
       </EventClipboardProvider>

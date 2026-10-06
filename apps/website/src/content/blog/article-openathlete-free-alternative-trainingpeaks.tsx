@@ -287,7 +287,7 @@ export const articleOpenathleteFreeAlternativeTrainingpeaks: BlogPost = {
               <td>Device Integration</td>
               <td>✅ Extensive</td>
               <td>✅ Good</td>
-              <td>✅ Good (Garmin, Strava, Suunto, Polar, Coros)</td>
+              <td>✅ Good (Garmin, Strava, Suunto, Polar)</td>
             </tr>
           </tbody>
         </table>
@@ -452,7 +452,7 @@ export const articleOpenathleteFreeAlternativeTrainingpeaks: BlogPost = {
 
         <h3>What if I need help switching?</h3>
         <p>
-          Our support team is here to help! Contact us at{' '}
+          We're here to help! Write to us at{' '}
           <a href="mailto:contact@openathlete.org">contact@openathlete.org</a>{' '}
           and we'll assist you with the migration process.
         </p>
@@ -735,7 +735,7 @@ export const articleOpenathleteFreeAlternativeTrainingpeaks: BlogPost = {
               <td>Intégration d'Appareils</td>
               <td>✅ Étendue</td>
               <td>✅ Bonne</td>
-              <td>✅ Bonne (Garmin, Strava, Suunto, Polar, Coros)</td>
+              <td>✅ Bonne (Garmin, Strava, Suunto, Polar)</td>
             </tr>
           </tbody>
         </table>
@@ -913,7 +913,7 @@ export const articleOpenathleteFreeAlternativeTrainingpeaks: BlogPost = {
 
         <h3>Et si j'ai besoin d'aide pour changer ?</h3>
         <p>
-          Notre équipe de support est là pour vous aider ! Contactez-nous à{' '}
+          Nous sommes là pour vous aider ! Écrivez-nous à{' '}
           <a href="mailto:contact@openathlete.org">contact@openathlete.org</a>{' '}
           et nous vous assisterons dans le processus de migration.
         </p>

@@ -1,0 +1,10 @@
+---
+title: Search chat messages
+description: Search chat messages.
+---
+
+Use the search icon on the Messages page or floating chat. Search the current conversation or all conversations available to your account. Results match message text, sender names and conversation titles, ignoring case and accents. All words must match.
+
+Select a result to open its conversation, scroll to the message and highlight it. Sending a message restores normal scrolling. Results appear newest first, initially 50 at a time.
+
+Search runs locally over the histories returned by the existing authorized threads endpoint. It adds no endpoint or database table. Loading more results reveals more local matches; it does not paginate on the server. Large histories retain the existing endpoint’s memory and network costs.

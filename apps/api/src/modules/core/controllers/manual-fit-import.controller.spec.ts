@@ -19,6 +19,7 @@ describe('Manual FIT multipart upload', () => {
   const service = {
     import: jest.fn().mockResolvedValue({ eventId: 90 }),
     importGpx: jest.fn().mockResolvedValue({ eventId: 91 }),
+    importTcx: jest.fn().mockResolvedValue({ eventId: 92 }),
   };
   beforeAll(async () => {
     const module = await Test.createTestingModule({
@@ -45,6 +46,7 @@ describe('Manual FIT multipart upload', () => {
   beforeEach(() => {
     service.import.mockClear();
     service.importGpx.mockClear();
+    service.importTcx.mockClear();
   });
   const form = () => {
     const data = new FormData();
@@ -108,5 +110,37 @@ describe('Manual FIT multipart upload', () => {
     });
     expect(response.status).toBe(400);
     expect(service.importGpx).toHaveBeenCalledTimes(2);
+  });
+  test('accepts a TCX with an optional sport', async () => {
+    const tcx = (sport?: string) => {
+      const data = new FormData();
+      data.append('file', new Blob(['<TrainingCenterDatabase/>']), 'run.tcx');
+      data.append('name', 'Morning run');
+      if (sport) data.append('sport', sport);
+      return data;
+    };
+    let response = await fetch(origin + '/activity-import/tcx', {
+      method: 'POST',
+      body: tcx('HIKING'),
+    });
+    expect(response.status).toBe(201);
+    expect(service.importTcx).toHaveBeenCalledWith(
+      { userId: 4 },
+      expect.objectContaining({ originalname: 'run.tcx' }),
+      'Morning run',
+      'HIKING',
+    );
+    response = await fetch(origin + '/activity-import/tcx', {
+      method: 'POST',
+      body: tcx(),
+    });
+    expect(response.status).toBe(201);
+    expect(service.importTcx.mock.calls[1][3]).toBeUndefined();
+    response = await fetch(origin + '/activity-import/tcx', {
+      method: 'POST',
+      body: tcx('QUIDDITCH'),
+    });
+    expect(response.status).toBe(400);
+    expect(service.importTcx).toHaveBeenCalledTimes(2);
   });
 });

@@ -20,7 +20,9 @@ import { messagesKeys } from './messages.keys';
 // ==================== Thread Hooks ====================
 
 export const useGetUserThreadsQuery = (
-  opt?: QueryOptions<Awaited<ReturnType<typeof MessagesAPI.getUserThreads>>>,
+  opt?: QueryOptions<Awaited<ReturnType<typeof MessagesAPI.getUserThreads>>> & {
+    enabled?: boolean;
+  },
 ) =>
   useQuery({
     ...opt,
@@ -130,6 +132,9 @@ export const useCreateMessageMutation = (
     ...opt,
     mutationFn: MessagesAPI.createMessage,
     onSuccess: (data, variables, onMutateResult, context) => {
+      void queryClient.invalidateQueries({
+        queryKey: messagesKeys.getUserThreads,
+      });
       if (opt?.onSuccess)
         opt.onSuccess(data, variables, onMutateResult, context);
       queryClient.invalidateQueries({
@@ -155,6 +160,9 @@ export const useUpdateMessageMutation = (
     mutationFn: ({ messageId, body }) =>
       MessagesAPI.updateMessage({ messageId, body }),
     onSuccess: (data, variables, onMutateResult, context) => {
+      void queryClient.invalidateQueries({
+        queryKey: messagesKeys.getUserThreads,
+      });
       if (opt?.onSuccess)
         opt.onSuccess(data, variables, onMutateResult, context);
       queryClient.invalidateQueries({
@@ -179,6 +187,9 @@ export const useDeleteMessageMutation = (
     ...opt,
     mutationFn: ({ messageId }) => MessagesAPI.deleteMessage(messageId),
     onSuccess: (data, variables, onMutateResult, context) => {
+      void queryClient.invalidateQueries({
+        queryKey: messagesKeys.getUserThreads,
+      });
       if (opt?.onSuccess)
         opt.onSuccess(data, variables, onMutateResult, context);
       queryClient.invalidateQueries({
