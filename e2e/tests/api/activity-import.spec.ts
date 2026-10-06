@@ -15,6 +15,11 @@ const GPX = readFileSync(
   path.join(import.meta.dirname, '../../fixtures/synthetic-run.gpx'),
 );
 
+// A synthetic 10-minute TCX run in two laps; no real data.
+const TCX = readFileSync(
+  path.join(import.meta.dirname, '../../fixtures/synthetic-run.tcx'),
+);
+
 const upload = (
   accessToken: string,
   name: string,
@@ -110,4 +115,43 @@ test('refuses a planned GPX route', async ({ request }) => {
   );
   expect(response.status()).toBe(400);
   expect((await response.json()).message).toBe('GPX_NO_TIME');
+});
+
+test('imports a TCX activity once, with its laps', async ({ request }) => {
+  const athlete = await createAthlete(request);
+  const first = await request.post(
+    `${API_URL}/activity-import/tcx`,
+    upload(athlete.accessToken, 'run.tcx', TCX),
+  );
+  expect(first.status(), await first.text()).toBe(201);
+  const imported = await first.json();
+  expect(imported).toMatchObject({
+    name: 'E2E run',
+    startDate: '2024-05-03T07:00:00.000Z',
+    alreadyImported: false,
+    warnings: [],
+  });
+
+  const again = await request.post(
+    `${API_URL}/activity-import/tcx`,
+    upload(athlete.accessToken, 'run.tcx', TCX),
+  );
+  expect(again.status()).toBe(201);
+  expect(await again.json()).toMatchObject({
+    eventId: imported.eventId,
+    alreadyImported: true,
+  });
+});
+
+test('refuses a TCX course', async ({ request }) => {
+  const athlete = await createAthlete(request);
+  const course = Buffer.from(
+    '<?xml version="1.0"?><TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"><Courses><Course><Name>Plan</Name></Course></Courses></TrainingCenterDatabase>',
+  );
+  const response = await request.post(
+    `${API_URL}/activity-import/tcx`,
+    upload(athlete.accessToken, 'course.tcx', course),
+  );
+  expect(response.status()).toBe(400);
+  expect((await response.json()).message).toBe('TCX_NO_TIME');
 });

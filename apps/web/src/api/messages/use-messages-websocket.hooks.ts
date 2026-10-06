@@ -114,6 +114,13 @@ export function useMessagesWebSocket({
             if (!oldThread) return undefined;
             return {
               ...oldThread,
+              messages: oldThread.messages?.some(
+                (message) => message.messageId === newMessage.messageId,
+              )
+                ? oldThread.messages
+                : oldThread.messages
+                  ? [...oldThread.messages, newMessage]
+                  : undefined,
               lastMessage: newMessage,
               updatedAt: newMessage.createdAt,
             };
@@ -129,6 +136,13 @@ export function useMessagesWebSocket({
               if (thread.messageThreadId === threadId) {
                 return {
                   ...thread,
+                  messages: thread.messages?.some(
+                    (message) => message.messageId === newMessage.messageId,
+                  )
+                    ? thread.messages
+                    : thread.messages
+                      ? [...thread.messages, newMessage]
+                      : undefined,
                   lastMessage: newMessage,
                   updatedAt: newMessage.createdAt,
                 };
@@ -174,6 +188,11 @@ export function useMessagesWebSocket({
               oldThread.lastMessage?.messageId === updatedMessage.messageId;
             return {
               ...oldThread,
+              messages: oldThread.messages?.map((message) =>
+                message.messageId === updatedMessage.messageId
+                  ? updatedMessage
+                  : message,
+              ),
               lastMessage: isLastMessage
                 ? updatedMessage
                 : oldThread.lastMessage,
@@ -193,6 +212,11 @@ export function useMessagesWebSocket({
                   thread.lastMessage?.messageId === updatedMessage.messageId;
                 return {
                   ...thread,
+                  messages: thread.messages?.map((message) =>
+                    message.messageId === updatedMessage.messageId
+                      ? updatedMessage
+                      : message,
+                  ),
                   lastMessage: isLastMessage
                     ? updatedMessage
                     : thread.lastMessage,

@@ -7,6 +7,7 @@ import {
 import { useGetMeQuery } from '@/api/user';
 import { ChatInput } from '@/components/chatbot/chat-input';
 import { MessageMessages } from '@/components/messages/message-messages';
+import { MessageSearch } from '@/components/messages/message-search';
 import { NewMessageThreadDialog } from '@/components/messages/new-message-thread-dialog';
 import { MobileHeader } from '@/components/mobile/mobile-header';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ import { m } from '@/paraglide/messages';
 import { getLocale } from '@/paraglide/runtime';
 import { AnalyticsEvent } from '@/utils/analytics-events';
 import { isCapacitor } from '@/utils/capacitor';
+import type { MessageSearchTarget } from '@/utils/message-search';
 import { calculateUnreadCount } from '@/utils/messages';
 import { cn } from '@/utils/shadcn';
 import { motion } from 'framer-motion';
@@ -43,6 +45,9 @@ export function MessagesPage() {
   const posthog = usePostHog();
   const [filter, setFilter] = useState<ThreadFilter>('all');
   const [newThreadDialogOpen, setNewThreadDialogOpen] = useState(false);
+  const [searchTarget, setSearchTarget] = useState<MessageSearchTarget | null>(
+    null,
+  );
   const [activeMessageThreadId, setActiveMessageThreadId] = useState<
     number | null
   >(null);
@@ -180,6 +185,12 @@ export function MessagesPage() {
     [isMobile, setActiveId],
   );
 
+  const handleSearchResult = (target: MessageSearchTarget) => {
+    setSearchTarget(target);
+    setFilter('all');
+    handleThreadClick(target.messageThreadId);
+  };
+
   const handleBackToList = useCallback(() => {
     setMobileView('list');
     setActiveId(null);
@@ -248,6 +259,7 @@ export function MessagesPage() {
 
   const handleSendMessage = useCallback(
     (content: string) => {
+      setSearchTarget(null);
       posthog?.capture(AnalyticsEvent.messages_message_sent, {
         char_length_bucket:
           content.length > 2000
@@ -274,6 +286,7 @@ export function MessagesPage() {
               <p className="text-xs text-muted-foreground">
                 {formatConversationCount(threads?.length || 0)}
               </p>
+              <MessageSearch onSelect={handleSearchResult} />
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -312,7 +325,10 @@ export function MessagesPage() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
-                    onClick={() => handleThreadClick(threadId)}
+                    onClick={() => {
+                      setSearchTarget(null);
+                      handleThreadClick(threadId);
+                    }}
                     className={cn(
                       'group w-full flex items-start gap-3 p-3 rounded-lg text-left',
                       'transition-colors',
@@ -382,6 +398,13 @@ export function MessagesPage() {
           />
         </div>
 
+        <div className="flex justify-end px-3 border-b">
+          <MessageSearch
+            activeThreadId={activeId}
+            onSelect={handleSearchResult}
+          />
+        </div>
+
         {/* Messages */}
         {activeId ? (
           <>
@@ -391,7 +414,10 @@ export function MessagesPage() {
                 WebkitOverflowScrolling: 'touch',
               }}
             >
-              <MessageMessages messageThreadId={activeId} />
+              <MessageMessages
+                messageThreadId={activeId}
+                searchTarget={searchTarget}
+              />
             </div>
 
             <Separator className="flex-shrink-0" />
@@ -429,6 +455,7 @@ export function MessagesPage() {
       <div className="hidden md:flex md:flex-col w-80 border-r border-border min-h-0">
         <div className="flex-shrink-0 p-4 border-b border-border">
           <div className="flex items-center justify-between mb-4">
+            <MessageSearch onSelect={handleSearchResult} />
             <Button
               onClick={handleNewConversation}
               size="icon"
@@ -479,7 +506,10 @@ export function MessagesPage() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  onClick={() => handleThreadClick(threadId)}
+                  onClick={() => {
+                    setSearchTarget(null);
+                    handleThreadClick(threadId);
+                  }}
                   className={cn(
                     'group w-full flex items-start gap-3 p-3 rounded-lg text-left',
                     'transition-colors',
@@ -525,16 +555,23 @@ export function MessagesPage() {
       <div className="flex-1 flex flex-col min-h-0">
         {activeId ? (
           <>
-            <div className="flex-shrink-0 border-b border-border p-4">
-              <h2 className="text-lg font-semibold">
+            <div className="flex-shrink-0 border-b border-border p-4 flex items-center justify-between gap-2">
+              <h2 className="text-lg font-semibold min-w-0 break-words">
                 {messageThreads?.find(
                   (t) => t.messageThreadId === activeMessageThreadId,
                 )?.title || m.message_thread_title({ id: activeId })}
               </h2>
+              <MessageSearch
+                activeThreadId={activeId}
+                onSelect={handleSearchResult}
+              />
             </div>
 
             <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
-              <MessageMessages messageThreadId={activeId} />
+              <MessageMessages
+                messageThreadId={activeId}
+                searchTarget={searchTarget}
+              />
             </div>
 
             <Separator className="flex-shrink-0" />

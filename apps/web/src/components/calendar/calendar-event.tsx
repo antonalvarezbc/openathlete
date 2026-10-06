@@ -43,6 +43,7 @@ import { COLORED_BY } from './types/filter';
 interface P {
   event: Event;
   wrapped?: boolean;
+  detailed?: boolean;
 }
 
 function EventSecondLine({ event }: { event: Event }) {
@@ -92,7 +93,7 @@ function EventSecondLine({ event }: { event: Event }) {
   }
 }
 
-export function CalendarEvent({ event, wrapped }: P) {
+export function CalendarEvent({ event, wrapped, detailed = false }: P) {
   const posthog = usePostHog();
   const bulk = useBulkWorkoutSelection();
   const selectable = !!bulk?.selecting && bulk.eligible.has(event.eventId);
@@ -228,7 +229,14 @@ export function CalendarEvent({ event, wrapped }: P) {
                   {m.bulk_workouts_toggle({ name: event.name })}
                 </label>
               )}
-              <div className="text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis px-1">
+              <div
+                className={cn(
+                  'text-sm font-medium px-1',
+                  detailed
+                    ? 'whitespace-normal break-words'
+                    : 'whitespace-nowrap overflow-hidden text-ellipsis',
+                )}
+              >
                 {event.type !== EVENT_TYPE.NOTE && (
                   <SportIcon
                     sport={event.sport}

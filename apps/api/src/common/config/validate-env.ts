@@ -11,6 +11,12 @@ export function validateEnv(config: Record<string, unknown>): ApiEnvSchemaType {
   const withoutEmpty = Object.fromEntries(
     Object.entries(config).filter(([, value]) => value !== ''),
   );
+  // ConfigService.get() reads process.env before the validated values, and
+  // some code reads process.env directly: drop the empty ones there too, so
+  // that an empty TRUST_PROXY, for example, means "not set" everywhere.
+  for (const [key, value] of Object.entries(config)) {
+    if (value === '' && process.env[key] === '') delete process.env[key];
+  }
 
   const result = ApiEnvSchema.safeParse(withoutEmpty);
   if (!result.success) {

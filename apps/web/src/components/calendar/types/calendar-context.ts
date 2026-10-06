@@ -7,11 +7,19 @@ import {
   Event,
 } from '@openathlete/shared';
 
+import { CalendarView } from '../hooks/use-calendar-data';
 import { COLORED_BY } from './filter';
 
 export type SummaryType = 'planned' | 'done' | 'planned-done';
 
 export type CalendarContextType = {
+  view: CalendarView;
+  setView: (view: CalendarView) => void;
+  weekStart: Date;
+  goToWeek: (date: Date) => void;
+  nextWeek: () => void;
+  prevWeek: () => void;
+  goToCurrentWeek: () => void;
   displayedMonth: Date;
   nextMonth: () => void;
   prevMonth: () => void;

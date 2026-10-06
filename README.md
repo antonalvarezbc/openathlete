@@ -55,8 +55,8 @@ OpenAthlete is a different proposition: comparable tracking and analysis in an o
 - 🔒 **You Own Your Data** — Self-hostable, full export, no lock-in
 - 🔍 **Transparent Algorithms** — Training load formulas (CTL/ATL/TSB) are in the code, auditable, customizable
 - 📊 **Comprehensive Tracking** — Workouts, fitness/fatigue/form metrics, progression visualizations
-- 🔗 **Device Integrations** — Strava, Garmin, Suunto, Polar, Coros
-- 📱 **Mobile Apps** — Native iOS ([TestFlight](https://testflight.apple.com/join/1hBg4mR1)), Android coming
+- 🔗 **Device Integrations** — Activities from Strava, Garmin, Polar and Suunto; planned workouts sent to Garmin and Suunto watches (Coros coming); FIT and GPX file import
+- 📱 **On your phone** — Installable web app on iPhone and Android; iOS app in beta ([TestFlight](https://testflight.apple.com/join/1hBg4mR1))
 - 🤖 **AI Assistance** — Modest helpers for session generation and load monitoring (not a replacement for a coach)
 - 🌐 **Open Source** — AGPLv3, community-driven, sustainably funded
 
@@ -249,47 +249,17 @@ Here is what you need to be able to run OpenAthlete.
 
 ## Deployment
 
-### Docker
+### Self-hosting with Docker
 
-OpenAthlete can be deployed using Docker. Docker configurations are provided in the repository.
-
-#### Requirements
-
-Make sure you have `docker` & `docker compose` installed on the server / system.
-
-#### Running OpenAthlete with Docker Compose
-
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/openathleteorg/openathlete.git
-   cd openathlete
-   ```
-
-2. Create your configuration from the template. `docker compose` reads `.env` at the repository root:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-   Set `JWT_SECRET_KEY` and `HASH_PEPPER` (each `openssl rand -base64 48`), and the public URLs if you are not on `localhost`. Optional features stay disabled while their variables are empty.
-
-3. Start OpenAthlete:
-
-   ```bash
-   docker compose up -d --build
-   ```
-
-4. Open `http://localhost` (or your `APP_URL`) and create your account.
-
-#### Updating OpenAthlete
+On any server with Docker and its Compose plugin:
 
 ```bash
-git pull
-docker compose up -d --build
+curl -fsSL https://raw.githubusercontent.com/openathleteorg/openathlete/main/scripts/install.sh | sh
 ```
 
-> Instances started before October 2026 relied on built-in secrets that are now required. Set a new `JWT_SECRET_KEY`, and keep `HASH_PEPPER=dev-pepper-change-in-production-min-32-chars` if you used the default, otherwise existing passwords stop working. See the [self-hosting guide](https://docs.openathlete.org/docs/getting-started/self-hosting).
+OpenAthlete then runs on `http://localhost` from the published images, with new random secrets in `openathlete/.env`. Add `-s -- --domain openathlete.example.org` to serve your domain over HTTPS with automatic certificates. Run the script again to update.
+
+The [self-hosting guide](https://docs.openathlete.org/docs/getting-started/self-hosting) covers HTTPS, device sync, AI, backups and upgrades from older setups.
 
 ### Manual Deployment
 
