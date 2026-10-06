@@ -42,7 +42,7 @@ export function CalendarBulkDelete({
   header?: ReactNode;
   children: ReactNode;
 }) {
-  const { events, allowCreate, athleteId, displayedMonth } =
+  const { events, allowCreate, athleteId, displayedMonth, view, weekStart } =
     useCalendarContext();
   const { space } = useSpaceContext();
   const allowed = allowCreate && space === 'COACH' && !!athleteId;
@@ -74,7 +74,11 @@ export function CalendarBulkDelete({
     observer.observe(toolbar);
     return () => observer.disconnect();
   }, [isMobile, selecting]);
-  const selectionScope = `${athleteId}:${displayedMonth.getTime()}`;
+  // The selection only covers the period on screen: the shown week in week
+  // view, so nothing selected out of sight can be deleted
+  const selectionScope = `${athleteId}:${
+    view === 'week' ? weekStart.getTime() : displayedMonth.getTime()
+  }`;
   useEffect(() => {
     setSelected(new Set());
     setSelecting(false);

@@ -13,6 +13,8 @@ const state = vi.hoisted(() => ({
     athleteId: 7,
     allowCreate: true,
     displayedMonth: new Date(2026, 9, 1),
+    view: 'month' as 'month' | 'week',
+    weekStart: new Date(2026, 9, 5),
     events: [] as Array<{
       eventId: number;
       name: string;
@@ -90,6 +92,8 @@ beforeEach(async () => {
   state.calendar.athleteId = 7;
   state.calendar.allowCreate = true;
   state.calendar.displayedMonth = new Date(2026, 9, 1);
+  state.calendar.view = 'month';
+  state.calendar.weekStart = new Date(2026, 9, 5);
   state.calendar.events = [1, 2].map((id) => ({
     eventId: id,
     name: 'Workout ' + id,
@@ -173,4 +177,16 @@ it('hides selection from athletes and read-only calendars', async () => {
   state.calendar.allowCreate = false;
   await render();
   expect(document.querySelector('[data-bulk-workouts-select]')).toBeNull();
+});
+it('resets selection when the shown week changes within a month', async () => {
+  state.calendar.view = 'week';
+  await render();
+  await select();
+  // Next week, same displayed month: nothing selected out of sight remains
+  state.calendar.weekStart = new Date(2026, 9, 12);
+  await render();
+  expect(document.querySelector('[data-bulk-workouts-toolbar]')).toBeNull();
+  expect(
+    document.querySelector('[data-row="1"]')?.getAttribute('aria-pressed'),
+  ).toBe('false');
 });
