@@ -34,6 +34,7 @@ const EXPORTED_TABLES = [
   'athlete_metric',
   'athlete_settings',
   'coach_athlete',
+  'coach_activity_alert_settings',
   'cycle',
   'equipment',
   'event',
@@ -47,6 +48,8 @@ const EXPORTED_TABLES = [
   'training_zone',
 ];
 const NOT_EXPORTED_TABLES = {
+  activity_chat_notice:
+    'automatic delivery/suppression receipts, not human-authored content',
   athlete_invitation: 'pending invitations sent to other people',
   coach_invitation: 'pending invitations, also other people’s data',
   event_template_folder: 'exported with each template, by name',

@@ -1,0 +1,34 @@
+/// Preferences belong to the individual coach, not to the athlete globally.
+model CoachActivityAlertSettings {
+  id Int @id @default(autoincrement())
+  coachUserId Int @map("coach_user_id")
+  athleteId Int @map("athlete_id")
+  notifyComments Boolean @default(true) @map("notify_comments")
+  notifyRpe Boolean @default(true) @map("notify_rpe")
+  notifyNewActivities Boolean @default(false) @map("notify_new_activities")
+  coach User @relation(fields: [coachUserId], references: [userId], onDelete: Cascade)
+  athlete Athlete @relation(fields: [athleteId], references: [athleteId], onDelete: Cascade)
+  @@unique([coachUserId, athleteId])
+  @@index([athleteId])
+  @@map("coach_activity_alert_settings")
+}
+
+/// Automated chat entry, distinct from a human-authored message. Keep the
+/// delivery key when a conversation is deleted so retries cannot resurrect it.
+model ActivityChatNotice {
+  id Int @id @default(autoincrement())
+  coachUserId Int @map("coach_user_id")
+  deliveryKey String @map("delivery_key")
+  kind String
+  eventName String @map("event_name")
+  rpe Float?
+  eventId Int? @map("event_id")
+  messageId Int? @unique @map("message_id")
+  coach User @relation(fields: [coachUserId], references: [userId], onDelete: Cascade)
+  event Event? @relation(fields: [eventId], references: [eventId], onDelete: SetNull)
+  message Message? @relation(fields: [messageId], references: [messageId], onDelete: SetNull)
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([coachUserId, deliveryKey])
+  @@index([eventId])
+  @@map("activity_chat_notice")
+}

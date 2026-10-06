@@ -38,14 +38,16 @@ export function useMessagesWebSocket({
     const socket = MessagesAPI.getSocket();
     socketRef.current = socket;
 
-    socket.on('connect', () => {
+    const onConnect = () => {
+      socket.emit('subscribe_inbox');
       setIsConnected(true);
       connectingRef.current = false;
 
       if (messageThreadId) {
         MessagesAPI.joinThread(messageThreadId);
       }
-    });
+    };
+    socket.on('connect', onConnect);
 
     socket.on('disconnect', () => {
       setIsConnected(false);
@@ -85,6 +87,19 @@ export function useMessagesWebSocket({
       // Let Socket.IO's built-in reconnection handle retries
       // Don't manually reconnect to avoid loops
     });
+
+    const onActivityNotice = (data: { message: Message }) => {
+      void queryClient.invalidateQueries({
+        queryKey: messagesKeys.getUserThreads,
+      });
+      void queryClient.invalidateQueries({
+        queryKey: messagesKeys.getThread(data.message.messageThreadId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: messagesKeys.getThreadMessages(data.message.messageThreadId),
+      });
+    };
+    socket.on('activity_notice', onActivityNotice);
 
     socket.on('new_message', (data: { message: Message }) => {
       if (onNewMessage) {
@@ -307,6 +322,10 @@ export function useMessagesWebSocket({
       }
     });
 
+    if (socket.connected) {
+      socket.emit('subscribe_inbox');
+      setIsConnected(true);
+    }
     const token = getItem(ACCESS_TOKEN);
     if (token && !socket.connected && !connectingRef.current) {
       connectingRef.current = true;
@@ -320,9 +339,10 @@ export function useMessagesWebSocket({
     }
 
     return () => {
-      socket.off('connect');
+      socket.off('connect', onConnect);
       socket.off('disconnect');
       socket.off('connect_error');
+      socket.off('activity_notice', onActivityNotice);
       socket.off('new_message');
       socket.off('message_updated');
       socket.off('messages_read');

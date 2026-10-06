@@ -15,6 +15,7 @@ import { Message } from '@openathlete/shared';
 
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
+import { ActivityChatNotice } from './activity-chat-notice';
 
 interface MessageMessagesProps {
   messageThreadId: number;
@@ -78,6 +79,32 @@ function MessageBubble({
       .length || 0;
   const totalParticipants = totalParticipantCount || 2;
   const isReadByAll = readCount >= totalParticipants - 1;
+  const time = new Date(message.createdAt).toLocaleTimeString(
+    getDateLocale(getLocale()),
+    { hour: '2-digit', minute: '2-digit' },
+  );
+
+  // Automatic notices are stored under the athlete but nobody wrote them:
+  // show them as a system row, not as a bubble on one side of the chat
+  if (message.activityNotice)
+    return (
+      <div
+        data-message-id={message.messageId}
+        data-activity-notice
+        data-search-match={highlighted || undefined}
+        tabIndex={-1}
+        className={cn(
+          'flex w-full justify-center mb-4 rounded-2xl',
+          highlighted &&
+            'ring-2 ring-primary ring-offset-2 ring-offset-background',
+        )}
+      >
+        <div className="w-full max-w-[80%] sm:max-w-120 rounded-xl border border-dashed px-4 py-3 text-sm text-muted-foreground">
+          <ActivityChatNotice notice={message.activityNotice} />
+          <p className="text-xs opacity-60 mt-2">{time}</p>
+        </div>
+      </div>
+    );
 
   return (
     <div
@@ -134,15 +161,7 @@ function MessageBubble({
             </div>
 
             <div className="flex items-center gap-2 mt-2">
-              <p className="text-xs opacity-60">
-                {new Date(message.createdAt).toLocaleTimeString(
-                  getDateLocale(getLocale()),
-                  {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  },
-                )}
-              </p>
+              <p className="text-xs opacity-60">{time}</p>
               {message.editedAt && (
                 <p className="text-xs opacity-60 italic">
                   {m.messages_edited()}

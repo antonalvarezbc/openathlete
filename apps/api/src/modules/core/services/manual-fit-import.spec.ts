@@ -7,6 +7,7 @@ import {
   ForbiddenException,
   PayloadTooLargeException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { Prisma } from '@openathlete/database';
 
@@ -142,12 +143,15 @@ function setup() {
   const queue = {
     addActivityProcessingJob: jest.fn().mockResolvedValue(undefined),
   };
+  const emitter = { emit: jest.fn() };
   return {
     db,
     queue,
+    emitter,
     service: new ManualFitImportService(
       db as unknown as PrismaService,
       queue as unknown as QueueService,
+      emitter as unknown as EventEmitter2,
     ),
   };
 }
@@ -260,8 +264,14 @@ describe('Manual FIT parsing', () => {
 
 describe('Manual FIT ownership and persistence', () => {
   test('binds import to authenticated user, writes atomically and queues without AI feedback', async () => {
-    const { db, queue, service } = setup();
+    const { db, queue, service, emitter } = setup();
     const result = await service.import(athlete, fixture(), 'Test trail');
+    expect(emitter.emit).toHaveBeenCalledWith(
+      'coach.activity.notice',
+      expect.objectContaining({
+        payload: { eventId: 90, kind: 'ACTIVITY', deliveryKey: 'import:90' },
+      }),
+    );
     expect(db.athlete.findUnique).toHaveBeenCalledWith({
       where: { userId: 4 },
     });

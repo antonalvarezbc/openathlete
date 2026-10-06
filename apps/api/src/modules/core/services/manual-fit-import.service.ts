@@ -5,8 +5,10 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Optional,
   PayloadTooLargeException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { Athlete, Prisma } from '@openathlete/database';
 import {
@@ -15,6 +17,7 @@ import {
   isValidGpsPoint,
 } from '@openathlete/shared';
 
+import { CoachActivityNoticeEvent } from '../../../events/coach-activity-notice.event';
 import { AuthUser } from '../../auth/decorators/user.decorator';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { QueueService } from '../../queue/queue.service';
@@ -44,6 +47,7 @@ export class ManualFitImportService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly queue: QueueService,
+    @Optional() private readonly emitter?: EventEmitter2,
   ) {}
 
   /** The activity always goes to the caller's own athlete profile. */
@@ -237,6 +241,15 @@ export class ManualFitImportService {
           throw new ConflictException(`${format}_CONFLICT`);
       }
     }
+    if (!saved.alreadyImported)
+      this.emitter?.emit(
+        CoachActivityNoticeEvent.SLUG,
+        new CoachActivityNoticeEvent({
+          eventId: saved.activity.eventId,
+          kind: 'ACTIVITY',
+          deliveryKey: `import:${saved.activity.eventId}`,
+        }),
+      );
     let processingQueued = true;
     try {
       // Historical file import uses the normal pipeline without generating AI feedback.

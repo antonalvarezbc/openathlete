@@ -1245,5 +1245,20 @@
   "messages_search_hint": "Type to search the message history.",
   "messages_search_count": "Results: {count}",
   "messages_search_empty": "No messages found.",
-  "messages_search_more": "Show more"
+  "messages_search_more": "Show more",
+  "activity_alert_settings_title": "Chat notifications",
+  "activity_alert_settings_help": "Choose which automatic notifications to receive from this athlete in your conversation. Your preferences do not affect other coaches. They apply to future changes; existing notices are kept.",
+  "activity_alert_comments": "Athlete comments and responses",
+  "activity_alert_rpe": "Athlete RPE changes",
+  "activity_alert_new": "New activities",
+  "activity_alert_settings_error": "Unable to load or save your preferences. Try again.",
+  "activity_alert_settings_saved": "Preferences saved.",
+  "activity_alert_retry": "Retry",
+  "activity_alert_automatic": "Automatic notification",
+  "activity_alert_uploaded": "New activity available",
+  "activity_alert_comment_updated": "Activity comment updated",
+  "activity_alert_rpe_updated": "Activity RPE updated",
+  "activity_alert_rpe_removed": "RPE removed",
+  "activity_alert_open": "Open activity",
+  "activity_alert_unavailable": "The activity is no longer available or you do not have access."
 }

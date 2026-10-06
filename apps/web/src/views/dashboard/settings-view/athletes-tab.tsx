@@ -7,8 +7,15 @@ import {
 } from '@/api/athlete';
 import { ConfirmAction } from '@/components/confirm-action';
 import { InviteAthleteDialog } from '@/components/invite-athlete-dialog/invite-athlete.dialog';
+import { ActivityAlertSettings } from '@/components/messages/activity-alert-settings';
 import { PaywallDialog } from '@/components/paywall';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { SkeletonTableRow } from '@/components/ui/skeleton';
 import {
   Table,
@@ -31,6 +38,7 @@ export function AthletesTab() {
   const { data: athletes, isPending: isLoadingAthletes } =
     useGetMyCoachedAthletesQuery();
   const nav = useNavigate();
+  const [alertsAthleteId, setAlertsAthleteId] = useState<number | null>(null);
   const { data: sentInvitations, isLoading: sentInvitationsLoading } =
     useGetSentAthleteInvitationsQuery({ enabled: true });
   const [deleteAthleteDialog, setDeleteAthleteDialog] = useState<number | null>(
@@ -69,6 +77,22 @@ export function AthletesTab() {
 
   return (
     <div className="space-y-6">
+      <Dialog
+        open={alertsAthleteId !== null}
+        onOpenChange={(open) => !open && setAlertsAthleteId(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{m.activity_alert_settings_title()}</DialogTitle>
+          </DialogHeader>
+          {alertsAthleteId !== null && (
+            <ActivityAlertSettings
+              key={alertsAthleteId}
+              athleteId={alertsAthleteId}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
       <SettingsSection
         title={m.athletes()}
         description={m.athletes_tab_description()}
@@ -107,7 +131,14 @@ export function AthletesTab() {
                     </TableCell>
                     <TableCell>{athlete.user?.email}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAlertsAthleteId(athlete.athleteId)}
+                        >
+                          {m.activity_alert_settings_title()}
+                        </Button>
                         <Button
                           variant="link"
                           size="sm"
