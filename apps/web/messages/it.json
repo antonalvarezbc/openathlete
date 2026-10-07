@@ -849,7 +849,7 @@
   "activity_feedback_next": "Avanti",
   "activity_feedback_completed": "Grazie per il tuo feedback!",
   "activity_feedback_completed_message": "Le tue risposte sono state salvate.",
-  "activity_feedback_close": "Chiudi",
+  "ui_close": "Chiudi",
   "loading_feedback_questions": "Caricamento domande...",
   "activity_feedback_skipping": "Salto in corso...",
   "activity_feedback_answer_by_text": "Rispondi tramite audio o testo",
