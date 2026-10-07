@@ -1,5 +1,3 @@
-import type { ConnectorProvider } from '../../../entities/core';
-
 /**
  * Voice note transcription readiness:
  * - `unsupported-by-ai-provider`: the selected AI provider (Claude) has no
@@ -15,8 +13,3 @@ export type InstallationFeaturesDto = {
   manualGarminSync: boolean;
   voiceTranscription: VoiceTranscriptionStatus;
 };
-
-/** Local OAuth readiness only; credentials are never included. */
-export type ProviderConfigurationDto = Partial<
-  Record<ConnectorProvider, boolean>
->;

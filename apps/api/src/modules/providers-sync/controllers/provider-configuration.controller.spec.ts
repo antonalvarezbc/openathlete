@@ -7,7 +7,6 @@ import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import { Test } from '@nestjs/testing';
 
-import { InstallationFeaturesController } from '../../core/controllers/installation-features.controller';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { QueueService } from '../../queue/queue.service';
 import { CorosProviderService, SuuntoProviderService } from '../providers';
@@ -53,7 +52,7 @@ describe('provider configuration HTTP boundary', () => {
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({
-      controllers: [InstallationFeaturesController, ProviderOAuthController],
+      controllers: [ProviderOAuthController],
       providers: [
         { provide: ConfigService, useValue: config },
         { provide: PrismaService, useValue: prisma },
@@ -110,23 +109,6 @@ describe('provider configuration HTTP boundary', () => {
     config.set(`${name}_CLIENT_SECRET`, 'synthetic-opaque-secret');
   }
 
-  it('requires authentication before revealing configuration states', async () => {
-    expect((await fetch(origin + '/installation/providers')).status).toBe(401);
-  });
-  it('returns only booleans and keeps provider states independent', async () => {
-    configure('STRAVA');
-    const response = await fetch(origin + '/installation/providers', {
-      headers,
-    });
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({
-      STRAVA: true,
-      GARMIN: false,
-      SUUNTO: false,
-      POLAR: false,
-      COROS: false,
-    });
-  });
   it.each(names)(
     'blocks placeholder %s authorization and token exchange without provider or DB calls',
     async (name) => {

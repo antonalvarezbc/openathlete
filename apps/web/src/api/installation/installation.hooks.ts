@@ -2,10 +2,7 @@ import { useAuthContext } from '@/contexts/auth';
 import client from '@/utils/axios';
 import { useQuery } from '@tanstack/react-query';
 
-import {
-  InstallationFeaturesDto,
-  ProviderConfigurationDto,
-} from '@openathlete/shared';
+import { InstallationFeaturesDto } from '@openathlete/shared';
 
 export function useInstallationFeatures(): InstallationFeaturesDto {
   const { authenticated, user } = useAuthContext();
@@ -29,17 +26,4 @@ export function useInstallationFeatures(): InstallationFeaturesDto {
     voiceTranscription:
       (available && query.data?.voiceTranscription) || 'available',
   };
-}
-
-export function useProviderConfiguration() {
-  const { authenticated, user } = useAuthContext();
-  return useQuery({
-    queryKey: ['installation', 'providers', user?.userId],
-    queryFn: async () =>
-      (await client.get<ProviderConfigurationDto>('/installation/providers'))
-        .data,
-    enabled: authenticated,
-    staleTime: 60_000,
-    retry: false,
-  });
 }

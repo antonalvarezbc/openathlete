@@ -1,52 +1,40 @@
 # Official connector configuration
 
-Settings → Connections shows **Not configured** and disables **Connect** when an
-installation has empty or template OAuth credentials. The authenticated
-`GET /installation/providers` endpoint returns only a boolean per provider;
-client secrets, client IDs and callback URLs are never included.
+The app offers an official connector only when the instance has all its
+settings. The public `GET /instance` lists those connectors; the onboarding and
+Settings → Connections show only them, plus accounts already connected so they
+can still be disconnected. Without any, both point to file import and to the
+self-hosting guide. No client ID, secret or callback URL is ever returned.
 
-The API uses the same check before returning an authorization URL or exchanging
-a connection code. An incomplete provider returns HTTP 503 with
-`code: PROVIDER_NOT_CONFIGURED`, before contacting the provider or looking up an
-athlete. Existing accounts are not disconnected or deleted.
+The API checks the same list before returning an authorization URL and, in this
+fork, before exchanging a connection code too. A connector that is not
+configured answers HTTP 503 `PROVIDER_NOT_CONFIGURED`, before contacting the
+provider or looking up an athlete. Existing accounts are not disconnected.
 
 ## Required installation values
 
-All four supported official connectors require their own `*_CLIENT_ID`,
-`*_CLIENT_SECRET` and an HTTP(S) `*_REDIRECT_URI`:
+- `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`
+- `GARMIN_CLIENT_ID`, `GARMIN_CLIENT_SECRET`
+- `SUUNTO_CLIENT_ID`, `SUUNTO_CLIENT_SECRET`, `SUUNTO_SUBSCRIPTION_KEY`
+- `POLAR_CLIENT_ID`, `POLAR_CLIENT_SECRET`
 
-- `STRAVA_*`
-- `GARMIN_*`
-- `SUUNTO_*`, plus `SUUNTO_SUBSCRIPTION_KEY`
-- `POLAR_*`
+Callback URLs follow `APP_URL` unless `*_REDIRECT_URI` is set. COROS is never
+offered: its connector is unfinished.
 
-Blank/whitespace values and recognizable templates such as the `your-...` values
-in `.env.example`, `placeholder`, `replace-me` and `xxxxx` are not configuration.
-Callback URLs must be usable HTTP(S) URLs rather than example domains or URLs
-containing credentials. Localhost callbacks remain allowed. COROS remains
-unavailable because its current provider implementation has empty credentials;
-this change does not enable that unfinished connector.
+Values left from an example file do not count: `your-...` as in
+`.env.example`, `placeholder`, `replace-me`, `changeme`, `example`, `xxx`,
+`<...>` and `${...}`. Upstream only checks that the values are present; this
+fork adds the template check so a copied `.env.example` offers nothing.
 
-Configure these values in the API environment, restart the API and reload the
-page. The check is local: **configured does not mean verified by the provider**.
-It cannot detect an expired, revoked or arbitrary non-template secret, missing
-provider approval, or a mismatch with the callback registered in a provider portal.
-No probe request is made to a provider to calculate the state.
+The check is local: **configured does not mean verified by the provider**. It
+cannot detect an expired, revoked or wrong secret, missing provider approval, or
+a callback that does not match the provider portal.
 
-## Interface behavior
-
-- Missing/template configuration: show Not configured, explain that the
-  administrator must configure it, and disable Connect.
-- Loading or failed configuration lookup: keep Connect disabled and show the
-  corresponding loading/error message instead of claiming the provider is missing.
-- Configured: retain the existing Connect flow.
-- Already connected: preserve the linked account and Disconnect action, including
-  when the installation configuration subsequently becomes unavailable.
-
-The EN/ES/FR/IT texts cover these states. Manual Garmin synchronization and manual
-FIT imports keep their separate installation flags and credential flows.
+Manual Garmin synchronization and manual file imports keep their own
+installation flags and flows.
 
 ## Source references
 
-- [Provider configuration checks](../apps/api/src/modules/providers-sync/helpers/provider-configuration.ts)
+- [Configured connectors](../apps/api/src/modules/providers-sync/base/provider-config.ts)
+- [Instance information](../apps/api/src/modules/instance/instance.controller.ts)
 - [API environment example](../apps/api/.env.example)
