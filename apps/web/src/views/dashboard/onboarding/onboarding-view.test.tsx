@@ -19,6 +19,13 @@ vi.mock('@/api/installation/installation.hooks', () => ({
 vi.mock('@/api/athlete', () => ({
   useGetMyCoachesQuery: () => ({ data: [] }),
 }));
+// The official connectors this instance has set up
+const instance = vi.hoisted(() => ({
+  providers: ['STRAVA', 'GARMIN', 'POLAR', 'SUUNTO'],
+}));
+vi.mock('@/api/instance', () => ({
+  useInstanceInfoQuery: () => ({ data: instance, isPending: false }),
+}));
 vi.mock('@/api/user', () => ({
   useCompleteOnboardingMutation: () => ({
     mutate: completeOnboarding,
@@ -114,6 +121,15 @@ describe('onboarding connectors step', () => {
       card.compareDocumentPosition(skipButton()) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  it('keeps unofficial Garmin sync on an instance without official connectors', async () => {
+    features.manualGarminSync = true;
+    instance.providers = [];
+    await mount();
+    expect(container.textContent).toContain('connectors_unavailable_title');
+    expect(manualGarmin()).not.toBeNull();
+    instance.providers = ['STRAVA', 'GARMIN', 'POLAR', 'SUUNTO'];
   });
 
   it('shows only the official providers on other installations', async () => {

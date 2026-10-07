@@ -133,7 +133,7 @@ describe('provider configuration HTTP boundary', () => {
       const uri = await fetch(origin + `/provider/${name.toLowerCase()}/uri`);
       expect(uri.status).toBe(503);
       expect(await uri.json()).toMatchObject({
-        code: 'PROVIDER_NOT_CONFIGURED',
+        message: 'PROVIDER_NOT_CONFIGURED',
       });
       const token = await fetch(
         origin + `/provider/${name.toLowerCase()}/token`,
@@ -148,7 +148,7 @@ describe('provider configuration HTTP boundary', () => {
       );
       expect(token.status).toBe(503);
       expect(await token.json()).toMatchObject({
-        code: 'PROVIDER_NOT_CONFIGURED',
+        message: 'PROVIDER_NOT_CONFIGURED',
       });
       expect(provider.getAuthorizationUri).not.toHaveBeenCalled();
       expect(provider.getAuthorizationUriWithPKCE).not.toHaveBeenCalled();

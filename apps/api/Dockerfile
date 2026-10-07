@@ -81,6 +81,7 @@ COPY scripts/garmin-probe/*.py /opt/garmin-probe/
 # nothing under /app (Garmin sessions live in GARMIN_UNOFFICIAL_DIRECTORY).
 # A `chown -R /app` copied every file into a new layer, 600 MB.
 COPY --chmod=755 apps/api/scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
+COPY --chmod=755 apps/api/scripts/openathlete /usr/local/bin/openathlete
 
 USER root
 

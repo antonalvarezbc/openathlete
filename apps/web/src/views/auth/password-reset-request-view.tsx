@@ -1,3 +1,4 @@
+import { useInstanceInfoQuery } from '@/api/instance';
 import { usePasswordResetRequestMutation } from '@/api/user';
 import { FormProvider, RHFTextField } from '@/components/hook-form';
 import { Button } from '@/components/ui/button';
@@ -14,9 +15,16 @@ import { passwordResetRequestSchema } from '@openathlete/shared';
 export function PasswordResetRequestView({
   className,
 }: React.ComponentProps<'form'>) {
+  // Without email, the link goes to the server logs for the administrator
+  const { data: instance } = useInstanceInfoQuery();
+  const sendsEmails = instance?.email !== false;
   const passwordResetRequestMutation = usePasswordResetRequestMutation({
     onSuccess: async () => {
-      toast.success(m.password_reset_email_sent());
+      toast.success(
+        sendsEmails
+          ? m.password_reset_email_sent()
+          : m.password_reset_ask_administrator(),
+      );
     },
     onError: () => {
       toast.error(m.error_sending_password_reset_email());
@@ -44,6 +52,14 @@ export function PasswordResetRequestView({
         <p className="text-muted-foreground text-sm text-balance">
           {m.enter_email_to_reset_password()}
         </p>
+        {!sendsEmails && (
+          <p
+            className="text-sm text-balance rounded-md border px-3 py-2"
+            data-reset-without-email
+          >
+            {m.password_reset_without_email()}
+          </p>
+        )}
       </div>
       <div className="grid gap-6">
         <div className="grid gap-3">
@@ -61,7 +77,9 @@ export function PasswordResetRequestView({
           onClick={onSubmit}
           isLoading={passwordResetRequestMutation.isPending}
         >
-          {m.send_password_reset_email()}
+          {sendsEmails
+            ? m.send_password_reset_email()
+            : m.password_reset_request_link()}
         </Button>
       </div>
       <div className="text-center text-sm">

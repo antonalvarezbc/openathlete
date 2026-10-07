@@ -23,6 +23,7 @@ import { AppController } from './app.controller';
 import { AuthModule } from './auth';
 import { CalendarModule } from './calendar/calendar.module';
 import { CoreModule } from './core';
+import { InstanceModule } from './instance/instance.module';
 import { MessagesModule } from './messages/messages.module';
 import { NotificationModule } from './notification';
 import { PrismaService } from './prisma/services/prisma.service';
@@ -45,6 +46,7 @@ import { SubscriptionModule } from './subscription';
     ThrottlerModule.forRoot(DEFAULT_RATE_LIMIT),
     AuthModule,
     CoreModule,
+    InstanceModule,
     AgentModule,
     AiModule,
     MessagesModule,

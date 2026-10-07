@@ -34,6 +34,16 @@ function getFirebaseWebConfig(): FirebaseWebConfig {
   return { apiKey, authDomain, projectId, appId };
 }
 
+/** The app was built with the Firebase settings Google sign-in needs. */
+export function isFirebaseWebConfigured(): boolean {
+  try {
+    getFirebaseWebConfig();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 let webAuth: Auth | null = null;
 
 function getWebAuth(): Auth {

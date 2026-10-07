@@ -31,3 +31,4 @@ export * from './access-token.dto';
 export * from './manual-garmin-workout.dto';
 export * from './records.dto';
 export * from './weekly-volume.dto';
+export * from './instance.dto';

@@ -22,18 +22,22 @@ export function ChatBubble() {
       ? calculateTotalUnreadCount(messageThreads, currentUser.userId)
       : 0;
 
+  // Not on the messages page, which shows them already, nor during the
+  // onboarding, where a new user has no conversation yet
+  const hidden =
+    isOpen ||
+    pathname === getPath(['dashboard', 'messages']) ||
+    pathname.startsWith(getPath(['dashboard', 'onboarding']));
+
   const { springX, springY, isDragging, handleMouseDown, handleTouchStart } =
     useDraggableBubble({
       position: bubblePosition,
       onPositionChange: setBubblePosition,
       onClick: openChat,
-      enabled: !isOpen && pathname !== getPath(['dashboard', 'messages']),
+      enabled: !hidden,
     });
 
-  // Don't show bubble if chat is open or on messages page
-  if (isOpen || pathname === getPath(['dashboard', 'messages'])) {
-    return null;
-  }
+  if (hidden) return null;
 
   return (
     <motion.button

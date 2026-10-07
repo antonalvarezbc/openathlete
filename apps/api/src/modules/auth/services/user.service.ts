@@ -37,6 +37,7 @@ import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
 import { ensureSelfCoachingLink } from '../../core/helpers/self-coaching';
 import { AuthUser } from '../decorators/user.decorator';
+import { passwordResetUrl } from '../helpers/password-reset-url';
 import { isAccountAdministrator } from './account-administration.service';
 import { AccountDeletionService } from './account-deletion.service';
 import { AthleteInvitationService } from './athlete-invitation.service';
@@ -127,6 +128,34 @@ export class UserService {
     return { success: true };
   };
 
+  /**
+   * Applies SIGNUP_MODE to a new account, by password or by Google. The
+   * first account of an instance is always allowed: it is its
+   * administrator's.
+   */
+  private async assertSignupAllowed(
+    invitationToken?: string,
+    coachInvitationToken?: string,
+  ) {
+    const mode = this.configService.get('SIGNUP_MODE') ?? 'open';
+    if (mode === 'open') return;
+    if ((await this.prisma.user.count()) === 0) return;
+    if (mode === 'invite') {
+      const invited =
+        (invitationToken &&
+          (await this.invitationService.verifyInvitationToken(
+            invitationToken,
+          ))) ||
+        (coachInvitationToken &&
+          (await this.coachInvitationService.verifyInvitationToken(
+            coachInvitationToken,
+          )));
+      if (invited) return;
+      throw new ForbiddenException('SIGNUP_INVITE_ONLY');
+    }
+    throw new ForbiddenException('SIGNUP_CLOSED');
+  }
+
   public createAccount = async ({
     email,
     password,
@@ -135,6 +164,7 @@ export class UserService {
     invitationToken,
     coachInvitationToken,
   }: CreateAccountDto) => {
+    await this.assertSignupAllowed(invitationToken, coachInvitationToken);
     const normalizedEmail = email.toLowerCase();
     const hashedPassword = await this.hashPassword(password);
 
@@ -263,18 +293,24 @@ export class UserService {
       }),
     );
 
-    this.eventEmitter.emit(
-      SendEmailEvent.SLUG,
-      new SendEmailEvent({
-        type: 'signup-notification',
-        to: 'contact@openathlete.org',
-        params: {
-          email: normalizedEmail,
-          firstName,
-          lastName,
-        },
-      }),
+    // Opt-in: a self-hosted instance must not tell anyone about its users
+    const notificationEmail = this.configService.get(
+      'SIGNUP_NOTIFICATION_EMAIL',
     );
+    if (notificationEmail) {
+      this.eventEmitter.emit(
+        SendEmailEvent.SLUG,
+        new SendEmailEvent({
+          type: 'signup-notification',
+          to: notificationEmail,
+          params: {
+            email: normalizedEmail,
+            firstName,
+            lastName,
+          },
+        }),
+      );
+    }
 
     return created;
   };
@@ -330,15 +366,26 @@ export class UserService {
       { userId: user.userId },
       TokenType.PASSWORD_RESET,
     );
+    const url = passwordResetUrl(
+      this.configService.get('APP_URL'),
+      token.token,
+    );
+
+    if (!this.configService.get('BREVO_API_KEY')) {
+      // Nothing can carry the link to the user: the instance administrator
+      // reads it here and passes it on
+      this.logger.warn(
+        `Email is not configured. Password reset link for ${maskEmail(body.email)}, valid 15 minutes: ${url}`,
+      );
+      return;
+    }
 
     this.eventEmitter.emit(
       SendEmailEvent.SLUG,
       new SendEmailEvent({
         type: 'password-reset',
         to: body.email,
-        params: {
-          url: `${this.configService.get('APP_URL')}/auth/password-reset?token=${token.token}`,
-        },
+        params: { url },
       }),
     );
   };

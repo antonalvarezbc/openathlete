@@ -85,6 +85,9 @@ export const routes = {
     update: (folderId: number) => `/event-template-folder/${folderId}`,
     delete: (folderId: number) => `/event-template-folder/${folderId}`,
   },
+  instance: {
+    getInstanceInfo: '/instance',
+  },
   record: {
     getRecords: '/record',
     getRecordSports: '/record/sports',

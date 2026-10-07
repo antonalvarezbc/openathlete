@@ -1,0 +1,12 @@
+#!/bin/sh
+# Administration commands of a self-hosted instance:
+#   docker compose exec api openathlete <command>
+# Run without arguments to list them.
+set -e
+cd /app/apps/api
+
+if [ "$(id -u)" = "0" ]; then
+  exec su-exec openathlete node dist/cli.js "$@"
+fi
+
+exec node dist/cli.js "$@"

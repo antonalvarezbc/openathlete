@@ -1,5 +1,6 @@
 import { useLoginMutation } from '@/api/auth';
 import { AuthAPI } from '@/api/auth/auth.api';
+import { useInstanceInfoQuery } from '@/api/instance';
 import { useCreateAccountMutation } from '@/api/user';
 import {
   FormProvider,
@@ -13,6 +14,7 @@ import { getPath } from '@/routes/paths';
 import { localizedNewPasswordSchema } from '@/utils/password';
 import { RETURN_TO_PARAM, rememberReturnTo } from '@/utils/return-to';
 import { cn } from '@/utils/shadcn';
+import { signupRefusal } from '@/utils/signup';
 import { OAuthButtons } from '@/views/auth/oauth-buttons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { isAxiosError } from 'axios';
@@ -82,7 +84,7 @@ export function CreateAccountView({ className }: React.ComponentProps<'form'>) {
   // Without these messages a rejected sign-up (e.g. an email that already
   // exists) left the form unchanged, which looked like it was stuck.
   const [submitError, setSubmitError] = useState<
-    'exists' | 'failed' | 'login' | null
+    'exists' | 'failed' | 'login' | { refused: string } | null
   >(null);
   const loginMutation = useLoginMutation({
     onSuccess: async () => {
@@ -96,13 +98,24 @@ export function CreateAccountView({ className }: React.ComponentProps<'form'>) {
       posthog?.capture('user_signed_up');
       loginMutation.mutate(variables);
     },
-    onError: (error) =>
+    onError: (error) => {
+      // The instance's SIGNUP_MODE says why, rather than a generic failure
+      const refused = signupRefusal(error);
       setSubmitError(
-        isAxiosError(error) && error.response?.status === 409
-          ? 'exists'
-          : 'failed',
-      ),
+        refused
+          ? { refused }
+          : isAxiosError(error) && error.response?.status === 409
+            ? 'exists'
+            : 'failed',
+      );
+    },
   });
+  const { data: instance } = useInstanceInfoQuery();
+  const signup = instance?.signup ?? 'open';
+  // In invite mode, the link of an invitation still opens the form
+  const signupBlocked =
+    signup === 'closed' ||
+    (signup === 'invite' && !invitationToken && !coachInvitationToken);
 
   const { handleSubmit } = methods;
 
@@ -115,6 +128,28 @@ export function CreateAccountView({ className }: React.ComponentProps<'form'>) {
     };
     createAccountMutation.mutate(submitData);
   });
+
+  if (signupBlocked) {
+    return (
+      <div
+        className={cn('flex flex-col gap-6 text-center', className)}
+        data-signup-blocked={signup}
+      >
+        <h1 className="text-2xl font-bold">{m.create_an_account()}</h1>
+        <p className="text-muted-foreground text-sm text-balance">
+          {signup === 'closed'
+            ? m.signup_closed_message()
+            : m.signup_invite_only_message()}
+        </p>
+        <div className="text-sm">
+          {m.already_have_account()}{' '}
+          <Link to="/auth/login" className="underline underline-offset-4">
+            {m.login()}
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <FormProvider
@@ -166,11 +201,13 @@ export function CreateAccountView({ className }: React.ComponentProps<'form'>) {
         />
         {submitError && (
           <p role="alert" className="text-center text-sm text-destructive">
-            {submitError === 'exists'
-              ? m.signup_email_exists()
-              : submitError === 'login'
-                ? m.signup_login_failed()
-                : m.signup_failed()}{' '}
+            {typeof submitError === 'object'
+              ? submitError.refused
+              : submitError === 'exists'
+                ? m.signup_email_exists()
+                : submitError === 'login'
+                  ? m.signup_login_failed()
+                  : m.signup_failed()}{' '}
             {submitError !== 'failed' && (
               <Link to="/auth/login" className="underline underline-offset-4">
                 {m.login()}

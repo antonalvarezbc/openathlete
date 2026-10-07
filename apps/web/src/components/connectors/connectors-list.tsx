@@ -1,3 +1,4 @@
+import { useInstanceInfoQuery } from '@/api/instance';
 import {
   useDisconnectProviderMutation,
   useGetConnectedProvidersQuery,
@@ -29,6 +30,9 @@ import { toast } from 'sonner';
 
 import { ConnectorProvider } from '@openathlete/shared';
 
+import { ConnectorsUnavailable } from './connectors-unavailable';
+import { offeredProviders } from './offered-providers';
+
 interface ConnectorsListProps {
   supportedProviders?: ConnectorProvider[];
   showSkip?: boolean;
@@ -54,8 +58,18 @@ export function ConnectorsList({
   children,
 }: ConnectorsListProps) {
   const posthog = usePostHog();
-  const { data: connectedProviders = [], isLoading: isLoadingConnected } =
-    useGetConnectedProvidersQuery();
+  const {
+    data: connectedProviders = [],
+    isLoading: isLoadingConnectedAccounts,
+  } = useGetConnectedProvidersQuery();
+  const { data: instance, isPending: isLoadingInstance } =
+    useInstanceInfoQuery();
+  const isLoadingConnected = isLoadingConnectedAccounts || isLoadingInstance;
+  const providers = offeredProviders(
+    supportedProviders,
+    instance?.providers ?? [],
+    connectedProviders.map((account) => account.provider),
+  );
 
   const getOAuthUriMutation = useGetOAuthUriMutation({
     onSuccess: async (response, provider) => {
@@ -126,106 +140,110 @@ export function ConnectorsList({
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-4">
-        {isLoadingConnected
-          ? Array.from({ length: supportedProviders.length }).map((_, i) => (
-              <Card key={i}>
+        {isLoadingConnected ? (
+          Array.from({ length: supportedProviders.length }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-10 w-10 rounded" />
+                    <div>
+                      <Skeleton className="h-5 w-32 mb-2" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-10 w-full" />
+              </CardContent>
+            </Card>
+          ))
+        ) : providers.length === 0 ? (
+          <ConnectorsUnavailable />
+        ) : (
+          providers.map((provider) => {
+            const connected = isConnected(provider);
+            const isLoading =
+              getOAuthUriMutation.isPending ||
+              disconnectMutation.isPending ||
+              isLoadingConnected;
+
+            return (
+              <Card key={provider}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <Skeleton className="h-10 w-10 rounded" />
+                      <div className="h-10 w-10 flex items-center justify-center">
+                        {getProviderIcon(provider)}
+                      </div>
                       <div>
-                        <Skeleton className="h-5 w-32 mb-2" />
-                        <Skeleton className="h-4 w-24" />
+                        <CardTitle className="text-base">
+                          {connectorProviderLabelMap[provider]}
+                        </CardTitle>
+                        <CardDescription>
+                          {connected
+                            ? m.connected_and_syncing()
+                            : m.not_connected()}
+                        </CardDescription>
                       </div>
                     </div>
+                    {connected && (
+                      <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                        <CheckCircle2 className="h-5 w-5" />
+                        <span className="text-sm font-medium">
+                          {m.connected()}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <Skeleton className="h-10 w-full" />
-                </CardContent>
-              </Card>
-            ))
-          : supportedProviders.map((provider) => {
-              const connected = isConnected(provider);
-              const isLoading =
-                getOAuthUriMutation.isPending ||
-                disconnectMutation.isPending ||
-                isLoadingConnected;
-
-              return (
-                <Card key={provider}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 flex items-center justify-center">
-                          {getProviderIcon(provider)}
-                        </div>
-                        <div>
-                          <CardTitle className="text-base">
-                            {connectorProviderLabelMap[provider]}
-                          </CardTitle>
-                          <CardDescription>
-                            {connected
-                              ? m.connected_and_syncing()
-                              : m.not_connected()}
-                          </CardDescription>
-                        </div>
-                      </div>
-                      {connected && (
-                        <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                          <CheckCircle2 className="h-5 w-5" />
-                          <span className="text-sm font-medium">
-                            {m.connected()}
-                          </span>
-                        </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      {connected ? (
+                        <p className="text-sm text-muted-foreground">
+                          {m.provider_account_connected({
+                            provider: connectorProviderLabelMap[provider],
+                          })}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          {m.connect_provider_account({
+                            provider: connectorProviderLabelMap[provider],
+                          })}
+                        </p>
                       )}
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        {connected ? (
-                          <p className="text-sm text-muted-foreground">
-                            {m.provider_account_connected({
-                              provider: connectorProviderLabelMap[provider],
-                            })}
-                          </p>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">
-                            {m.connect_provider_account({
-                              provider: connectorProviderLabelMap[provider],
-                            })}
-                          </p>
-                        )}
-                      </div>
-                      <div className="ml-4">
-                        {connected ? (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDisconnect(provider)}
-                            disabled={isLoading}
-                          >
-                            <Link2Off className="h-4 w-4 mr-2" />
-                            {m.disconnect()}
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleConnect(provider)}
-                            disabled={isLoading}
-                          >
-                            <Link2 className="h-4 w-4 mr-2" />
-                            {m.connect()}
-                          </Button>
-                        )}
-                      </div>
+                    <div className="ml-4">
+                      {connected ? (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDisconnect(provider)}
+                          disabled={isLoading}
+                        >
+                          <Link2Off className="h-4 w-4 mr-2" />
+                          {m.disconnect()}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleConnect(provider)}
+                          disabled={isLoading}
+                        >
+                          <Link2 className="h-4 w-4 mr-2" />
+                          {m.connect()}
+                        </Button>
+                      )}
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
         {children}
       </div>
       {showSkip && onSkip && (
