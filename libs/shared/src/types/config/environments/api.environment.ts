@@ -221,6 +221,15 @@ export const ApiEnvSchema = z
       .optional()
       .describe('Default sender email address for Brevo emails (optional)'),
 
+    // Where the hosted instance hears about new accounts (optional)
+    SIGNUP_NOTIFICATION_EMAIL: z
+      .string()
+      .email('SIGNUP_NOTIFICATION_EMAIL must be a valid email address')
+      .optional()
+      .describe(
+        'Receives an email for each new account (optional, needs Brevo)',
+      ),
+
     // AI Services (optional)
     OPENAI_API_KEY: z
       .string()

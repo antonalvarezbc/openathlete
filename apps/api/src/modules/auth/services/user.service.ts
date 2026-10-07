@@ -254,18 +254,24 @@ export class UserService {
       }),
     );
 
-    this.eventEmitter.emit(
-      SendEmailEvent.SLUG,
-      new SendEmailEvent({
-        type: 'signup-notification',
-        to: 'contact@openathlete.org',
-        params: {
-          email: normalizedEmail,
-          firstName,
-          lastName,
-        },
-      }),
+    // Opt-in: a self-hosted instance must not tell anyone about its users
+    const notificationEmail = this.configService.get(
+      'SIGNUP_NOTIFICATION_EMAIL',
     );
+    if (notificationEmail) {
+      this.eventEmitter.emit(
+        SendEmailEvent.SLUG,
+        new SendEmailEvent({
+          type: 'signup-notification',
+          to: notificationEmail,
+          params: {
+            email: normalizedEmail,
+            firstName,
+            lastName,
+          },
+        }),
+      );
+    }
 
     return created;
   };
