@@ -24,7 +24,8 @@ curl -fsSL https://raw.githubusercontent.com/openathleteorg/openathlete/main/scr
 [Caddy](https://caddyserver.com) then obtains and renews the certificate on its own; ports 80 and 443 must be reachable. Behind your own reverse proxy instead, use `--url https://openathlete.example.org` and forward to the port of the web container (`WEB_PORT`).
 
 <Callout type="warn">
-Keep a copy of `.env`. Without `HASH_PEPPER`, no existing password can be checked.
+  Keep a copy of `.env`. Without `HASH_PEPPER`, no existing password can be
+  checked.
 </Callout>
 
 ### How it fits together
@@ -49,14 +50,16 @@ To build the images from a clone of the repository instead: `docker compose -f d
 
 Leave a variable empty to disable the feature:
 
-| Feature | Variables |
-| --- | --- |
-| Transactional email (password reset, invitations) | `BREVO_API_KEY`, `BREVO_FROM_EMAIL` |
-| Device sync | `STRAVA_*`, `GARMIN_*`, `POLAR_*`, `SUUNTO_*` |
-| AI load estimation of planned sessions | `ENABLE_TRAINING_LOAD_ESTIMATION` |
-| Billing | `STRIPE_*` (not needed for self-hosting) |
+| Feature                                           | Variables                                     |
+| ------------------------------------------------- | --------------------------------------------- |
+| Transactional email (password reset, invitations) | `BREVO_API_KEY`, `BREVO_FROM_EMAIL`           |
+| Device sync                                       | `STRAVA_*`, `GARMIN_*`, `POLAR_*`, `SUUNTO_*` |
+| AI load estimation of planned sessions            | `ENABLE_TRAINING_LOAD_ESTIMATION`             |
+| Billing                                           | `STRIPE_*` (not needed for self-hosting)      |
 
 Without Stripe, the instance sells nothing and limits nobody: every account can coach any number of athletes. With Stripe, free accounts coach up to 5 athletes and the Supporter subscription (`STRIPE_PRICE_SUPPORTER_MONTHLY`, `STRIPE_PRICE_SUPPORTER_YEARLY`) removes the limit and includes AI on the instance keys.
+
+The app only offers what is set up: without Firebase there is no "Continue with Google" button, and without device sync settings Settings > Connectors points to file import instead of offering connectors that would fail. `GET /api/instance` lists what the instance offers.
 
 Every API variable is documented in `apps/api/.env.example`.
 
@@ -64,14 +67,14 @@ Every API variable is documented in `apps/api/.env.example`.
 
 Each provider needs an app registered in its developer program. Users can always import FIT and GPX files instead (Settings > Connectors).
 
-| Provider | Developer program | Callback URL to declare |
-| --- | --- | --- |
-| Strava | [strava.com/settings/api](https://www.strava.com/settings/api), open to anyone (limited to a few athletes until Strava reviews the app) | Authorization domain: your domain |
-| Polar | [admin.polaraccesslink.com](https://admin.polaraccesslink.com), open to anyone | `APP_URL/auth/callback/polar` |
-| Garmin | [Garmin Connect Developer Program](https://developer.garmin.com/gc-developer-program/), business approval required | `APP_URL/auth/callback/garmin` |
-| Suunto | [Suunto API Zone](https://apizone.suunto.com), partner approval required | `APP_URL/auth/callback/suunto` |
+| Provider | Developer program                                                                                                                       | Callback URL to declare           |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| Strava   | [strava.com/settings/api](https://www.strava.com/settings/api), open to anyone (limited to a few athletes until Strava reviews the app) | Authorization domain: your domain |
+| Polar    | [admin.polaraccesslink.com](https://admin.polaraccesslink.com), open to anyone                                                          | `APP_URL/auth/callback/polar`     |
+| Garmin   | [Garmin Connect Developer Program](https://developer.garmin.com/gc-developer-program/), business approval required                      | `APP_URL/auth/callback/garmin`    |
+| Suunto   | [Suunto API Zone](https://apizone.suunto.com), partner approval required                                                                | `APP_URL/auth/callback/suunto`    |
 
-Set the client ID and secret in `.env` (`STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`...). Callback URLs default to `APP_URL/auth/callback/<provider>` and webhooks to `APP_URL/api/provider/<provider>/webhook`; the `*_REDIRECT_URI` and `POLAR_WEBHOOK_URL` variables override them.
+Set the client ID and secret in `.env` (`STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`...); Suunto also needs `SUUNTO_SUBSCRIPTION_KEY`. A provider appears in the app once all its settings are present. Callback URLs default to `APP_URL/auth/callback/<provider>` and webhooks to `APP_URL/api/provider/<provider>/webhook`; the `*_REDIRECT_URI` and `POLAR_WEBHOOK_URL` variables override them.
 
 Activities from connected devices, including historical imports, are fetched by background jobs that run inside the API container (`ENABLE_ACTIVITY_IMPORT` and `ENABLE_ACTIVITY_PROCESSING`, both on by default). To run them in a separate worker instead, start a second API container with these two variables set to `true` and `SKIP_MIGRATIONS=true`, and set them to `false` on the API.
 
@@ -88,6 +91,7 @@ AI features (workout generation and editing, post-activity questions, feedback a
   ```
 
   Without `AI_MODEL_DEFAULT`, every feature uses `openai/gpt-5.6-luna`, so `OPENAI_API_KEY` is enough. `AI_MODEL_EVENT_GENERATION`, `AI_MODEL_EVENT_MODIFICATION`, `AI_MODEL_POST_ACTIVITY_FEEDBACK`, `AI_MODEL_FEEDBACK_EXTRACTION` and `AI_MODEL_TRIMP_ESTIMATION` override one feature. A feature whose model has no key configured is simply unavailable on the instance keys.
+
 - **Who may use the instance keys**: `AI_HOSTED_ACCESS=everyone` (default without Stripe), `subscribers` (users whose plan includes AI), or `none`.
 - **Monthly budget**: `AI_HOSTED_MONTHLY_BUDGET_USD` caps what each user may spend per month on the instance keys, in US dollars at the providers' prices, for example `3`. Calls are charged at their model's price (input and output tokens apart); a model the API does not know is charged like a flagship model. Once the budget is used, features run only on the user's own key until the next month. Unset, usage is not limited. Users see the share they used in Settings > AI.
 - **Local models**: users can add any OpenAI-compatible endpoint, such as Ollama (`http://ollama:11434/v1`), vLLM or LM Studio. This is on by default without Stripe. Set `AI_ALLOW_CUSTOM_ENDPOINTS=false` on an instance open to the public: the server calls these URLs on users' behalf.
@@ -117,7 +121,7 @@ Read the [release notes](https://github.com/openathleteorg/openathlete/releases)
 - Leave `POSTGRES_PASSWORD` empty: your database was created with the former default.
 - PostgreSQL (5433) and Redis (6379) are no longer published on the host; use `docker compose exec` for backups.
 - `JWT_SECRET_KEY` and `HASH_PEPPER` are required. Keep `HASH_PEPPER=dev-pepper-change-in-production-min-32-chars` if your instance used that former default: changing the pepper invalidates every password.
-</Callout>
+  </Callout>
 
 ## Manual deployment
 

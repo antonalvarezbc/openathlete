@@ -15,6 +15,7 @@ import {
   Post,
   Req,
   Res,
+  ServiceUnavailableException,
   UseGuards,
   forwardRef,
 } from '@nestjs/common';
@@ -50,6 +51,7 @@ import {
   PolarWebhookPayload,
   SuuntoWebhookPayload,
 } from '../../core/types/connector';
+import { configuredProviders } from '../base/provider-config';
 import { CorosProviderService, SuuntoProviderService } from '../providers';
 import { GarminProviderService } from '../providers/garmin.provider.service';
 import { PolarProviderService } from '../providers/polar.provider.service';
@@ -153,8 +155,14 @@ export class ProviderOAuthController {
     status: 400,
     description: 'Bad request - provider not supported',
   })
+  @ApiResponse({
+    status: 503,
+    description:
+      'PROVIDER_NOT_CONFIGURED - the connector is not set up on this instance',
+  })
   getAuthorizationUri(@Param('provider') provider: string) {
     const providerEnum = provider.toUpperCase() as ConnectorProvider;
+    this.assertConfigured(providerEnum);
 
     switch (providerEnum) {
       case ConnectorProvider.STRAVA:
@@ -172,7 +180,20 @@ export class ProviderOAuthController {
       case ConnectorProvider.POLAR:
         return { uri: this.polarProviderService.getAuthorizationUri() };
       default:
-        throw new Error(`Provider ${provider} not supported`);
+        throw new BadRequestException(`Provider ${provider} not supported`);
+    }
+  }
+
+  /**
+   * Without its client settings a connector would send the user to the
+   * provider with an empty client_id: refuse it up front.
+   */
+  private assertConfigured(provider: ConnectorProvider) {
+    const configured = configuredProviders((key) =>
+      this.configService.get(key),
+    );
+    if (!configured.includes(provider)) {
+      throw new ServiceUnavailableException('PROVIDER_NOT_CONFIGURED');
     }
   }
 

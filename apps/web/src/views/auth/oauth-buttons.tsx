@@ -1,4 +1,5 @@
 import { useLoginWithFirebaseMutation } from '@/api/auth';
+import { useInstanceInfoQuery } from '@/api/instance';
 import { GoogleIcon } from '@/components/icons/google';
 import { Button } from '@/components/ui/button';
 import { useAuthContext } from '@/contexts/auth';
@@ -7,6 +8,7 @@ import { getPath } from '@/routes/paths';
 import {
   type OAuthProviderId,
   getFirebaseIdTokenForProvider,
+  isFirebaseWebConfigured,
 } from '@/utils/firebase-auth';
 import { takeReturnTo } from '@/utils/return-to';
 import { cn } from '@/utils/shadcn';
@@ -31,6 +33,7 @@ export function OAuthButtons({
   const nav = useNavigate();
   const { initialize } = useAuthContext();
   const posthog = usePostHog();
+  const { data: instance } = useInstanceInfoQuery();
   const [pendingProvider, setPendingProvider] =
     useState<OAuthProviderId | null>(null);
 
@@ -68,6 +71,10 @@ export function OAuthButtons({
 
   const isLoading =
     loginWithFirebaseMutation.isPending || pendingProvider !== null;
+
+  // Both the API and this build need Firebase: offering the button without
+  // them ends on "OAuth sign-in failed"
+  if (!instance?.googleSignIn || !isFirebaseWebConfigured()) return null;
 
   return (
     <div className={cn('grid gap-5', className)}>

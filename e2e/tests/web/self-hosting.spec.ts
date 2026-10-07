@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { WEB_URL } from '../../support/env';
+import { API_URL, WEB_URL } from '../../support/env';
 
 // Without API_PUBLIC_URL, the web image proxies the API under /api
 test('reaches the API through its own origin', async ({ page }) => {
@@ -38,4 +38,32 @@ test('makes no third-party request', async ({ page }) => {
   await page.waitForLoadState('networkidle');
 
   expect([...thirdParty]).toEqual([]);
+});
+
+// A bare instance has no Google sign-in, email or device connector: the app
+// must not offer what would only fail
+test('hides what the instance has not set up', async ({ page, request }) => {
+  const instance = await request.get(`${API_URL}/instance`);
+  expect(await instance.json()).toEqual({
+    googleSignIn: false,
+    email: false,
+    providers: [],
+  });
+
+  await page.goto('/dashboard/settings?tab=connectors');
+  await expect(page.locator('[data-connectors-unavailable]')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Connect' })).toHaveCount(0);
+  // Files remain the way in
+  await expect(page.locator('[data-import-fit-trigger]')).toBeVisible();
+});
+
+test('signs in without a Google button on a bare instance', async ({
+  browser,
+}) => {
+  const context = await browser.newContext({ storageState: undefined });
+  const page = await context.newPage();
+  await page.goto('/auth/login');
+  await expect(page.locator('input[name="email"]')).toBeVisible();
+  await expect(page.getByText('Google')).toHaveCount(0);
+  await context.close();
 });
