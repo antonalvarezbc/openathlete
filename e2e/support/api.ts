@@ -3,12 +3,14 @@ import { randomInt, randomUUID } from 'node:crypto';
 
 import { API_URL } from './env';
 
-export interface TestAthlete {
+export interface TestUser {
   email: string;
   password: string;
   accessToken: string;
   refreshToken: string;
 }
+
+export type TestAthlete = TestUser;
 
 /**
  * A private address for X-Forwarded-For. The API trusts it from the Docker
@@ -43,17 +45,19 @@ export async function login(
   };
 }
 
-/** Signs up a new user and completes the athlete onboarding. */
-export async function createAthlete(
+/** Signs up a new user and completes the onboarding with the given roles. */
+async function createUser(
   request: APIRequestContext,
-): Promise<TestAthlete> {
+  roles: ('ATHLETE' | 'COACH')[],
+  lastName: string,
+): Promise<TestUser> {
   const ip = randomClientIp();
   const email = `e2e-${randomUUID()}@example.com`;
   const password = 'E2e-Test-Passw0rd!';
 
   const signup = await request.post(`${API_URL}/user`, {
     headers: apiHeaders(ip),
-    data: { email, password, firstName: 'Test', lastName: 'Athlete' },
+    data: { email, password, firstName: 'Test', lastName },
   });
   expect(signup.status(), await signup.text()).toBe(201);
 
@@ -66,9 +70,61 @@ export async function createAthlete(
 
   const onboarding = await request.post(`${API_URL}/user/complete-onboarding`, {
     headers: apiHeaders(ip, accessToken),
-    data: { roles: ['ATHLETE'], gender: 'MALE', hrMax: 190, hrRest: 50 },
+    data: {
+      roles,
+      ...(roles.includes('ATHLETE') && {
+        gender: 'MALE',
+        hrMax: 190,
+        hrRest: 50,
+      }),
+    },
   });
   expect(onboarding.status(), await onboarding.text()).toBe(201);
 
   return { email, password, accessToken, refreshToken };
+}
+
+/** Signs up a new user and completes the athlete onboarding. */
+export function createAthlete(
+  request: APIRequestContext,
+): Promise<TestAthlete> {
+  return createUser(request, ['ATHLETE'], 'Athlete');
+}
+
+/**
+ * A coach and an athlete linked the way people do it: the coach invites the
+ * athlete, who accepts. athleteId is the athlete profile the coach manages.
+ */
+export async function createCoachWithAthlete(request: APIRequestContext) {
+  const athlete = await createAthlete(request);
+  const coach = await createUser(request, ['COACH'], 'Coach');
+  const coachHeaders = apiHeaders(undefined, coach.accessToken);
+  const athleteHeaders = apiHeaders(undefined, athlete.accessToken);
+
+  const invite = await request.post(`${API_URL}/athlete/invite/athlete`, {
+    headers: coachHeaders,
+    data: { email: athlete.email },
+  });
+  expect(invite.status(), await invite.text()).toBe(201);
+
+  const pending = await request.get(`${API_URL}/athlete/invitations/pending`, {
+    headers: athleteHeaders,
+  });
+  expect(pending.status(), await pending.text()).toBe(200);
+  const [invitation] = (await pending.json()) as {
+    athleteInvitationId: number;
+  }[];
+  const accept = await request.post(
+    `${API_URL}/athlete/invitations/${invitation.athleteInvitationId}/accept`,
+    { headers: athleteHeaders },
+  );
+  expect(accept.status(), await accept.text()).toBe(201);
+
+  const coached = await request.get(`${API_URL}/athlete/coached`, {
+    headers: coachHeaders,
+  });
+  expect(coached.status(), await coached.text()).toBe(200);
+  const [{ athleteId }] = (await coached.json()) as { athleteId: number }[];
+
+  return { coach, athlete, athleteId };
 }
