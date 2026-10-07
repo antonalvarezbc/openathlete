@@ -39,6 +39,8 @@ describe('editing an activity (PostgreSQL)', () => {
   const athlete = {
     userId: DELETED_USER_ID,
     email: 'athlete@example.com',
+    // In this fork an athlete may edit their activities through the role
+    roles: ['ATHLETE'],
     athlete: { athleteId: DELETED_ATHLETE_ID },
     coachAthletes: [],
   } as unknown as AuthUser;
