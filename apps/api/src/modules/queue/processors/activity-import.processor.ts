@@ -4,10 +4,11 @@ import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Inject, Logger, Optional, forwardRef } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
-import { ConnectorProvider, EventActivity } from '@openathlete/database';
+import { ConnectorProvider } from '@openathlete/database';
 
 import { CoachActivityNoticeEvent } from '../../../events/coach-activity-notice.event';
 import { PrismaService } from '../../prisma/services/prisma.service';
+import { ImportResult } from '../../providers-sync/base/provider-import.interface';
 import {
   GarminProviderService,
   PolarProviderService,
@@ -77,24 +78,24 @@ export class ActivityImportProcessor extends WorkerHost {
 
       await job.updateProgress(30);
 
-      let savedActivity: EventActivity;
+      let result: ImportResult;
       if (account.provider === ConnectorProvider.STRAVA) {
-        savedActivity = await this.stravaProviderService.importActivity(
+        result = await this.stravaProviderService.importActivity(
           account,
           activity,
         );
       } else if (account.provider === ConnectorProvider.GARMIN) {
-        savedActivity = await this.garminProviderService.importActivity(
+        result = await this.garminProviderService.importActivity(
           account,
           activity,
         );
       } else if (account.provider === ConnectorProvider.POLAR) {
-        savedActivity = await this.polarProviderService.importActivity(
+        result = await this.polarProviderService.importActivity(
           account,
           activity,
         );
       } else if (account.provider === ConnectorProvider.SUUNTO) {
-        savedActivity = await this.suuntoProviderService.importActivity(
+        result = await this.suuntoProviderService.importActivity(
           account,
           activity,
         );
@@ -104,20 +105,19 @@ export class ActivityImportProcessor extends WorkerHost {
         );
       }
 
-      if (!bulkImport && this.emitter) {
-        const importedEvent = await this.prisma.event.findUnique({
-          where: { eventId: savedActivity.eventId },
-          select: { createdAt: true },
-        });
-        if (importedEvent && importedEvent.createdAt.getTime() >= job.timestamp)
-          this.emitter.emit(
-            CoachActivityNoticeEvent.SLUG,
-            new CoachActivityNoticeEvent({
-              eventId: savedActivity.eventId,
-              kind: 'ACTIVITY',
-              deliveryKey: `import:${savedActivity.eventId}`,
-            }),
-          );
+      const { activity: savedActivity, created } = result;
+
+      // Only the import that saved the activity announces it: a webhook
+      // retry or a later sync of the same activity finds it already there
+      if (!bulkImport && created && this.emitter) {
+        this.emitter.emit(
+          CoachActivityNoticeEvent.SLUG,
+          new CoachActivityNoticeEvent({
+            eventId: savedActivity.eventId,
+            kind: 'ACTIVITY',
+            deliveryKey: `import:${savedActivity.eventId}`,
+          }),
+        );
       }
       await job.updateProgress(60);
 

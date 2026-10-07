@@ -1,4 +1,4 @@
-import { ProviderAccount } from '@openathlete/database';
+import { EventActivity, ProviderAccount } from '@openathlete/database';
 
 /**
  * Interface for providers that support activity import
@@ -37,4 +37,11 @@ export interface ImportedActivity {
   duration?: number;
   // Additional metadata
   [key: string]: unknown;
+}
+
+/** An imported activity, and whether this import is the one that saved it */
+export interface ImportResult {
+  activity: EventActivity;
+  /** False when it was already saved, e.g. by an earlier webhook or sync */
+  created: boolean;
 }
