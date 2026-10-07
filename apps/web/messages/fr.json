@@ -1290,5 +1290,17 @@
   "password_reset_ask_administrator": "Demande enregistrée. Demandez votre lien de réinitialisation à l’administrateur de l’instance : il est valable 15 minutes.",
   "password_reset_request_link": "Demander un lien de réinitialisation",
   "signup_invite_only_message": "L’inscription sur cette instance se fait sur invitation. Demandez à un coach ou un athlète qui l’utilise de vous inviter, puis suivez le lien de l’invitation.",
-  "signup_closed_message": "Cette instance n’accepte pas de nouveaux comptes. Adressez-vous à son administrateur si vous en avez besoin."
+  "signup_closed_message": "Cette instance n’accepte pas de nouveaux comptes. Adressez-vous à son administrateur si vous en avez besoin.",
+  "coach_watch_title": "À surveiller",
+  "coach_watch_none": "Rien à signaler : tout le monde s’est entraîné cette semaine, aucune douleur signalée, aucun message non lu.",
+  "coach_alert_pain": "Douleur : {location} ({score}/10)",
+  "coach_alert_load_spike": "Charge en forte hausse (ratio {ratio})",
+  "coach_alert_inactive": "Aucune activité depuis {days} jours",
+  "coach_alert_never_active": "Aucune activité pour l’instant",
+  "coach_unread_messages": "{count} non lu(s)",
+  "coach_column_sessions": "Séances",
+  "coach_column_volume": "Volume",
+  "coach_column_form": "Forme/fatigue",
+  "coach_form_value": "Fraîcheur {tsb}",
+  "coach_dashboard_nav": "Tableau de bord coach"
 }

@@ -87,6 +87,8 @@ export interface TrainingLoadMetrics {
   };
   // Training status based on TSB
   status: 'overreaching' | 'optimal' | 'detraining';
+  // Acute:chronic workload ratio of the last weeks, null without enough history
+  acwr: number | null;
 }
 
 /**
@@ -904,6 +906,7 @@ export class TrainingLoadService {
       trainingDays,
       recommendedLoadRange,
       status,
+      acwr: acwr ?? null,
     };
   }
 

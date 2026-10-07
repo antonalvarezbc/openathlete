@@ -1290,5 +1290,17 @@
   "password_reset_ask_administrator": "Request recorded. Ask the instance administrator for your reset link: it is valid 15 minutes.",
   "password_reset_request_link": "Request a reset link",
   "signup_invite_only_message": "Sign-up on this instance is by invitation. Ask a coach or athlete who uses it to invite you, then follow the link in the invitation.",
-  "signup_closed_message": "This instance does not accept new accounts. Ask its administrator if you need one."
+  "signup_closed_message": "This instance does not accept new accounts. Ask its administrator if you need one.",
+  "coach_watch_title": "To watch",
+  "coach_watch_none": "Nothing to watch: everyone trained this week, no pain reported, no unread message.",
+  "coach_alert_pain": "Pain: {location} ({score}/10)",
+  "coach_alert_load_spike": "Load up sharply (ratio {ratio})",
+  "coach_alert_inactive": "No activity for {days} days",
+  "coach_alert_never_active": "No activity yet",
+  "coach_unread_messages": "{count} unread",
+  "coach_column_sessions": "Sessions",
+  "coach_column_volume": "Volume",
+  "coach_column_form": "Fitness/fatigue",
+  "coach_form_value": "Form {tsb}",
+  "coach_dashboard_nav": "Coach dashboard"
 }

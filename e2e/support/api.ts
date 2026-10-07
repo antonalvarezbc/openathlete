@@ -46,6 +46,7 @@ export async function login(
 /** Signs up a new user and completes the athlete onboarding. */
 export async function createAthlete(
   request: APIRequestContext,
+  { roles = ['ATHLETE'], firstName = 'Test' } = {},
 ): Promise<TestAthlete> {
   const ip = randomClientIp();
   const email = `e2e-${randomUUID()}@example.com`;
@@ -53,7 +54,7 @@ export async function createAthlete(
 
   const signup = await request.post(`${API_URL}/user`, {
     headers: apiHeaders(ip),
-    data: { email, password, firstName: 'Test', lastName: 'Athlete' },
+    data: { email, password, firstName, lastName: 'Athlete' },
   });
   expect(signup.status(), await signup.text()).toBe(201);
 
@@ -66,9 +67,35 @@ export async function createAthlete(
 
   const onboarding = await request.post(`${API_URL}/user/complete-onboarding`, {
     headers: apiHeaders(ip, accessToken),
-    data: { roles: ['ATHLETE'], gender: 'MALE', hrMax: 190, hrRest: 50 },
+    data: { roles, gender: 'MALE', hrMax: 190, hrRest: 50 },
   });
   expect(onboarding.status(), await onboarding.text()).toBe(201);
 
   return { email, password, accessToken, refreshToken };
+}
+
+/** The coach invites the athlete, who accepts: the coach then sees them. */
+export async function linkCoach(
+  request: APIRequestContext,
+  coach: TestAthlete,
+  athlete: TestAthlete,
+) {
+  const invite = await request.post(`${API_URL}/athlete/invite/athlete`, {
+    headers: apiHeaders(undefined, coach.accessToken),
+    data: { email: athlete.email },
+  });
+  expect(invite.status(), await invite.text()).toBe(201);
+
+  const athleteHeaders = apiHeaders(undefined, athlete.accessToken);
+  const pending = await request.get(`${API_URL}/athlete/invitations/pending`, {
+    headers: athleteHeaders,
+  });
+  const [invitation] = (await pending.json()) as {
+    athleteInvitationId: number;
+  }[];
+  const accept = await request.post(
+    `${API_URL}/athlete/invitations/${invitation.athleteInvitationId}/accept`,
+    { headers: athleteHeaders },
+  );
+  expect(accept.status(), await accept.text()).toBe(201);
 }

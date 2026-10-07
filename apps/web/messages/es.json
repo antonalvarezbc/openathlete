@@ -1290,5 +1290,17 @@
   "password_reset_ask_administrator": "Solicitud registrada. Pide el enlace de restablecimiento al administrador de la instancia: es válido 15 minutos.",
   "password_reset_request_link": "Solicitar un enlace de restablecimiento",
   "signup_invite_only_message": "El registro en esta instancia es por invitación. Pide a un entrenador o atleta que la use que te invite y sigue el enlace de la invitación.",
-  "signup_closed_message": "Esta instancia no acepta cuentas nuevas. Pide una a su administrador si la necesitas."
+  "signup_closed_message": "Esta instancia no acepta cuentas nuevas. Pide una a su administrador si la necesitas.",
+  "coach_watch_title": "A vigilar",
+  "coach_watch_none": "Nada que señalar: todos entrenaron esta semana, sin dolor señalado ni mensajes sin leer.",
+  "coach_alert_pain": "Dolor: {location} ({score}/10)",
+  "coach_alert_load_spike": "Carga en fuerte aumento (ratio {ratio})",
+  "coach_alert_inactive": "Sin actividad desde hace {days} días",
+  "coach_alert_never_active": "Sin actividad todavía",
+  "coach_unread_messages": "{count} sin leer",
+  "coach_column_sessions": "Sesiones",
+  "coach_column_volume": "Volumen",
+  "coach_column_form": "Forma/fatiga",
+  "coach_form_value": "Frescura {tsb}",
+  "coach_dashboard_nav": "Panel del entrenador"
 }

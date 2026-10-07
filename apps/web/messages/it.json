@@ -1290,5 +1290,17 @@
   "password_reset_ask_administrator": "Richiesta registrata. Chiedi il link di reimpostazione all’amministratore dell’istanza: è valido 15 minuti.",
   "password_reset_request_link": "Richiedi un link di reimpostazione",
   "signup_invite_only_message": "La registrazione su questa istanza avviene su invito. Chiedi a un coach o a un atleta che la usa di invitarti, poi segui il link dell’invito.",
-  "signup_closed_message": "Questa istanza non accetta nuovi account. Rivolgiti al suo amministratore se ne hai bisogno."
+  "signup_closed_message": "Questa istanza non accetta nuovi account. Rivolgiti al suo amministratore se ne hai bisogno.",
+  "coach_watch_title": "Da tenere d’occhio",
+  "coach_watch_none": "Niente da segnalare: tutti si sono allenati questa settimana, nessun dolore segnalato, nessun messaggio non letto.",
+  "coach_alert_pain": "Dolore: {location} ({score}/10)",
+  "coach_alert_load_spike": "Carico in forte aumento (rapporto {ratio})",
+  "coach_alert_inactive": "Nessuna attività da {days} giorni",
+  "coach_alert_never_active": "Ancora nessuna attività",
+  "coach_unread_messages": "{count} non letti",
+  "coach_column_sessions": "Sessioni",
+  "coach_column_volume": "Volume",
+  "coach_column_form": "Forma/fatica",
+  "coach_form_value": "Freschezza {tsb}",
+  "coach_dashboard_nav": "Dashboard coach"
 }
