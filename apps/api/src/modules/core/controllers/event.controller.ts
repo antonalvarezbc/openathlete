@@ -579,7 +579,8 @@ export class EventController {
   })
   @ApiResponse({
     status: 404,
-    description: 'Not found - event, activity, or weather data not found',
+    description:
+      'Not found - event or activity not found. An activity without weather data answers null.',
   })
   getEventWeather(
     @JwtUser() user: AuthUser,

@@ -16,7 +16,10 @@ import type {
 } from '@openathlete/shared';
 import { EVENT_TYPE } from '@openathlete/shared';
 
-import type { EventFormValues } from '../utils/event-form-schemas';
+import {
+  type EventFormValues,
+  withEquipmentId,
+} from '../utils/event-form-schemas';
 
 type CreateProps = {
   date?: Date;
@@ -81,8 +84,9 @@ export function useEventFormSubmission(
     (handleSubmit: UseFormHandleSubmit<EventFormValues>) =>
       handleSubmit(
         async (data: EventFormValues) => {
-          const { saveAsTemplate, startDate, endDate, ...eventData } = data;
+          const { saveAsTemplate, startDate, endDate, ...formData } = data;
           const shouldSaveAsTemplate = saveAsTemplate === true;
+          const eventData = withEquipmentId(formData);
 
           // Prepare event data, only include dates if they exist
           const baseEventData = {

@@ -45,6 +45,8 @@ export const RHFSelect = ({ name, label, placeholder, ...other }: Props) => {
             dir={undefined}
           >
             <SelectTrigger
+              // Ties the trigger to its label for screen readers
+              id={name}
               className={cn(
                 other.className,
                 'w-full',

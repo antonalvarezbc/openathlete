@@ -93,9 +93,10 @@ export class EventAPI {
 
   static async getEventWeather(
     eventId: Event['eventId'],
-  ): Promise<GetEventWeatherResponseDto> {
+  ): Promise<GetEventWeatherResponseDto | null> {
     const res = await client.get(routes.event.getEventWeather(eventId));
-    return res.data;
+    // An activity without weather answers an empty body
+    return res.data || null;
   }
 
   static async getEventNormalization(

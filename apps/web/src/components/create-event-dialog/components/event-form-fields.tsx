@@ -1,3 +1,4 @@
+import { useGetMyEquipmentQuery } from '@/api/equipment';
 import { SportIcon } from '@/components/sport-icon/sport-icon';
 import { m } from '@/paraglide/messages';
 import { sportTypeLabelMap } from '@/utils/label-map/core';
@@ -12,16 +13,24 @@ import {
   RHFSelect,
   RHFTextField,
 } from '../../hook-form';
+import { RHFCheckbox } from '../../hook-form/rhf-checkbox';
+import { RHFDateTimePicker } from '../../hook-form/rhf-datetime-picker';
 import { RHFElevation } from '../../hook-form/rhf-elevation';
 import { RHFRpe } from '../../hook-form/rhf-rpe';
 import { RHFTextarea } from '../../hook-form/rhf-textarea';
 import { SelectItem } from '../../ui/select';
-import type { EventFormValues } from '../utils/event-form-schemas';
+import {
+  type EventFormValues,
+  NO_EQUIPMENT,
+} from '../utils/event-form-schemas';
 
 type Props = {
   type: EVENT_TYPE;
   hasStepsWithDuration: boolean;
   startDateValue?: Date;
+  endDateValue?: Date;
+  /** Equipment can only be chosen among the user's own */
+  canChooseEquipment?: boolean;
   goalDistanceValue?: number | null;
   goalDurationValue?: number | null;
   setValue: UseFormSetValue<EventFormValues>;
@@ -32,6 +41,8 @@ export function EventFormFields({
   type,
   hasStepsWithDuration,
   startDateValue,
+  endDateValue,
+  canChooseEquipment,
   goalDistanceValue,
   goalDurationValue,
   setValue,
@@ -81,6 +92,23 @@ export function EventFormFields({
             />
           </div>
         )}
+      {!isTemplate && type === EVENT_TYPE.ACTIVITY && (
+        <div className="col-span-1 md:col-span-2">
+          <RHFDateTimePicker
+            name="startDate"
+            label={m.start_date()}
+            onChange={(date) => {
+              // The recorded duration stays: only the time moves
+              if (date && startDateValue && endDateValue) {
+                const duration =
+                  new Date(endDateValue).getTime() -
+                  new Date(startDateValue).getTime();
+                setValue('endDate', new Date(date.getTime() + duration));
+              }
+            }}
+          />
+        </div>
+      )}
       <div className="col-span-1 md:col-span-2">
         <RHFTextarea
           name="description"
@@ -134,10 +162,30 @@ export function EventFormFields({
         </>
       )}
       {type === EVENT_TYPE.ACTIVITY && (
-        <div className="col-span-1 md:col-span-2">
-          <RHFRpe name="rpe" label={m.rpe()} />
-        </div>
+        <>
+          {canChooseEquipment && <ActivityEquipmentSelect />}
+          <div className="flex items-end pb-2">
+            <RHFCheckbox name="isRace" label={m.activity_is_race()} />
+          </div>
+          <div className="col-span-1 md:col-span-2">
+            <RHFRpe name="rpe" label={m.rpe()} />
+          </div>
+        </>
       )}
     </div>
+  );
+}
+
+function ActivityEquipmentSelect() {
+  const { data: equipment = [] } = useGetMyEquipmentQuery();
+  return (
+    <RHFSelect name="equipment" label={m.equipment()}>
+      <SelectItem value={NO_EQUIPMENT}>{m.no_equipment()}</SelectItem>
+      {equipment.map((item) => (
+        <SelectItem key={item.equipmentId} value={String(item.equipmentId)}>
+          {item.name}
+        </SelectItem>
+      ))}
+    </RHFSelect>
   );
 }
