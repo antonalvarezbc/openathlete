@@ -145,6 +145,15 @@ export const ACWR_MODERATE_RISK_THRESHOLD = 1.5;
  */
 export const ACWR_HIGH_RISK_THRESHOLD = 1.5;
 
+/**
+ * Weeks of load the ACWR needs before the acute week
+ *
+ * With fewer weeks of history (a new athlete, or a return after a long
+ * break) the chronic load is not established yet and the ratio would only
+ * reflect missing data, so no ACWR is reported or used.
+ */
+export const ACWR_MIN_CHRONIC_WEEKS = 3;
+
 // ============================================================================
 // Training Zone Percentages (%HRmax)
 // ============================================================================

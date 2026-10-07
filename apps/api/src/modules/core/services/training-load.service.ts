@@ -19,6 +19,7 @@ import {
 
 import {
   ACWR_HIGH_RISK_THRESHOLD,
+  ACWR_MIN_CHRONIC_WEEKS,
   ACWR_MODERATE_RISK_THRESHOLD,
   ACWR_OPTIMAL_MAX,
   ACWR_RECOMMENDATION_ADJUSTMENTS,
@@ -165,24 +166,29 @@ export class TrainingLoadService {
       return null;
     }
 
-    // We need at least 6 weeks of data for proper CTL calculation
     // For ATL, we use the most recent week
     const acuteWeek = weeklyLoads[0] ?? 0;
 
-    // Calculate CTL as exponentially weighted average of last 6 weeks
-    // Using the same alpha as in getTrainingLoadMetrics (2/43 for 42-day)
-    // But adapted for weekly data: alpha = 2 / (weeks + 1)
-    const weeksForCTL = Math.min(weeklyLoads.length - 1, 6);
-    if (weeksForCTL < 1) {
+    // The chronic weeks (up to 6 before the acute one), oldest first. Weeks
+    // before the first one with any load are missing data, not rest: as zeros
+    // they would shrink the CTL and inflate the ratio of every new athlete.
+    const chronicWeeks = weeklyLoads.slice(1, 7).reverse();
+    const firstLoaded = chronicWeeks.findIndex((load) => load > 0);
+    if (firstLoaded === -1) {
+      return null;
+    }
+    const history = chronicWeeks.slice(firstLoaded);
+    if (history.length < ACWR_MIN_CHRONIC_WEEKS) {
       return null;
     }
 
-    const alphaCTL = 2 / (weeksForCTL + 1);
-    let ctl = 0;
-
-    // Calculate CTL from historical weeks (skip the acute week)
-    for (let i = 1; i <= weeksForCTL; i++) {
-      const weekLoad = weeklyLoads[i] ?? 0;
+    // Exponentially weighted average, adapted for weekly data:
+    // alpha = 2 / (weeks + 1). It runs from the oldest week so the most
+    // recent ones weigh most, and starts from the oldest week rather than
+    // zero, so steady training gives an ACWR of 1.
+    const alphaCTL = 2 / (history.length + 1);
+    let ctl = history[0];
+    for (const weekLoad of history.slice(1)) {
       ctl = alphaCTL * weekLoad + (1 - alphaCTL) * ctl;
     }
 
