@@ -1285,5 +1285,8 @@
   "connectors_unavailable_title": "Pas de synchronisation d’appareils sur cette instance",
   "connectors_unavailable_text": "Strava, Garmin, Polar et Suunto ne sont pas configurés sur cette instance. Importez plutôt vos activités depuis des fichiers FIT, GPX ou TCX.",
   "connectors_unavailable_docs": "Configurer la synchronisation des appareils",
-  "connectors_unavailable_where": "L’import de fichiers se trouve dans Paramètres > Connecteurs."
+  "connectors_unavailable_where": "L’import de fichiers se trouve dans Paramètres > Connecteurs.",
+  "password_reset_without_email": "Cette instance n’envoie pas d’emails. Après votre demande, demandez votre lien de réinitialisation à son administrateur.",
+  "password_reset_ask_administrator": "Demande enregistrée. Demandez votre lien de réinitialisation à l’administrateur de l’instance : il est valable 15 minutes.",
+  "password_reset_request_link": "Demander un lien de réinitialisation"
 }

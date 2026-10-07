@@ -35,6 +35,7 @@ import { SendEmailEvent } from 'src/events';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
 import { AuthUser } from '../decorators/user.decorator';
+import { passwordResetUrl } from '../helpers/password-reset-url';
 import { AccountDeletionService } from './account-deletion.service';
 import { AthleteInvitationService } from './athlete-invitation.service';
 import { CoachInvitationService } from './coach-invitation.service';
@@ -320,15 +321,26 @@ export class UserService {
       { userId: user.userId },
       TokenType.PASSWORD_RESET,
     );
+    const url = passwordResetUrl(
+      this.configService.get('APP_URL'),
+      token.token,
+    );
+
+    if (!this.configService.get('BREVO_API_KEY')) {
+      // Nothing can carry the link to the user: the instance administrator
+      // reads it here and passes it on
+      this.logger.warn(
+        `Email is not configured. Password reset link for ${maskEmail(body.email)}, valid 15 minutes: ${url}`,
+      );
+      return;
+    }
 
     this.eventEmitter.emit(
       SendEmailEvent.SLUG,
       new SendEmailEvent({
         type: 'password-reset',
         to: body.email,
-        params: {
-          url: `${this.configService.get('APP_URL')}/auth/password-reset?token=${token.token}`,
-        },
+        params: { url },
       }),
     );
   };

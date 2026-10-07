@@ -67,3 +67,16 @@ test('signs in without a Google button on a bare instance', async ({
   await expect(page.getByText('Google')).toHaveCount(0);
   await context.close();
 });
+
+test('explains how to reset a password without email', async ({ browser }) => {
+  const context = await browser.newContext({ storageState: undefined });
+  const page = await context.newPage();
+  await page.goto('/auth/password-reset-request');
+
+  // The link goes to the server logs: the administrator passes it on
+  await expect(page.locator('[data-reset-without-email]')).toBeVisible();
+  await page.locator('input[name="email"]').fill('someone@example.com');
+  await page.getByRole('button', { name: 'Request a reset link' }).click();
+  await expect(page.getByText('Ask the instance administrator')).toBeVisible();
+  await context.close();
+});

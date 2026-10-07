@@ -70,6 +70,7 @@ COPY --from=build /app/libs/database/prisma.config.js ./libs/database/prisma.con
 # nothing under /app. (A `chown -R /app` copied every file into a new layer,
 # 600 MB.)
 COPY --chmod=755 apps/api/scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
+COPY --chmod=755 apps/api/scripts/openathlete /usr/local/bin/openathlete
 
 USER root
 

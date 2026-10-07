@@ -1285,5 +1285,8 @@
   "connectors_unavailable_title": "No device sync on this instance",
   "connectors_unavailable_text": "Strava, Garmin, Polar and Suunto are not set up on this instance. Import your activities from FIT, GPX or TCX files instead.",
   "connectors_unavailable_docs": "How to set up device sync",
-  "connectors_unavailable_where": "File import is in Settings > Connectors."
+  "connectors_unavailable_where": "File import is in Settings > Connectors.",
+  "password_reset_without_email": "This instance does not send emails. Ask its administrator for your reset link after you request it.",
+  "password_reset_ask_administrator": "Request recorded. Ask the instance administrator for your reset link: it is valid 15 minutes.",
+  "password_reset_request_link": "Request a reset link"
 }
