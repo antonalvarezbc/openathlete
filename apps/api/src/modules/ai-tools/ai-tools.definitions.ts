@@ -2,7 +2,14 @@ import { z } from 'zod';
 
 import { NotFoundException } from '@nestjs/common';
 
+import {
+  CompressedActivityStream,
+  EventWeatherSampleDto,
+  WorkoutTargetZone,
+} from '@openathlete/shared';
+
 import { AuthUser } from '../auth/decorators/user.decorator';
+import { uncompressActivityStream } from '../core/helpers/activity-stream';
 import { PrismaService } from '../prisma/services/prisma.service';
 import {
   clipText,
@@ -10,6 +17,18 @@ import {
   resolveAthleteId,
   utcWeekStart,
 } from './ai-tools.access';
+import {
+  MAX_SEGMENTS,
+  formatPace,
+  formatSegments,
+  formatSteps,
+  heartRateZoneRanges,
+  speedFields,
+  streamSplits,
+  summarizeWeather,
+  targetMetricTypes,
+  timeInHeartRateZones,
+} from './ai-tools.activity';
 import { AiTool, defineTool } from './ai-tools.types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -86,6 +105,61 @@ async function activityLoads(
   });
   return new Map(entries.map((entry) => [entry.activityId, entry.value]));
 }
+
+/** Latest value of each metric type (type → value). */
+async function latestMetrics(
+  prisma: PrismaService,
+  athleteId: number,
+  types: string[],
+) {
+  if (!types.length) return {};
+  const rows = await prisma.athleteMetric.findMany({
+    where: { athleteId, type: { in: types as never[] } },
+    orderBy: { date: 'desc' },
+    distinct: ['type'],
+    select: { type: true, value: true },
+  });
+  return Object.fromEntries(rows.map((row) => [row.type, row.value]));
+}
+
+const zoneSelect = {
+  trainingZoneId: true,
+  name: true,
+  type: true,
+  index: true,
+  values: { select: { min: true, max: true, sports: true } },
+} as const;
+
+/** Weekly load fields, with the planned sessions that have no estimate. */
+function weekLoad(
+  week: {
+    actualLoad: number;
+    estimatedLoad: number;
+    totalLoad: number;
+    recommendedMin: number;
+    recommendedMax: number;
+    acwr?: number;
+    acwrStatus?: string;
+  },
+  withoutEstimate?: { sessions: number; seconds: number },
+) {
+  return {
+    actual: round(week.actualLoad, 0),
+    plannedPending: round(week.estimatedLoad, 0),
+    total: round(week.totalLoad, 0),
+    recommendedMin: round(week.recommendedMin, 0),
+    recommendedMax: round(week.recommendedMax, 0),
+    acwr: round(week.acwr, 2),
+    acwrStatus: week.acwrStatus,
+    ...(withoutEstimate?.sessions && {
+      plannedSessionsWithoutEstimate: withoutEstimate.sessions,
+      plannedSecondsWithoutEstimate: withoutEstimate.seconds,
+    }),
+  };
+}
+
+const LOAD_NOTE =
+  'plannedPending only counts planned sessions with a load estimate; plannedSessionsWithoutEstimate are not done and have none. No acwr until three weeks of load precede the week.';
 
 const listAthletes = defineTool({
   name: 'list_athletes',
@@ -190,6 +264,12 @@ const getWeek = defineTool({
     const week = loadSummary.find(
       (summary) => isoDay(new Date(summary.weekStart)) === isoDay(start),
     );
+    const withoutEstimate = events.filter(
+      (event) =>
+        event.training &&
+        !event.training.relatedActivityId &&
+        event.training.estimatedLoad == null,
+    );
     return {
       athleteId,
       weekStart: isoDay(start),
@@ -205,15 +285,16 @@ const getWeek = defineTool({
         phase: overview.planWeek.cycle.phase ?? undefined,
         races: overview.planWeek.races,
       },
-      load: week && {
-        actual: round(week.actualLoad, 0),
-        plannedPending: round(week.estimatedLoad, 0),
-        total: round(week.totalLoad, 0),
-        recommendedMin: round(week.recommendedMin, 0),
-        recommendedMax: round(week.recommendedMax, 0),
-        acwr: round(week.acwr, 2),
-        acwrStatus: week.acwrStatus,
-      },
+      load:
+        week &&
+        weekLoad(week, {
+          sessions: withoutEstimate.length,
+          seconds: withoutEstimate.reduce(
+            (sum, event) => sum + (event.training?.goalDuration ?? 0),
+            0,
+          ),
+        }),
+      ...(week && { loadNote: LOAD_NOTE }),
       events: events.map((event) => ({
         eventId: event.eventId,
         type: event.type,
@@ -339,10 +420,51 @@ const searchActivities = defineTool({
   },
 });
 
+const targetSelect = {
+  targetType: true,
+  targetMin: true,
+  targetMax: true,
+  targetValue: true,
+  metricType: true,
+  zoneReference: true,
+} as const;
+const leafStepSelect = {
+  stepType: true,
+  name: true,
+  notes: true,
+  durationType: true,
+  durationValue: true,
+  targets: { select: targetSelect },
+} as const;
+// Repeats nest at most twice in the workout editor
+const stepSelect = {
+  ...leafStepSelect,
+  repeatBlock: {
+    select: {
+      repetitions: true,
+      childSteps: {
+        orderBy: { orderIndex: 'asc' },
+        select: {
+          ...leafStepSelect,
+          repeatBlock: {
+            select: {
+              repetitions: true,
+              childSteps: {
+                orderBy: { orderIndex: 'asc' },
+                select: leafStepSelect,
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+} as const;
+
 const getActivity = defineTool({
   name: 'get_activity',
   description:
-    'Details of one completed activity: summary metrics, TRIMP, athlete comment, answered feedback questions, and the planned session it fulfilled (goals and workout step count).',
+    "Details of one completed activity: summary metrics, TRIMP, athlete comment, answered feedback questions, laps as recorded (or 1 km / 5 km splits computed from the recording when there are none), time in the athlete's heart-rate zones, weather, and the planned session it fulfilled with its workout steps and targets.",
   input: z.object({ eventId: z.number().int().positive() }).strict(),
   async run({ prisma }, user, input) {
     const event = await prisma.event.findUnique({
@@ -358,7 +480,32 @@ const getActivity = defineTool({
           select: {
             ...activitySelect,
             averageSpeed: true,
+            averageGapSpeed: true,
             averageCadence: true,
+            stream: true,
+            weather: { select: { samples: true } },
+            segments: {
+              orderBy: { orderIndex: 'asc' },
+              // One more than shown, to tell when laps were left out
+              take: MAX_SEGMENTS + 1,
+              select: {
+                segmentType: true,
+                name: true,
+                orderIndex: true,
+                startTimeSeconds: true,
+                endTimeSeconds: true,
+                distance: true,
+                elevationGain: true,
+                movingTime: true,
+                averageSpeed: true,
+                averageGapSpeed: true,
+                averageCadence: true,
+                averageWatts: true,
+                averageHeartrate: true,
+                maxHeartrate: true,
+                workoutStep: { select: { name: true, stepType: true } },
+              },
+            },
             feedbackQuestions: {
               where: { answerText: { not: null } },
               select: { questionText: true, answerText: true },
@@ -366,13 +513,22 @@ const getActivity = defineTool({
             },
             relatedTraining: {
               select: {
+                sport: true,
                 goalDuration: true,
                 goalDistance: true,
                 goalElevationGain: true,
                 goalRpe: true,
                 description: true,
                 event: { select: { name: true } },
-                workout: { select: { _count: { select: { steps: true } } } },
+                workout: {
+                  select: {
+                    steps: {
+                      where: { repeatParentId: null },
+                      orderBy: { orderIndex: 'asc' },
+                      select: stepSelect,
+                    },
+                  },
+                },
               },
             },
           },
@@ -382,26 +538,55 @@ const getActivity = defineTool({
     if (!event?.activity || !event.athleteId || event.type !== 'ACTIVITY')
       throw new NotFoundException('Activity not found');
     const athleteId = await resolveAthleteId(prisma, user, event.athleteId);
-    const loads = await activityLoads(prisma, athleteId, [
-      event.activity.eventActivityId,
+    const { activity } = event;
+    const planned = activity.relatedTraining;
+    const steps = planned?.workout?.steps ?? [];
+    const [loads, zones, metrics] = await Promise.all([
+      activityLoads(prisma, athleteId, [activity.eventActivityId]),
+      prisma.trainingZone.findMany({
+        where: { athleteId },
+        orderBy: { index: 'asc' },
+        select: zoneSelect,
+      }),
+      latestMetrics(prisma, athleteId, targetMetricTypes(steps)),
     ]);
-    const planned = event.activity.relatedTraining;
+    const stream = activity.stream
+      ? uncompressActivityStream(activity.stream as CompressedActivityStream)
+      : undefined;
+    const segments = activity.segments.slice(0, MAX_SEGMENTS);
+    const splits =
+      !segments.length && stream ? streamSplits(activity.sport, stream) : [];
+    const targetZones = zones as unknown as WorkoutTargetZone[];
     return {
       eventId: event.eventId,
       athleteId,
       name: event.name,
       start: event.startDate.toISOString(),
       end: event.endDate.toISOString(),
-      ...activitySummary(
-        event.activity,
-        loads.get(event.activity.eventActivityId),
-      ),
-      averageSpeedMps: round(event.activity.averageSpeed, 2),
-      averageCadence: round(event.activity.averageCadence, 0),
-      feedback: event.activity.feedbackQuestions.map((q) => ({
+      ...activitySummary(activity, loads.get(activity.eventActivityId)),
+      averageSpeedMps: round(activity.averageSpeed, 2),
+      ...speedFields(activity.sport, activity.averageSpeed),
+      averageCadence: round(activity.averageCadence, 0),
+      feedback: activity.feedbackQuestions.map((q) => ({
         question: clipText(q.questionText, 200),
         answer: clipText(q.answerText, 400),
       })),
+      ...(segments.length && {
+        laps: formatSegments(activity.sport, segments),
+      }),
+      ...(activity.segments.length > MAX_SEGMENTS && { lapsTruncated: true }),
+      ...(splits.length && { splits }),
+      heartRateZones:
+        stream &&
+        timeInHeartRateZones(
+          stream,
+          heartRateZoneRanges(zones, activity.sport),
+        ),
+      weather:
+        activity.weather &&
+        summarizeWeather(
+          activity.weather.samples as unknown as EventWeatherSampleDto[],
+        ),
       plannedSession: planned && {
         name: planned.event.name,
         goalDurationSeconds: planned.goalDuration ?? undefined,
@@ -409,8 +594,14 @@ const getActivity = defineTool({
         goalElevationM: round(planned.goalElevationGain, 0),
         goalRpe:
           planned.goalRpe == null ? undefined : round(planned.goalRpe * 10, 0),
-        workoutSteps: planned.workout?._count.steps ?? 0,
         description: clipText(planned.description, 300),
+        ...(steps.length && {
+          steps: formatSteps(steps, {
+            zones: targetZones,
+            metrics,
+            sport: planned.sport,
+          }),
+        }),
       },
     };
   },
@@ -419,7 +610,7 @@ const getActivity = defineTool({
 const getTrainingLoad = defineTool({
   name: 'get_training_load',
   description:
-    'Weekly training load (TRIMP) of an athlete over several weeks: actual, pending planned load, recommended range and ACWR with its risk status.',
+    'Weekly training load (TRIMP) of an athlete over several weeks: actual, pending planned load, planned sessions without a load estimate, recommended range and ACWR with its risk status (none until three weeks of load precede the week).',
   input: z
     .object({
       athleteId: athleteIdInput,
@@ -434,43 +625,77 @@ const getTrainingLoad = defineTool({
     );
     const first = new Date(lastWeek.getTime() - (input.weeks - 1) * 7 * DAY_MS);
     const end = new Date(lastWeek.getTime() + 7 * DAY_MS - 1);
-    const summaries = await trainingLoad.getWeeklyTrimpSummary(
-      user,
-      first,
-      end,
-      athleteId,
-    );
+    const [summaries, unestimated] = await Promise.all([
+      trainingLoad.getWeeklyTrimpSummary(user, first, end, athleteId),
+      prisma.eventTraining.findMany({
+        where: {
+          estimatedLoad: null,
+          relatedActivityId: null,
+          event: {
+            athleteId,
+            type: 'TRAINING',
+            startDate: { gte: first, lte: end },
+          },
+        },
+        select: { goalDuration: true, event: { select: { startDate: true } } },
+      }),
+    ]);
+    const withoutEstimate = new Map<
+      string,
+      { sessions: number; seconds: number }
+    >();
+    for (const training of unestimated) {
+      const key = isoDay(utcWeekStart(training.event.startDate));
+      const week = withoutEstimate.get(key) ?? { sessions: 0, seconds: 0 };
+      week.sessions += 1;
+      week.seconds += training.goalDuration ?? 0;
+      withoutEstimate.set(key, week);
+    }
     return {
       athleteId,
+      note: LOAD_NOTE,
       weeks: summaries
         .filter((s) => {
           const start = new Date(s.weekStart).getTime();
           return start >= first.getTime() && start <= lastWeek.getTime();
         })
-        .map((s) => ({
-          weekStart: isoDay(new Date(s.weekStart)),
-          actual: round(s.actualLoad, 0),
-          plannedPending: round(s.estimatedLoad, 0),
-          total: round(s.totalLoad, 0),
-          recommendedMin: round(s.recommendedMin, 0),
-          recommendedMax: round(s.recommendedMax, 0),
-          acwr: round(s.acwr, 2),
-          acwrStatus: s.acwrStatus,
-        })),
+        .map((s) => {
+          const weekStart = isoDay(new Date(s.weekStart));
+          return {
+            weekStart,
+            ...weekLoad(s, withoutEstimate.get(weekStart)),
+          };
+        }),
     };
   },
 });
 
+// Readiness signals most devices record; others can be asked for by type
+const DEFAULT_WELLNESS_TYPES = [
+  'HRV_LAST_NIGHT_AVG',
+  'RMSSD',
+  'HR_REST',
+  'SLEEP_DURATION',
+  'SLEEP_SCORE',
+  'STRESS_AVERAGE',
+  'BODY_BATTERY_CHARGED',
+  'HOOPER_INDEX',
+  'WEIGHT',
+  'VO2MAX',
+];
+const MAX_WELLNESS_ROWS = 1500;
+
 const getWellness = defineTool({
   name: 'get_wellness',
   description:
-    'Daily wellness and body metrics of an athlete (e.g. HRV/RMSSD, resting HR, sleep, stress, body battery, weight, VO2max), newest first. Missing values are unknown, not zero.',
+    "Daily wellness and body metrics of an athlete, one row per day, newest first, with each metric's 7-day and period averages and range. By default the readiness metrics (HRV, resting HR, sleep, stress, body battery, Hooper index, weight, VO2max); availableTypes lists every other metric recorded, to ask for by type. Missing values are unknown, not zero.",
   input: z
     .object({
       athleteId: athleteIdInput,
       days: z.number().int().min(1).max(90).default(14),
       types: z
         .array(z.string().max(40))
+        .min(1)
         .max(15)
         .optional()
         .describe('Metric types, e.g. ["HR_REST","RMSSD","SLEEP_SCORE"]'),
@@ -479,24 +704,69 @@ const getWellness = defineTool({
   async run({ prisma }, user, input) {
     const athleteId = await resolveAthleteId(prisma, user, input.athleteId);
     const since = new Date(Date.now() - input.days * DAY_MS);
-    const metrics = await prisma.athleteMetric.findMany({
-      where: {
-        athleteId,
-        date: { gte: since },
-        ...(input.types?.length && { type: { in: input.types as never[] } }),
-      },
-      orderBy: { date: 'desc' },
-      take: 300,
-      select: { type: true, date: true, value: true },
-    });
+    const types = input.types ?? DEFAULT_WELLNESS_TYPES;
+    const [metrics, recorded] = await Promise.all([
+      prisma.athleteMetric.findMany({
+        where: {
+          athleteId,
+          date: { gte: since },
+          type: { in: types as never[] },
+        },
+        orderBy: { date: 'desc' },
+        take: MAX_WELLNESS_ROWS,
+        select: { type: true, date: true, value: true },
+      }),
+      prisma.athleteMetric.groupBy({
+        by: ['type'],
+        where: { athleteId, date: { gte: since } },
+      }),
+    ]);
+    const days = new Map<string, Record<string, number | string>>();
+    const series = new Map<string, { date: string; value: number }[]>();
+    for (const metric of metrics) {
+      const date = isoDay(metric.date);
+      const value = round(metric.value, 2)!;
+      const day = days.get(date) ?? { date };
+      days.set(date, day);
+      // Several readings on one day: the latest one wins
+      if (metric.type in day) continue;
+      day[metric.type] = value;
+      series.set(metric.type, [
+        ...(series.get(metric.type) ?? []),
+        { date, value },
+      ]);
+    }
+    const average = (values: number[]) =>
+      round(values.reduce((sum, v) => sum + v, 0) / values.length, 1);
+    const baselines = Object.fromEntries(
+      [...series].map(([type, points]) => {
+        // Points are newest first; the 7 days run back from the latest one
+        const latest = new Date(`${points[0].date}T00:00:00Z`).getTime();
+        const week = points.filter(
+          (point) =>
+            latest - new Date(`${point.date}T00:00:00Z`).getTime() < 7 * DAY_MS,
+        );
+        const values = points.map((point) => point.value);
+        return [
+          type,
+          {
+            last7DaysAvg: average(week.map((point) => point.value)),
+            periodAvg: average(values),
+            periodMin: Math.min(...values),
+            periodMax: Math.max(...values),
+            days: values.length,
+          },
+        ];
+      }),
+    );
     return {
       athleteId,
       since: isoDay(since),
-      metrics: metrics.map((metric) => ({
-        type: metric.type,
-        date: isoDay(metric.date),
-        value: round(metric.value, 2),
-      })),
+      types,
+      days: [...days.values()],
+      baselines,
+      availableTypes: recorded.map((row) => row.type).sort(),
+      ...(metrics.length === MAX_WELLNESS_ROWS && { truncated: true }),
     };
   },
 });
@@ -631,9 +901,201 @@ const getPlans = defineTool({
   },
 });
 
+const PROFILE_METRICS = [
+  'HR_MAX',
+  'HR_REST',
+  'VO2MAX',
+  'VO2MAX_CYCLING',
+  'VMA',
+  'FTP_RUNNING',
+  'FTP_CYCLING',
+  'CRITICAL_POWER_RUNNING',
+  'CRITICAL_POWER_CYCLING',
+  'WEIGHT',
+  'HEIGHT',
+];
+
+/** "132-142 bpm", "200-240 W" or "4:30-5:00/km" (pace zones are min/km). */
+function zoneRange(type: string, min: number, max: number) {
+  if (type === 'PACE')
+    return `${formatPace(min * 60)}-${formatPace(max * 60)}/km`;
+  const unit = type === 'HEARTRATE' ? 'bpm' : type === 'POWER' ? 'W' : '';
+  return `${Math.round(min)}-${Math.round(max)} ${unit}`.trim();
+}
+
+const getAthleteProfile = defineTool({
+  name: 'get_athlete_profile',
+  description:
+    "An athlete's reference values to judge intensity: training zones (heart rate, power, pace) and the sports they apply to, maximum and resting heart rate, and the latest fitness metrics (VO2max, VMA, FTP, critical power, weight), each with its date.",
+  input: z.object({ athleteId: athleteIdInput }).strict(),
+  async run({ prisma }, user, input) {
+    const athleteId = await resolveAthleteId(prisma, user, input.athleteId);
+    const [athlete, zones, metrics] = await Promise.all([
+      prisma.athlete.findUnique({
+        where: { athleteId },
+        select: {
+          user: { select: { firstName: true, lastName: true, gender: true } },
+        },
+      }),
+      prisma.trainingZone.findMany({
+        where: { athleteId },
+        orderBy: [{ type: 'asc' }, { index: 'asc' }],
+        select: { ...zoneSelect, description: true },
+      }),
+      prisma.athleteMetric.findMany({
+        where: { athleteId, type: { in: PROFILE_METRICS as never[] } },
+        orderBy: { date: 'desc' },
+        distinct: ['type'],
+        select: { type: true, value: true, date: true },
+      }),
+    ]);
+    return {
+      athleteId,
+      name: athlete && `${athlete.user.firstName} ${athlete.user.lastName}`,
+      gender: athlete?.user.gender ?? undefined,
+      metrics: metrics.map((metric) => ({
+        type: metric.type,
+        value: round(metric.value, 1),
+        date: isoDay(metric.date),
+      })),
+      zones: zones.map((zone) => ({
+        type: zone.type,
+        name: zone.name,
+        description: clipText(zone.description, 100),
+        ranges: zone.values.map((value) => ({
+          range: zoneRange(zone.type, value.min, value.max),
+          sports: value.sports.length ? value.sports : 'all',
+        })),
+      })),
+      ...(!zones.length && { zonesNote: 'No training zones configured' }),
+    };
+  },
+});
+
+const RECORD_TYPES = ['SPEED', 'POWER', 'HEARTRATE', 'ELEVATION_GAIN'] as const;
+
+/** "1:23:45" or "23:45". */
+const formatDuration = (seconds: number) => {
+  const total = Math.round(seconds);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = String(total % 60).padStart(2, '0');
+  return h ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
+};
+
+const getRecords = defineTool({
+  name: 'get_records',
+  description:
+    'Personal records of an athlete in one sport, with the activity each comes from: best times over distances (400 m to 100 km, type SPEED), best power and heart rate held over durations, and most climbing over distances. Optional date range, e.g. to compare seasons.',
+  input: z
+    .object({
+      athleteId: athleteIdInput,
+      sport: z
+        .string()
+        .max(40)
+        .optional()
+        .describe(
+          'Sport type, e.g. RUNNING. Default: the sport with most records',
+        ),
+      types: z.array(z.enum(RECORD_TYPES)).min(1).max(4).default(['SPEED']),
+      from: dayInput.optional(),
+      to: dayInput.optional(),
+    })
+    .strict(),
+  async run({ prisma }, user, input) {
+    const athleteId = await resolveAthleteId(prisma, user, input.athleteId);
+    const sports = await prisma.eventActivity.groupBy({
+      by: ['sport'],
+      where: { records: { some: { athleteId } } },
+      _count: { sport: true },
+      orderBy: { _count: { sport: 'desc' } },
+    });
+    const sport = input.sport ?? sports[0]?.sport;
+    const sportsWithRecords = sports.map((row) => row.sport);
+    if (!sport) return { athleteId, sportsWithRecords, records: [] };
+    const records = await prisma.record.findMany({
+      where: {
+        athleteId,
+        type: { in: [...input.types] },
+        eventActivity: { sport: sport as never },
+        ...((input.from || input.to) && {
+          date: {
+            ...(input.from && { gte: new Date(`${input.from}T00:00:00Z`) }),
+            ...(input.to && {
+              lt: new Date(
+                new Date(`${input.to}T00:00:00Z`).getTime() + DAY_MS,
+              ),
+            }),
+          },
+        }),
+      },
+      select: {
+        type: true,
+        distance: true,
+        duration: true,
+        value: true,
+        date: true,
+        eventActivity: {
+          select: { event: { select: { eventId: true, name: true } } },
+        },
+      },
+    });
+    const best = new Map<string, (typeof records)[number]>();
+    for (const record of records) {
+      const key = `${record.type}:${record.distance ?? ''}:${record.duration ?? ''}`;
+      const current = best.get(key);
+      // Speed records hold the time over the distance: lower is better
+      const better =
+        !current ||
+        (record.type === 'SPEED'
+          ? record.value < current.value
+          : record.value > current.value);
+      if (better) best.set(key, record);
+    }
+    const order = (type: string) => RECORD_TYPES.indexOf(type as never);
+    return {
+      athleteId,
+      sport,
+      sportsWithRecords,
+      records: [...best.values()]
+        .sort(
+          (a, b) =>
+            order(a.type) - order(b.type) ||
+            (a.distance ?? a.duration ?? 0) - (b.distance ?? b.duration ?? 0),
+        )
+        .map((record) => ({
+          type: record.type,
+          ...(record.distance != null && { distanceKm: km(record.distance) }),
+          ...(record.duration != null && {
+            durationSeconds: record.duration,
+          }),
+          ...(record.type === 'SPEED'
+            ? {
+                time: formatDuration(record.value),
+                ...(record.distance &&
+                  speedFields(sport, record.distance / record.value)),
+              }
+            : {
+                value: round(record.value, 0),
+                unit:
+                  record.type === 'POWER'
+                    ? 'W'
+                    : record.type === 'HEARTRATE'
+                      ? 'bpm'
+                      : 'm',
+              }),
+          date: isoDay(record.date),
+          eventId: record.eventActivity?.event.eventId,
+          activityName: record.eventActivity?.event.name,
+        })),
+    };
+  },
+});
+
 /** Read-only tools, in the order they are offered to models. */
 export const AI_TOOLS: AiTool[] = [
   listAthletes,
+  getAthleteProfile,
   getWeek,
   searchActivities,
   getActivity,
@@ -641,4 +1103,5 @@ export const AI_TOOLS: AiTool[] = [
   getWellness,
   getInjuries,
   getPlans,
+  getRecords,
 ];

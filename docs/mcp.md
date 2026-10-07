@@ -10,17 +10,25 @@ behalf.
 | Tool | Returns |
 | --- | --- |
 | `list_athletes` | Your own athlete profile and the athletes you coach (use their `athleteId`) |
+| `get_athlete_profile` | Training zones (heart rate, power, pace) per sport, maximum and resting heart rate, latest VO2max, VMA, FTP, critical power and weight |
 | `get_week` | One Monday–Sunday week: planned sessions, activities with TRIMP, notes, plan week (theme, targets, phase, races) and weekly load vs recommended range |
 | `search_activities` | Completed activities, newest first; filter by dates, sport, distance, elevation or text (max 30) |
-| `get_activity` | One activity: metrics, TRIMP, comment, feedback answers and the planned session it fulfilled |
-| `get_training_load` | Weekly TRIMP (actual, pending, recommended range, ACWR) for up to 26 weeks |
-| `get_wellness` | Daily wellness and body metrics (HRV, resting HR, sleep…) for up to 90 days |
+| `get_activity` | One activity: metrics, TRIMP, comment, feedback answers, laps (or 1 km / 5 km splits computed from the recording), time in heart-rate zones, weather, and the planned session it fulfilled with its steps and targets |
+| `get_training_load` | Weekly TRIMP (actual, pending, sessions without an estimate, recommended range, ACWR) for up to 26 weeks |
+| `get_wellness` | One row per day of wellness metrics (HRV, resting HR, sleep… by default) for up to 90 days, with 7-day and period averages |
 | `get_injuries` | Injury log (pain out of 10, status, context) |
 | `get_plans` | Training plans with cycles, weeks (theme, targets, sessions) and races |
+| `get_records` | Personal records in one sport: best times over distances, best power and heart rate over durations |
 
 Every call validates its input, checks that you own or coach the athlete
 (same rules as the API) and returns bounded data. Units: durations in seconds,
-distances in km, elevation in m, load in TRIMP. Tools never change data.
+distances in km, elevation in m, load in TRIMP; paces are written `m:ss/km`.
+Tools never change data.
+
+Planned sessions without a load estimate are not part of `plannedPending`;
+they are counted in `plannedSessionsWithoutEstimate`. Estimates are made by
+AI, so an athlete without AI access has none. The ACWR is missing until
+three weeks of load precede the week.
 
 Source: [`apps/api/src/modules/ai-tools`](../apps/api/src/modules/ai-tools).
 
