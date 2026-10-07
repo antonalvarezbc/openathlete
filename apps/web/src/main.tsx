@@ -1,3 +1,7 @@
+// sort-imports-ignore
+// Must stay first: the locale cookie is migrated before anything reads it
+import './utils/adopt-locale-cookie';
+
 import { getLocale } from '@/paraglide/runtime';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
