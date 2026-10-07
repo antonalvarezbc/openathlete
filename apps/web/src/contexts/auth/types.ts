@@ -14,6 +14,8 @@ export type ActionMapType<M extends { [index: string]: unknown }> = {
 export type AuthStateType = {
   status?: string;
   loading: boolean;
+  /** The API could not be reached: the stored session is kept for a retry */
+  offline: boolean;
   user: User | null;
 };
 
@@ -22,6 +24,7 @@ export type AuthContextType = {
   loading: boolean;
   authenticated: boolean;
   unauthenticated: boolean;
+  offline: boolean;
   initialize: () => Promise<void>;
   logout: (navigate?: (path: string) => void) => void;
 };
