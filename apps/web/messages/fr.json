@@ -1288,5 +1288,7 @@
   "connectors_unavailable_where": "L’import de fichiers se trouve dans Paramètres > Connecteurs.",
   "password_reset_without_email": "Cette instance n’envoie pas d’emails. Après votre demande, demandez votre lien de réinitialisation à son administrateur.",
   "password_reset_ask_administrator": "Demande enregistrée. Demandez votre lien de réinitialisation à l’administrateur de l’instance : il est valable 15 minutes.",
-  "password_reset_request_link": "Demander un lien de réinitialisation"
+  "password_reset_request_link": "Demander un lien de réinitialisation",
+  "signup_invite_only_message": "L’inscription sur cette instance se fait sur invitation. Demandez à un coach ou un athlète qui l’utilise de vous inviter, puis suivez le lien de l’invitation.",
+  "signup_closed_message": "Cette instance n’accepte pas de nouveaux comptes. Adressez-vous à son administrateur si vous en avez besoin."
 }

@@ -1288,5 +1288,7 @@
   "connectors_unavailable_where": "L’importazione dei file si trova in Impostazioni > Connettori.",
   "password_reset_without_email": "Questa istanza non invia email. Dopo la richiesta, chiedi il link di reimpostazione al suo amministratore.",
   "password_reset_ask_administrator": "Richiesta registrata. Chiedi il link di reimpostazione all’amministratore dell’istanza: è valido 15 minuti.",
-  "password_reset_request_link": "Richiedi un link di reimpostazione"
+  "password_reset_request_link": "Richiedi un link di reimpostazione",
+  "signup_invite_only_message": "La registrazione su questa istanza avviene su invito. Chiedi a un coach o a un atleta che la usa di invitarti, poi segui il link dell’invito.",
+  "signup_closed_message": "Questa istanza non accetta nuovi account. Rivolgiti al suo amministratore se ne hai bisogno."
 }

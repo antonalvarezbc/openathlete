@@ -11,4 +11,9 @@ export interface InstanceInfoDto {
   email: boolean;
   /** Connectors users can connect */
   providers: ConnectorProvider[];
+  /**
+   * Who can create an account now: SIGNUP_MODE, except that an instance
+   * without any account is open, for its administrator
+   */
+  signup: 'open' | 'invite' | 'closed';
 }

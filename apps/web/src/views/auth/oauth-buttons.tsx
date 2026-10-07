@@ -12,6 +12,7 @@ import {
 } from '@/utils/firebase-auth';
 import { takeReturnTo } from '@/utils/return-to';
 import { cn } from '@/utils/shadcn';
+import { signupRefusal } from '@/utils/signup';
 import { usePostHog } from 'posthog-js/react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -45,8 +46,9 @@ export function OAuthButtons({
       await initialize();
       nav(takeReturnTo(redirectTo || getPath(['dashboard'])));
     },
-    onError: () => {
-      toast.error(m.oauth_login_failed());
+    onError: (error) => {
+      // Signing in with Google creates the account of a new user
+      toast.error(signupRefusal(error) ?? m.oauth_login_failed());
     },
     onSettled: () => {
       setPendingProvider(null);

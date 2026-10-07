@@ -5,18 +5,22 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ConnectorProvider } from '@openathlete/database';
 import { ApiEnvSchemaType, InstanceInfoDto } from '@openathlete/shared';
 
+import { PrismaService } from '../prisma/services/prisma.service';
 import { configuredProviders } from '../providers-sync/base/provider-config';
 
 @ApiTags('Instance')
 @Controller('instance')
 export class InstanceController {
-  constructor(private readonly config: ConfigService<ApiEnvSchemaType, true>) {}
+  constructor(
+    private readonly config: ConfigService<ApiEnvSchemaType, true>,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Get()
   @ApiOperation({
     summary: 'What this instance offers',
     description:
-      'Public. Which optional services are configured: Google sign-in, email, and the device connectors users can connect. The app hides the rest. Says nothing about how they are configured.',
+      'Public. Which optional services are configured: Google sign-in, email, and the device connectors users can connect, and who can create an account. The app hides the rest. Says nothing about how they are configured.',
   })
   @ApiResponse({
     status: 200,
@@ -29,15 +33,27 @@ export class InstanceController {
           type: 'array',
           items: { type: 'string', enum: Object.values(ConnectorProvider) },
         },
+        signup: {
+          type: 'string',
+          enum: ['open', 'invite', 'closed'],
+          description:
+            'SIGNUP_MODE, except open while the instance has no account',
+        },
       },
     },
   })
-  getInstanceInfo(): InstanceInfoDto {
+  async getInstanceInfo(): Promise<InstanceInfoDto> {
     const get = (key: keyof ApiEnvSchemaType) => this.config.get(key);
+    const mode = this.config.get('SIGNUP_MODE') ?? 'open';
     return {
       googleSignIn: !!get('FIREBASE_SERVICE_ACCOUNT_JSON'),
       email: !!get('BREVO_API_KEY'),
       providers: configuredProviders(get),
+      // The first account is always allowed: it is the administrator's
+      signup:
+        mode !== 'open' && (await this.prisma.user.count()) === 0
+          ? 'open'
+          : mode,
     };
   }
 }

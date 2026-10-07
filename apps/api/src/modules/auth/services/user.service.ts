@@ -3,6 +3,7 @@ import * as argon2 from 'argon2';
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -118,6 +119,34 @@ export class UserService {
     return { success: true };
   };
 
+  /**
+   * Applies SIGNUP_MODE to a new account, by password or by Google. The
+   * first account of an instance is always allowed: it is its
+   * administrator's.
+   */
+  private async assertSignupAllowed(
+    invitationToken?: string,
+    coachInvitationToken?: string,
+  ) {
+    const mode = this.configService.get('SIGNUP_MODE') ?? 'open';
+    if (mode === 'open') return;
+    if ((await this.prisma.user.count()) === 0) return;
+    if (mode === 'invite') {
+      const invited =
+        (invitationToken &&
+          (await this.invitationService.verifyInvitationToken(
+            invitationToken,
+          ))) ||
+        (coachInvitationToken &&
+          (await this.coachInvitationService.verifyInvitationToken(
+            coachInvitationToken,
+          )));
+      if (invited) return;
+      throw new ForbiddenException('SIGNUP_INVITE_ONLY');
+    }
+    throw new ForbiddenException('SIGNUP_CLOSED');
+  }
+
   public createAccount = async ({
     email,
     password,
@@ -126,6 +155,7 @@ export class UserService {
     invitationToken,
     coachInvitationToken,
   }: CreateAccountDto) => {
+    await this.assertSignupAllowed(invitationToken, coachInvitationToken);
     const normalizedEmail = email.toLowerCase();
     const hashedPassword = await this.hashPassword(password);
 

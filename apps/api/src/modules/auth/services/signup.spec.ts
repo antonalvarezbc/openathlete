@@ -72,3 +72,38 @@ describe('sign-up notification', () => {
     expect(emailsTo()).toEqual(['ana@example.com', 'team@example.org']);
   });
 });
+
+describe('sign-up mode', () => {
+  it('lets anyone sign up by default', async () => {
+    const { signUp, prisma } = setup();
+    await expect(signUp()).resolves.toEqual({ userId: 42 });
+    expect(prisma.user.count).not.toHaveBeenCalled();
+  });
+
+  it('needs a valid invitation in invite mode', async () => {
+    const { signUp, prisma } = setup({ SIGNUP_MODE: 'invite' });
+    await expect(signUp()).rejects.toThrow('SIGNUP_INVITE_ONLY');
+    await expect(signUp({ invitationToken: 'expired' })).rejects.toThrow(
+      'SIGNUP_INVITE_ONLY',
+    );
+    expect(prisma.user.create).not.toHaveBeenCalled();
+    await expect(signUp({ invitationToken: 'valid' })).resolves.toEqual({
+      userId: 42,
+    });
+  });
+
+  it('refuses every sign-up when closed', async () => {
+    const { signUp } = setup({ SIGNUP_MODE: 'closed' });
+    await expect(signUp({ invitationToken: 'valid' })).rejects.toThrow(
+      'SIGNUP_CLOSED',
+    );
+  });
+
+  it("always lets the instance's first account in", async () => {
+    for (const mode of ['invite', 'closed']) {
+      const { signUp, prisma } = setup({ SIGNUP_MODE: mode });
+      prisma.user.count.mockResolvedValue(0);
+      await expect(signUp()).resolves.toEqual({ userId: 42 });
+    }
+  });
+});

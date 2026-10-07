@@ -78,6 +78,8 @@ services:
       # callback URLs follow it
       APP_URL: ${APP_URL:-http://localhost}
       FRONTEND_URL: ${APP_URL:-http://localhost}
+      # open, invite or closed (the first account is always allowed)
+      SIGNUP_MODE: ${SIGNUP_MODE:-open}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       TRUST_PROXY: ${TRUST_PROXY:-}
 

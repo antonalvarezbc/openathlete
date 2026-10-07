@@ -48,6 +48,7 @@ test('hides what the instance has not set up', async ({ page, request }) => {
     googleSignIn: false,
     email: false,
     providers: [],
+    signup: 'open',
   });
 
   await page.goto('/dashboard/settings?tab=connectors');

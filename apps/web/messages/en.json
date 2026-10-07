@@ -1288,5 +1288,7 @@
   "connectors_unavailable_where": "File import is in Settings > Connectors.",
   "password_reset_without_email": "This instance does not send emails. Ask its administrator for your reset link after you request it.",
   "password_reset_ask_administrator": "Request recorded. Ask the instance administrator for your reset link: it is valid 15 minutes.",
-  "password_reset_request_link": "Request a reset link"
+  "password_reset_request_link": "Request a reset link",
+  "signup_invite_only_message": "Sign-up on this instance is by invitation. Ask a coach or athlete who uses it to invite you, then follow the link in the invitation.",
+  "signup_closed_message": "This instance does not accept new accounts. Ask its administrator if you need one."
 }

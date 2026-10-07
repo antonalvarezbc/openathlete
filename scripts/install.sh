@@ -95,9 +95,11 @@ get_env() {
   sed -n "s/^$1=//p" .env | tail -n 1
 }
 
+CREATED_ENV=0
 if [ -f .env ]; then
   say "Keeping the existing .env"
 else
+  CREATED_ENV=1
   cp .env.example .env
   chmod 600 .env
   set_env JWT_SECRET_KEY "$(random_secret)"
@@ -115,6 +117,11 @@ if [ -n "$DOMAIN" ]; then
   set_env DOMAIN "$DOMAIN"
   set_env COMPOSE_PROFILES https
   set_env WEB_PORT 127.0.0.1:8080
+  # Reachable from the internet: strangers should not open accounts. The
+  # first account is still allowed, and invitations let others in.
+  if [ "$CREATED_ENV" = 1 ]; then
+    set_env SIGNUP_MODE invite
+  fi
 elif [ -n "$URL" ]; then
   set_env APP_URL "${URL%/}"
 fi
@@ -144,4 +151,7 @@ done
 say ""
 say "OpenAthlete is running: ${APP_URL:-http://localhost}"
 say "Create your account there. Configuration: $(pwd)/.env"
+if [ "$(get_env SIGNUP_MODE)" = invite ]; then
+  say "Sign-up is by invitation (SIGNUP_MODE=invite in .env): the first account is yours, then invite your athletes or coaches."
+fi
 say "Update later by running this script again, or: docker compose pull && docker compose up -d"

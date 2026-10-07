@@ -221,6 +221,14 @@ export const ApiEnvSchema = z
       .optional()
       .describe('Default sender email address for Brevo emails (optional)'),
 
+    // Who may create an account
+    SIGNUP_MODE: z
+      .enum(['open', 'invite', 'closed'])
+      .default('open')
+      .describe(
+        'open: anyone can sign up; invite: only with an invitation from a coach or athlete; closed: nobody, except the first account of the instance',
+      ),
+
     // Where the hosted instance hears about new accounts (optional)
     SIGNUP_NOTIFICATION_EMAIL: z
       .string()

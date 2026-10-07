@@ -1288,5 +1288,7 @@
   "connectors_unavailable_where": "La importación de archivos está en Ajustes > Conexiones.",
   "password_reset_without_email": "Esta instancia no envía correos. Tras tu solicitud, pide el enlace de restablecimiento a su administrador.",
   "password_reset_ask_administrator": "Solicitud registrada. Pide el enlace de restablecimiento al administrador de la instancia: es válido 15 minutos.",
-  "password_reset_request_link": "Solicitar un enlace de restablecimiento"
+  "password_reset_request_link": "Solicitar un enlace de restablecimiento",
+  "signup_invite_only_message": "El registro en esta instancia es por invitación. Pide a un entrenador o atleta que la use que te invite y sigue el enlace de la invitación.",
+  "signup_closed_message": "Esta instancia no acepta cuentas nuevas. Pide una a su administrador si la necesitas."
 }

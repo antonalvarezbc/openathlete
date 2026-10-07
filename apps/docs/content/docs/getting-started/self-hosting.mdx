@@ -103,6 +103,18 @@ For background features (post-activity questions, feedback analysis, load estima
 
 The `https` profile runs Caddy with automatic certificates (see the quick start). With your own proxy (Traefik, nginx, Coolify...), forward the whole domain to the web container and keep `WEB_PORT` on localhost, for example `WEB_PORT=127.0.0.1:8080`. The API trusts `X-Forwarded-For` only from proxies on private networks, which covers a proxy on the same host or Docker network. If another public proxy sits in front (for example Cloudflare), set `TRUST_PROXY` to the number of proxy hops so rate limiting sees real client IPs.
 
+### Sign-up
+
+`SIGNUP_MODE` decides who can create an account, with a password or with Google:
+
+| Value            | Who can sign up                                                              |
+| ---------------- | ---------------------------------------------------------------------------- |
+| `open` (default) | Anyone who reaches the instance                                              |
+| `invite`         | Only people a coach or athlete invited, through the link of their invitation |
+| `closed`         | Nobody                                                                       |
+
+The first account of the instance is always allowed: it is yours. The install script sets `invite` when it sets up a public domain. Existing accounts keep signing in whatever the mode.
+
 ### Administration
 
 Commands run inside the API container:
