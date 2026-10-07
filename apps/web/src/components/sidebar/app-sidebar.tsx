@@ -173,7 +173,7 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
               variant="ghost"
               size="icon"
               className="size-11 shrink-0"
-              aria-label={m.activity_feedback_close()}
+              aria-label={m.ui_close()}
               onClick={() => setOpenMobile(false)}
             >
               <X className="size-5" />

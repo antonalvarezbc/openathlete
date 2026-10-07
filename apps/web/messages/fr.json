@@ -849,7 +849,7 @@
   "activity_feedback_next": "Suivant",
   "activity_feedback_completed": "Merci pour ton retour !",
   "activity_feedback_completed_message": "Tes réponses ont été enregistrées.",
-  "activity_feedback_close": "Quitter",
+  "ui_close": "Fermer",
   "loading_feedback_questions": "Chargement des questions...",
   "activity_feedback_skipping": "Ignoration...",
   "activity_feedback_answer_by_text": "Répondre par audio ou texte",
