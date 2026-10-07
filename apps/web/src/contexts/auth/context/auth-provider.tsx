@@ -1,6 +1,7 @@
 import { UserAPI } from '@/api/user';
 import { getPath } from '@/routes/paths';
 import { isValidToken } from '@/utils/auth';
+import { isNetworkError } from '@/utils/axios';
 import { signOutFirebase } from '@/utils/firebase-auth';
 import { ACCESS_TOKEN, clear, getItem, setItem } from '@/utils/local-storage';
 import { initializePushNotifications } from '@/utils/push-notifications';
@@ -14,6 +15,7 @@ import { AuthContext } from './auth-context';
 
 const Types = {
   INITIAL: 'INITIAL',
+  OFFLINE: 'OFFLINE',
   LOGOUT: 'LOGOUT',
 } as const;
 
@@ -23,7 +25,15 @@ const reducer = (state: AuthStateType, action: ActionsType) => {
   if (action.type === Types.INITIAL) {
     return {
       loading: false,
+      offline: false,
       user: action.payload.user,
+    };
+  }
+  if (action.type === Types.OFFLINE) {
+    return {
+      loading: false,
+      offline: true,
+      user: null,
     };
   }
   if (action.type === Types.LOGOUT) {
@@ -43,6 +53,7 @@ type Payload = {
   [Types.INITIAL]: {
     user: User | null;
   };
+  [Types.OFFLINE]: undefined;
   [Types.LOGOUT]: undefined;
 };
 
@@ -51,12 +62,22 @@ type ActionsType = ActionMapType<Payload>[keyof ActionMapType<Payload>];
 const initialState: AuthStateType = {
   user: null,
   loading: true,
+  offline: false,
 };
 
 export function AuthProvider({ children }: Props) {
   const [state, dispatch] = useReducer(reducer, initialState);
 
   const initialize = useCallback(async () => {
+    // Without an answer from the API the session is unknown, not signed out:
+    // treating it as signed out would send the user to the login page
+    const signedOutOrOffline = (error: unknown) =>
+      dispatch(
+        isNetworkError(error)
+          ? { type: Types.OFFLINE }
+          : { type: Types.INITIAL, payload: { user: null } },
+      );
+
     try {
       const accessToken = getItem(ACCESS_TOKEN);
 
@@ -143,22 +164,12 @@ export function AuthProvider({ children }: Props) {
             .catch((error) => {
               console.error('Failed to initialize push notifications:', error);
             });
-        } catch {
-          dispatch({
-            type: Types.INITIAL,
-            payload: {
-              user: null,
-            },
-          });
+        } catch (error) {
+          signedOutOrOffline(error);
         }
       }
-    } catch {
-      dispatch({
-        type: Types.INITIAL,
-        payload: {
-          user: null,
-        },
-      });
+    } catch (error) {
+      signedOutOrOffline(error);
     }
   }, []);
 
@@ -184,6 +195,14 @@ export function AuthProvider({ children }: Props) {
     initialize();
   }, [initialize]);
 
+  // Back online: try again without waiting for the user
+  useEffect(() => {
+    if (!state.offline) return;
+    const retry = () => void initialize();
+    window.addEventListener('online', retry);
+    return () => window.removeEventListener('online', retry);
+  }, [state.offline, initialize]);
+
   const checkAuthenticated = state.user ? 'authenticated' : 'unauthenticated';
 
   const status = state.loading ? 'loading' : checkAuthenticated;
@@ -193,11 +212,12 @@ export function AuthProvider({ children }: Props) {
       user: state.user,
       loading: status === 'loading',
       authenticated: status === 'authenticated',
-      unauthenticated: status === 'unauthenticated',
+      unauthenticated: status === 'unauthenticated' && !state.offline,
+      offline: state.offline,
       initialize,
       logout,
     }),
-    [state.user, status, initialize, logout],
+    [state.user, state.offline, status, initialize, logout],
   );
 
   return (
