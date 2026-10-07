@@ -1,3 +1,5 @@
+import { SPORT_TYPE } from '@openathlete/shared';
+
 import { AuthUser } from '../auth/decorators/user.decorator';
 import { compressActivityStream } from '../core/helpers/activity-stream';
 import type { TrainingLoadService } from '../core/services/training-load.service';
@@ -469,6 +471,7 @@ describe('AiToolsService', () => {
     prisma.athlete.findUnique.mockResolvedValue({
       user: { firstName: 'Leo', lastName: 'Run', gender: 'FEMALE' },
     });
+    const everySport = Object.values(SPORT_TYPE) as string[];
     prisma.trainingZone.findMany.mockResolvedValue([
       {
         trainingZoneId: 9,
@@ -477,6 +480,21 @@ describe('AiToolsService', () => {
         index: 1,
         description: 'Marathon',
         values: [{ min: 4.5, max: 5, sports: ['RUNNING'] }],
+      },
+      {
+        trainingZoneId: 10,
+        name: 'Zone 1',
+        type: 'HEARTRATE',
+        index: 0,
+        description: 'Recovery',
+        values: [
+          { min: 60, max: 137, sports: everySport },
+          {
+            min: 60,
+            max: 130,
+            sports: everySport.filter((sport) => sport !== 'MOBILITY'),
+          },
+        ],
       },
     ]);
     prisma.athleteMetric.findMany.mockResolvedValue([
@@ -495,6 +513,16 @@ describe('AiToolsService', () => {
           name: 'Zone 2',
           description: 'Marathon',
           ranges: [{ range: '4:30-5:00/km', sports: ['RUNNING'] }],
+        },
+        {
+          type: 'HEARTRATE',
+          name: 'Zone 1',
+          description: 'Recovery',
+          // A zone set for every sport says so instead of listing them
+          ranges: [
+            { range: '60-137 bpm', sports: 'all' },
+            { range: '60-130 bpm', sports: 'all except MOBILITY' },
+          ],
         },
       ],
     });

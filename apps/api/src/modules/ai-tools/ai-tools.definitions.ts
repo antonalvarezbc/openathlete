@@ -5,6 +5,7 @@ import { NotFoundException } from '@nestjs/common';
 import {
   CompressedActivityStream,
   EventWeatherSampleDto,
+  SPORT_TYPE,
   WorkoutTargetZone,
 } from '@openathlete/shared';
 
@@ -572,7 +573,7 @@ const getActivity = defineTool({
         answer: clipText(q.answerText, 400),
       })),
       ...(segments.length && {
-        laps: formatSegments(activity.sport, segments),
+        laps: formatSegments(activity.sport, segments, activity.averageCadence),
       }),
       ...(activity.segments.length > MAX_SEGMENTS && { lapsTruncated: true }),
       ...(splits.length && { splits }),
@@ -923,6 +924,20 @@ function zoneRange(type: string, min: number, max: number) {
   return `${Math.round(min)}-${Math.round(max)} ${unit}`.trim();
 }
 
+const ALL_SPORTS = Object.values(SPORT_TYPE) as string[];
+
+/**
+ * The sports a zone range applies to, short: zones created for every sport
+ * list all of them, which says nothing and fills the answer.
+ */
+function zoneSports(sports: string[]) {
+  const missing = ALL_SPORTS.filter((sport) => !sports.includes(sport));
+  if (!sports.length || !missing.length) return 'all';
+  return missing.length < sports.length
+    ? `all except ${missing.join(', ')}`
+    : sports;
+}
+
 const getAthleteProfile = defineTool({
   name: 'get_athlete_profile',
   description:
@@ -964,7 +979,7 @@ const getAthleteProfile = defineTool({
         description: clipText(zone.description, 100),
         ranges: zone.values.map((value) => ({
           range: zoneRange(zone.type, value.min, value.max),
-          sports: value.sports.length ? value.sports : 'all',
+          sports: zoneSports(value.sports),
         })),
       })),
       ...(!zones.length && { zonesNote: 'No training zones configured' }),

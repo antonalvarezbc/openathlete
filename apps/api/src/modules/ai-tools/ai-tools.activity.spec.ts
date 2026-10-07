@@ -6,6 +6,7 @@ import {
   formatSegments,
   formatSteps,
   heartRateZoneRanges,
+  lapCadenceFactor,
   streamSplits,
   summarizeWeather,
   targetMetricTypes,
@@ -281,6 +282,22 @@ describe('activity details for the data tools', () => {
     expect(formatSegments('CYCLING', [lap])[0]).toMatchObject({
       speedKmh: 12.2,
     });
+    expect(formatSegments('RUNNING', [lap], 364)[0].cadence).toBe(363);
+  });
+
+  it('puts lap cadences in the unit of the activity', () => {
+    // A run's laps counting one foot, its summary counting steps
+    const laps = [
+      { averageCadence: 91, movingTime: 300 },
+      { averageCadence: 94, movingTime: 300 },
+    ];
+    expect(lapCadenceFactor(laps, 186)).toBe(2);
+    // Already in the same unit, or nothing to compare with
+    expect(lapCadenceFactor(laps, 92)).toBe(1);
+    expect(lapCadenceFactor(laps, null)).toBe(1);
+    expect(
+      lapCadenceFactor([{ averageCadence: null, movingTime: 300 }], 186),
+    ).toBe(1);
   });
 
   it('summarizes the weather without adding up hourly rain rates', () => {

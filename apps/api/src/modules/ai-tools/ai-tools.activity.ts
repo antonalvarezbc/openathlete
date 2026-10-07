@@ -60,8 +60,34 @@ export type SegmentRow = {
   workoutStep: { name: string | null; stepType: string } | null;
 };
 
+/**
+ * Factor that puts lap cadences in the activity's unit. Running streams
+ * (FIT, Strava) count one foot while the activity summary may count steps:
+ * laps averaging half the activity's cadence are doubled to match it.
+ */
+export function lapCadenceFactor(
+  segments: Pick<SegmentRow, 'averageCadence' | 'movingTime'>[],
+  activityCadence?: number | null,
+) {
+  let seconds = 0;
+  let weighted = 0;
+  for (const { averageCadence, movingTime } of segments)
+    if (averageCadence && movingTime) {
+      seconds += movingTime;
+      weighted += averageCadence * movingTime;
+    }
+  if (!activityCadence || !seconds) return 1;
+  const ratio = activityCadence / (weighted / seconds);
+  return ratio > 1.8 && ratio < 2.2 ? 2 : 1;
+}
+
 /** Laps and workout-step segments as recorded by the device. */
-export function formatSegments(sport: string, segments: SegmentRow[]) {
+export function formatSegments(
+  sport: string,
+  segments: SegmentRow[],
+  activityCadence?: number | null,
+) {
+  const cadenceFactor = lapCadenceFactor(segments, activityCadence);
   return segments.map((segment) => {
     const gap = speedFields(sport, segment.averageGapSpeed);
     return {
@@ -80,7 +106,12 @@ export function formatSegments(sport: string, segments: SegmentRow[]) {
       averageHeartrate: round(segment.averageHeartrate, 0),
       maxHeartrate: round(segment.maxHeartrate, 0),
       averagePowerW: round(segment.averageWatts, 0),
-      cadence: round(segment.averageCadence, 0),
+      cadence: round(
+        segment.averageCadence == null
+          ? null
+          : segment.averageCadence * cadenceFactor,
+        0,
+      ),
       elevationGainM: round(segment.elevationGain, 0),
       plannedStep: segment.workoutStep
         ? (segment.workoutStep.name ?? segment.workoutStep.stepType)
