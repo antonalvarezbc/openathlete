@@ -89,7 +89,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Long Run",
               "sport": "RUNNING",
               "description": "1h10 endurance. Do not run fast, the goal is duration.",
@@ -187,7 +187,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Long Run",
               "sport": "RUNNING",
               "description": "1h20 endurance.",
@@ -395,7 +395,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Long Run",
               "sport": "RUNNING",
               "description": "1h30 Endurance.",
@@ -515,7 +515,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Reduced Long Run",
               "sport": "RUNNING",
               "description": "1h00 Endurance.",
@@ -708,7 +708,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Long Run",
               "sport": "RUNNING",
               "description": "1h30 Endurance.",
@@ -849,7 +849,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Long Run with Block",
               "sport": "RUNNING",
               "description": "1h40 including 2x 15min Marathon Pace (4h30).",
@@ -1033,7 +1033,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Long Run",
               "sport": "RUNNING",
               "description": "1h50 Pure endurance. Accustom the body to duration.",
@@ -1174,7 +1174,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Long Run",
               "sport": "RUNNING",
               "description": "1h20 Endurance.",
@@ -1382,7 +1382,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Specific Long Run",
               "sport": "RUNNING",
               "description": "2h00 including 2x 20min Marathon Pace.",
@@ -1566,7 +1566,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Long Run",
               "sport": "RUNNING",
               "description": "2h15 endurance. This is long, hydrate well.",
@@ -1707,7 +1707,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "The Longest Run",
               "sport": "RUNNING",
               "description": "2h30 including 3x 15min Marathon Pace. Test your race nutrition.",
@@ -1894,7 +1894,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Long Run",
               "sport": "RUNNING",
               "description": "1h45 Endurance.",
@@ -2043,7 +2043,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Long Run",
               "sport": "RUNNING",
               "description": "1h15 Endurance.",
@@ -2184,7 +2184,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Long Run",
               "sport": "RUNNING",
               "description": "1h00 Endurance.",
@@ -2289,7 +2289,7 @@
               "goalRpe": 0
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Short Run",
               "sport": "RUNNING",
               "description": "40 min Endurance.",
@@ -2419,7 +2419,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "MARATHON",
               "sport": "RUNNING",
               "description": "Race Day. Goal 4h30. Start conservatively (6:24/km) and enjoy!",
