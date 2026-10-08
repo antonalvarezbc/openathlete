@@ -162,7 +162,7 @@ export const articleStopTrainingOnFeeling: BlogPost = {
           </li>
           <li>
             <strong>Watch integration:</strong> Plans sync directly to your
-            Garmin, Polar, or Polar
+            Garmin, Suunto, or Polar
           </li>
           <li>
             <strong>RPE monitoring:</strong> Tracks how sessions feel relative
@@ -416,7 +416,7 @@ export const articleStopTrainingOnFeeling: BlogPost = {
           </li>
           <li>
             <strong>Intégration montre :</strong> Les plans se synchronisent
-            directement sur votre Garmin, Polar ou Polar
+            directement sur votre Garmin, Suunto ou Polar
           </li>
           <li>
             <strong>Surveillance RPE :</strong> Suit comment les séances se
