@@ -333,9 +333,19 @@ export function useDraggableBubble({
     return () => window.removeEventListener('resize', handleResize);
   }, [position, isDragging, x, y, getViewport]);
 
+  // Window listeners of the drag in progress. They are added when it starts,
+  // not in an effect: a quick tap can end before React renders again, and
+  // its end would then be missed.
+  const stopListeningRef = useRef<(() => void) | null>(null);
+  const stopListening = useCallback(() => {
+    stopListeningRef.current?.();
+    stopListeningRef.current = null;
+  }, []);
+  useEffect(() => stopListening, [stopListening]);
+
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
-      if (!isDragging || !dragRef.current || !enabled) return;
+      if (!dragRef.current || !enabled) return;
 
       const viewport = getViewport();
       const deltaX = e.clientX - dragRef.current.startX;
@@ -378,12 +388,12 @@ export function useDraggableBubble({
       );
       onPositionChange(newPosition);
     },
-    [isDragging, enabled, x, y, onPositionChange, getViewport],
+    [enabled, x, y, onPositionChange, getViewport],
   );
 
   const handleTouchMove = useCallback(
     (e: TouchEvent) => {
-      if (!isDragging || !dragRef.current || !enabled) return;
+      if (!dragRef.current || !enabled) return;
       if (e.touches.length !== 1) return;
 
       const touch = e.touches[0];
@@ -426,11 +436,12 @@ export function useDraggableBubble({
       );
       onPositionChange(newPosition);
     },
-    [isDragging, enabled, x, y, onPositionChange, getViewport],
+    [enabled, x, y, onPositionChange, getViewport],
   );
 
   const handleMouseUp = useCallback(() => {
-    if (!isDragging || !dragRef.current) {
+    stopListening();
+    if (!dragRef.current) {
       setIsDragging(false);
       dragRef.current = null;
       return;
@@ -495,34 +506,18 @@ export function useDraggableBubble({
 
     dragRef.current = null;
     onDragEnd?.();
-  }, [isDragging, onPositionChange, onDragEnd, onClick, x, y, getViewport]);
+  }, [stopListening, onPositionChange, onDragEnd, onClick, x, y, getViewport]);
 
-  const handleTouchEnd = useCallback(() => {
-    handleMouseUp();
-  }, [handleMouseUp]);
-
-  // Set up event listeners
-  useEffect(() => {
-    if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-      window.addEventListener('touchmove', handleTouchMove, { passive: false });
-      window.addEventListener('touchend', handleTouchEnd);
-
-      return () => {
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
-        window.removeEventListener('touchmove', handleTouchMove);
-        window.removeEventListener('touchend', handleTouchEnd);
-      };
-    }
-  }, [
-    isDragging,
-    handleMouseMove,
-    handleMouseUp,
-    handleTouchMove,
-    handleTouchEnd,
-  ]);
+  const handleTouchEnd = useCallback(
+    (e: TouchEvent) => {
+      // A tap opens the chat where the finger is: without this, the mouse
+      // events and click the browser emulates after the touch land on the
+      // chat that just opened, and its backdrop closes it again
+      if (e.cancelable) e.preventDefault();
+      handleMouseUp();
+    },
+    [handleMouseUp],
+  );
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -540,10 +535,18 @@ export function useDraggableBubble({
         startCenterY: centerY,
       };
 
+      stopListening();
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      stopListeningRef.current = () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+
       setIsDragging(true);
       onDragStart?.();
     },
-    [enabled, onDragStart],
+    [enabled, onDragStart, stopListening, handleMouseMove, handleMouseUp],
   );
 
   const handleTouchStart = useCallback(
@@ -563,10 +566,18 @@ export function useDraggableBubble({
         startCenterY: centerY,
       };
 
+      stopListening();
+      window.addEventListener('touchmove', handleTouchMove, { passive: false });
+      window.addEventListener('touchend', handleTouchEnd, { passive: false });
+      stopListeningRef.current = () => {
+        window.removeEventListener('touchmove', handleTouchMove);
+        window.removeEventListener('touchend', handleTouchEnd);
+      };
+
       setIsDragging(true);
       onDragStart?.();
     },
-    [enabled, onDragStart],
+    [enabled, onDragStart, stopListening, handleTouchMove, handleTouchEnd],
   );
 
   return {
