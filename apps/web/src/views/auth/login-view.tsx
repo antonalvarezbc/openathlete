@@ -1,4 +1,5 @@
 import { useLoginMutation } from '@/api/auth';
+import { useInstanceInfoQuery } from '@/api/instance';
 import {
   FormProvider,
   RHFPasswordField,
@@ -37,6 +38,7 @@ function loginErrorMessage(error: unknown) {
 }
 
 export function LoginView({ className }: React.ComponentProps<'form'>) {
+  const { data: instance } = useInstanceInfoQuery();
   const { initialize } = useAuthContext();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -119,15 +121,17 @@ export function LoginView({ className }: React.ComponentProps<'form'>) {
         </Button>
         <OAuthButtons />
       </div>
-      <div className="text-center text-sm">
-        {m.dont_have_account()}{' '}
-        <Link
-          to="/auth/create-account"
-          className="underline underline-offset-4"
-        >
-          {m.sign_up()}
-        </Link>
-      </div>
+      {instance?.signup !== 'invite' && instance?.signup !== 'closed' && (
+        <div className="text-center text-sm">
+          {m.dont_have_account()}{' '}
+          <Link
+            to="/auth/create-account"
+            className="underline underline-offset-4"
+          >
+            {m.sign_up()}
+          </Link>
+        </div>
+      )}
     </FormProvider>
   );
 }

@@ -49,7 +49,7 @@ export async function login(
 async function createUser(
   request: APIRequestContext,
   roles: ('ATHLETE' | 'COACH')[],
-  lastName: string,
+  { firstName = 'Test', lastName = 'Athlete' } = {},
 ): Promise<TestUser> {
   const ip = randomClientIp();
   const email = `e2e-${randomUUID()}@example.com`;
@@ -57,7 +57,7 @@ async function createUser(
 
   const signup = await request.post(`${API_URL}/user`, {
     headers: apiHeaders(ip),
-    data: { email, password, firstName: 'Test', lastName },
+    data: { email, password, firstName, lastName },
   });
   expect(signup.status(), await signup.text()).toBe(201);
 
@@ -87,26 +87,27 @@ async function createUser(
 /** Signs up a new user and completes the athlete onboarding. */
 export function createAthlete(
   request: APIRequestContext,
+  {
+    roles = ['ATHLETE'],
+    firstName = 'Test',
+  }: { roles?: ('ATHLETE' | 'COACH')[]; firstName?: string } = {},
 ): Promise<TestAthlete> {
-  return createUser(request, ['ATHLETE'], 'Athlete');
+  return createUser(request, roles, { firstName });
 }
 
-/**
- * A coach and an athlete linked the way people do it: the coach invites the
- * athlete, who accepts. athleteId is the athlete profile the coach manages.
- */
-export async function createCoachWithAthlete(request: APIRequestContext) {
-  const athlete = await createAthlete(request);
-  const coach = await createUser(request, ['COACH'], 'Coach');
-  const coachHeaders = apiHeaders(undefined, coach.accessToken);
-  const athleteHeaders = apiHeaders(undefined, athlete.accessToken);
-
+/** The coach invites the athlete, who accepts: the coach then sees them. */
+export async function linkCoach(
+  request: APIRequestContext,
+  coach: TestUser,
+  athlete: TestUser,
+) {
   const invite = await request.post(`${API_URL}/athlete/invite/athlete`, {
-    headers: coachHeaders,
+    headers: apiHeaders(undefined, coach.accessToken),
     data: { email: athlete.email },
   });
   expect(invite.status(), await invite.text()).toBe(201);
 
+  const athleteHeaders = apiHeaders(undefined, athlete.accessToken);
   const pending = await request.get(`${API_URL}/athlete/invitations/pending`, {
     headers: athleteHeaders,
   });
@@ -119,9 +120,19 @@ export async function createCoachWithAthlete(request: APIRequestContext) {
     { headers: athleteHeaders },
   );
   expect(accept.status(), await accept.text()).toBe(201);
+}
+
+/**
+ * A coach and an athlete linked the way people do it: the coach invites the
+ * athlete, who accepts. athleteId is the athlete profile the coach manages.
+ */
+export async function createCoachWithAthlete(request: APIRequestContext) {
+  const athlete = await createAthlete(request);
+  const coach = await createUser(request, ['COACH'], { lastName: 'Coach' });
+  await linkCoach(request, coach, athlete);
 
   const coached = await request.get(`${API_URL}/athlete/coached`, {
-    headers: coachHeaders,
+    headers: apiHeaders(undefined, coach.accessToken),
   });
   expect(coached.status(), await coached.text()).toBe(200);
   const [{ athleteId }] = (await coached.json()) as { athleteId: number }[];

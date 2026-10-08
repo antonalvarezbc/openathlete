@@ -71,4 +71,18 @@ describe('ChatBubble', () => {
       expect(Number(bubble.style.zIndex)).toBeLessThan(zIndex);
     }
   });
+
+  it('stays out of the onboarding', async () => {
+    container = document.createElement('div');
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () =>
+      root.render(
+        <MemoryRouter initialEntries={['/dashboard/onboarding']}>
+          <ChatBubble />
+        </MemoryRouter>,
+      ),
+    );
+    expect(document.querySelector('[data-chat-bubble]')).toBeNull();
+  });
 });

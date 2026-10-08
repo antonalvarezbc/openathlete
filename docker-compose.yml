@@ -78,6 +78,8 @@ services:
       # callback URLs follow it
       APP_URL: ${APP_URL:-http://localhost}
       FRONTEND_URL: ${APP_URL:-http://localhost}
+      # open, invite or closed (the first account is always allowed)
+      SIGNUP_MODE: ${SIGNUP_MODE:-open}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       TRUST_PROXY: ${TRUST_PROXY:-}
 
@@ -106,6 +108,7 @@ services:
       # Email (Brevo, optional)
       BREVO_API_KEY: ${BREVO_API_KEY:-}
       BREVO_FROM_EMAIL: ${BREVO_FROM_EMAIL:-}
+      SIGNUP_NOTIFICATION_EMAIL: ${SIGNUP_NOTIFICATION_EMAIL:-}
 
       # AI (optional): users can bring their own keys in Settings > AI; keys
       # here are the instance's, see .env.example
@@ -125,6 +128,7 @@ services:
       STRIPE_PRICE_SUPPORTER_MONTHLY: ${STRIPE_PRICE_SUPPORTER_MONTHLY:-}
       STRIPE_PRICE_SUPPORTER_YEARLY: ${STRIPE_PRICE_SUPPORTER_YEARLY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      APPLE_IAP_APP_ID: ${APPLE_IAP_APP_ID:-}
 
       # Push notifications (optional)
       FIREBASE_FUNCTIONS_URL: ${FIREBASE_FUNCTIONS_URL:-}

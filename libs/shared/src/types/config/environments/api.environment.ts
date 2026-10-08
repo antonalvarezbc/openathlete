@@ -221,6 +221,23 @@ export const ApiEnvSchema = z
       .optional()
       .describe('Default sender email address for Brevo emails (optional)'),
 
+    // Who may create an account
+    SIGNUP_MODE: z
+      .enum(['open', 'invite', 'closed'])
+      .default('open')
+      .describe(
+        'open: anyone can sign up; invite: only with an invitation from a coach or athlete; closed: nobody, except the first account of the instance',
+      ),
+
+    // Where the hosted instance hears about new accounts (optional)
+    SIGNUP_NOTIFICATION_EMAIL: z
+      .string()
+      .email('SIGNUP_NOTIFICATION_EMAIL must be a valid email address')
+      .optional()
+      .describe(
+        'Receives an email for each new account (optional, needs Brevo)',
+      ),
+
     // AI Services (optional)
     OPENAI_API_KEY: z
       .string()
@@ -330,6 +347,18 @@ export const ApiEnvSchema = z
       .optional()
       .describe(
         'Stripe webhook secret for verifying webhook requests (optional)',
+      ),
+
+    // App Store in-app purchases (optional, hosted iOS app only)
+    APPLE_IAP_APP_ID: z
+      .string()
+      .regex(
+        /^\d+$/,
+        'APPLE_IAP_APP_ID must be the numeric Apple ID of the app',
+      )
+      .optional()
+      .describe(
+        'Apple ID of the iOS app (App Store Connect > App Information); enables Supporter subscriptions bought in the iOS app (optional)',
       ),
 
     // Firebase

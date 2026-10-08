@@ -1,0 +1,136 @@
+# Mobile releases
+
+The iOS and Android apps are the web build wrapped by Capacitor. They are published by the same `vX.Y.Z` tag as the Docker images:
+
+| Step | Trigger | Where it goes |
+| --- | --- | --- |
+| Unsigned build of both apps | A pull request or push to `main` that touches the native projects (`.github/workflows/mobile.yml`) | Nowhere, it only checks they build |
+| Signed build, uploaded for testing | Pushing a `vX.Y.Z` tag (`.github/workflows/release.yml`) | TestFlight (internal testers) and the Google Play testing track |
+| Public release | Running **Mobile promote** from the Actions tab (`.github/workflows/mobile-promote.yml`) | App Store review and Google Play production |
+
+Everything runs through fastlane lanes in `apps/web/fastlane/Fastfile`, which you can also run by hand (see [Running lanes locally](#running-lanes-locally)).
+
+## Versions
+
+The tag is the only place a mobile version is set (`apps/web/scripts/mobile-version.ts`):
+
+| Tag | Android `versionName` | iOS version | Build number (both stores) |
+| --- | --- | --- | --- |
+| `v1.4.2-rc.3` | `1.4.2-rc.3` | `1.4.2` | `10400203` |
+| `v1.4.2` | `1.4.2` | `1.4.2` | `10400299` |
+
+Build numbers always grow with the version, and a pre-release sorts before its stable release. Pre-release tags need a number (`-rc.1` to `-rc.98`), minor versions stop at 99 and patches at 999.
+
+A store refuses a build number it already has. To ship a fix to testers, push a new tag (`v1.4.2-rc.4`); don't move an existing tag.
+
+Release notes come from the `feat` and `fix` commits since the previous tag (`apps/web/scripts/release-notes.ts`).
+
+## One-time setup
+
+Mobile releases stay off until the `MOBILE_RELEASES` variable is `true`, so forks and self-hosted mirrors never try to publish. Set the secrets and variables below, then turn it on. All commands run from the repository root with an authenticated `gh`.
+
+### Apple
+
+1. **App Store Connect API key.** In App Store Connect, open Users and Access → Integrations → App Store Connect API, and create a team key with the **Admin** role (fastlane renews the provisioning profile, which needs access to certificates). Download the `.p8` file; Apple only lets you download it once.
+   ```bash
+   gh secret set ASC_KEY_ID --body "<Key ID>"
+   gh secret set ASC_ISSUER_ID --body "<Issuer ID>"
+   gh secret set ASC_KEY_P8 < AuthKey_XXXXXXXXXX.p8
+   ```
+2. **Distribution certificate.** In Xcode → Settings → Accounts → Manage Certificates, create an **Apple Distribution** certificate if you have none. In Keychain Access, export it with its private key as a `.p12` file, with a password.
+   ```bash
+   base64 -i distribution.p12 | gh secret set IOS_DISTRIBUTION_CERTIFICATE_BASE64
+   gh secret set IOS_DISTRIBUTION_CERTIFICATE_PASSWORD --body "<p12 password>"
+   ```
+3. **Firebase config.**
+   ```bash
+   base64 -i apps/web/ios/App/App/GoogleService-Info.plist | gh secret set GOOGLE_SERVICE_INFO_PLIST_BASE64
+   ```
+
+The provisioning profile needs no secret: each build downloads it, and creates it again when it expires.
+
+### Google Play
+
+1. **Upload key.** Use the keystore that signed the builds already on Google Play (Play App Signing keeps the app signing key; this is only the upload key).
+   ```bash
+   base64 -i upload-keystore.jks | gh secret set ANDROID_KEYSTORE_BASE64
+   gh secret set ANDROID_KEYSTORE_PASSWORD --body "<keystore password>"
+   gh secret set ANDROID_KEY_ALIAS --body "<key alias>"
+   gh secret set ANDROID_KEY_PASSWORD --body "<key password>"
+   ```
+2. **Service account.** In Google Cloud, create a service account in any project and download a JSON key. Enable the Google Play Android Developer API in that project. In the Play Console, open Users and permissions, invite the service account's email, and give it, for the OpenAthlete app: *Release to production, exclude devices, and use Play App Signing* and *Release apps to testing tracks*.
+   ```bash
+   gh secret set PLAY_SERVICE_ACCOUNT_JSON < service-account.json
+   ```
+3. **Firebase config.**
+   ```bash
+   base64 -i apps/web/android/app/google-services.json | gh secret set GOOGLE_SERVICES_JSON_BASE64
+   ```
+
+### Variables
+
+The web bundle inside the apps is built in CI, so it needs the same `VITE_*` settings as the hosted web app (see `apps/web/.env.example`). They are public once the app ships, so they are variables, not secrets.
+
+```bash
+gh variable set VITE_FIREBASE_API_KEY --body "..."      # and the other VITE_FIREBASE_*,
+gh variable set VITE_ERROR_MONITORING_DSN --body "..."  # VITE_PUBLIC_POSTHOG_*, VITE_WEB_URL,
+                                                        # VITE_WEBSITE_URL... as on Vercel
+gh variable set PLAY_TRACK --body "alpha"   # Play track for test builds: internal (default) or alpha (closed testing)
+gh variable set MOBILE_RELEASES --body "true"
+```
+
+Until the app has been published on Google Play once, the Play Console only accepts draft releases: set `PLAY_RELEASE_STATUS` to `draft` and roll the release out by hand in the console. Delete the variable afterwards.
+
+## Sign in with Apple and App Store purchases
+
+App Review requires both: an app that offers Google sign-in must offer Sign in with Apple (guideline 4.8), and an app that gives Supporters their benefits must also sell the subscription through in-app purchase (3.1.1 and 3.1.3(b)).
+
+How it works:
+
+- **Sign in with Apple**: the iOS app signs in through the Firebase plugin. The API accepts the Firebase ID token like a Google one, so a hidden relay address (`@privaterelay.appleid.com`) creates an account like any email. Deleting the account in the iOS app also revokes Sign in with Apple.
+- **Purchases**: the iOS app buys the `org.openathlete.supporter.monthly` or `.yearly` subscription with StoreKit 2, passing the user's account token (`GET /subscription/apple/account-token`). It sends the signed transaction to `POST /subscription/apple/transactions`. The API checks Apple's signature against Apple Root CA - G3 and makes the user a Supporter, billed by the App Store (`subscription.provider = apple`).
+- **Renewals, cancellations, refunds**: Apple posts App Store Server Notifications V2 to `POST /subscription/apple/notifications`, verified the same way.
+- **Sandbox**: TestFlight and App Review buy in the sandbox against the production API, which accepts sandbox transactions. In the sandbox, a monthly subscription renews every 5 minutes, up to 12 times.
+- **Stores**: a user billed by one store cannot subscribe through the other. App Store subscribers manage their subscription in the iOS settings; the Android app sells nothing.
+
+One-time setup:
+
+1. **Apple Developer**, Identifiers, `org.openathlete`: enable **Sign in with Apple**. The next build creates a new App Store profile with it.
+2. **Firebase console**, Authentication, Sign-in method: enable **Apple**. The iOS app needs nothing else; the web needs a Services ID, which the web app does not use.
+3. **Apple Developer**, Services, Sign in with Apple for Email Communication: register the domain the API sends email from, so relay addresses receive email.
+4. **App Store Connect**, Business: the Paid Apps agreement must be active (bank and tax forms). Join the App Store Small Business Program for a 15% commission.
+5. **App Store Connect**, the app, Monetization, Subscriptions: create a "Supporter" group with two auto-renewable subscriptions, `org.openathlete.supporter.monthly` (1 month) and `org.openathlete.supporter.yearly` (1 year). Give each a price, a localized name and description, and a review screenshot of the purchase screen. They are submitted with the next app version.
+6. **App Store Connect**, the app, App Information, App Store Server Notifications: set the production and sandbox URLs to `https://<api>/subscription/apple/notifications`, version 2, then send a test notification.
+7. **API environment**: set `APPLE_IAP_APP_ID` to the app's Apple ID (App Information, General). Without it, the iOS app shows no subscription offer and the endpoints answer 503.
+
+## Releasing
+
+1. Push the tag, as for any release (see the `release` skill). The **Release** workflow uploads both apps next to the Docker images.
+2. iOS: the build reaches internal TestFlight testers once Apple has processed it (about 15 minutes), with the release notes as *What to Test*. Android: it reaches the `PLAY_TRACK` testers within minutes.
+3. Once it is tested, run **Mobile promote** from the Actions tab with the tag. Android goes to production right away. iOS is submitted for review, and you release it from App Store Connect once it is approved (automatic release is off).
+
+## Running lanes locally
+
+You need Ruby 3.4 (`brew install ruby`), Xcode 26 or later for iOS, and Java 21 with the Android SDK for Android.
+
+```bash
+cd apps/web
+bundle install
+bundle exec fastlane android check          # what CI runs on native changes
+bundle exec fastlane ios check
+RELEASE_TAG=v1.4.2 bundle exec fastlane ios release   # same environment variables as CI
+```
+
+The release lanes read the secrets above as environment variables (`ANDROID_KEYSTORE_BASE64`, `ASC_KEY_P8`...), and the `VITE_*` values from your shell. They refuse to run while `apps/web/.env` exists, since Vite would bake its development values (a localhost API) into the app: move it aside first. Locally, `ios release` signs with the distribution certificate already in your login keychain.
+
+## Troubleshooting
+
+| Error | Cause |
+| --- | --- |
+| `Version code ... has already been used` / `The bundle version must be higher` | The tag was released already. Push a new one. |
+| `Only releases with status draft may be created on draft app` | The app was never published: set `PLAY_RELEASE_STATUS=draft` (see above). |
+| `No profile for team ... matching ...` / certificate errors | The `.p12` is missing its private key, or the certificate was revoked. Export it again. |
+| `Invalid Swift Support` / SDK version rejected | The runner's Xcode is older than Apple's minimum. Pick another `runs-on` image in `release.yml`. |
+| The iOS app quits at launch, logging `UIScene life cycle is required` | Since the iOS 27 SDK, apps must use scenes. Keep `ios/App/App/SceneDelegate.swift` and the scene manifest in `Info.plist`. |
+| `APPLE_PURCHASE_OF_ANOTHER_ACCOUNT` after a purchase or restore | The Apple ID's subscription belongs to another OpenAthlete account, the one logged in when it was bought. |
+| The iOS app shows no Supporter offer | `APPLE_IAP_APP_ID` is not set on the API, or the products are not available yet in App Store Connect. |

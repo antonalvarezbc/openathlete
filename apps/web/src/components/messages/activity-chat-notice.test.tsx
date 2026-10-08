@@ -56,7 +56,7 @@ describe('automatic activity notice', () => {
       ...document.body.querySelectorAll<HTMLButtonElement>(
         '[role="dialog"] button',
       ),
-    ].find((b) => b.textContent?.includes('activity_feedback_close'))!;
+    ].find((b) => b.textContent?.includes('ui_close'))!;
     await act(async () => close.click());
     expect(document.body.querySelector('[role="dialog"]')).toBeNull();
   });

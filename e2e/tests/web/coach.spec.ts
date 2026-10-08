@@ -29,7 +29,8 @@ test('the coach dashboard lists a linked athlete and opens their calendar', asyn
 
   await page.goto('/dashboard/coach');
   await expect(page.getByText(athlete.email)).toBeVisible();
-  await page.getByTitle('View calendar').click();
+  // The dashboard holds a table for wide screens and cards for phones
+  await page.locator('[data-coach-table]').getByTitle('View calendar').click();
 
   await expect(page).toHaveURL(new RegExp(`/dashboard/calendar/${athleteId}$`));
   expect(problems).toEqual([]);

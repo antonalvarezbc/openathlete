@@ -53,6 +53,7 @@ import {
 } from '../base';
 import {
   ImportOptions,
+  ImportResult,
   ImportedActivity,
   ProviderImportCapability,
 } from '../base/provider-import.interface';
@@ -675,7 +676,7 @@ export class SuuntoProviderService
   async importActivity(
     account: ProviderAccount,
     activity: ImportedActivity,
-  ): Promise<EventActivity> {
+  ): Promise<ImportResult> {
     const existing = await this.prisma.eventActivity.findFirst({
       where: {
         externalId: activity.externalId,
@@ -683,7 +684,7 @@ export class SuuntoProviderService
     });
 
     if (existing) {
-      return existing;
+      return { activity: existing, created: false };
     }
 
     const athlete = await this.prisma.athlete.findUnique({
@@ -725,7 +726,7 @@ export class SuuntoProviderService
       );
     }
 
-    return savedActivity;
+    return { activity: savedActivity, created: true };
   }
 
   /**
