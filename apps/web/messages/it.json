@@ -1819,6 +1819,7 @@
   "garmin_backfill_section": "Dettagli FIT (GPS, sensori, giri)",
   "garmin_login_change": "Cambia account o password Garmin",
   "garmin_login_reconnect_help": "Usalo se hai cambiato la password di Garmin, se la sessione è scaduta o se hai collegato l'account sbagliato. Le attività già importate restano.",
+  "garmin_manual_disconnect_help": "Rimuove la tua sessione Garmin da questo server. Le attività e le metriche già importate restano. Per aggiornare da Garmin dovrai accedere di nuovo.",
   "ai_structure_button": "Da testo (IA)",
   "ai_structure_title": "Convertire un allenamento scritto in passi",
   "ai_structure_help": "Scrivi l'allenamento come lo diresti. L'IA lo trasforma in passi e blocchi di ripetizioni, con le zone dell'atleta se le citi. Nome, data e obiettivi non cambiano.",

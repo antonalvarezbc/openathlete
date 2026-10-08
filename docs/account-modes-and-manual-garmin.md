@@ -110,10 +110,27 @@ independent setting, `ENABLE_MANUAL_FIT_IMPORT`, also disabled by default.
 - MFA is supported through a second step. Pending login processes expire after three minutes.
 - Passwords/codes pass through stdin, not command arguments, files or API logs.
 - Garmin session tokens are stored locally with restrictive permissions.
+- The Python workers do not inherit the API environment: they get `PATH`,
+  `HOME`, locale, `TZ`, `TMPDIR`, the TLS trust store and proxy variables,
+  and their own `OA_GARMIN_*` paths (`manual-garmin-env.ts`). Database, JWT,
+  pepper, payment and AI secrets never reach them.
 - Authentication errors never expose raw provider responses or exception messages.
 - The previous single-athlete connection remains usable until the athlete connects through the UI.
 - New sessions are isolated under `GARMIN_UNOFFICIAL_DIRECTORY/accounts/<athleteId>/.private`.
   This directory is ignored by Git.
+- **Disconnect** (a link beside **Change Garmin account or password**, owner
+  only, with a second click to confirm; `POST /provider/garmin-manual/disconnect`)
+  deletes `accounts/<athleteId>`: tokens, link, sync state and FIT cache. When
+  the command-line connection at the root belongs to the athlete, its tokens,
+  link, state and FIT cache go too; the shared lock, request pacing and
+  diagnostic reports stay. Imported activities and metrics stay, and so do the
+  records of workouts sent to Garmin, so the same account can still update or
+  remove them after signing in again. It is refused while an update, a FIT
+  download or a workout export runs.
+- Deleting the account removes the same files once the database deletion has
+  committed, whenever `GARMIN_UNOFFICIAL_DIRECTORY` is set, even if the
+  connector has been turned off since. A failure there is logged for the
+  administrator and does not fail the deletion.
 - Sync retains the existing manual trigger, two-minute cooldown and database lock.
 - Garmin _Mobility_ activities (FIT sport 86) are imported with the Mobility sport.
   They used to be stored as Pilates; a migration corrects those with Garmin's

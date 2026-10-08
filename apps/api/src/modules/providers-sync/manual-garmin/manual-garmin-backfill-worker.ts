@@ -2,6 +2,8 @@ import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { z } from 'zod';
 
+import { manualGarminWorkerEnv } from './manual-garmin-env';
+
 const messageSchema = z.discriminatedUnion('type', [
   z
     .object({
@@ -68,14 +70,12 @@ export function runManualGarminBackfill(
         join(root, '.venv/bin/python'),
         [join(root, 'backfill.py')],
         {
-          env: {
-            ...process.env,
-            PYTHONUNBUFFERED: '1',
+          env: manualGarminWorkerEnv({
             OA_GARMIN_PRIVATE_DIR: join(directory, '.private'),
             OA_GARMIN_BACKFILL_IDS: JSON.stringify(ids),
             OA_GARMIN_BACKFILL_RUN_ID: runId,
             OA_GARMIN_LOCK_DIRECTORY: join(root, '.private'),
-          },
+          }),
           stdio: ['pipe', 'pipe', 'pipe'],
         },
       );

@@ -82,6 +82,20 @@ describe('Manual Garmin backfill worker', () => {
     await expect(result).resolves.toEqual({ reason: 'COMPLETE' });
   });
 
+  it('does not hand the API secrets to the Python process', async () => {
+    process.env.JWT_SECRET_KEY_TEST_SENTINEL = 'synthetic';
+    try {
+      const result = run();
+      const [, , options] = jest.mocked(spawn).mock.calls[0];
+      expect(options?.env).not.toHaveProperty('JWT_SECRET_KEY_TEST_SENTINEL');
+      done();
+      close();
+      await result;
+    } finally {
+      delete process.env.JWT_SECRET_KEY_TEST_SENTINEL;
+    }
+  });
+
   it('does not start a process for an aborted or empty operation', async () => {
     const controller = new AbortController();
     controller.abort();

@@ -1,7 +1,16 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  stat,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
@@ -174,6 +183,7 @@ describe('manual Garmin import', () => {
       await expect(service.sync(user)).rejects.toThrow();
       await expect(service.backfill(user)).rejects.toThrow();
       await expect(service.stopBackfill(user)).rejects.toThrow();
+      await expect(service.disconnect(user)).rejects.toThrow();
       await expect(
         service.connect(user, {
           email: 'athlete@example.test',
@@ -250,6 +260,68 @@ describe('manual Garmin import', () => {
     expect(JSON.stringify(await service.status(user))).not.toContain(
       'not-real',
     );
+  });
+  it('owner disconnects: the session files go, and nothing else', async () => {
+    const own = join(directory, 'accounts/2/.private');
+    await mkdir(join(own, 'tokens'), { recursive: true });
+    await writeFile(join(own, 'tokens/garmin_tokens.json'), '{}');
+    await writeFile(
+      join(own, 'connection.json'),
+      JSON.stringify({
+        athleteId: 2,
+        garminUserProfileId: '123',
+        timezone: 'Europe/Madrid',
+      }),
+    );
+    // The command-line connection of the same athlete, and pacing shared by all
+    await mkdir(join(directory, '.private/tokens'));
+    await writeFile(join(directory, '.private/tokens/garmin_tokens.json'), '');
+    await writeFile(join(directory, '.private/request-safety.json'), '{}');
+
+    expect(await service.disconnect(user)).toMatchObject({
+      enabled: true,
+      connected: false,
+      canConfigure: true,
+      athleteId: 2,
+    });
+
+    await expect(stat(join(directory, 'accounts/2'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    expect(await readdir(join(directory, '.private'))).toEqual([
+      'request-safety.json',
+    ]);
+    // Only the lock query: imported activities and metrics are not touched
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(service.fetch).not.toHaveBeenCalled();
+    expect(loginGarmin).not.toHaveBeenCalled();
+  });
+  it('only the owner disconnects, and never during a Garmin operation', async () => {
+    prisma.coachAthlete.findFirst.mockResolvedValue({
+      athleteId: 2,
+      userId: 9,
+    });
+    await expect(
+      service.disconnect({ ...user, userId: 9, roles: ['COACH'] }, 2),
+    ).rejects.toThrow(ForbiddenException);
+    await expect(
+      service.disconnect({ ...user, userId: 99 }, 2),
+    ).rejects.toThrow(ForbiddenException);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+
+    tx.$queryRaw.mockResolvedValue([{ locked: false }]);
+    await expect(service.disconnect(user)).rejects.toMatchObject({
+      response: { code: 'GARMIN_BACKFILL_BUSY' },
+    });
+    tx.$queryRaw.mockResolvedValue([{ locked: true }]);
+    await writeFile(
+      join(directory, '.private/sync-state.json'),
+      JSON.stringify({ running: true, lastAttempt: new Date().toISOString() }),
+    );
+    await expect(service.disconnect(user)).rejects.toMatchObject({
+      response: { code: 'GARMIN_BACKFILL_BUSY' },
+    });
+    expect(await service.status(user)).toMatchObject({ connected: true });
   });
   it('imports atomically into the bound athlete and enforces cooldown', async () => {
     const result = await service.sync(user);
@@ -719,6 +791,10 @@ describe('manual Garmin import', () => {
     await expect(
       service.connect(user, { timezone: 'Europe/Madrid' }),
     ).rejects.toThrow();
+    await expect(service.disconnect(user)).rejects.toMatchObject({
+      response: { code: 'GARMIN_BACKFILL_BUSY' },
+    });
+    expect(await service.status(user)).toMatchObject({ connected: true });
     expect(service.fetch).not.toHaveBeenCalled();
     release({ reason: 'COMPLETE' });
     await service.completion;

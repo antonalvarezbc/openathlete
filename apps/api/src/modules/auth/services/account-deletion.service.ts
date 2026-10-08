@@ -1,8 +1,12 @@
+import { isAbsolute } from 'node:path';
+
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 import { Prisma } from '@openathlete/database';
 
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
+import { removeManualGarminSession } from 'src/modules/providers-sync/manual-garmin/manual-garmin-session';
 import { StripeService } from 'src/modules/subscription/services/stripe.service';
 
 type Tx = Prisma.TransactionClient;
@@ -24,6 +28,7 @@ export class AccountDeletionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly stripeService: StripeService,
+    private readonly config: ConfigService,
   ) {}
 
   async deleteAccount(userId: number): Promise<void> {
@@ -89,6 +94,30 @@ export class AccountDeletionService {
     );
 
     this.logger.log(`Account deleted for user ${userId}`);
+
+    if (athleteId) await this.removeManualGarminSession(athleteId);
+  }
+
+  /**
+   * The manual Garmin connector keeps the athlete's Garmin tokens in files.
+   * They cannot join the transaction, so they go once the account is gone:
+   * a failed deletion keeps a working connection. They go even when the
+   * connector has since been turned off, as long as its directory is set.
+   */
+  private async removeManualGarminSession(athleteId: number) {
+    const root = this.config.get<string>('GARMIN_UNOFFICIAL_DIRECTORY');
+    if (!root || !isAbsolute(root)) return;
+    try {
+      await removeManualGarminSession(root, athleteId);
+    } catch (error) {
+      // The account is already deleted: report the leftover files to the
+      // administrator rather than fail a deletion that cannot be retried.
+      this.logger.error(
+        `Could not remove the manual Garmin session of deleted athlete ${athleteId}: ${
+          (error as NodeJS.ErrnoException).code ?? 'unknown error'
+        }`,
+      );
+    }
   }
 
   private async deleteEvents(tx: Tx, eventIds: number[]) {

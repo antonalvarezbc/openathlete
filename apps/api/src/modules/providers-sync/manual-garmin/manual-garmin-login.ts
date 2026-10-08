@@ -3,6 +3,8 @@ import { join } from 'node:path';
 
 import { ConflictException, ServiceUnavailableException } from '@nestjs/common';
 
+import { manualGarminWorkerEnv } from './manual-garmin-env';
+
 type Reply = { mfaRequired?: boolean; connected?: boolean };
 type Pending = {
   child: ChildProcessWithoutNullStreams;
@@ -45,12 +47,10 @@ export async function loginGarmin(
       join(root, '.venv/bin/python'),
       [join(root, 'login.py')],
       {
-        env: {
-          ...process.env,
-          PYTHONUNBUFFERED: '1',
+        env: manualGarminWorkerEnv({
           OA_GARMIN_PRIVATE_DIR: privateDirectory,
           OA_GARMIN_LOCK_DIRECTORY: join(root, '.private'),
-        },
+        }),
         stdio: ['pipe', 'pipe', 'pipe'],
       },
     );

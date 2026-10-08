@@ -43,8 +43,13 @@ import {
   runManualGarminBackfill,
 } from './manual-garmin-backfill-worker';
 import { mergeManualGarminStreams } from './manual-garmin-enrichment';
+import { manualGarminWorkerEnv } from './manual-garmin-env';
 import { hasActivityStream, readManualFit } from './manual-garmin-fit';
 import { loginGarmin } from './manual-garmin-login';
+import {
+  manualGarminAccountDirectory,
+  removeManualGarminSession,
+} from './manual-garmin-session';
 import {
   manualGarminConnection,
   manualGarminPayload,
@@ -162,15 +167,13 @@ export class ManualGarminService implements OnModuleDestroy {
       {
         timeout: 180_000,
         maxBuffer: 2 * 1024 * 1024,
-        env: {
-          ...process.env,
-          PYTHONUNBUFFERED: '1',
+        env: manualGarminWorkerEnv({
           OA_GARMIN_PRIVATE_DIR: join(directory, '.private'),
           OA_GARMIN_LOCK_DIRECTORY: join(
             this.config.getOrThrow<string>('GARMIN_UNOFFICIAL_DIRECTORY'),
             '.private',
           ),
-        },
+        }),
       },
     );
     const result = JSON.parse(stdout);
@@ -216,8 +219,8 @@ export class ManualGarminService implements OnModuleDestroy {
     return readManualFit(directory, profile, id);
   }
 
-  /** Access-checked manual Garmin connection of an athlete, or null. */
-  async connection(user: AuthUser, requestedAthleteId?: number) {
+  /** The athlete a user acts for and whether they own it, or null. */
+  private async access(user: AuthUser, requestedAthleteId?: number) {
     if (!getInstallationFeatures(this.config).manualGarminSync) return null;
     const root = this.config.getOrThrow<string>('GARMIN_UNOFFICIAL_DIRECTORY');
     let legacy: ReturnType<typeof manualGarminConnection.parse> | undefined;
@@ -247,7 +250,15 @@ export class ManualGarminService implements OnModuleDestroy {
         where: { athleteId, userId: user.userId },
       }));
     if (!athlete || (!owner && !coach)) return null;
-    const directory = join(root, 'accounts', String(athleteId));
+    return { root, legacy, athleteId, owner };
+  }
+
+  /** Access-checked manual Garmin connection of an athlete, or null. */
+  async connection(user: AuthUser, requestedAthleteId?: number) {
+    const access = await this.access(user, requestedAthleteId);
+    if (!access) return null;
+    const { root, legacy, athleteId, owner } = access;
+    const directory = manualGarminAccountDirectory(root, athleteId);
     try {
       const connection = manualGarminConnection.parse(
         JSON.parse(
@@ -305,11 +316,61 @@ export class ManualGarminService implements OnModuleDestroy {
     return loginGarmin(
       user.userId,
       root,
-      join(root, 'accounts', String(connection.athleteId), '.private'),
+      join(
+        manualGarminAccountDirectory(root, connection.athleteId),
+        '.private',
+      ),
       {
         ...input,
         athleteId: connection.athleteId,
       },
+    );
+  }
+
+  /**
+   * Forgets the athlete's Garmin session on this server: tokens, link, sync
+   * state and FIT cache. Imported activities and metrics stay, and so does
+   * the record of workouts sent to Garmin: signing in to the same account
+   * again can still update or remove them. Only the athlete may do it, as
+   * for signing in.
+   */
+  async disconnect(user: AuthUser, requestedAthleteId?: number) {
+    const access = await this.access(user, requestedAthleteId);
+    if (!access?.owner) throw new ForbiddenException();
+    const { root, legacy, athleteId } = access;
+    const directories = [manualGarminAccountDirectory(root, athleteId)];
+    if (legacy?.athleteId === athleteId) directories.push(root);
+    await this.prisma.$transaction(
+      async (tx) => {
+        // Syncs and workout exports hold this lock: their worker must not
+        // lose its session halfway through.
+        const [lock] = await tx.$queryRaw<
+          { locked: boolean }[]
+        >`SELECT pg_try_advisory_xact_lock(714203, ${athleteId}::int) AS locked`;
+        let busy = !lock.locked;
+        for (const directory of directories)
+          busy ||= await this.operationRunning(directory);
+        if (busy)
+          throw new ConflictException({
+            code: 'GARMIN_BACKFILL_BUSY',
+            message: 'Wait for the Garmin operation to finish.',
+          });
+        await removeManualGarminSession(root, athleteId);
+      },
+      { timeout: 15000, maxWait: 5000 },
+    );
+    this.logger.log(`Manual Garmin session removed for athlete ${athleteId}`);
+    return this.status(user, athleteId);
+  }
+
+  private async operationRunning(directory: string) {
+    // Unreadable state must not keep a session the athlete wants gone.
+    const backfill = await readBackfill(directory).catch(() => undefined);
+    const state = await this.state(directory).catch((): SyncState => ({}));
+    return (
+      backfillActive(backfill) ||
+      (!!state.running &&
+        Date.now() - Date.parse(state.lastAttempt ?? '') < 240_000)
     );
   }
 

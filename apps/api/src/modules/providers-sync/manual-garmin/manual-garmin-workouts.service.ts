@@ -23,6 +23,7 @@ import { AuthUser } from '../../auth/decorators/user.decorator';
 import { prepareWorkoutTargets } from '../../core/helpers/workout-targets';
 import { PrismaService } from '../../prisma/services/prisma.service';
 import { backfillActive, readBackfill } from './manual-garmin-backfill-state';
+import { manualGarminWorkerEnv } from './manual-garmin-env';
 import {
   GarminConnectWorkout,
   ManualGarminStep,
@@ -134,12 +135,10 @@ export class ManualGarminWorkoutsService {
       {
         timeout: 180_000,
         maxBuffer: 1024 * 1024,
-        env: {
-          ...process.env,
-          PYTHONUNBUFFERED: '1',
+        env: manualGarminWorkerEnv({
           OA_GARMIN_PRIVATE_DIR: join(directory, '.private'),
           OA_GARMIN_LOCK_DIRECTORY: join(root, '.private'),
-        },
+        }),
       },
     );
     running.child.stdin?.end(JSON.stringify({ operations }) + '\n');
