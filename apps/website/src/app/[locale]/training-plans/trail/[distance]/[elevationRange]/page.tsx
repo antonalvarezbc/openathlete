@@ -31,8 +31,8 @@ export async function generateMetadata({
 
     const title =
       locale === 'fr'
-        ? `Plan d'entraînement Trail ${distance} ${elevationDisplay} gratuit | OpenAthlete`
-        : `Free Trail ${distance} ${elevationDisplay} Training Plan | OpenAthlete`;
+        ? `Plan d'entraînement Trail ${distance} ${elevationDisplay} gratuit`
+        : `Free Trail ${distance} ${elevationDisplay} Training Plan`;
     const description =
       locale === 'fr'
         ? `Plan d'entraînement gratuit pour trail ${distance} avec ${elevationDisplay} de dénivelé. Plan complet avec conseils et tableau d'entraînement semaine par semaine.`

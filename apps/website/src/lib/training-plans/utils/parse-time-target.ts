@@ -32,7 +32,7 @@ export function parseTimeTarget(timeStr: string): number | null {
 }
 
 /**
- * Format seconds to time string (e.g., 16200 -> "4h30")
+ * Format seconds to time string (e.g., 16200 -> "4h30", 14400 -> "4h")
  * @param seconds - Time in seconds
  * @returns Formatted time string
  */
@@ -41,7 +41,7 @@ export function formatTimeTarget(seconds: number): string {
   const minutes = Math.floor((seconds % 3600) / 60);
 
   if (hours > 0 && minutes > 0) {
-    return `${hours}h${minutes}`;
+    return `${hours}h${String(minutes).padStart(2, '0')}`;
   } else if (hours > 0) {
     return `${hours}h`;
   } else if (minutes > 0) {
