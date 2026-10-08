@@ -89,7 +89,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga",
               "sport": "RUNNING",
               "description": "1h10 de resistencia aeróbica. No corras rápido: el objetivo es la duración.",
@@ -187,7 +187,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga",
               "sport": "RUNNING",
               "description": "1h20 de resistencia aeróbica.",
@@ -395,7 +395,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga",
               "sport": "RUNNING",
               "description": "1h30 de resistencia aeróbica.",
@@ -515,7 +515,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga reducida",
               "sport": "RUNNING",
               "description": "1h00 de resistencia aeróbica.",
@@ -708,7 +708,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga",
               "sport": "RUNNING",
               "description": "1h30 de resistencia aeróbica.",
@@ -849,7 +849,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga con bloque",
               "sport": "RUNNING",
               "description": "1h40 con 2x 15 min a ritmo maratón (4h30).",
@@ -1033,7 +1033,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga",
               "sport": "RUNNING",
               "description": "1h50 de resistencia aeróbica pura. Para acostumbrar el cuerpo a la duración.",
@@ -1174,7 +1174,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga",
               "sport": "RUNNING",
               "description": "1h20 de resistencia aeróbica.",
@@ -1382,7 +1382,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga específica",
               "sport": "RUNNING",
               "description": "2h00 con 2x 20 min a ritmo maratón.",
@@ -1566,7 +1566,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga",
               "sport": "RUNNING",
               "description": "2h15 de resistencia aeróbica. Es larga: hidrátate bien.",
@@ -1707,7 +1707,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "La tirada más larga",
               "sport": "RUNNING",
               "description": "2h30 con 3x 15 min a ritmo maratón. Prueba tu avituallamiento de carrera.",
@@ -1894,7 +1894,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga",
               "sport": "RUNNING",
               "description": "1h45 de resistencia aeróbica.",
@@ -2043,7 +2043,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga",
               "sport": "RUNNING",
               "description": "1h15 de resistencia aeróbica.",
@@ -2184,7 +2184,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga",
               "sport": "RUNNING",
               "description": "1h00 de resistencia aeróbica.",
@@ -2289,7 +2289,7 @@
               "goalRpe": 0
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Rodaje corto",
               "sport": "RUNNING",
               "description": "40 min de resistencia aeróbica.",
@@ -2419,7 +2419,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "MARATÓN",
               "sport": "RUNNING",
               "description": "Día de carrera. Objetivo 4h30. Sal con prudencia (6:24/km) y ¡disfruta!",

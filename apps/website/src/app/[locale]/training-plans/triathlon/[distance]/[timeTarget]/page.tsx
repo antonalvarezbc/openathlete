@@ -35,7 +35,7 @@ export async function generateMetadata({
     const title = {
       en: `Free Triathlon ${distance} ${timeDisplay} Training Plan`,
       fr: `Plan d'entraînement Triathlon ${distance} ${timeDisplay} gratuit`,
-      es: `Plan de entrenamiento gratuito de triatlón ${distance} en ${timeDisplay} | OpenAthlete`,
+      es: `Plan de entrenamiento gratuito de triatlón ${distance} en ${timeDisplay}`,
     }[locale];
     const description = {
       en: `Free training plan for triathlon ${distance} in ${timeDisplay}. Complete plan with tips and week-by-week training schedule.`,

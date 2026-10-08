@@ -109,7 +109,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga",
               "sport": "RUNNING",
               "description": "La sesión clave de la semana. Ritmo lento y conversacional.",
@@ -227,7 +227,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga",
               "sport": "RUNNING",
               "description": "Aumento de la duración de la tirada larga.",
@@ -412,7 +412,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga",
               "sport": "RUNNING",
               "description": "Tirada larga de 1h30.",
@@ -519,7 +519,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga acortada",
               "sport": "RUNNING",
               "description": "Solo 1h00 para recuperar.",
@@ -645,7 +645,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga de 1h40",
               "sport": "RUNNING",
               "description": "Volvemos a duraciones largas.",
@@ -763,7 +763,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga de 1h45",
               "sport": "RUNNING",
               "description": "Sobre todo resistencia aeróbica de base.",
@@ -881,7 +881,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga de 1h50",
               "sport": "RUNNING",
               "description": "Llegamos a 1h50.",
@@ -999,7 +999,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga suave",
               "sport": "RUNNING",
               "description": "Solo 1h15.",
@@ -1117,7 +1117,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga de 2h00",
               "sport": "RUNNING",
               "description": "Superas la barrera de las 2 horas. ¡Es un hito psicológico!",
@@ -1215,7 +1215,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga de 2h15",
               "sport": "RUNNING",
               "description": "Aumento progresivo.",
@@ -1333,7 +1333,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga máxima de 2h30",
               "sport": "RUNNING",
               "description": "La tirada más larga del plan (o 2h40 como máximo si te encuentras bien). Prueba tu avituallamiento.",
@@ -1451,7 +1451,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga de 2h15",
               "sport": "RUNNING",
               "description": "Última tirada muy larga.",
@@ -1577,7 +1577,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga de 1h45",
               "sport": "RUNNING",
               "description": "Reducimos la duración.",
@@ -1695,7 +1695,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Tirada larga de 1h15",
               "sport": "RUNNING",
               "description": "Último rodaje de más de una hora.",
@@ -1853,7 +1853,7 @@
           "theme": "Día de carrera",
           "sessions": [
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "MARATÓN",
               "sport": "RUNNING",
               "description": "¡Llegó el gran día! Objetivo 5h00. Sal con prudencia (7:10/km) y mantén un ritmo constante.",

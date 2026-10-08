@@ -33,7 +33,7 @@ export async function generateMetadata({
     const title = {
       en: `Free Trail ${distance} ${elevationDisplay} Training Plan`,
       fr: `Plan d'entraînement Trail ${distance} ${elevationDisplay} gratuit`,
-      es: `Plan de entrenamiento gratuito de trail ${distance} ${elevationDisplay} | OpenAthlete`,
+      es: `Plan de entrenamiento gratuito de trail ${distance} ${elevationDisplay}`,
     }[locale];
     const description = {
       en: `Free training plan for trail ${distance} with ${elevationDisplay} elevation gain. Complete plan with tips and week-by-week training schedule.`,

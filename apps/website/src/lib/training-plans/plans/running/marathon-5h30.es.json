@@ -1405,7 +1405,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "DÍA DEL MARATÓN",
               "sport": "RUNNING",
               "description": "¡Llegó el gran día! Sal con prudencia (7:50/km). Disfruta del ambiente.",

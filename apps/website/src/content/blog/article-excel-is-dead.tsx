@@ -731,9 +731,9 @@ export const articleExcelIsDead: BlogPost = {
         </p>
 
         <p>
-          OpenAthlete se sincroniza directamente con Garmin, Polar y otros
-          dispositivos. Cuando creas un plan, aparece automáticamente en el
-          reloj del atleta. Sin introducir nada a mano. Sin errores. Sin
+          OpenAthlete se sincroniza directamente con Garmin, Suunto, Polar y
+          otros dispositivos. Cuando creas un plan, aparece automáticamente en
+          el reloj del atleta. Sin introducir nada a mano. Sin errores. Sin
           excusas.
         </p>
 

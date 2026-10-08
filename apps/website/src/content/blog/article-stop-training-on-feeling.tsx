@@ -666,7 +666,7 @@ export const articleStopTrainingOnFeeling: BlogPost = {
           </li>
           <li>
             <strong>Integración con el reloj:</strong> los planes se sincronizan
-            directamente con tu Garmin o tu Polar
+            directamente con tu Garmin, Suunto o Polar
           </li>
           <li>
             <strong>Seguimiento del RPE:</strong> registra cómo sientes las

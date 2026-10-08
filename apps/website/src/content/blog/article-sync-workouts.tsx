@@ -6,7 +6,7 @@ export const articleSyncWorkouts: BlogPost = {
     title: {
       en: 'How to Sync Workouts to Garmin, Suunto, and Polar',
       fr: 'Comment Synchroniser les Entraînements vers Garmin, Suunto et Polar',
-      es: 'Cómo sincronizar entrenamientos con Garmin, Polar y Polar',
+      es: 'Cómo sincronizar entrenamientos con Garmin, Suunto y Polar',
     },
     description: {
       en: 'Tutorial: "Gateway" article. Show how to sync manually, then show how OpenAthlete does it automatically.',
@@ -259,7 +259,7 @@ export const articleSyncWorkouts: BlogPost = {
 
         <p>
           Esta guía te muestra cómo sincronizar entrenamientos con tu reloj,
-          tanto a mano como de forma automática. Uses Garmin, Polar o Polar,
+          tanto a mano como de forma automática. Uses Garmin, Suunto o Polar,
           repasamos todas las opciones.
         </p>
 
@@ -274,10 +274,10 @@ export const articleSyncWorkouts: BlogPost = {
         </ol>
 
         <p>
-          <strong>Polar:</strong>
+          <strong>Suunto:</strong>
         </p>
         <ol>
-          <li>Usa Polar Training Hub</li>
+          <li>Usa la app de Suunto</li>
           <li>Crea el plan de entrenamiento</li>
           <li>Sincroniza desde la app</li>
         </ol>
@@ -317,8 +317,8 @@ export const articleSyncWorkouts: BlogPost = {
             datos a mano
           </li>
           <li>
-            <strong>Multidispositivo:</strong> funciona con Garmin, Polar, Polar
-            y más
+            <strong>Multidispositivo:</strong> funciona con Garmin, Suunto,
+            Polar y más
           </li>
         </ul>
 
