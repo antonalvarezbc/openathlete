@@ -8,7 +8,10 @@ import {
 import { TrainingPlanPage } from '@/components/training-plan/training-plan-page';
 import { SITE_URL } from '@/config';
 import { loadPlan } from '@/lib/training-plans/plan-loader';
-import { parseTimeTarget } from '@/lib/training-plans/utils/parse-time-target';
+import {
+  formatTimeTarget,
+  parseTimeTarget,
+} from '@/lib/training-plans/utils/parse-time-target';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
@@ -26,14 +29,12 @@ export async function generateMetadata({
   try {
     const timeInSeconds = parseTimeTarget(timeTarget);
     const timeDisplay =
-      timeInSeconds !== null
-        ? `${Math.floor(timeInSeconds / 3600)}h${Math.floor((timeInSeconds % 3600) / 60)}`
-        : timeTarget;
+      timeInSeconds !== null ? formatTimeTarget(timeInSeconds) : timeTarget;
 
     const title =
       locale === 'fr'
-        ? `Plan d'entraînement ${distance} ${timeDisplay} gratuit | OpenAthlete`
-        : `Free ${distance} ${timeDisplay} Training Plan | OpenAthlete`;
+        ? `Plan d'entraînement ${distance} ${timeDisplay} gratuit`
+        : `Free ${distance} ${timeDisplay} Training Plan`;
     const description =
       locale === 'fr'
         ? `Plan d'entraînement gratuit pour ${distance} en ${timeDisplay}. Plan complet avec conseils et tableau d'entraînement semaine par semaine.`
