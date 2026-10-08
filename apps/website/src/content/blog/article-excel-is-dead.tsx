@@ -208,9 +208,9 @@ export const articleExcelIsDead: BlogPost = {
         </p>
 
         <p>
-          OpenAthlete syncs directly to Garmin, Polar, Polar, and other devices.
-          When you create a plan, it automatically appears on the athlete's
-          watch. No manual entry. No errors. No excuses.
+          OpenAthlete syncs directly to Garmin, Suunto, Polar, and other
+          devices. When you create a plan, it automatically appears on the
+          athlete's watch. No manual entry. No errors. No excuses.
         </p>
 
         <h2>Real-World Comparison</h2>
@@ -470,7 +470,7 @@ export const articleExcelIsDead: BlogPost = {
         </p>
 
         <p>
-          OpenAthlete se synchronise directement avec Garmin, Polar, Polar et
+          OpenAthlete se synchronise directement avec Garmin, Suunto, Polar et
           d'autres appareils. Quand vous créez un plan, il apparaît
           automatiquement sur la montre de l'athlète. Pas d'entrée manuelle. Pas
           d'erreurs. Pas d'excuses.
