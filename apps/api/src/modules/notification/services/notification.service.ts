@@ -29,14 +29,15 @@ export class NotificationService {
     }
 
     try {
-      // Get user language from database, default to FR if user not found
+      // The recipient's saved language; for someone without an account, the
+      // payload's (e.g. the inviter's); else FR
       const user = await this.prisma.user.findUnique({
         where: { email: payload.to },
         select: { language: true },
       });
 
-      const language: EmailLanguage = (user?.language ||
-        Language.FR) as EmailLanguage;
+      const language: EmailLanguage =
+        user?.language ?? payload.language ?? Language.FR;
 
       const defaultSubject = emailLibrary[payload.type].defaultSubject;
       const subject = payload.subject || defaultSubject[language];
