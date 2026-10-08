@@ -17,6 +17,16 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 /* eslint-disable react-refresh/only-export-components */
+// The URL slug is English: Spanish titles name the race in Spanish
+const SPANISH_DISTANCES: Record<string, string> = {
+  marathon: 'maratón',
+  'half-marathon': 'media maratón',
+};
+
+function spanishDistance(distance: string) {
+  return SPANISH_DISTANCES[distance] ?? distance;
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -35,12 +45,12 @@ export async function generateMetadata({
     const title = {
       en: `Free ${distance} ${timeDisplay} Training Plan`,
       fr: `Plan d'entraînement ${distance} ${timeDisplay} gratuit`,
-      es: `Plan de entrenamiento gratuito para ${distance} en ${timeDisplay}`,
+      es: `Plan de entrenamiento gratuito para ${spanishDistance(distance)} en ${timeDisplay}`,
     }[locale];
     const description = {
       en: `Free training plan for ${distance} in ${timeDisplay}. Complete plan with tips and week-by-week training schedule.`,
       fr: `Plan d'entraînement gratuit pour ${distance} en ${timeDisplay}. Plan complet avec conseils et tableau d'entraînement semaine par semaine.`,
-      es: `Plan de entrenamiento gratuito para ${distance} en ${timeDisplay}. Plan completo con consejos y calendario de entrenamiento semana a semana.`,
+      es: `Plan de entrenamiento gratuito para ${spanishDistance(distance)} en ${timeDisplay}. Plan completo con consejos y calendario de entrenamiento semana a semana.`,
     }[locale];
 
     const path = `/training-plans/running/${distance}/${timeTarget}`;
@@ -76,14 +86,14 @@ export default async function RunningTrainingPlanPage({
             {
               en: `${distance} ${timeTarget} Training Plan`,
               fr: `Plan d'entraînement ${distance} ${timeTarget}`,
-              es: `Plan de entrenamiento ${distance} ${timeTarget}`,
+              es: `Plan de entrenamiento ${spanishDistance(distance)} ${timeTarget}`,
             }[locale]
           }
           description={
             {
               en: `Free training plan for ${distance}`,
               fr: `Plan d'entraînement gratuit pour ${distance}`,
-              es: `Plan de entrenamiento gratuito para ${distance}`,
+              es: `Plan de entrenamiento gratuito para ${spanishDistance(distance)}`,
             }[locale]
           }
           url={pageUrl}
