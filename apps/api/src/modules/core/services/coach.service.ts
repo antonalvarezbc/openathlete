@@ -213,6 +213,7 @@ export class CoachService {
     user: AuthUser,
     period?: { start?: Date; end?: Date },
   ): Promise<CoachDashboardResponseDto> {
+    if (!user.roles?.includes('COACH')) throw new ForbiddenException();
     // Resolve period
     const { start, end } = (() => {
       if (period?.start && period?.end)

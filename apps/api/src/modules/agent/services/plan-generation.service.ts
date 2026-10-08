@@ -202,12 +202,34 @@ export class PlanGenerationService {
     private readonly queue: Queue<PlanGenerationJob, AiPlanDraft>,
   ) {}
 
+  /** Queue jobs must use today's roles and coaching links, not their caller's snapshot. */
+  async authorize(userId: number, athleteId: number): Promise<number> {
+    const user = await this.prisma.user.findUnique({
+      where: { userId },
+      select: {
+        userId: true,
+        roles: true,
+        athlete: { select: { athleteId: true } },
+      },
+    });
+    if (!user?.roles.includes('COACH'))
+      throw new ForbiddenException('Coach role required');
+    return resolveAiEventAthleteId(
+      this.prisma,
+      {
+        userId: user.userId,
+        athlete: user.roles.includes('ATHLETE') ? user.athlete : null,
+      },
+      athleteId,
+    );
+  }
+
   /** Queues a draft: a long plan takes minutes, more than a request should. */
   async start(
     user: AuthUser,
     request: AiPlanRequest,
   ): Promise<AiPlanJobStatus> {
-    await resolveAiEventAthleteId(this.prisma, user, request.athleteId);
+    await this.authorize(user.userId, request.athleteId);
     if (request.goalEventId)
       await this.goalEvent(request.athleteId, request.goalEventId);
     // Fails at once without AI; the job resolves the model again, as keys
@@ -225,6 +247,7 @@ export class PlanGenerationService {
     const job = await this.queue.getJob(jobId);
     // Drafts belong to whoever asked for them.
     if (!job || job.data.userId !== user.userId) throw new NotFoundException();
+    await this.authorize(user.userId, job.data.request.athleteId);
     const state = await job.getState();
     if (state === 'completed')
       return { jobId, state: 'done', draft: job.returnvalue };
@@ -374,11 +397,16 @@ export class PlanGenerationService {
     request: AiPlanRequest,
     onStage: (stage: 'repairing') => Promise<unknown> = async () => undefined,
   ): Promise<AiPlanDraft> {
+    await this.authorize(model.userId, request.athleteId);
     const context = await this.context(request);
+    // Permissions can change while the context is being fetched.
+    await this.authorize(model.userId, request.athleteId);
     const first = await this.callModel(model, JSON.stringify(context.prompt));
+    await this.authorize(model.userId, request.athleteId);
     let result = this.evaluate(first, request, context.facts);
     if (!result.plan || result.problems.length) {
       await onStage('repairing');
+      await this.authorize(model.userId, request.athleteId);
       const second = await this.callModel(
         model,
         JSON.stringify({
@@ -390,6 +418,7 @@ export class PlanGenerationService {
           },
         }),
       );
+      await this.authorize(model.userId, request.athleteId);
       const revised = this.evaluate(second, request, context.facts);
       // Keep the first draft if the repair broke the format.
       if (revised.plan || !result.plan) result = revised;

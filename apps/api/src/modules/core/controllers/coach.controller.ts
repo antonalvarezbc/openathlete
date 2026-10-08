@@ -60,6 +60,7 @@ export class CoachController {
   }
 
   @UseGuards(AuthGuard('jwt'), UserTypeGuard)
+  @UserTypes(['COACH'])
   @ApiBearerAuth()
   @Get('dashboard')
   @ApiOperation({
@@ -176,6 +177,7 @@ export class CoachController {
     status: 401,
     description: 'Unauthorized - invalid or missing authentication token',
   })
+  @ApiResponse({ status: 403, description: 'Coach role required' })
   getDashboard(
     @JwtUser() user: AuthUser,
     @Query('start') start?: string,

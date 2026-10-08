@@ -1,6 +1,6 @@
 import { UnrecoverableError } from 'bullmq';
 
-import { Logger } from '@nestjs/common';
+import { ForbiddenException, Logger } from '@nestjs/common';
 
 import { AiErrorCode, AiTask } from '@openathlete/shared';
 
@@ -36,23 +36,37 @@ function setup(
   generate: jest.Mock,
   resolveModel = jest.fn().mockResolvedValue(model),
 ) {
+  const authorize = jest.fn().mockResolvedValue(4);
   const processor = new PlanGenerationProcessor({
+    authorize,
     generate,
     resolveModel,
   } as unknown as PlanGenerationService);
   const job = {
-    data: { userId: 3, request: { constraints: SECRET_PROMPT } },
+    data: { userId: 3, request: { athleteId: 4, constraints: SECRET_PROMPT } },
     updateProgress: jest.fn(),
   };
   const error = jest
     .spyOn(Logger.prototype, 'error')
     .mockImplementation(() => undefined);
-  return { processor, job, error, resolveModel };
+  return { processor, job, error, resolveModel, authorize };
 }
 
 afterEach(() => jest.restoreAllMocks());
 
 describe('PlanGenerationProcessor', () => {
+  test('rechecks access before resolving credentials or running a queued draft', async () => {
+    const generate = jest.fn();
+    const { processor, job, authorize, resolveModel } = setup(generate);
+    authorize.mockRejectedValue(new ForbiddenException('Coach role required'));
+    await expect(processor.process(job as never)).rejects.toBeInstanceOf(
+      UnrecoverableError,
+    );
+    expect(authorize).toHaveBeenCalledWith(3, 4);
+    expect(resolveModel).not.toHaveBeenCalled();
+    expect(generate).not.toHaveBeenCalled();
+  });
+
   test('drafts on the model resolved for whoever asked, on the worker', async () => {
     const draft = { plan: { plan: {}, cycles: [] } };
     const generate = jest.fn().mockResolvedValue(draft);

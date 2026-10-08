@@ -133,8 +133,10 @@ class TestService extends PlanGenerationService {
     truncated?: boolean;
   }> = [];
   prompts: Array<Record<string, unknown>> = [];
+  onModelCall?: () => void;
   protected async callModel(_model: ResolvedAiModel, prompt: string) {
     this.prompts.push(JSON.parse(prompt));
+    this.onModelCall?.();
     return this.answers.shift() ?? { object: null, raw: '' };
   }
 }
@@ -177,6 +179,7 @@ const events: Record<number, { athleteId: number; type: string }> = {
 
 function setup() {
   const prisma = {
+    user: { findUnique: jest.fn().mockResolvedValue(coach) },
     coachAthlete: {
       findFirst: jest.fn().mockResolvedValue({ coachAthleteId: 1 }),
     },
@@ -794,6 +797,66 @@ describe('PlanGenerationService model call', () => {
 });
 
 describe('PlanGenerationService jobs', () => {
+  test('rejects stale roles and missing accounts before resolving a model or queuing', async () => {
+    const { service, prisma, queue, resolver } = setup();
+    for (const current of [{ ...coach, roles: ['ATHLETE'] }, null]) {
+      prisma.user.findUnique.mockResolvedValue(current);
+      await expect(service.start(coach, request)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+    }
+    expect(resolver.resolveForUser).not.toHaveBeenCalled();
+    expect(queue.add).not.toHaveBeenCalled();
+  });
+
+  test('self-coaching needs both current roles even with an old athlete profile', async () => {
+    const { service, prisma } = setup();
+    prisma.coachAthlete.findFirst.mockResolvedValue(null);
+    prisma.user.findUnique.mockResolvedValue({
+      ...coach,
+      roles: ['COACH', 'ATHLETE'],
+      athlete: { athleteId: request.athleteId },
+    });
+    await expect(
+      service.authorize(coach.userId, request.athleteId),
+    ).resolves.toBe(request.athleteId);
+    prisma.user.findUnique.mockResolvedValue({
+      ...coach,
+      athlete: { athleteId: request.athleteId },
+    });
+    await expect(
+      service.authorize(coach.userId, request.athleteId),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  test.each(['unlink', 'role removal'])(
+    'denies a completed draft after %s',
+    async (revocation) => {
+      const { service, prisma, queue } = setup();
+      const job = {
+        data: { userId: coach.userId, request },
+        getState: jest.fn().mockResolvedValue('completed'),
+        returnvalue: { conflicts: { plans: [{ name: 'Private plan' }] } },
+      };
+      queue.getJob.mockResolvedValue(job);
+      await expect(service.status(coach, 'owned')).resolves.toMatchObject({
+        state: 'done',
+      });
+      job.getState.mockClear();
+      if (revocation === 'unlink')
+        prisma.coachAthlete.findFirst.mockResolvedValue(null);
+      else
+        prisma.user.findUnique.mockResolvedValue({
+          ...coach,
+          roles: ['ATHLETE'],
+        });
+      await expect(service.status(coach, 'owned')).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(job.getState).not.toHaveBeenCalled();
+    },
+  );
+
   test('queues a draft only for a linked athlete', async () => {
     const { service, prisma, queue, resolver } = setup();
     await expect(service.start(coach, request)).resolves.toEqual({
@@ -888,6 +951,88 @@ describe('PlanGenerationService jobs', () => {
     await expect(service.status(coach, 'a')).rejects.toBeInstanceOf(
       NotFoundException,
     );
+  });
+});
+
+describe('PlanGenerationService permission changes during a job', () => {
+  test.each(['unlink', 'role removal'])(
+    'fetches no athlete context after %s while queued',
+    async (revocation) => {
+      const { service, prisma } = setup();
+      await service.start(coach, request);
+      if (revocation === 'unlink')
+        prisma.coachAthlete.findFirst.mockResolvedValue(null);
+      else
+        prisma.user.findUnique.mockResolvedValue({
+          ...coach,
+          roles: ['ATHLETE'],
+        });
+      service.answers = [{ object: answer(GOOD), raw: '' }];
+      await expect(service.generate(planModel, request)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(prisma.athleteMetric.findMany).not.toHaveBeenCalled();
+      expect(prisma.athleteInjury.findMany).not.toHaveBeenCalled();
+      expect(prisma.event.findMany).not.toHaveBeenCalled();
+      expect(service.prompts).toEqual([]);
+    },
+  );
+
+  test('does not send context when permissions disappear while reading it', async () => {
+    const { service, prisma } = setup();
+    prisma.athleteMetric.findMany.mockImplementationOnce(async () => {
+      prisma.coachAthlete.findFirst.mockResolvedValue(null);
+      return [];
+    });
+    await expect(service.generate(planModel, request)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(service.prompts).toEqual([]);
+  });
+
+  test('discards a model answer when the coach is unlinked during the call', async () => {
+    const { service, prisma } = setup();
+    service.answers = [{ object: answer(GOOD), raw: '' }];
+    service.onModelCall = () =>
+      prisma.coachAthlete.findFirst.mockResolvedValue(null);
+    await expect(service.generate(planModel, request)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(service.prompts).toHaveLength(1);
+  });
+
+  test('does not request a repair if access disappears between model calls', async () => {
+    const { service, prisma } = setup();
+    const tooFast = [...GOOD];
+    tooFast[1] = 300;
+    service.answers = [{ object: answer(tooFast), raw: '' }];
+    await expect(
+      service.generate(planModel, request, async () => {
+        prisma.coachAthlete.findFirst.mockResolvedValue(null);
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(service.prompts).toHaveLength(1);
+  });
+
+  test('discards the repair answer if the coach role is removed during that call', async () => {
+    const { service, prisma } = setup();
+    const tooFast = [...GOOD];
+    tooFast[1] = 300;
+    service.answers = [
+      { object: answer(tooFast), raw: '' },
+      { object: answer(GOOD), raw: '' },
+    ];
+    service.onModelCall = () => {
+      if (service.prompts.length === 2)
+        prisma.user.findUnique.mockResolvedValue({
+          ...coach,
+          roles: ['ATHLETE'],
+        });
+    };
+    await expect(service.generate(planModel, request)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(service.prompts).toHaveLength(2);
   });
 });
 

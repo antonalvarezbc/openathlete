@@ -27,6 +27,7 @@ export class PlanGenerationProcessor extends WorkerHost {
     await job.updateProgress({ stage: 'generating' });
     let model: ResolvedAiModel | undefined;
     try {
+      await this.service.authorize(job.data.userId, job.data.request.athleteId);
       // The keys of whoever asked, resolved here: they never enter the queue.
       model = await this.service.resolveModel(job.data.userId);
       return await this.service.generate(model, job.data.request, (stage) =>

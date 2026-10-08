@@ -163,9 +163,10 @@ export class AthleteService {
     return athlete;
   }
 
-  async getMyCoachedAthletes(userId: AuthUser['userId']) {
+  async getMyCoachedAthletes(user: AuthUser) {
+    if (!user.roles?.includes('COACH')) throw new ForbiddenException();
     const athletes = await this.prisma.athlete.findMany({
-      where: { coachAthletes: { some: { userId: userId } } },
+      where: { coachAthletes: { some: { userId: user.userId } } },
       include: ATHLETE_INCLUDES,
     });
 

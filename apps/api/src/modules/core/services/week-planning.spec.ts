@@ -2,6 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 import { CaslAbilityFactory } from 'src/modules/auth';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
+import { createPrismaAbility } from 'src/modules/auth/services/casl-prisma';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
 import { EventService } from './event.service';
@@ -93,9 +94,10 @@ function setup() {
         { value: 40, activity: { eventId: 31 } },
       ]),
     },
-    event: { findUnique: jest.fn(), update: jest.fn() },
+    event: { findFirst: jest.fn(), update: jest.fn() },
   };
-  const ability = { can: jest.fn().mockReturnValue(true) };
+  const ability = createPrismaAbility([{ action: 'manage', subject: 'all' }]);
+  const can = jest.spyOn(ability, 'can');
   const abilities = { getFor: jest.fn().mockResolvedValue(ability) };
   const events = {
     duplicateEventComplete: jest.fn().mockResolvedValue({ eventId: 99 }),
@@ -107,7 +109,7 @@ function setup() {
     abilities as unknown as CaslAbilityFactory,
     events as unknown as EventService,
   );
-  return { db, ability, events, service };
+  return { db, ability: { can }, events, service };
 }
 
 beforeEach(() => jest.clearAllMocks());
@@ -193,7 +195,7 @@ describe('batch actions', () => {
 
   it('copies sessions to the new dates and keeps them in the plan', async () => {
     const { service, db, events } = setup();
-    db.event.findUnique.mockResolvedValue({
+    db.event.findFirst.mockResolvedValue({
       type: 'TRAINING',
       athleteId: 7,
       training: { relatedActivityId: 40 },
@@ -213,7 +215,7 @@ describe('batch actions', () => {
 
   it('keeps copies outside the plan as plain sessions', async () => {
     const { service, db } = setup();
-    db.event.findUnique.mockResolvedValue({
+    db.event.findFirst.mockResolvedValue({
       type: 'NOTE',
       athleteId: 7,
       training: null,
@@ -231,7 +233,7 @@ describe('batch actions', () => {
   it('never copies, moves or deletes activities and races', async () => {
     const { service, db, events } = setup();
     for (const type of ['ACTIVITY', 'COMPETITION']) {
-      db.event.findUnique.mockResolvedValue({ type, athleteId: 7 });
+      db.event.findFirst.mockResolvedValue({ type, athleteId: 7 });
       const copy = await service.copy(coach, { items: [item] });
       const move = await service.move(coach, { items: [item] });
       const del = await service.delete(coach, { eventIds: [5] });
@@ -245,7 +247,7 @@ describe('batch actions', () => {
 
   it('does not move or delete sessions already done', async () => {
     const { service, db, events } = setup();
-    db.event.findUnique.mockResolvedValue({
+    db.event.findFirst.mockResolvedValue({
       type: 'TRAINING',
       athleteId: 7,
       training: { relatedActivityId: 40 },
@@ -258,7 +260,7 @@ describe('batch actions', () => {
 
   it('reports per-event failures without stopping the batch', async () => {
     const { service, db, events } = setup();
-    db.event.findUnique.mockResolvedValue({
+    db.event.findFirst.mockResolvedValue({
       type: 'TRAINING',
       athleteId: 7,
       training: { relatedActivityId: null },
@@ -281,7 +283,7 @@ describe('batch actions', () => {
 
   it('hides unexpected error details', async () => {
     const { service, db, events } = setup();
-    db.event.findUnique.mockResolvedValue({
+    db.event.findFirst.mockResolvedValue({
       type: 'NOTE',
       athleteId: 7,
     });

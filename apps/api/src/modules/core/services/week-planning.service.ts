@@ -20,6 +20,7 @@ import {
 
 import { CaslAbilityFactory } from 'src/modules/auth';
 import { AuthUser } from 'src/modules/auth/decorators/user.decorator';
+import { accessibleBy } from 'src/modules/auth/services/casl-prisma';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
 import { authorizePlanAthlete, findPlanWeek } from '../helpers/plan-access';
@@ -231,9 +232,25 @@ export class WeekPlanningService {
     });
   }
 
-  private async plannedSource(eventId: number, allowCompleted: boolean) {
-    const event = await this.prisma.event.findUnique({
-      where: { eventId },
+  private async plannedSource(
+    user: AuthUser,
+    eventId: number,
+    action: 'create' | 'update' | 'delete',
+  ) {
+    const ability = await this.abilities.getFor({ user });
+    const actions =
+      action === 'create' ? (['read', action] as const) : [action];
+    // An inaccessible event must look absent before revealing its type or
+    // completion state, including users with no Event permissions at all.
+    if (actions.some((required) => !ability.can(required, 'Event')))
+      throw new NotFoundException('Event not found');
+    const event = await this.prisma.event.findFirst({
+      where: {
+        AND: [
+          { eventId },
+          ...actions.map((required) => accessibleBy(ability, required).Event),
+        ],
+      },
       select: {
         type: true,
         athleteId: true,
@@ -244,6 +261,7 @@ export class WeekPlanningService {
       },
     });
     if (!event) throw new NotFoundException('Event not found');
+    const allowCompleted = action === 'create';
     const planned =
       event.type === 'NOTE' ||
       (event.type === 'TRAINING' &&
@@ -265,7 +283,7 @@ export class WeekPlanningService {
     const result: EventBatchResult = { succeeded: [], failed: [] };
     for (const item of input.items) {
       try {
-        const source = await this.plannedSource(item.eventId, true);
+        const source = await this.plannedSource(user, item.eventId, 'create');
         const copy = await this.events.duplicateEventComplete(
           user,
           item.eventId,
@@ -307,7 +325,7 @@ export class WeekPlanningService {
     const result: EventBatchResult = { succeeded: [], failed: [] };
     for (const item of input.items) {
       try {
-        await this.plannedSource(item.eventId, false);
+        await this.plannedSource(user, item.eventId, 'update');
         await this.events.updateEvent(user, item.eventId, {
           startDate: item.startDate,
           endDate: item.endDate,
@@ -331,7 +349,7 @@ export class WeekPlanningService {
     const result: EventBatchResult = { succeeded: [], failed: [] };
     for (const eventId of input.eventIds) {
       try {
-        await this.plannedSource(eventId, false);
+        await this.plannedSource(user, eventId, 'delete');
         await this.events.deleteEvent(user, eventId);
         result.succeeded.push(eventId);
       } catch (error) {

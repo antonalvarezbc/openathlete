@@ -123,6 +123,7 @@ export class AthleteController {
   }
 
   @UseGuards(AuthGuard('jwt'), UserTypeGuard)
+  @UserTypes(['COACH'])
   @ApiBearerAuth()
   @Get('coached')
   @ApiOperation({
@@ -158,8 +159,9 @@ export class AthleteController {
     status: 401,
     description: 'Unauthorized - invalid or missing authentication token',
   })
+  @ApiResponse({ status: 403, description: 'Coach role required' })
   getMyCoachedAthletes(@JwtUser() user: AuthUser) {
-    return this.athleteService.getMyCoachedAthletes(user.userId);
+    return this.athleteService.getMyCoachedAthletes(user);
   }
 
   @UseGuards(AuthGuard('jwt'), UserTypeGuard)
