@@ -6,6 +6,7 @@ import {
 } from '@/api/equipment';
 import { ConfirmAction } from '@/components/confirm-action';
 import { EquipmentForm } from '@/components/equipment/equipment-form';
+import { describeSports } from '@/components/training-zone-editor/sport-summary';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -17,7 +18,6 @@ import {
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { m } from '@/paraglide/messages';
-import { sportTypeLabelMap } from '@/utils/label-map/core';
 import { Pencil, Trash } from 'lucide-react';
 import { useState } from 'react';
 
@@ -169,9 +169,7 @@ export function EquipmentTab() {
                         {m.sports()}
                       </span>
                       <span className="text-sm font-medium">
-                        {item.sports
-                          .map((sport) => sportTypeLabelMap[sport])
-                          .join(', ')}
+                        {describeSports(item.sports)}
                       </span>
                     </div>
                     {item.isDefault && (
