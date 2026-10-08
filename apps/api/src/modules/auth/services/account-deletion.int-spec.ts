@@ -1,3 +1,5 @@
+import { ConfigService } from '@nestjs/config';
+
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 import { StripeService } from 'src/modules/subscription/services/stripe.service';
 
@@ -72,9 +74,11 @@ describe('AccountDeletionService (PostgreSQL)', () => {
   beforeAll(async () => {
     prisma = new PrismaService({ datasourceUrl: databaseUrl });
     await prisma.$connect();
-    service = new AccountDeletionService(prisma, {
-      cancelSubscriptionNow,
-    } as unknown as StripeService);
+    service = new AccountDeletionService(
+      prisma,
+      { cancelSubscriptionNow } as unknown as StripeService,
+      new ConfigService({}),
+    );
   });
 
   afterAll(async () => {

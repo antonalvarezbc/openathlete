@@ -118,6 +118,13 @@ independent setting, `ENABLE_MANUAL_FIT_IMPORT`, also disabled by default.
 - The previous single-athlete connection remains usable until the athlete connects through the UI.
 - New sessions are isolated under `GARMIN_UNOFFICIAL_DIRECTORY/accounts/<athleteId>/.private`.
   This directory is ignored by Git.
+- Deleting the account removes `accounts/<athleteId>` (tokens, link, sync
+  state and FIT cache) once the database deletion has committed, and the
+  command-line connection's tokens, link, state and FIT cache when it belongs
+  to the athlete; the shared lock, request pacing and diagnostic reports stay.
+  This happens whenever `GARMIN_UNOFFICIAL_DIRECTORY` is set, even if the
+  connector has been turned off since. A failure there is logged for the
+  administrator and does not fail the deletion.
 - Sync retains the existing manual trigger, two-minute cooldown and database lock.
 - Garmin _Mobility_ activities (FIT sport 86) are imported with the Mobility sport.
   They used to be stored as Pilates; a migration corrects those with Garmin's
