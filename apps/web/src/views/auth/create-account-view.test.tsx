@@ -25,6 +25,8 @@ vi.mock('@/contexts/auth', () => ({
 }));
 vi.mock('posthog-js/react', () => ({ usePostHog: () => undefined }));
 vi.mock('@/views/auth/oauth-buttons', () => ({ OAuthButtons: () => null }));
+// The app is shown in Spanish.
+vi.mock('@/paraglide/runtime', () => ({ getLocale: () => 'es' }));
 // Every message renders as its key.
 vi.mock('@/paraglide/messages', () => ({
   m: new Proxy({}, { get: (_target, key) => () => String(key) }),
@@ -107,6 +109,14 @@ describe('CreateAccountView', () => {
     });
     expect(api.toastError).toHaveBeenCalledWith('signup_email_exists');
     expect(api.login).not.toHaveBeenCalled();
+  });
+
+  it('signs up in the language the app is shown in', async () => {
+    api.createAccount.mockRejectedValue(httpError(500));
+    await signUp();
+    expect(api.createAccount.mock.calls[0][0]).toMatchObject({
+      language: 'ES',
+    });
   });
 
   it('reports other sign-up failures', async () => {

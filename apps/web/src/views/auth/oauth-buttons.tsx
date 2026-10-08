@@ -12,6 +12,7 @@ import {
   getFirebaseIdTokenForProvider,
   isFirebaseWebConfigured,
 } from '@/utils/firebase-auth';
+import { currentLanguage } from '@/utils/language-choice';
 import { takeReturnTo } from '@/utils/return-to';
 import { cn } from '@/utils/shadcn';
 import { signupRefusal } from '@/utils/signup';
@@ -67,6 +68,8 @@ export function OAuthButtons({
         idToken,
         invitationToken: invitationToken || undefined,
         coachInvitationToken: coachInvitationToken || undefined,
+        // Saved only if this sign-in creates the account
+        language: currentLanguage(),
       });
     } catch (error) {
       console.error('OAuth sign-in failed:', error);
