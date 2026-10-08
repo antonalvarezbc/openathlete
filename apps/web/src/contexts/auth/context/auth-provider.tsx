@@ -3,6 +3,7 @@ import { getPath } from '@/routes/paths';
 import { isValidToken } from '@/utils/auth';
 import { isNetworkError } from '@/utils/axios';
 import { signOutFirebase } from '@/utils/firebase-auth';
+import { saveLanguageChoice } from '@/utils/language-choice';
 import { ACCESS_TOKEN, clear, getItem, setItem } from '@/utils/local-storage';
 import { initializePushNotifications } from '@/utils/push-notifications';
 import posthog from 'posthog-js';
@@ -86,18 +87,7 @@ export function AuthProvider({ children }: Props) {
 
         const user = await UserAPI.getMe();
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlLang = urlParams.get('lang');
-        if (urlLang && ['fr', 'en', 'it', 'es'].includes(urlLang)) {
-          const language = urlLang.toUpperCase() as 'FR' | 'EN' | 'IT' | 'ES';
-          if (user.language !== language) {
-            try {
-              await UserAPI.updateLanguage(language);
-            } catch (error) {
-              console.error('Failed to update language:', error);
-            }
-          }
-        }
+        await saveLanguageChoice(user.language);
 
         posthog.identify(user.userId.toString(), {
           roles: user.roles,
@@ -127,18 +117,7 @@ export function AuthProvider({ children }: Props) {
         try {
           const user = await UserAPI.getMe();
 
-          const urlParams = new URLSearchParams(window.location.search);
-          const urlLang = urlParams.get('lang');
-          if (urlLang && ['fr', 'en', 'it', 'es'].includes(urlLang)) {
-            const language = urlLang.toUpperCase() as 'FR' | 'EN' | 'IT' | 'ES';
-            if (user.language !== language) {
-              try {
-                await UserAPI.updateLanguage(language);
-              } catch (error) {
-                console.error('Failed to update language:', error);
-              }
-            }
-          }
+          await saveLanguageChoice(user.language);
 
           posthog.identify(user.userId.toString(), {
             roles: user.roles,

@@ -1,6 +1,7 @@
 import { UserAPI } from '@/api/user';
 import { useAuthContext } from '@/contexts/auth';
 import { setLocale } from '@/paraglide/runtime';
+import { rememberLanguageChoice } from '@/utils/language-choice';
 import { useCallback } from 'react';
 
 export function useLanguageSync() {
@@ -16,6 +17,9 @@ export function useLanguageSync() {
         } catch (error) {
           console.error('Failed to sync language with backend:', error);
         }
+      } else {
+        // Saved to the profile, for emails, at the next sign-in
+        rememberLanguageChoice(lang);
       }
 
       // Paraglide reloads the page, so persist the preference first.
