@@ -40,5 +40,13 @@ export default defineConfig({
       },
       dependencies: ['setup'],
     },
+    {
+      // The same phone tests on an Android phone: its own viewport, screen
+      // density and user agent
+      name: 'android',
+      testMatch: /mobile\/.*\.spec\.ts/,
+      use: { ...devices['Pixel 8'], storageState: AUTH_FILE },
+      dependencies: ['setup'],
+    },
   ],
 });
