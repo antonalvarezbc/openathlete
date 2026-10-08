@@ -55,6 +55,17 @@ describe('AuthService.loginWithFirebase', () => {
     });
   });
 
+  it('creates the account in the language of the app', async () => {
+    const { service, userService } = setup();
+    userService.createAccount.mockReset().mockResolvedValue({ userId: 7 });
+
+    await service.loginWithFirebase({ idToken: 'token', language: 'IT' });
+
+    expect(userService.createAccount).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'runner@example.com', language: 'IT' }),
+    );
+  });
+
   it('still fails when the account cannot be found afterwards', async () => {
     const { service, prisma } = setup();
     prisma.user.findFirst.mockReset().mockResolvedValue(null);
