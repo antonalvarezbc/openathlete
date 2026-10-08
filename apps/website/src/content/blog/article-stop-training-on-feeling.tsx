@@ -6,14 +6,17 @@ export const articleStopTrainingOnFeeling: BlogPost = {
     title: {
       en: 'Stop Training on "Feeling" (The Wrong Kind)',
       fr: 'Arrêtez de Vous Entraîner sur le "Ressenti" (Le Mauvais Type)',
+      es: 'Deja de entrenar según «cómo te sientes» (en el mal sentido)',
     },
     description: {
       en: 'Learn the difference between "listening to your body" (good) and "random training" (bad). Discover the discipline of a structured calendar that exports to your watch.',
       fr: 'Apprenez la différence entre "écouter votre corps" (bien) et "entraînement aléatoire" (mauvais). Découvrez la discipline d\'un calendrier structuré qui s\'exporte sur votre montre.',
+      es: 'Aprende la diferencia entre «escuchar a tu cuerpo» (bien) y «entrenar al azar» (mal). Descubre la disciplina de un calendario estructurado que se exporta a tu reloj.',
     },
     excerpt: {
       en: 'There\'s a difference between listening to your body and training randomly. Structured training with discipline beats "feeling-based" workouts every time.',
       fr: 'Il y a une différence entre écouter votre corps et s\'entraîner aléatoirement. L\'entraînement structuré avec discipline bat les entraînements "basés sur le ressenti" à chaque fois.',
+      es: 'Escuchar a tu cuerpo no es lo mismo que entrenar al azar. El entrenamiento estructurado y con disciplina gana siempre a las sesiones «según cómo te sientas».',
     },
     author: {
       name: 'OpenAthlete Team',
@@ -522,6 +525,246 @@ export const articleStopTrainingOnFeeling: BlogPost = {
           et obtenez un plan structuré qui se synchronise sur votre montre,
           s'adapte à votre récupération et vous guide vers vos objectifs—même
           les jours où vous "n'en avez pas envie."
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          <strong>
+            Te levantas. Te sientes genial. Decides apretar hoy: quizá un tempo,
+            quizá unas series. Mañana estás cansado, así que te lo saltas. Al
+            día siguiente te encuentras bien, así que haces un rodaje suave.
+            Tres semanas después, te preguntas por qué no progresas.
+          </strong>
+        </p>
+
+        <p>
+          Esto es entrenar «según cómo te sientes», y te está frenando. Hay una
+          diferencia clave entre escuchar a tu cuerpo (algo esencial) y entrenar
+          al azar según el humor del día (algo ineficaz). Entender esta
+          diferencia es la clave para progresar de forma constante.
+        </p>
+
+        <h2>Los dos tipos de «sensaciones»</h2>
+        <p>
+          <strong>Sensaciones buenas (escuchar a tu cuerpo):</strong>
+        </p>
+        <ul>
+          <li>Reconocer cuándo estás sobreentrenado y necesitas descansar</li>
+          <li>Ajustar la intensidad cuando estás realmente fatigado</li>
+          <li>Modificar las sesiones según tu estado de recuperación</li>
+          <li>Responder a las señales de lesión</li>
+        </ul>
+
+        <p>
+          <strong>Sensaciones malas (entrenar al azar):</strong>
+        </p>
+        <ul>
+          <li>Entrenar fuerte porque «te apetece»</li>
+          <li>Saltarte sesiones porque «no te apetece»</li>
+          <li>Cambiar los planes según el humor del día</li>
+          <li>Sin estructura, sin progresión, sin plan</li>
+        </ul>
+
+        <p>
+          ¿La diferencia? Las sensaciones buenas son{' '}
+          <strong>adaptativas</strong>: ajustas dentro de una estructura. Las
+          malas son <strong>impulsivas</strong>: abandonas la estructura por
+          completo.
+        </p>
+
+        <h2>Por qué falla entrenar al azar</h2>
+        <p>Entrenar al azar sienta bien en el momento, pero falla porque:</p>
+        <ul>
+          <li>
+            <strong>No hay sobrecarga progresiva:</strong> no aumentas el
+            estímulo de forma sistemática
+          </li>
+          <li>
+            <strong>No hay periodización:</strong> no construyes hacia objetivos
+            concretos
+          </li>
+          <li>
+            <strong>No hay planificación de la recuperación:</strong> no
+            optimizas la adaptación
+          </li>
+          <li>
+            <strong>No hay constancia:</strong> no creas hábitos
+          </li>
+          <li>
+            <strong>No hay medición:</strong> no puedes saber qué funciona
+          </li>
+        </ul>
+
+        <p>
+          Puede que tengas grandes sesiones sueltas, pero sin estructura esas
+          sesiones no se suman en un progreso a largo plazo. En el fondo, estás
+          dando vueltas en círculo: trabajas duro, pero no avanzas.
+        </p>
+
+        <h2>El poder de la estructura</h2>
+        <p>El entrenamiento estructurado funciona porque:</p>
+        <ul>
+          <li>
+            <strong>Garantiza la progresión:</strong> cada semana se apoya en la
+            anterior
+          </li>
+          <li>
+            <strong>Equilibra estímulo y recuperación:</strong> días duros
+            seguidos de días suaves
+          </li>
+          <li>
+            <strong>Construye hacia tus objetivos:</strong> cada sesión tiene un
+            propósito
+          </li>
+          <li>
+            <strong>Crea hábitos:</strong> la constancia se vuelve automática
+          </li>
+          <li>
+            <strong>Permite medir:</strong> puedes ver qué funciona
+          </li>
+        </ul>
+
+        <p>
+          Con un plan estructurado sabes exactamente qué hacer cada día. Sin
+          fatiga de decisión. Sin conjeturas. Solo ejecutar.
+        </p>
+
+        <h2>La disciplina de la estructura</h2>
+        <p>
+          Esta es la verdad incómoda: progresar exige disciplina. Disciplina
+          significa:
+        </p>
+        <ul>
+          <li>Seguir tu plan incluso cuando «no te apetece»</li>
+          <li>Hacer rodajes suaves cuando lo que quieres es apretar</li>
+          <li>Descansar cuando te apetece entrenar</li>
+          <li>
+            Confiar en el proceso por encima de las sensaciones del momento
+          </li>
+        </ul>
+
+        <p>
+          Esto no significa ignorar a tu cuerpo. Significa tener un plan y
+          ajustarlo según señales reales (fatiga, riesgo de lesión, estado de
+          recuperación), no según el humor.
+        </p>
+
+        <h2>Cómo OpenAthlete cubre esa distancia</h2>
+        <p>OpenAthlete lo resuelve ofreciéndote estructura con flexibilidad:</p>
+        <ul>
+          <li>
+            <strong>Planes estructurados:</strong> la IA genera un entrenamiento
+            periodizado según tus objetivos
+          </li>
+          <li>
+            <strong>Ajustes automáticos:</strong> los planes se adaptan cuando
+            te saltas sesiones o muestras fatiga
+          </li>
+          <li>
+            <strong>Integración con el reloj:</strong> los planes se sincronizan
+            directamente con tu Garmin o tu Polar
+          </li>
+          <li>
+            <strong>Seguimiento del RPE:</strong> registra cómo sientes las
+            sesiones en comparación con los objetivos
+          </li>
+          <li>
+            <strong>Modificaciones inteligentes:</strong> ajusta la intensidad
+            cuando tu recuperación es baja
+          </li>
+        </ul>
+
+        <p>
+          Consigues la disciplina de la estructura con la flexibilidad de
+          adaptarte. No quedas atado a un plan rígido, pero tampoco entrenas al
+          azar.
+        </p>
+
+        <h2>La ventaja de la integración con el reloj</h2>
+        <p>
+          Cuando tu plan de entrenamiento se sincroniza directamente con tu
+          reloj, ocurre algo poderoso:
+        </p>
+        <ul>
+          <li>
+            <strong>Sin fatiga de decisión:</strong> tu reloj te dice
+            exactamente qué hacer
+          </li>
+          <li>
+            <strong>Sin excusas:</strong> el plan está ahí, listo para
+            ejecutarlo
+          </li>
+          <li>
+            <strong>Ritmo adecuado:</strong> tu reloj te guía hacia las
+            intensidades correctas
+          </li>
+          <li>
+            <strong>Constancia:</strong> sigues el plan porque es cómodo
+          </li>
+        </ul>
+
+        <p>
+          En lugar de levantarte y preguntarte «¿qué hago hoy?», te levantas y
+          ejecutas. La decisión ya está tomada. La estructura ya está ahí. Solo
+          tienes que seguirla.
+        </p>
+
+        <h2>Un ejemplo real</h2>
+        <p>
+          Mark entrenaba «según cómo se sentía». Corría fuerte cuando se
+          encontraba bien, se saltaba sesiones cuando estaba cansado y no tenía
+          un plan de verdad. Al cabo de 6 meses, apenas había progresado.
+        </p>
+
+        <p>Se pasó al enfoque estructurado de OpenAthlete:</p>
+        <ul>
+          <li>
+            La IA generó un plan de 16 semanas hacia su objetivo de maratón
+          </li>
+          <li>Los planes se sincronizaban con su reloj Garmin</li>
+          <li>Siguió el plan, incluso los días en que «no le apetecía»</li>
+          <li>
+            La IA hacía ajustes cuando mostraba fatiga (según sus datos de RPE)
+          </li>
+        </ul>
+
+        <p>
+          Resultado: bajó 20 minutos su marca personal en maratón. La estructura
+          funcionó. La disciplina dio sus frutos. Las «sensaciones» dieron paso
+          a decisiones basadas en datos.
+        </p>
+
+        <h2>En resumen</h2>
+        <p>
+          Escuchar a tu cuerpo tiene su lugar: cuando estás realmente fatigado,
+          cuando te lesionas, cuando tu recuperación se resiente. Pero no hay
+          lugar para entrenar al azar según el humor.
+        </p>
+
+        <p>
+          Progresar exige estructura. La estructura exige disciplina. Y la
+          disciplina significa seguir un plan aunque no te apetezca, y ajustarlo
+          con inteligencia cuando tu cuerpo da señales reales, no simples
+          cambios de humor.
+        </p>
+
+        <p>
+          No confundas «escuchar a tu cuerpo» con «entrenar al azar». Lo uno
+          lleva al progreso. Lo otro, al estancamiento.
+        </p>
+
+        <p>
+          <strong>Deja de adivinar y empieza hoy a entrenar con IA.</strong>{' '}
+          <a href="https://app.openathlete.org/auth/create-account">
+            Regístrate en OpenAthlete
+          </a>{' '}
+          y consigue un plan estructurado que se sincroniza con tu reloj, se
+          adapta a tu recuperación y te guía hacia tus objetivos, incluso los
+          días en que «no te apetece».
         </p>
       </div>
     );

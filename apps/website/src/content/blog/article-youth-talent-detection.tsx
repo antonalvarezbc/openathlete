@@ -6,14 +6,17 @@ export const articleYouthTalentDetection: BlogPost = {
     title: {
       en: 'Detecting Talent & Preventing Dropout in Youth',
       fr: "Détecter le Talent & Prévenir l'Abandon chez les Jeunes",
+      es: 'Detectar el talento y prevenir el abandono en jóvenes',
     },
     description: {
       en: "Importance of monitoring RPE in young athletes who can't always articulate pain. Using data to protect young talent and prevent burnout.",
       fr: "Importance de surveiller le RPE chez les jeunes athlètes qui ne peuvent pas toujours articuler la douleur. Utiliser les données pour protéger le jeune talent et prévenir l'épuisement.",
+      es: 'Por qué es importante controlar el RPE en los atletas jóvenes, que no siempre saben expresar el dolor. Usar los datos para proteger el talento joven y prevenir el agotamiento.',
     },
     excerpt: {
       en: "Young athletes often can't articulate when they're in pain or overtrained. RPE monitoring and data analysis help detect talent and prevent dropout.",
       fr: "Les jeunes athlètes ne peuvent souvent pas articuler quand ils ont mal ou sont en surentraînement. Le suivi RPE et l'analyse de données aident à détecter le talent et prévenir l'abandon.",
+      es: 'Los atletas jóvenes a menudo no saben expresar cuándo sienten dolor o están sobreentrenados. El seguimiento del RPE y el análisis de datos ayudan a detectar el talento y prevenir el abandono.',
     },
     author: {
       name: 'OpenAthlete Team',
@@ -270,6 +273,128 @@ export const articleYouthTalentDetection: BlogPost = {
           </a>{' '}
           et utilisez les données pour protéger les jeunes athlètes, détecter le
           talent et prévenir l'épuisement.
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          <strong>
+            Una corredora de 15 años promete mucho. Es rápida, constante y no
+            para de mejorar. Pero no sabe decirte cuándo le duele algo. No sabe
+            qué se siente al estar «sobreentrenada». Tres meses después, lo
+            deja. Nunca lo viste venir.
+          </strong>
+        </p>
+
+        <p>
+          Este es el reto con los atletas jóvenes: a menudo no saben expresar lo
+          que sienten. Siguen adelante a pesar del dolor porque no conocen otra
+          cosa. No reconocen las señales del sobreentrenamiento. Se queman antes
+          de que su talento pueda desarrollarse.
+        </p>
+
+        <h2>El reto de los atletas jóvenes</h2>
+        <p>Los atletas jóvenes se enfrentan a retos específicos:</p>
+        <ul>
+          <li>
+            <strong>No saben expresar el dolor:</strong> no saben describir lo
+            que sienten
+          </li>
+          <li>
+            <strong>Quieren agradar:</strong> aprietan los dientes para no
+            decepcionar a entrenadores y padres
+          </li>
+          <li>
+            <strong>No reconocen sus límites:</strong> no entienden qué es el
+            sobreentrenamiento
+          </li>
+          <li>
+            <strong>Crecimiento rápido:</strong> su cuerpo cambia, lo que
+            complica la gestión de la carga
+          </li>
+          <li>
+            <strong>Presión social:</strong> compañeros, padres y entrenadores
+            los empujan
+          </li>
+        </ul>
+
+        <p>
+          Sin datos, los entrenadores van a ciegas. No ven que un atleta joven
+          se dirige hacia el agotamiento hasta que ya es demasiado tarde.
+        </p>
+
+        <h2>La solución: el RPE</h2>
+        <p>
+          El seguimiento del RPE se vuelve fundamental con los atletas jóvenes
+          porque:
+        </p>
+        <ul>
+          <li>
+            <strong>Recoge lo que no dicen:</strong> un RPE elevado revela la
+            fatiga aunque digan «estoy bien»
+          </li>
+          <li>
+            <strong>Detecta patrones:</strong> un RPE alto de forma constante
+            indica una sobrecarga
+          </li>
+          <li>
+            <strong>Previene lesiones:</strong> permite intervenir pronto, antes
+            de que los problemas se agraven
+          </li>
+          <li>
+            <strong>Protege el talento:</strong> mantiene a los atletas
+            prometedores sanos y progresando
+          </li>
+        </ul>
+
+        <p>
+          Cuando el RPE de un atleta joven se dispara mientras su ritmo sigue
+          igual, es una señal de alarma. Puede que no sepa decirte que está
+          cansado, pero los datos lo muestran.
+        </p>
+
+        <h2>Detectar el talento con datos</h2>
+        <p>El análisis de datos también ayuda a identificar el talento:</p>
+        <ul>
+          <li>
+            <strong>Mejora rápida:</strong> atletas que progresan más deprisa
+            que sus compañeros
+          </li>
+          <li>
+            <strong>RPE bajo a alta intensidad:</strong> eficiencia natural
+          </li>
+          <li>
+            <strong>Rendimiento constante:</strong> fiables bajo presión
+          </li>
+          <li>
+            <strong>Recuperación rápida:</strong> se recuperan antes
+          </li>
+        </ul>
+
+        <p>
+          Estos patrones, visibles gracias a los datos, ayudan a los
+          entrenadores a identificar a los atletas que podrían destacar con un
+          desarrollo adecuado.
+        </p>
+
+        <h2>En resumen</h2>
+        <p>
+          Los atletas jóvenes necesitan protección. No siempre pueden decirte
+          cuándo algo va mal, pero los datos sí. El seguimiento del RPE, el
+          control de la carga y el análisis de patrones ayudan a los
+          entrenadores a proteger el talento joven y a prevenir el abandono.
+        </p>
+
+        <p>
+          <strong>Deja de adivinar y empieza hoy a entrenar con IA.</strong>{' '}
+          <a href="https://app.openathlete.org/auth/create-account">
+            Regístrate en OpenAthlete
+          </a>{' '}
+          y usa los datos para proteger a los atletas jóvenes, detectar el
+          talento y prevenir el agotamiento.
         </p>
       </div>
     );

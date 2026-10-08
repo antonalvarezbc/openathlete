@@ -6,14 +6,17 @@ export const articleOpenathleteOpensourceBenefits: BlogPost = {
     title: {
       en: 'Why Open Source Matters: How OpenAthlete Protects Your Privacy and Drives Innovation',
       fr: "Pourquoi l'Open Source Compte : Comment OpenAthlete Protège Votre Confidentialité et Stimule l'Innovation",
+      es: 'Por qué importa el código abierto: cómo OpenAthlete protege tu privacidad e impulsa la innovación',
     },
     description: {
       en: 'Discover why OpenAthlete being open source matters for your privacy, data security, and training innovation. Learn about transparency, self-hosting, community-driven development, and why open source is the future of sports technology.',
       fr: "Découvrez pourquoi le fait qu'OpenAthlete soit open source compte pour votre confidentialité, la sécurité de vos données et l'innovation d'entraînement. Apprenez-en sur la transparence, l'auto-hébergement, le développement communautaire et pourquoi l'open source est l'avenir de la technologie sportive.",
+      es: 'Descubre por qué es importante que OpenAthlete sea de código abierto para tu privacidad, la seguridad de tus datos y la innovación en el entrenamiento. Conoce la transparencia, el autoalojamiento, el desarrollo impulsado por la comunidad y por qué el código abierto es el futuro de la tecnología deportiva.',
     },
     excerpt: {
       en: 'Open source software gives you control, transparency, and security. OpenAthlete is open source, meaning you can verify how your data is processed, self-host on your infrastructure, and contribute to improvements. Discover why this matters for athletes and coaches.',
       fr: 'Les logiciels open source vous donnent contrôle, transparence et sécurité. OpenAthlete est open source, ce qui signifie que vous pouvez vérifier comment vos données sont traitées, auto-héberger sur votre infrastructure et contribuer aux améliorations. Découvrez pourquoi cela compte pour les athlètes et les coachs.',
+      es: 'El software de código abierto te da control, transparencia y seguridad. OpenAthlete es de código abierto: puedes comprobar cómo se procesan tus datos, autoalojarlo en tu propia infraestructura y contribuir a mejorarlo. Descubre por qué esto importa a atletas y entrenadores.',
     },
     author: {
       name: 'OpenAthlete Team',
@@ -1220,6 +1223,614 @@ export const articleOpenathleteOpensourceBenefits: BlogPost = {
           reste open source et libre. Cela signifie que vous pouvez utiliser,
           modifier et distribuer OpenAthlete, tant que vous suivez les termes de
           la licence.
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          <strong>
+            Tus datos de entrenamiento son personales. Tus métricas de salud son
+            sensibles. Tu información de rendimiento es privada.
+          </strong>
+        </p>
+
+        <p>
+          Sin embargo, la mayoría de las plataformas de entrenamiento son «cajas
+          negras»: no tienes ni idea de cómo se procesan, almacenan o utilizan
+          tus datos. Confías tu información más sensible a una empresa con la
+          esperanza de que la proteja.
+        </p>
+
+        <p>
+          <strong>OpenAthlete es diferente.</strong> Al ser una plataforma de
+          código abierto, todo es transparente. Puedes ver exactamente cómo se
+          tratan tus datos, comprobar nuestras prácticas de seguridad e incluso
+          ejecutar el software en tu propia infraestructura si quieres tener el
+          control total.
+        </p>
+
+        <h2>¿Qué significa realmente «código abierto»?</h2>
+
+        <p>
+          Código abierto significa que el código fuente de OpenAthlete es
+          público y que cualquiera puede consultarlo, auditarlo, modificarlo y
+          distribuirlo. Es algo radicalmente distinto del software propietario
+          como TrainingPeaks, TrainerRoad o Strava, donde el código es secreto y
+          lo controla una sola empresa.
+        </p>
+
+        <p>En el caso de OpenAthlete, esto significa:</p>
+        <ul>
+          <li>
+            <strong>Transparencia total:</strong> cualquiera puede revisar el
+            código para ver exactamente cómo se procesan los datos
+          </li>
+          <li>
+            <strong>Auditoría de la comunidad:</strong> investigadores de
+            seguridad y desarrolladores pueden detectar y corregir
+            vulnerabilidades
+          </li>
+          <li>
+            <strong>Sin dependencia del proveedor:</strong> nunca te quedas
+            atrapado; siempre puedes autoalojarlo o migrar
+          </li>
+          <li>
+            <strong>Mejora continua:</strong> la comunidad aporta nuevas
+            funciones, correcciones y mejoras
+          </li>
+          <li>
+            <strong>Control total:</strong> puedes modificar el software para
+            adaptarlo a tus necesidades concretas
+          </li>
+        </ul>
+
+        <h2>1. Privacidad y protección de datos: tus datos, bajo tu control</h2>
+
+        <h3>El problema de las plataformas propietarias</h3>
+        <p>
+          Cuando usas un software de entrenamiento propietario, en el fondo
+          estás diciendo: «Confío mis datos de salud sensibles a esta empresa y
+          espero que los proteja». No tienes forma de comprobar:
+        </p>
+        <ul>
+          <li>Cómo se almacenan y cifran tus datos</li>
+          <li>Quién tiene acceso a tus datos</li>
+          <li>Si tus datos se venden a terceros</li>
+          <li>Si la empresa sigue las buenas prácticas de seguridad</li>
+          <li>Qué pasa con tus datos si la empresa es adquirida o cierra</li>
+        </ul>
+
+        <h3>Cómo protege tu privacidad el código abierto</h3>
+        <p>Con OpenAthlete, puedes comprobarlo todo:</p>
+        <ul>
+          <li>
+            <strong>Tratamiento de datos transparente:</strong> revisa el código
+            para ver exactamente cómo se procesan, almacenan y analizan tus
+            datos de entrenamiento
+          </li>
+          <li>
+            <strong>Sin seguimiento oculto:</strong> ni analíticas secretas ni
+            recogida de datos a escondidas; todo está a la vista en el código
+          </li>
+          <li>
+            <strong>Cumplimiento del RGPD:</strong> el código abierto facilita
+            verificar el cumplimiento del RGPD y las prácticas de protección de
+            datos
+          </li>
+          <li>
+            <strong>Opción de autoalojamiento:</strong> para una privacidad
+            máxima, puedes ejecutar OpenAthlete en tu propio servidor con
+            soberanía total sobre tus datos
+          </li>
+          <li>
+            <strong>Sin venta de datos:</strong> como el código es abierto,
+            puedes comprobar que no vendemos tus datos a terceros
+          </li>
+        </ul>
+
+        <blockquote>
+          <p>
+            «Con el software propietario, confías en una empresa. Con el código
+            abierto, confías en el código, y puedes comprobarlo tú mismo».
+          </p>
+        </blockquote>
+
+        <h3>Ventajas reales para tu privacidad</h3>
+        <p>
+          <strong>Ejemplo 1: soberanía de los datos</strong>
+        </p>
+        <p>
+          Si eres atleta profesional o entrenador y trabajas con datos de
+          entrenamiento sensibles, puede que necesites garantizar que tus datos
+          se queden en una jurisdicción concreta. Con OpenAthlete, puedes
+          autoalojarlo en servidores de tu país o región y asegurarte la
+          soberanía total sobre tus datos.
+        </p>
+
+        <p>
+          <strong>Ejemplo 2: requisitos de cumplimiento normativo</strong>
+        </p>
+        <p>
+          Organizaciones como federaciones deportivas o clubes pueden tener
+          requisitos estrictos de protección de datos. El código abierto les
+          permite auditar el código, comprobar las prácticas de seguridad y
+          garantizar el cumplimiento de normativas como el RGPD, la HIPAA o las
+          leyes locales de protección de datos.
+        </p>
+
+        <h2>2. Seguridad: con muchos ojos, los errores salen a la luz</h2>
+
+        <h3>La ventaja de la «ley de Linus»</h3>
+        <p>
+          Linus Torvalds, creador de Linux, dijo una frase célebre: «Con
+          suficientes ojos, todos los errores son superficiales». Es decir, en
+          el software de código abierto hay más personas que pueden revisar el
+          código, encontrar vulnerabilidades y corregirlas rápidamente.
+        </p>
+
+        <p>
+          <strong>Cómo funciona esto en OpenAthlete:</strong>
+        </p>
+        <ul>
+          <li>
+            <strong>Auditorías de seguridad de la comunidad:</strong> los
+            investigadores de seguridad pueden revisar el código y comunicar
+            vulnerabilidades
+          </li>
+          <li>
+            <strong>Correcciones más rápidas:</strong> cuando se detecta un
+            problema, la comunidad puede aportar la solución de inmediato
+          </li>
+          <li>
+            <strong>Sin vulnerabilidades ocultas:</strong> a diferencia del
+            software propietario, los fallos de seguridad no se pueden esconder;
+            están a la vista de todos
+          </li>
+          <li>
+            <strong>Verificación independiente:</strong> no tienes que fiarte de
+            nuestra palabra; puedes comprobar tú mismo las prácticas de
+            seguridad
+          </li>
+        </ul>
+
+        <h3>Comparativa de seguridad: código abierto frente a propietario</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Aspecto</th>
+              <th>Software propietario</th>
+              <th>Código abierto (OpenAthlete)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Visibilidad del código</td>
+              <td>❌ Oculto</td>
+              <td>✅ Público</td>
+            </tr>
+            <tr>
+              <td>Auditorías de seguridad</td>
+              <td>❌ Solo internas</td>
+              <td>✅ Abiertas a toda la comunidad</td>
+            </tr>
+            <tr>
+              <td>Divulgación de vulnerabilidades</td>
+              <td>❌ Pueden ocultarse</td>
+              <td>✅ Transparente</td>
+            </tr>
+            <tr>
+              <td>Verificación independiente</td>
+              <td>❌ No es posible</td>
+              <td>✅ Cualquiera puede verificar</td>
+            </tr>
+            <tr>
+              <td>Rapidez de corrección de errores</td>
+              <td>❌ Depende del proveedor</td>
+              <td>✅ La comunidad puede corregir</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>3. Innovación: un desarrollo impulsado por la comunidad</h2>
+
+        <h3>Por qué el código abierto impulsa la innovación</h3>
+        <p>
+          Las empresas de software propietario tienen recursos limitados y deben
+          priorizar las funciones que benefician a más usuarios. Esto suele
+          implicar:
+        </p>
+        <ul>
+          <li>Un desarrollo lento de nuevas funciones</li>
+          <li>
+            Funciones que benefician a la empresa, no necesariamente a los
+            usuarios
+          </li>
+          <li>Pocas opciones de personalización</li>
+          <li>Una innovación limitada a las ideas del equipo interno</li>
+        </ul>
+
+        <p>
+          <strong>El código abierto lo cambia todo:</strong>
+        </p>
+        <ul>
+          <li>
+            <strong>Contribuciones de la comunidad:</strong> atletas,
+            entrenadores y desarrolladores pueden aportar las funciones que de
+            verdad necesitan
+          </li>
+          <li>
+            <strong>Desarrollo más rápido:</strong> más desarrolladores
+            significa nuevas funciones y correcciones más rápidas
+          </li>
+          <li>
+            <strong>Perspectivas diversas:</strong> cada usuario aporta sus
+            propias necesidades e ideas, lo que da lugar a soluciones más
+            innovadoras
+          </li>
+          <li>
+            <strong>Sin intereses corporativos:</strong> las funciones responden
+            a las necesidades de los usuarios, no a los márgenes de beneficio
+          </li>
+          <li>
+            <strong>Personalización:</strong> los usuarios pueden modificar el
+            software para adaptarlo a su forma de trabajar
+          </li>
+        </ul>
+
+        <h3>Ejemplos reales de innovación en código abierto</h3>
+        <p>
+          <strong>Linux:</strong> hace funcionar la mayor parte de internet, los
+          móviles Android y los superordenadores, todo gracias a la innovación
+          del código abierto.
+        </p>
+        <p>
+          <strong>WordPress:</strong> está detrás del 40 % de todos los sitios
+          web porque la comunidad no deja de mejorarlo y ampliarlo.
+        </p>
+        <p>
+          <strong>Git:</strong> el sistema de control de versiones que usa
+          prácticamente cualquier empresa de software, creado como código
+          abierto.
+        </p>
+
+        <p>
+          <strong>OpenAthlete:</strong> ya se beneficia de las contribuciones de
+          la comunidad: atletas y entrenadores proponen funciones, informan de
+          errores e incluso aportan mejoras al código.
+        </p>
+
+        <h2>4. Sin dependencia del proveedor: nunca te quedas atrapado</h2>
+
+        <h3>El problema de las plataformas propietarias</h3>
+        <p>Cuando usas software propietario, quedas atado a él:</p>
+        <ul>
+          <li>
+            <strong>Exportación de datos limitada:</strong> no puedes exportar
+            fácilmente tus datos en un formato que te sirva
+          </li>
+          <li>
+            <strong>Subidas de precio:</strong> las empresas pueden subir los
+            precios sabiendo que dependes de su plataforma
+          </li>
+          <li>
+            <strong>Funciones eliminadas:</strong> pueden quitar funciones de
+            las que dependes sin contar contigo
+          </li>
+          <li>
+            <strong>Cierre del servicio:</strong> si la empresa cierra, pierdes
+            el acceso a tus datos y a la plataforma
+          </li>
+          <li>
+            <strong>Riesgos de adquisición:</strong> si la empresa es adquirida,
+            el nuevo propietario puede cambiarlo todo
+          </li>
+        </ul>
+
+        <h3>Cómo evita el código abierto esa dependencia</h3>
+        <p>Con OpenAthlete, nunca te quedas atrapado:</p>
+        <ul>
+          <li>
+            <strong>Opción de autoalojamiento:</strong> puedes ejecutar
+            OpenAthlete en tu propia infraestructura, sin depender de nuestro
+            servicio en la nube
+          </li>
+          <li>
+            <strong>Portabilidad de los datos:</strong> tus datos se guardan en
+            formatos estándar; puedes exportarlos cuando quieras
+          </li>
+          <li>
+            <strong>Posibilidad de bifurcar:</strong> si no te gusta el rumbo
+            que tomamos, puedes hacer un fork del proyecto y seguir
+            desarrollándolo por tu cuenta
+          </li>
+          <li>
+            <strong>Sin depender de una suscripción:</strong> aunque dejáramos
+            de ofrecer el alojamiento en la nube, podrías seguir usando el
+            software
+          </li>
+          <li>
+            <strong>Continuidad gracias a la comunidad:</strong> la comunidad
+            puede seguir con el desarrollo aunque sus creadores originales pasen
+            a otra cosa
+          </li>
+        </ul>
+
+        <h2>5. Ahorro: software libre, no software «gratis»</h2>
+
+        <p>
+          Código abierto no solo significa «gratis como una cerveza gratis»:
+          significa «libre como en libertad». Pero el ahorro es real:
+        </p>
+        <ul>
+          <li>
+            <strong>Sin costes de licencia:</strong> usa OpenAthlete sin pagar
+            licencias
+          </li>
+          <li>
+            <strong>Sin costes por usuario:</strong> añade tantos atletas o
+            entrenadores como quieras sin coste adicional
+          </li>
+          <li>
+            <strong>Ahorro con el autoalojamiento:</strong> para las
+            organizaciones, autoalojar puede suponer un ahorro de miles frente a
+            las soluciones propietarias
+          </li>
+          <li>
+            <strong>Sin sobrecoste del proveedor:</strong> no pagas los gastos
+            añadidos de una licencia propietaria
+          </li>
+        </ul>
+
+        <h2>6. Transparencia y confianza</h2>
+
+        <p>
+          <strong>
+            Con el software propietario, tienes que confiar en que:
+          </strong>
+        </p>
+        <ul>
+          <li>La empresa dice la verdad sobre la seguridad</li>
+          <li>No vende tus datos</li>
+          <li>Sigue las buenas prácticas</li>
+          <li>Seguirá dando soporte al software</li>
+        </ul>
+
+        <p>
+          <strong>Con el código abierto, puedes comprobarlo:</strong>
+        </p>
+        <ul>
+          <li>Revisa tú mismo el código o contrata a alguien para auditarlo</li>
+          <li>Mira exactamente cómo se procesan los datos</li>
+          <li>Comprueba las prácticas de seguridad</li>
+          <li>
+            Ten la certeza de que la comunidad puede seguir con el desarrollo
+          </li>
+        </ul>
+
+        <blockquote>
+          <p>
+            «Confía, pero verifica. Con el código abierto, puedes hacer ambas
+            cosas».
+          </p>
+        </blockquote>
+
+        <h2>7. Personalización y flexibilidad</h2>
+
+        <p>
+          Cada atleta y cada entrenador tiene necesidades únicas. El software
+          propietario te obliga a adaptarte a sus limitaciones. El código
+          abierto te permite adaptar el software a tus necesidades.
+        </p>
+
+        <p>
+          <strong>Con OpenAthlete, puedes:</strong>
+        </p>
+        <ul>
+          <li>
+            <strong>Modificar funciones:</strong> cambia cómo funcionan para
+            adaptarlas a tu forma de trabajar
+          </li>
+          <li>
+            <strong>Añadir integraciones:</strong> crea integraciones a medida
+            con las herramientas que ya usas
+          </li>
+          <li>
+            <strong>Crear informes personalizados:</strong> genera informes
+            adaptados a tus necesidades concretas
+          </li>
+          <li>
+            <strong>Adaptar la interfaz:</strong> personaliza la interfaz para
+            tu equipo u organización
+          </li>
+          <li>
+            <strong>Crear flujos de trabajo:</strong> monta flujos automatizados
+            que encajen con tus procesos
+          </li>
+        </ul>
+
+        <h2>Impacto real: por qué es importante para atletas y entrenadores</h2>
+
+        <h3>Para los atletas</h3>
+        <ul>
+          <li>
+            <strong>Privacidad:</strong> sabes exactamente cómo se tratan tus
+            datos de salud sensibles
+          </li>
+          <li>
+            <strong>Control:</strong> autoalójalo si quieres soberanía total
+            sobre tus datos
+          </li>
+          <li>
+            <strong>Coste:</strong> usa un software de entrenamiento avanzado
+            sin pagar suscripciones caras
+          </li>
+          <li>
+            <strong>Innovación:</strong> aprovecha las mejoras y funciones que
+            impulsa la comunidad
+          </li>
+        </ul>
+
+        <h3>Para los entrenadores</h3>
+        <ul>
+          <li>
+            <strong>Protección de los datos de tus clientes:</strong> asegúrate
+            de que los datos de tus atletas se tratan de forma segura y
+            transparente
+          </li>
+          <li>
+            <strong>Cumplimiento normativo:</strong> comprueba el cumplimiento
+            del RGPD y de la protección de datos para tus clientes
+          </li>
+          <li>
+            <strong>Personalización:</strong> adapta la plataforma a tu
+            metodología de entrenamiento
+          </li>
+          <li>
+            <strong>Eficiencia de costes:</strong> ahorra en licencias de
+            software para invertir en tus atletas
+          </li>
+        </ul>
+
+        <h3>Para clubes y organizaciones</h3>
+        <ul>
+          <li>
+            <strong>Soberanía de los datos:</strong> autoalójalo para mantener
+            todos los datos dentro de tu infraestructura
+          </li>
+          <li>
+            <strong>Escalabilidad:</strong> añade miembros sin límite y sin
+            costes de licencia por usuario
+          </li>
+          <li>
+            <strong>Cumplimiento normativo:</strong> cumple requisitos estrictos
+            de protección de datos con un código auditable
+          </li>
+          <li>
+            <strong>Personalización:</strong> adapta la plataforma a las
+            necesidades de tu organización
+          </li>
+        </ul>
+
+        <h2>El futuro de la tecnología deportiva es abierto</h2>
+
+        <p>
+          El futuro del software es el código abierto. Grandes empresas como
+          Microsoft, Google y Amazon lo están adoptando. Las ventajas son
+          claras: más seguridad, una innovación más rápida, más transparencia y
+          más control para el usuario.
+        </p>
+
+        <p>
+          <strong>
+            OpenAthlete lidera este cambio en la tecnología deportiva.
+          </strong>{' '}
+          Creemos que los atletas y los entrenadores merecen:
+        </p>
+        <ul>
+          <li>Transparencia sobre cómo se procesan sus datos</li>
+          <li>Control sobre su información de entrenamiento</li>
+          <li>
+            Una innovación guiada por las necesidades de los usuarios, no por el
+            beneficio
+          </li>
+          <li>Libertad frente a la dependencia de un proveedor</li>
+          <li>
+            Un software que mejora gracias a la colaboración de la comunidad
+          </li>
+        </ul>
+
+        <h2>Empieza a usar un software de entrenamiento de código abierto</h2>
+
+        <p>
+          ¿Quieres descubrir las ventajas del código abierto? OpenAthlete es
+          gratuito, de código abierto y está listo para usar:
+        </p>
+
+        <ol>
+          <li>
+            <strong>Prueba la versión en la nube:</strong> regístrate gratis en{' '}
+            <a href="https://app.openathlete.org/auth/create-account">
+              app.openathlete.org
+            </a>{' '}
+            y descubre un software de entrenamiento de código abierto
+          </li>
+          <li>
+            <strong>Revisa el código:</strong> echa un vistazo a nuestro
+            repositorio de GitHub para ver cómo funciona todo
+          </li>
+          <li>
+            <strong>Autoalójalo (opcional):</strong> para un control máximo,
+            despliega OpenAthlete en tu propia infraestructura
+          </li>
+          <li>
+            <strong>Contribuye:</strong> ayuda a mejorar OpenAthlete informando
+            de errores, proponiendo funciones o aportando código
+          </li>
+        </ol>
+
+        <p>
+          <strong>
+            Únete a la revolución del código abierto en la tecnología deportiva.
+            Tus datos, tu control, tu innovación.
+          </strong>
+        </p>
+
+        <p>
+          <a
+            href="https://app.openathlete.org/auth/create-account"
+            className="inline-flex items-center rounded-md bg-primary px-6 py-3 text-base font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
+          >
+            Empieza con OpenAthlete →
+          </a>
+        </p>
+
+        <h2>Preguntas frecuentes</h2>
+
+        <h3>¿El software de código abierto es menos seguro?</h3>
+        <p>
+          No. De hecho, el software de código abierto suele ser más seguro
+          porque más personas pueden revisar el código y encontrar
+          vulnerabilidades. El principio de los «muchos ojos» hace que los
+          fallos de seguridad se detecten y se corrijan antes que en el software
+          propietario.
+        </p>
+
+        <h3>¿De verdad puedo autoalojar OpenAthlete?</h3>
+        <p>
+          ¡Sí! OpenAthlete está pensado para poder autoalojarse. Puedes
+          desplegarlo en tu propio servidor, usar tu propia base de datos y
+          tener el control total de tus datos. Hay documentación disponible para
+          el autoalojamiento.
+        </p>
+
+        <h3>
+          ¿Y si no tengo conocimientos técnicos? ¿Tengo que entender código?
+        </h3>
+        <p>
+          ¡Para nada! Puedes usar la versión en la nube de OpenAthlete como
+          cualquier otra plataforma de entrenamiento. Que sea de código abierto
+          te da la opción de autoalojarlo o revisar el código si quieres, pero
+          no es obligatorio.
+        </p>
+
+        <h3>¿Cómo ayuda el código abierto a innovar?</h3>
+        <p>
+          El código abierto permite que cualquiera aporte mejoras. Atletas,
+          entrenadores y desarrolladores pueden proponer funciones, informar de
+          errores e incluso contribuir con código. Así, el software mejora en
+          función de las necesidades reales de los usuarios, y no solo de lo que
+          una empresa cree que se venderá.
+        </p>
+
+        <h3>¿Qué licencia usa OpenAthlete?</h3>
+        <p>
+          OpenAthlete usa la licencia AGPLv3, que garantiza que el software siga
+          siendo libre y de código abierto. Esto significa que puedes usar,
+          modificar y distribuir OpenAthlete siempre que respetes los términos
+          de la licencia.
         </p>
       </div>
     );

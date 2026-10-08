@@ -6,14 +6,17 @@ export const articleGenerativeAiSports: BlogPost = {
     title: {
       en: 'Generative AI in Sports: Gadget or Revolution?',
       fr: 'IA Générative dans le Sport : Gadget ou Révolution ?',
+      es: 'IA generativa en el deporte: ¿moda pasajera o revolución?',
     },
     description: {
       en: "Demystify AI in sports training. Learn how generative AI doesn't replace coaches but processes data to instantly recalculate training plans when life happens.",
       fr: "Démystifiez l'IA dans l'entraînement sportif. Découvrez comment l'IA générative ne remplace pas les coachs mais traite les données pour recalculer instantanément les plans d'entraînement quand la vie arrive.",
+      es: 'Desmitificamos la IA en el entrenamiento deportivo: la IA generativa no sustituye a los entrenadores, sino que procesa los datos para recalcular al instante los planes de entrenamiento cuando la vida se cruza en el camino.',
     },
     excerpt: {
       en: "AI doesn't replace the coach—it processes data. See how AI instantly recalculates a week's plan after a missed session, unlike static PDF plans that become obsolete.",
       fr: "L'IA ne remplace pas le coach—elle traite les données. Voyez comment l'IA recalcule instantanément un plan hebdomadaire après une séance manquée, contrairement aux plans PDF statiques qui deviennent obsolètes.",
+      es: 'La IA no sustituye al entrenador: procesa datos. Descubre cómo la IA recalcula al instante el plan de la semana tras una sesión perdida, a diferencia de los planes estáticos en PDF que se quedan obsoletos.',
     },
     author: {
       name: 'OpenAthlete Team',
@@ -398,6 +401,197 @@ export const articleGenerativeAiSports: BlogPost = {
           </a>{' '}
           et découvrez comment la planification alimentée par l'IA s'adapte à
           votre vie tout en vous gardant sur la voie de vos objectifs.
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          <strong>
+            Te perdiste el entrenamiento del martes por una urgencia en el
+            trabajo. Tu plan de entrenamiento, un PDF estático que descargaste
+            hace tres semanas, se ha quedado obsoleto.
+          </strong>{' '}
+          ¿Te lo saltas? ¿Lo pasas al miércoles? ¿Reajustas el resto de la
+          semana? Te toca adivinar, y cada suposición puede echar por tierra tu
+          progreso.
+        </p>
+
+        <p>
+          Ese es el problema de los planes de entrenamiento tradicionales: son
+          documentos estáticos en un mundo dinámico. No pueden adaptarse cuando
+          la vida se cruza en el camino. Aquí es donde la IA generativa lo
+          cambia todo, no como sustituta de los entrenadores, sino como una
+          herramienta potente que procesa datos y se adapta en tiempo real.
+        </p>
+
+        <h2>Lo que hace realmente la IA generativa</h2>
+        <p>
+          Vamos a desmitificar la IA. En el entrenamiento deportivo, la IA
+          generativa no «piensa» ni «decide» como un entrenador humano. Lo que
+          hace es:
+        </p>
+        <ul>
+          <li>
+            <strong>Procesar patrones:</strong> analiza miles de sesiones de
+            entrenamiento para identificar qué funciona
+          </li>
+          <li>
+            <strong>Aplicar principios:</strong> usa las reglas de las ciencias
+            del deporte (periodización, sobrecarga progresiva, recuperación)
+            para generar planes
+          </li>
+          <li>
+            <strong>Adaptarse al instante:</strong> recalcula cuando cambian las
+            variables: sesiones perdidas, mala recuperación, nuevos objetivos
+          </li>
+          <li>
+            <strong>Aprender de forma continua:</strong> mejora sus
+            recomendaciones a partir de tus respuestas individuales
+          </li>
+        </ul>
+
+        <p>
+          Piensa en un GPS. Tu GPS no «sabe» cuál es la mejor ruta: procesa los
+          datos de tráfico, el estado de las carreteras y tu destino para
+          calcular opciones. Del mismo modo, la IA procesa los datos de
+          entrenamiento, el estado de recuperación y los objetivos para generar
+          opciones de entrenamiento.
+        </p>
+
+        <h2>La revolución de la adaptabilidad</h2>
+        <p>
+          Aquí es donde la IA brilla de verdad: en la{' '}
+          <strong>adaptabilidad</strong>. Imagina esta situación:
+        </p>
+
+        <p>
+          Llevas tres semanas de un plan de maratón de 16 semanas. El lunes
+          completas tu sesión de tempo. El martes te despiertas con un RPE
+          elevado por la sesión anterior y has dormido mal. El miércoles tienes
+          un viaje de trabajo que te obliga a saltarte la tirada larga.
+        </p>
+
+        <p>
+          Un plan estático en PDF ya no sirve de nada. En cambio, la
+          planificación con IA:
+        </p>
+        <ul>
+          <li>Detecta tu RPE elevado y tu peor recuperación</li>
+          <li>Tiene en cuenta la sesión perdida del miércoles</li>
+          <li>Recalcula al instante las sesiones que quedan en la semana</li>
+          <li>
+            Ajusta la intensidad y el volumen para respetar los principios de
+            periodización
+          </li>
+          <li>
+            Mantiene tus objetivos de entrenamiento sin perder de vista la
+            realidad
+          </li>
+        </ul>
+
+        <p>
+          Todo esto ocurre en segundos, no en horas. Sin escribirle un correo a
+          tu entrenador. Sin esperas. Sin conjeturas.
+        </p>
+
+        <h2>La IA no sustituye a los entrenadores: los potencia</h2>
+        <p>
+          El miedo a que la IA sustituya a los entrenadores es comprensible,
+          pero infundado. Te explicamos por qué:
+        </p>
+
+        <p>
+          <strong>La IA se encarga del 80%:</strong> las tareas repetitivas y
+          basadas en datos: calcular la carga, ajustar el volumen, mantener la
+          estructura de la periodización. Es el «trabajo pesado» que consume
+          horas del tiempo de un entrenador.
+        </p>
+
+        <p>
+          <strong>El entrenador se encarga del 20%:</strong> lo humano: la
+          motivación, la estrategia, la relación con el atleta, la comprensión
+          del contexto más allá de los datos. Ahí es donde un entrenador aporta
+          un valor insustituible.
+        </p>
+
+        <p>
+          ¿El resultado? Los entrenadores pueden llevar a más atletas y hacerlo
+          mejor. En lugar de dedicar 2 horas a la semana por atleta a planificar
+          y hacer cálculos, dedican 30 minutos a la estrategia y la
+          comunicación. Pueden pasar de 20 a 50 atletas sin sacrificar la
+          calidad.
+        </p>
+
+        <h2>Impacto real</h2>
+        <p>Pongamos el caso de un entrenador que lleva a 30 atletas. Sin IA:</p>
+        <ul>
+          <li>
+            Dedica más de 60 horas a la semana a planificar y hacer ajustes
+          </li>
+          <li>Reacciona a los problemas cuando ya han ocurrido</li>
+          <li>Le cuesta dar feedback a tiempo</li>
+          <li>Toca techo con 20-25 atletas</li>
+        </ul>
+
+        <p>Con planificación asistida por IA:</p>
+        <ul>
+          <li>Dedica 15 horas a la semana a la estrategia y la comunicación</li>
+          <li>Previene los problemas con ajustes proactivos</li>
+          <li>Ofrece feedback y adaptaciones al instante</li>
+          <li>Puede llegar a más de 50 atletas mejorando la calidad</li>
+        </ul>
+
+        <p>
+          Las cuentas son sencillas: la IA no sustituye a los entrenadores, los
+          hace más eficaces.
+        </p>
+
+        <h2>Más allá de los planes estáticos</h2>
+        <p>
+          Los planes de entrenamiento tradicionales son como los mapas de papel.
+          Son útiles, pero no tienen en cuenta los cortes de carretera, el
+          tráfico ni dónde estás ahora mismo. Los planes con IA son como un GPS:
+          se adaptan en tiempo real a tu situación real.
+        </p>
+
+        <p>Cuando completas una sesión, la IA analiza:</p>
+        <ul>
+          <li>¿Has alcanzado la intensidad objetivo?</li>
+          <li>¿Cómo ha sido tu RPE en comparación con lo esperado?</li>
+          <li>¿Cuál es tu estado de recuperación?</li>
+          <li>¿Vas camino del sobreentrenamiento?</li>
+        </ul>
+
+        <p>
+          A partir de este análisis, ajusta automáticamente las siguientes
+          sesiones. Sin recálculos manuales. Sin conjeturas. Solo una adaptación
+          inteligente.
+        </p>
+
+        <h2>En resumen</h2>
+        <p>
+          La IA generativa en el deporte no es una moda pasajera: es una
+          revolución en la forma de entender el entrenamiento. No sustituye la
+          experiencia humana, la amplifica. No elimina a los entrenadores, los
+          hace más potentes.
+        </p>
+
+        <p>
+          La cuestión no es si la IA va a transformar el entrenamiento
+          deportivo: ya lo está haciendo. La cuestión es si te vas a adaptar o
+          te vas a quedar atrás.
+        </p>
+
+        <p>
+          <strong>Deja de adivinar y empieza hoy a entrenar con IA.</strong>{' '}
+          <a href="https://app.openathlete.org/auth/create-account">
+            Regístrate en OpenAthlete
+          </a>{' '}
+          y comprueba cómo la planificación con IA se adapta a tu vida sin que
+          pierdas de vista tus objetivos.
         </p>
       </div>
     );

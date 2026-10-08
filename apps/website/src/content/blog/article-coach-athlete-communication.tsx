@@ -6,14 +6,17 @@ export const articleCoachAthleteCommunication: BlogPost = {
     title: {
       en: 'Coach-Athlete Communication: The #1 Success Factor',
       fr: 'Communication Coach-Athlète : Le Facteur de Succès #1',
+      es: 'Comunicación entre entrenador y atleta: el factor de éxito n.º 1',
     },
     description: {
       en: "A perfect plan is useless if the athlete doesn't understand it. Learn why chat and contextualized comments directly on sessions (not lost in WhatsApp) are crucial.",
       fr: "Un plan parfait est inutile si l'athlète ne le comprend pas. Découvrez pourquoi le chat et les commentaires contextualisés directement sur les séances (pas perdus dans WhatsApp) sont cruciaux.",
+      es: 'Un plan perfecto no sirve de nada si el atleta no lo entiende. Descubre por qué el chat y los comentarios en contexto, directamente en las sesiones (y no perdidos en WhatsApp), son clave.',
     },
     excerpt: {
       en: 'Communication is the foundation of successful coaching. See how contextualized feedback directly on training sessions beats scattered WhatsApp messages.',
       fr: "La communication est la base du coaching réussi. Voyez comment les retours contextualisés directement sur les séances d'entraînement battent les messages WhatsApp dispersés.",
+      es: 'La comunicación es la base de un buen entrenamiento. Descubre por qué el feedback en contexto, directamente en las sesiones, gana a los mensajes dispersos de WhatsApp.',
     },
     author: {
       name: 'OpenAthlete Team',
@@ -501,6 +504,236 @@ export const articleCoachAthleteCommunication: BlogPost = {
           </a>{' '}
           et découvrez comment la communication contextualisée transforme vos
           relations coach-athlète et améliore les résultats.
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          <strong>
+            Has pasado 2 horas diseñando el plan de entrenamiento perfecto. Cada
+            sesión está perfectamente periodizada. La progresión de la carga es
+            impecable. La recuperación está prevista. Lo envías por correo. Tres
+            días después, tu atleta te pregunta: «Oye, ¿qué era eso de
+            “tempo”?».
+          </strong>
+        </p>
+
+        <p>
+          Esta es la brecha de comunicación. Puedes crear el mejor plan del
+          mundo, pero si tu atleta no lo entiende, no puede consultarlo con
+          facilidad o pierde tus comentarios en un chat de WhatsApp, tu
+          experiencia se desperdicia.
+        </p>
+
+        <h2>Por qué la comunicación importa más que la planificación</h2>
+        <p>
+          Las investigaciones muestran una y otra vez que la comunicación entre
+          entrenador y atleta es el mejor indicador de:
+        </p>
+        <ul>
+          <li>La satisfacción del atleta</li>
+          <li>La adherencia a los planes de entrenamiento</li>
+          <li>La mejora del rendimiento</li>
+          <li>La retención a largo plazo</li>
+        </ul>
+
+        <p>
+          Un plan mediocre con una comunicación excelente gana siempre a un plan
+          perfecto con una mala comunicación. ¿Por qué? Porque los atletas
+          necesitan entender tus indicaciones, confiar en ellas y ponerlas en
+          práctica. Sin comunicación, nada de eso ocurre.
+        </p>
+
+        <h2>El problema de WhatsApp</h2>
+        <p>
+          Muchos entrenadores se comunican por WhatsApp. Es cómodo, pero genera
+          problemas:
+        </p>
+        <ul>
+          <li>
+            <strong>Los mensajes se pierden:</strong> el feedback importante
+            desaparece en conversaciones larguísimas
+          </li>
+          <li>
+            <strong>Sin contexto:</strong> los comentarios no están vinculados a
+            sesiones concretas
+          </li>
+          <li>
+            <strong>Sin historial:</strong> cuesta saber qué se habló y cuándo
+          </li>
+          <li>
+            <strong>Temas mezclados:</strong> las dudas sobre el entrenamiento
+            se mezclan con la charla informal
+          </li>
+          <li>
+            <strong>Sin estructura:</strong> no puedes organizar el feedback por
+            sesión, semana o tema
+          </li>
+        </ul>
+
+        <p>
+          Cuando un atleta te pregunta «¿Por qué me costó tanto el rodaje del
+          martes?», te pones a buscar entre días de mensajes para encontrar el
+          contexto. Cuando por fin respondes, el momento ya ha pasado.
+        </p>
+
+        <h2>Comunicación en contexto</h2>
+        <p>
+          OpenAthlete lo resuelve dando contexto a la comunicación. Cada
+          comentario, pregunta o feedback queda vinculado directamente a:
+        </p>
+        <ul>
+          <li>La sesión concreta a la que se refiere</li>
+          <li>La fecha y el contexto</li>
+          <li>Los datos de entrenamiento de esa sesión</li>
+          <li>El historial de progreso del atleta</li>
+        </ul>
+
+        <p>
+          Cuando comentas una sesión, el atleta lo ve justo ahí: sin buscar, sin
+          confusiones, sin perder el contexto.
+        </p>
+
+        <h2>Un ciclo de feedback en tiempo real</h2>
+        <p>
+          Después de cada sesión, OpenAthlete pide a los atletas su RPE. Esto
+          crea una oportunidad inmediata de dar feedback:
+        </p>
+        <ol>
+          <li>El atleta completa la sesión</li>
+          <li>El atleta valora su RPE</li>
+          <li>El entrenador ve un RPE elevado</li>
+          <li>
+            El entrenador comenta directamente en esa sesión: «Veo que te ha
+            costado más de lo previsto. ¿Qué tal dormiste anoche?»
+          </li>
+          <li>El atleta responde en contexto</li>
+          <li>
+            El entrenador ajusta la siguiente sesión según la conversación
+          </li>
+        </ol>
+
+        <p>
+          Todo esto ocurre en tiempo real y con todo el contexto. Sin buscar en
+          WhatsApp. Sin mensajes perdidos. Solo una comunicación clara y útil.
+        </p>
+
+        <h2>El chat</h2>
+        <p>
+          OpenAthlete incluye un chat integrado, pero más inteligente que una
+          mensajería genérica:
+        </p>
+        <ul>
+          <li>
+            <strong>Enlace a sesiones:</strong> menciona sesiones concretas en
+            el chat
+          </li>
+          <li>
+            <strong>Datos compartidos:</strong> comparte gráficos, métricas y
+            análisis directamente
+          </li>
+          <li>
+            <strong>Notificaciones:</strong> los atletas reciben un aviso de los
+            mensajes importantes
+          </li>
+          <li>
+            <strong>Historial con búsqueda:</strong> encuentra fácilmente
+            conversaciones anteriores
+          </li>
+          <li>
+            <strong>Conversaciones organizadas:</strong> separa las charlas
+            sobre entrenamiento de la conversación informal
+          </li>
+        </ul>
+
+        <p>No es solo mensajería: es comunicación pensada para entrenar.</p>
+
+        <h2>Por qué los atletas necesitan contexto</h2>
+        <p>
+          Cuando un atleta lee tu comentario «¡Muy bien esas series!», necesita
+          saber:
+        </p>
+        <ul>
+          <li>A qué sesión te refieres</li>
+          <li>Qué ha hecho bien exactamente</li>
+          <li>Cómo encaja en su plan global</li>
+          <li>En qué centrarse a continuación</li>
+        </ul>
+
+        <p>
+          Los comentarios en contexto aportan todo esto de forma automática. El
+          atleta no tiene que adivinar ni hacer más preguntas. Lo entiende al
+          instante.
+        </p>
+
+        <h2>La brecha de comprensión</h2>
+        <p>Muchos atletas no entienden la terminología del entrenamiento:</p>
+        <ul>
+          <li>«¿Qué diferencia hay entre tempo y umbral?»</li>
+          <li>«¿Por qué hago rodajes suaves si me encuentro bien?»</li>
+          <li>«¿Qué significa “Z2”?»</li>
+          <li>«¿Cómo sé si voy demasiado fuerte?»</li>
+        </ul>
+
+        <p>
+          Sin comunicación, estas preguntas quedan sin respuesta. Y los atletas:
+        </p>
+        <ul>
+          <li>Entrenan mal (intensidad equivocada, objetivo equivocado)</li>
+          <li>
+            Pierden la motivación (no entienden por qué hacen lo que hacen)
+          </li>
+          <li>Se frustran (sienten que van a ciegas)</li>
+        </ul>
+
+        <p>
+          Con los comentarios en contexto, puedes explicarlo directamente en la
+          sesión. Cuando un atleta ve «Tempo» el martes, puede pulsar y leer tu
+          explicación: «Esta sesión desarrolla tu capacidad aeróbica. Mantén el
+          control: deberías poder mantener una conversación».
+        </p>
+
+        <h2>Generar confianza a través de la comunicación</h2>
+        <p>
+          La confianza no se gana con planes perfectos, sino con una
+          comunicación constante y clara. Cuando los atletas:
+        </p>
+        <ul>
+          <li>Entienden por qué hacen cada sesión</li>
+          <li>Reciben feedback sobre su esfuerzo</li>
+          <li>Se sienten escuchados cuando algo les preocupa</li>
+          <li>Ven que les prestas atención</li>
+        </ul>
+
+        <p>
+          Confían en tus indicaciones. Siguen tus planes. Se quedan contigo a
+          largo plazo.
+        </p>
+
+        <h2>En resumen</h2>
+        <p>
+          La comunicación no es un extra: es la base de un buen entrenamiento.
+          Un plan perfecto sin comunicación no vale nada. Un buen plan con una
+          comunicación excelente es muy potente.
+        </p>
+
+        <p>
+          No dejes que tu experiencia se pierda en chats de WhatsApp o en
+          cadenas de correos. Usa herramientas pensadas para la comunicación
+          entre entrenador y atleta: herramientas que conservan el contexto,
+          guardan el historial y facilitan la comprensión.
+        </p>
+
+        <p>
+          <strong>Deja de adivinar y empieza hoy a entrenar con IA.</strong>{' '}
+          <a href="https://app.openathlete.org/auth/create-account">
+            Regístrate en OpenAthlete
+          </a>{' '}
+          y comprueba cómo la comunicación en contexto transforma tu relación
+          con tus atletas y mejora los resultados.
         </p>
       </div>
     );

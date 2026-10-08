@@ -6,14 +6,17 @@ export const article1: BlogPost = {
     title: {
       en: 'Introducing OpenAthlete: AI-Powered Endurance Coaching',
       fr: "Présentation d'OpenAthlete : Coaching d'endurance assisté par IA",
+      es: 'Te presentamos OpenAthlete: entrenamiento de resistencia asistido por IA',
     },
     description: {
       en: 'Discover how OpenAthlete revolutionizes endurance coaching with AI-powered planning, analysis, and fatigue prevention.',
       fr: "Découvrez comment OpenAthlete révolutionne le coaching d'endurance avec une planification, une analyse et une prévention de la fatigue assistées par IA.",
+      es: 'Descubre cómo OpenAthlete revoluciona el entrenamiento de resistencia con planificación, análisis y prevención de la fatiga asistidos por IA.',
     },
     excerpt: {
       en: 'OpenAthlete combines cutting-edge AI technology with proven training methodologies to help coaches and athletes achieve better results while preventing injuries.',
       fr: "OpenAthlete combine une technologie IA de pointe avec des méthodologies d'entraînement éprouvées pour aider les coachs et les athlètes à obtenir de meilleurs résultats tout en prévenant les blessures.",
+      es: 'OpenAthlete combina tecnología de IA de vanguardia con metodologías de entrenamiento probadas para ayudar a entrenadores y atletas a lograr mejores resultados mientras previenen lesiones.',
     },
     author: {
       name: 'OpenAthlete Team',
@@ -145,6 +148,72 @@ export const article1: BlogPost = {
             inscrivez-vous
           </a>{' '}
           et aidez à façonner l'avenir du coaching d'endurance.
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          Te damos la bienvenida a OpenAthlete, la plataforma de nueva
+          generación para el entrenamiento de resistencia. Nos hace mucha
+          ilusión presentarte una solución que combina la inteligencia
+          artificial con metodologías de entrenamiento probadas para ayudar a
+          entrenadores y atletas a alcanzar sus objetivos de forma más
+          eficiente.
+        </p>
+
+        <h2>El reto</h2>
+        <p>
+          El entrenamiento de resistencia es complejo. Cada día trae nuevas
+          variables: la calidad del sueño, el nivel de estrés, las obligaciones
+          laborales, la meteorología y el estado de recuperación. Los planes de
+          entrenamiento tradicionales suelen ser estáticos, lo que lleva a
+          adaptaciones poco óptimas y a un mayor riesgo de lesión.
+        </p>
+
+        <h2>Nuestra solución</h2>
+        <p>
+          OpenAthlete utiliza la IA para analizar estas variables en tiempo real
+          y ofrece a entrenadores y atletas:
+        </p>
+        <ul>
+          <li>
+            <strong>Planificación inteligente:</strong> la IA propone sesiones
+            de entrenamiento adaptadas a la carga actual del atleta, a sus
+            objetivos y a su estado de recuperación.
+          </li>
+          <li>
+            <strong>Análisis automático:</strong> cada sesión completada se
+            analiza en cuanto a intensidad, regularidad y coherencia con los
+            objetivos de entrenamiento.
+          </li>
+          <li>
+            <strong>Prevención de la fatiga:</strong> la detección temprana de
+            las señales de sobrecarga ayuda a prevenir lesiones y el
+            sobreentrenamiento antes de que aparezcan.
+          </li>
+        </ul>
+
+        <h2>Pensada para entrenadores y atletas</h2>
+        <p>
+          Tanto si eres un entrenador profesional que gestiona a varios atletas
+          como si eres un atleta que entrena por su cuenta, OpenAthlete se
+          adapta a tus necesidades. Nuestra plataforma ahorra a los entrenadores
+          hasta un 50% de su tiempo de planificación, a la vez que mejora la
+          calidad del entrenamiento y la satisfacción de los atletas.
+        </p>
+
+        <h2>Próximos pasos</h2>
+        <p>
+          Ahora mismo estamos en fase beta y trabajamos con un grupo de
+          entrenadores y atletas para pulir la plataforma. Si te interesa unirte
+          a nuestro programa beta,{' '}
+          <a href="https://app.openathlete.org/auth/create-account">
+            regístrate
+          </a>{' '}
+          y ayúdanos a dar forma al futuro del entrenamiento de resistencia.
         </p>
       </div>
     );

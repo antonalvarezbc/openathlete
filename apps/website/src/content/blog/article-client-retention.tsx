@@ -6,14 +6,17 @@ export const articleClientRetention: BlogPost = {
     title: {
       en: 'Client Retention: Why Athletes Quit (and How to Keep Them)',
       fr: 'Rétention Client : Pourquoi les Athlètes Quittent (et Comment les Garder)',
+      es: 'Retención de clientes: por qué los atletas se van (y cómo conservarlos)',
     },
     description: {
       en: "Athletes leave when they don't see progress or feel ignored. Learn how data visualization and AI alerts increase perceived value and reduce churn.",
       fr: 'Les athlètes partent quand ils ne voient pas de progrès ou se sentent ignorés. Découvrez comment la visualisation de données et les alertes IA augmentent la valeur perçue et réduisent le taux de désabonnement.',
+      es: 'Los atletas se van cuando no ven progresos o se sienten ignorados. Descubre cómo la visualización de datos y las alertas de IA aumentan el valor percibido y reducen las bajas.',
     },
     excerpt: {
       en: 'Understanding why athletes quit is the first step to keeping them. See how transparency, progress visualization, and proactive communication reduce churn rates.',
       fr: 'Comprendre pourquoi les athlètes quittent est la première étape pour les garder. Voyez comment la transparence, la visualisation des progrès et la communication proactive réduisent les taux de désabonnement.',
+      es: 'Entender por qué los atletas se van es el primer paso para conservarlos. Descubre cómo la transparencia, la visualización del progreso y la comunicación proactiva reducen la tasa de bajas.',
     },
     author: {
       name: 'OpenAthlete Team',
@@ -572,6 +575,276 @@ export const articleClientRetention: BlogPost = {
           et découvrez comment la visualisation de données, les alertes IA et la
           communication proactive peuvent réduire votre taux de désabonnement et
           améliorer la rétention des athlètes.
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          <strong>
+            Sarah era una gran atleta. Seguía cada plan. Daba un feedback
+            detallado. Estaba progresando. Y entonces, a los 3 meses, lo dejó.
+            Sin explicaciones. Simplemente desapareció.
+          </strong>
+        </p>
+
+        <p>
+          A los entrenadores les pasa constantemente. Los atletas se van y tú te
+          quedas preguntándote por qué. ¿La verdad? La mayoría no lo deja por
+          tener malos planes, sino porque no ven progresos, se sienten ignorados
+          o pierden la motivación. La solución no es planificar mejor, sino
+          implicarles más.
+        </p>
+
+        <h2>Por qué se van realmente los atletas</h2>
+        <p>
+          Los estudios sobre las bajas en los servicios de entrenamiento señalan
+          tres motivos principales por los que se van los atletas:
+        </p>
+
+        <p>
+          <strong>1. No ven progresos (40 %)</strong>
+        </p>
+        <p>
+          Los atletas necesitan ver que su entrenamiento funciona. Sin una
+          visualización clara del progreso, pierden la motivación. Mejorar 5
+          segundos en un 5K puede ser un logro enorme, pero si no lo ven con
+          claridad, lo viven como un estancamiento.
+        </p>
+
+        <p>
+          <strong>2. Se sienten ignorados (35 %)</strong>
+        </p>
+        <p>
+          Los atletas quieren sentirse escuchados. Cuando no reciben respuestas
+          a tiempo, no ven que prestas atención a sus datos o sienten que son
+          solo un número, se van. Los vacíos de comunicación acaban con la
+          retención.
+        </p>
+
+        <p>
+          <strong>3. Pierden la motivación (25 %)</strong>
+        </p>
+        <p>
+          Entrenar es duro. Sin objetivos claros, seguimiento del progreso y
+          ánimo, los atletas pierden las ganas de seguir. Necesitan ver el «para
+          qué» de su entrenamiento.
+        </p>
+
+        <h2>La solución: visualizar el progreso</h2>
+        <p>
+          OpenAthlete resuelve el problema de «no veo progresos» con una
+          visualización de datos completa:
+        </p>
+        <ul>
+          <li>
+            <strong>Tendencias de rendimiento:</strong> gráficos claros que
+            muestran la mejora del ritmo, la potencia y la frecuencia cardíaca a
+            lo largo del tiempo
+          </li>
+          <li>
+            <strong>Progresión del volumen:</strong> representación visual de
+            los aumentos de carga de entrenamiento
+          </li>
+          <li>
+            <strong>Métricas de constancia:</strong> porcentaje de sesiones
+            completadas y seguimiento de la adherencia
+          </li>
+          <li>
+            <strong>Progreso hacia el objetivo:</strong> barras de progreso
+            visuales hacia los objetivos de carrera
+          </li>
+          <li>
+            <strong>Análisis comparativo:</strong> «Eres un 12 % más rápido que
+            hace 3 meses»
+          </li>
+        </ul>
+
+        <p>
+          Cuando los atletas ven su progreso con claridad, la motivación se
+          mantiene alta. Entienden que incluso las pequeñas mejoras cuentan. Ven
+          el efecto acumulado de entrenar con constancia.
+        </p>
+
+        <h2>La solución: comunicación proactiva</h2>
+        <p>
+          OpenAthlete evita el problema de «me siento ignorado» con alertas
+          impulsadas por IA:
+        </p>
+        <ul>
+          <li>
+            <strong>Seguimientos automáticos:</strong> la IA detecta cuándo un
+            atleta no ha registrado sus sesiones
+          </li>
+          <li>
+            <strong>Celebración de logros:</strong> notificaciones cuando los
+            atletas alcanzan un hito
+          </li>
+          <li>
+            <strong>Alertas de riesgo:</strong> avisos cuando los patrones de
+            RPE apuntan a un problema
+          </li>
+          <li>
+            <strong>Mensajes de ánimo:</strong> refuerzo positivo automatizado
+          </li>
+        </ul>
+
+        <p>
+          Estas alertas animan a los entrenadores a tomar la iniciativa. En
+          lugar de esperar a que los atletas acudan a ti con problemas, te
+          adelantas cuando ves una oportunidad o algo que te preocupa. Así los
+          atletas se sienten valorados y escuchados.
+        </p>
+
+        <h2>La solución para la motivación</h2>
+        <p>OpenAthlete mantiene a los atletas motivados gracias a:</p>
+        <ul>
+          <li>
+            <strong>Objetivos claros:</strong> metas concretas y medibles con
+            seguimiento del progreso
+          </li>
+          <li>
+            <strong>Explicaciones en contexto:</strong> los atletas entienden
+            por qué importa cada sesión
+          </li>
+          <li>
+            <strong>Visualización del éxito:</strong> ver cómo el entrenamiento
+            actual construye hacia sus objetivos
+          </li>
+          <li>
+            <strong>Funciones de comunidad:</strong> (próximamente) conectar a
+            atletas con objetivos similares
+          </li>
+        </ul>
+
+        <p>
+          Cuando los atletas entienden el «para qué» de su entrenamiento y ven
+          cómo les acerca a sus objetivos, la motivación se mantiene alta.
+        </p>
+
+        <h2>El problema del valor percibido</h2>
+        <p>Muchos atletas no entienden por qué están pagando. Lo que ven es:</p>
+        <ul>
+          <li>
+            Un plan de entrenamiento (podrían encontrarlo gratis en internet)
+          </li>
+          <li>Algún comentario de vez en cuando (les sabe a poco)</li>
+          <li>Datos que no entienden (les abruman)</li>
+        </ul>
+
+        <p>Lo que no ven es:</p>
+        <ul>
+          <li>Las horas que dedicas a planificar</li>
+          <li>El análisis que haces</li>
+          <li>La experiencia que hay detrás de cada decisión</li>
+          <li>El valor de prevenir lesiones</li>
+        </ul>
+
+        <p>OpenAthlete hace visible tu valor. Los atletas ven:</p>
+        <ul>
+          <li>Una IA que analiza sus datos 24/7</li>
+          <li>Ajustes automáticos del plan</li>
+          <li>Alertas de riesgo de lesión</li>
+          <li>Seguimiento y visualización del progreso</li>
+          <li>Comunicación proactiva</li>
+        </ul>
+
+        <p>Cuando el valor se ve, la retención mejora.</p>
+
+        <h2>Impacto real</h2>
+        <p>Los entrenadores que usan OpenAthlete observan:</p>
+        <ul>
+          <li>
+            <strong>Un 30 % menos de bajas:</strong> más implicación = más
+            retención
+          </li>
+          <li>
+            <strong>Un 25 % más de satisfacción de los atletas:</strong>{' '}
+            progreso claro = atletas más contentos
+          </li>
+          <li>
+            <strong>Un 40 % más de adherencia al plan:</strong> mejor
+            comprensión = mejor ejecución
+          </li>
+          <li>
+            <strong>Un 50 % menos de atletas «fantasma»:</strong> alertas
+            proactivas = mejor comunicación
+          </li>
+        </ul>
+
+        <p>
+          No son solo cifras: tienen un impacto real en tu negocio. Menos bajas
+          significan ingresos más estables. Más satisfacción significa más
+          recomendaciones. Más adherencia significa mejores resultados y, por
+          tanto, atletas más contentos que se quedan más tiempo.
+        </p>
+
+        <h2>El sistema de alerta temprana</h2>
+        <p>
+          La IA de OpenAthlete funciona como un sistema de alerta temprana ante
+          los riesgos de baja:
+        </p>
+        <ul>
+          <li>
+            <strong>Menor implicación:</strong> te avisa cuando un atleta deja
+            de registrar sesiones
+          </li>
+          <li>
+            <strong>Estancamiento del rendimiento:</strong> señala cuándo el
+            progreso se estanca
+          </li>
+          <li>
+            <strong>Vacíos de comunicación:</strong> recuerda a los entrenadores
+            que contacten con sus atletas
+          </li>
+          <li>
+            <strong>Bajones de motivación:</strong> detecta cuándo los patrones
+            de RPE apuntan a una falta de implicación
+          </li>
+        </ul>
+
+        <p>
+          Cuando recibes estas alertas, puedes intervenir pronto, antes de que
+          el atleta decida irse. Un simple mensaje para ver cómo va, una
+          felicitación por su progreso o un ajuste del plan pueden salvar la
+          relación.
+        </p>
+
+        <h2>En resumen</h2>
+        <p>
+          La retención no depende de planes perfectos, sino de la implicación,
+          la comunicación y el valor percibido. Los atletas se quedan cuando:
+        </p>
+        <ul>
+          <li>Ven un progreso claro</li>
+          <li>Se sienten escuchados y valorados</li>
+          <li>Entienden su entrenamiento</li>
+          <li>Se sienten motivados para continuar</li>
+        </ul>
+
+        <p>
+          OpenAthlete te da las herramientas para conseguir todo esto. La
+          visualización de datos muestra el progreso. Las alertas de IA permiten
+          una comunicación proactiva. Las explicaciones en contexto generan
+          comprensión. El seguimiento del progreso mantiene la motivación.
+        </p>
+
+        <p>
+          No dejes que tus atletas se vayan porque no ven el valor. Haz visible
+          tu experiencia. Haz que el progreso sea evidente. Haz que comunicarse
+          sea fácil.
+        </p>
+
+        <p>
+          <strong>Deja de adivinar y empieza hoy a entrenar con IA.</strong>{' '}
+          <a href="https://app.openathlete.org/auth/create-account">
+            Regístrate en OpenAthlete
+          </a>{' '}
+          y descubre cómo la visualización de datos, las alertas de IA y la
+          comunicación proactiva pueden reducir tu tasa de bajas y mejorar la
+          retención de tus atletas.
         </p>
       </div>
     );

@@ -6,14 +6,17 @@ export const article3: BlogPost = {
     title: {
       en: 'Preventing Training Injuries: A Data-Driven Approach',
       fr: "Prévenir les blessures d'entraînement : Une approche basée sur les données",
+      es: 'Prevenir lesiones en el entrenamiento: un enfoque basado en datos',
     },
     description: {
       en: 'Learn how data analysis and early warning systems can help prevent common endurance training injuries before they occur.',
       fr: "Découvrez comment l'analyse de données et les systèmes d'alerte précoce peuvent aider à prévenir les blessures courantes de l'entraînement d'endurance avant qu'elles ne surviennent.",
+      es: 'Descubre cómo el análisis de datos y los sistemas de alerta temprana pueden ayudar a prevenir las lesiones más habituales del entrenamiento de resistencia antes de que aparezcan.',
     },
     excerpt: {
       en: 'Most training injuries are preventable with the right data and early intervention. Discover how modern technology is making injury prevention more accessible.',
       fr: "La plupart des blessures d'entraînement sont évitables avec les bonnes données et une intervention précoce. Découvrez comment la technologie moderne rend la prévention des blessures plus accessible.",
+      es: 'La mayoría de las lesiones en el entrenamiento se pueden evitar con los datos adecuados y una intervención temprana. Descubre cómo la tecnología actual está haciendo la prevención de lesiones más accesible.',
     },
     author: {
       name: 'OpenAthlete Team',
@@ -182,6 +185,85 @@ export const article3: BlogPost = {
           jamais. Avec les bons outils et les bonnes données, nous pouvons aider
           les athlètes à s'entraîner plus intelligemment, pas seulement plus
           dur.
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          La prevención de lesiones es uno de los aspectos más importantes del
+          entrenamiento de resistencia. Aun así, muchos atletas y entrenadores
+          tienen dificultades para detectar las señales de alerta antes de que
+          se conviertan en problemas serios. En este artículo veremos cómo los
+          enfoques basados en datos están cambiando las reglas del juego.
+        </p>
+
+        <h2>El coste de las lesiones</h2>
+        <p>
+          Las lesiones no solo causan dolor físico: pueden echar por tierra
+          meses de progreso, afectar a la salud mental y provocar retrocesos a
+          largo plazo. La buena noticia es que la mayoría de las lesiones se
+          pueden evitar con la información adecuada y una intervención a tiempo.
+        </p>
+
+        <h2>Señales de alerta temprana</h2>
+        <p>Antes de una lesión suele haber señales sutiles:</p>
+        <ul>
+          <li>
+            <strong>Picos de carga:</strong> aumentos bruscos del volumen o de
+            la intensidad del entrenamiento
+          </li>
+          <li>
+            <strong>Indicadores de recuperación:</strong> HRV a la baja, mala
+            calidad del sueño, frecuencia cardíaca en reposo elevada
+          </li>
+          <li>
+            <strong>Caída del rendimiento:</strong> incapacidad para alcanzar
+            los ritmos o la potencia objetivo
+          </li>
+          <li>
+            <strong>Esfuerzo percibido:</strong> sesiones que se hacen más duras
+            de lo que deberían
+          </li>
+        </ul>
+
+        <h2>Cómo ayuda la tecnología</h2>
+        <p>
+          Las plataformas de entrenamiento actuales pueden seguir estos
+          indicadores de forma continua y avisar a entrenadores y atletas cuando
+          los patrones apuntan a un mayor riesgo de lesión. Al combinar varias
+          fuentes de datos (carga de entrenamiento, métricas de recuperación y
+          sensaciones subjetivas), podemos obtener una imagen completa del
+          estado de un atleta.
+        </p>
+
+        <h2>Ajustes proactivos</h2>
+        <p>
+          La clave para prevenir lesiones no es solo detectar los problemas,
+          sino hacer ajustes proactivos. Cuando aparecen señales de alerta, el
+          sistema puede proponer:
+        </p>
+        <ul>
+          <li>Reducir el volumen de entrenamiento</li>
+          <li>Añadir días de recuperación</li>
+          <li>Modificar la intensidad</li>
+          <li>Alternativas de entrenamiento cruzado</li>
+        </ul>
+
+        <h2>Resultados reales</h2>
+        <p>
+          Los entrenadores que usan OpenAthlete observan hasta un 30% menos de
+          incidencias relacionadas con la fatiga. Detectando los problemas a
+          tiempo y ajustando el plan en el momento oportuno, los atletas pueden
+          progresar de forma constante sin los parones que conlleva una lesión.
+        </p>
+
+        <p>
+          Recuerda: la mejor lesión es la que nunca llega. Con las herramientas
+          y los datos adecuados, podemos ayudar a los atletas a entrenar de
+          forma más inteligente, no solo más duro.
         </p>
       </div>
     );
