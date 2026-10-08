@@ -280,6 +280,8 @@
   "blog_related_articles": "Related articles",
   "blog_no_articles": "No articles found",
   "blog_by_author": "By {author}",
+  "blog_breadcrumb_home": "Home",
+  "blog_translation_unavailable": "This article is not available in your language yet, so it is shown in English.",
   "footer_description": "Ethical, open-source endurance training. EU-first hosting, AGPLv3, your data under your control.",
   "footer_product": "Product",
   "footer_resources": "Resources",

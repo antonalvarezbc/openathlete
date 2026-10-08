@@ -1,3 +1,4 @@
+import { isSupportedLocale } from '@/utils/locales';
 import { notFound, redirect } from 'next/navigation';
 
 /**
@@ -11,7 +12,7 @@ export default async function CoachesPage({
 }) {
   const { locale } = await params;
 
-  if (locale !== 'en' && locale !== 'fr') {
+  if (!isSupportedLocale(locale)) {
     notFound();
   }
 

@@ -3,8 +3,8 @@ import { FAQItem } from '@/components/landing/faq-item';
 import { LandingSectionHeader } from '@/components/landing/landing-canvas';
 import { Section } from '@/components/landing/section';
 import { FAQPageStructuredData } from '@/components/seo/structured-data';
-import { SITE_URL } from '@/config';
 import { m } from '@/paraglide/messages';
+import { localizedUrl } from '@/utils/locales';
 
 interface FAQProps {
   locale?: string;
@@ -34,7 +34,7 @@ export function FAQ({ locale = 'en' }: FAQProps) {
     },
   ];
 
-  const faqUrl = `${SITE_URL}${locale === 'en' ? '' : `/${locale}`}#faq`;
+  const faqUrl = `${localizedUrl(locale)}#faq`;
 
   return (
     <>

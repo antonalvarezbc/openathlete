@@ -1,4 +1,5 @@
 import { SITE_URL } from '@/config';
+import { SUPPORTED_LOCALES } from '@/utils/locales';
 import Script from 'next/script';
 
 interface StructuredDataProps {
@@ -91,7 +92,7 @@ export function WebPageStructuredData({
         name: title,
         description,
         url,
-        inLanguage: ['en', 'fr'],
+        inLanguage: SUPPORTED_LOCALES,
         isPartOf: {
           '@type': 'WebSite',
           name: 'OpenAthlete',
@@ -122,7 +123,7 @@ export function FAQPageStructuredData({
           },
         })),
         url,
-        inLanguage: ['en', 'fr'],
+        inLanguage: SUPPORTED_LOCALES,
       }}
     />
   );
@@ -156,6 +157,7 @@ export function ArticleStructuredData({
   updatedAt,
   author,
   image,
+  inLanguage = SUPPORTED_LOCALES,
 }: {
   title: string;
   description: string;
@@ -164,6 +166,8 @@ export function ArticleStructuredData({
   updatedAt?: string;
   author: { name: string; email?: string };
   image?: string;
+  /** Language of the article body, which can differ from the page locale. */
+  inLanguage?: string | readonly string[];
 }) {
   return (
     <StructuredData
@@ -198,7 +202,7 @@ export function ArticleStructuredData({
           '@type': 'WebPage',
           '@id': url,
         },
-        inLanguage: ['en', 'fr'],
+        inLanguage,
       }}
     />
   );
@@ -251,7 +255,7 @@ export function SoftwareApplicationStructuredData({
           name: 'OpenAthlete',
           url: SITE_URL,
         },
-        inLanguage: ['en', 'fr'],
+        inLanguage: SUPPORTED_LOCALES,
       }}
     />
   );

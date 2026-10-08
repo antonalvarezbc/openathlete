@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/card';
 import { SITE_URL } from '@/config';
 import { m } from '@/paraglide/messages';
+import { isSupportedLocale } from '@/utils/locales';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
@@ -42,7 +43,7 @@ export default async function ToolsPage({
   const { locale } = await params;
 
   // Validate locale
-  if (locale !== 'en' && locale !== 'fr') {
+  if (!isSupportedLocale(locale)) {
     notFound();
   }
 

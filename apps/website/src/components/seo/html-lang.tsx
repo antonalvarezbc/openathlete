@@ -1,5 +1,6 @@
 'use client';
 
+import { DEFAULT_LOCALE, isSupportedLocale } from '@/utils/locales';
 import { useEffect } from 'react';
 
 interface HtmlLangProps {
@@ -13,7 +14,7 @@ interface HtmlLangProps {
 export function HtmlLang({ locale }: HtmlLangProps) {
   useEffect(() => {
     if (typeof document !== 'undefined') {
-      const htmlLang = locale === 'fr' ? 'fr' : 'en';
+      const htmlLang = isSupportedLocale(locale) ? locale : DEFAULT_LOCALE;
       document.documentElement.lang = htmlLang;
     }
   }, [locale]);

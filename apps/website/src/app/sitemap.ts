@@ -1,10 +1,9 @@
 import { SITE_URL } from '@/config';
-import { getAllPosts } from '@/content/blog';
+import { getAllPosts, getPostLocales } from '@/content/blog';
+import { SUPPORTED_LOCALES } from '@/utils/locales';
 import { existsSync, readdirSync, statSync } from 'fs';
 import type { MetadataRoute } from 'next';
 import { join } from 'path';
-
-const locales = ['en', 'fr'] as const;
 
 /**
  * Recursively scan directory for page.tsx files and return their routes
@@ -164,7 +163,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         ? now
         : new Date('2024-01-01');
 
-    for (const locale of locales) {
+    for (const locale of SUPPORTED_LOCALES) {
       const url =
         locale === 'en' ? `${baseUrl}${route}` : `${baseUrl}/${locale}${route}`;
 
@@ -175,7 +174,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         priority: routeMetadata.priority,
         alternates: {
           languages: Object.fromEntries(
-            locales.map((loc) => [
+            SUPPORTED_LOCALES.map((loc) => [
               loc,
               loc === 'en' ? `${baseUrl}${route}` : `${baseUrl}/${loc}${route}`,
             ]),
@@ -197,7 +196,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     const routeMetadata = getRouteMetadata(route);
     // Pages without a plan file in their locale fall back to English: only
     // list the real translations.
-    const routeLocales = locales.filter((locale) =>
+    const routeLocales = SUPPORTED_LOCALES.filter((locale) =>
       planLocales.includes(locale),
     );
     for (const locale of routeLocales) {
@@ -230,7 +229,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }
 
   for (const post of blogPosts) {
-    for (const locale of locales) {
+    // Untranslated posts show the English body: only list real translations.
+    const postLocales = getPostLocales(post);
+    for (const locale of postLocales) {
       const url =
         locale === 'en'
           ? `${baseUrl}/blog/${post.metadata.slug}`
@@ -245,7 +246,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         priority: 0.7,
         alternates: {
           languages: Object.fromEntries(
-            locales.map((loc) => [
+            postLocales.map((loc) => [
               loc,
               loc === 'en'
                 ? `${baseUrl}/blog/${post.metadata.slug}`
