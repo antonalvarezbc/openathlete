@@ -43,6 +43,7 @@ import {
   runManualGarminBackfill,
 } from './manual-garmin-backfill-worker';
 import { mergeManualGarminStreams } from './manual-garmin-enrichment';
+import { manualGarminWorkerEnv } from './manual-garmin-env';
 import { hasActivityStream, readManualFit } from './manual-garmin-fit';
 import { loginGarmin } from './manual-garmin-login';
 import {
@@ -162,15 +163,13 @@ export class ManualGarminService implements OnModuleDestroy {
       {
         timeout: 180_000,
         maxBuffer: 2 * 1024 * 1024,
-        env: {
-          ...process.env,
-          PYTHONUNBUFFERED: '1',
+        env: manualGarminWorkerEnv({
           OA_GARMIN_PRIVATE_DIR: join(directory, '.private'),
           OA_GARMIN_LOCK_DIRECTORY: join(
             this.config.getOrThrow<string>('GARMIN_UNOFFICIAL_DIRECTORY'),
             '.private',
           ),
-        },
+        }),
       },
     );
     const result = JSON.parse(stdout);

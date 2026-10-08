@@ -110,6 +110,10 @@ independent setting, `ENABLE_MANUAL_FIT_IMPORT`, also disabled by default.
 - MFA is supported through a second step. Pending login processes expire after three minutes.
 - Passwords/codes pass through stdin, not command arguments, files or API logs.
 - Garmin session tokens are stored locally with restrictive permissions.
+- The Python workers do not inherit the API environment: they get `PATH`,
+  `HOME`, locale, `TZ`, `TMPDIR`, the TLS trust store and proxy variables,
+  and their own `OA_GARMIN_*` paths (`manual-garmin-env.ts`). Database, JWT,
+  pepper, payment and AI secrets never reach them.
 - Authentication errors never expose raw provider responses or exception messages.
 - The previous single-athlete connection remains usable until the athlete connects through the UI.
 - New sessions are isolated under `GARMIN_UNOFFICIAL_DIRECTORY/accounts/<athleteId>/.private`.
