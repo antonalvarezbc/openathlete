@@ -4,6 +4,23 @@ import { Prisma } from '@openathlete/database';
 
 import { AuthUser } from '../../auth/decorators/user.decorator';
 
+/**
+ * Which athletes a user may access, as alternatives for a Prisma `OR`: their
+ * own profile with the ATHLETE role, the athletes they coach with the COACH
+ * role. A coach link left after the coach role is removed grants nothing.
+ * Empty when the user has neither role.
+ */
+export function accessibleAthleteConditions(
+  user: AuthUser,
+): Prisma.AthleteWhereInput[] {
+  return [
+    ...(user.roles?.includes('ATHLETE') ? [{ userId: user.userId }] : []),
+    ...(user.roles?.includes('COACH')
+      ? [{ coachAthletes: { some: { userId: user.userId } } }]
+      : []),
+  ];
+}
+
 export async function authorizePlanAthlete(
   db: Prisma.TransactionClient,
   user: AuthUser,
@@ -12,13 +29,7 @@ export async function authorizePlanAthlete(
   if (!user.roles?.includes('COACH'))
     throw new ForbiddenException('Coach role required');
   const athlete = await db.athlete.findFirst({
-    where: {
-      athleteId,
-      OR: [
-        ...(user.roles.includes('ATHLETE') ? [{ userId: user.userId }] : []),
-        { coachAthletes: { some: { userId: user.userId } } },
-      ],
-    },
+    where: { athleteId, OR: accessibleAthleteConditions(user) },
   });
   if (!athlete) throw new ForbiddenException('You cannot manage this athlete');
 }

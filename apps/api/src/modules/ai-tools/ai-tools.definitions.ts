@@ -11,6 +11,7 @@ import {
 
 import { AuthUser } from '../auth/decorators/user.decorator';
 import { uncompressActivityStream } from '../core/helpers/activity-stream';
+import { accessibleAthleteConditions } from '../core/helpers/plan-access';
 import { PrismaService } from '../prisma/services/prisma.service';
 import {
   clipText,
@@ -168,45 +169,28 @@ const listAthletes = defineTool({
     'Athletes you can read: your own athlete profile and the athletes you coach. Use the athleteId with the other tools.',
   input: z.object({}).strict(),
   async run({ prisma }, user: AuthUser) {
-    const [own, coached] = await Promise.all([
-      prisma.athlete.findFirst({
-        where: { userId: user.userId },
-        select: {
-          athleteId: true,
-          user: { select: { firstName: true, lastName: true } },
-        },
-      }),
-      prisma.coachAthlete.findMany({
-        where: { userId: user.userId },
-        select: {
-          athlete: {
-            select: {
-              athleteId: true,
-              user: { select: { firstName: true, lastName: true } },
-            },
-          },
-        },
-        take: 200,
-      }),
-    ]);
-    const athletes = new Map<
-      number,
-      { athleteId: number; name: string; self: boolean }
-    >();
-    if (own)
-      athletes.set(own.athleteId, {
-        athleteId: own.athleteId,
-        name: `${own.user.firstName} ${own.user.lastName}`,
-        self: true,
-      });
-    for (const { athlete } of coached)
-      if (!athletes.has(athlete.athleteId))
-        athletes.set(athlete.athleteId, {
+    const conditions = accessibleAthleteConditions(user);
+    if (!conditions.length) return { athletes: [] };
+    // The rule resolveAthleteId applies, so every listed athlete can be read.
+    const athletes = await prisma.athlete.findMany({
+      where: { OR: conditions },
+      orderBy: { athleteId: 'asc' },
+      take: 200,
+      select: {
+        athleteId: true,
+        userId: true,
+        user: { select: { firstName: true, lastName: true } },
+      },
+    });
+    return {
+      athletes: athletes
+        .map((athlete) => ({
           athleteId: athlete.athleteId,
           name: `${athlete.user.firstName} ${athlete.user.lastName}`,
-          self: false,
-        });
-    return { athletes: [...athletes.values()] };
+          self: athlete.userId === user.userId,
+        }))
+        .sort((a, b) => Number(b.self) - Number(a.self)),
+    };
   },
 });
 
