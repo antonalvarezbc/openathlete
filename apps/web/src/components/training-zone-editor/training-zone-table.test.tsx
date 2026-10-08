@@ -3,13 +3,19 @@ import { act } from 'react';
 import { type Root, createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { TRAINING_ZONE_TYPE } from '@openathlete/shared';
+import { SPORT_TYPE, TRAINING_ZONE_TYPE } from '@openathlete/shared';
 
 import { TrainingZoneTable } from './training-zone-table';
 
-// Every message renders as its key.
+// Every message renders as its key, followed by its parameters.
 vi.mock('@/paraglide/messages', () => ({
-  m: new Proxy({}, { get: (_target, key) => () => String(key) }),
+  m: new Proxy(
+    {},
+    {
+      get: (_target, key) => (params?: Record<string, string>) =>
+        [String(key), ...Object.values(params ?? {})].join(' '),
+    },
+  ),
 }));
 
 (
@@ -45,6 +51,8 @@ describe('TrainingZoneTable', () => {
 
   const render = (items: ReturnType<typeof zones>) =>
     act(() => root.render(<TrainingZoneTable zones={items as never} />));
+  const headings = () =>
+    [...container.querySelectorAll('h3')].map((item) => item.textContent);
   const rows = () =>
     [...container.querySelectorAll('tbody tr')].map((row) =>
       [...row.querySelectorAll('td')].map((cell) => cell.textContent),
@@ -67,5 +75,26 @@ describe('TrainingZoneTable', () => {
     const items = zones(TRAINING_ZONE_TYPE.HEARTRATE, ['RUNNING', 'CYCLING']);
     await render(items);
     expect(items[0].values[0].sports).toEqual(['RUNNING', 'CYCLING']);
+  });
+
+  it('heads zones with every sport "All sports", in any order', async () => {
+    const all = Object.values(SPORT_TYPE);
+    await render(zones(TRAINING_ZONE_TYPE.HEARTRATE, [...all].reverse()));
+    expect(headings()).toEqual(['all_sports']);
+  });
+
+  it('names only the sports missing from an almost complete list', async () => {
+    const sports = Object.values(SPORT_TYPE).filter(
+      (sport) => sport !== SPORT_TYPE.MOBILITY && sport !== SPORT_TYPE.YOGA,
+    );
+    await render(zones(TRAINING_ZONE_TYPE.HEARTRATE, sports));
+    expect(headings()).toEqual([
+      'all_sports_except sport_yoga, sport_mobility',
+    ]);
+  });
+
+  it('lists the sports of a specific selection', async () => {
+    await render(zones(TRAINING_ZONE_TYPE.PACE, ['TRAIL_RUNNING', 'RUNNING']));
+    expect(headings()).toEqual(['sport_running, sport_trail_running']);
   });
 });

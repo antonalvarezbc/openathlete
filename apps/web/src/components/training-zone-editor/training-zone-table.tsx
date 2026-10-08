@@ -7,7 +7,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { m } from '@/paraglide/messages';
-import { sportTypeLabelMap } from '@/utils/label-map/core';
 import { useMemo } from 'react';
 
 import {
@@ -16,6 +15,8 @@ import {
   TrainingZone,
   TrainingZoneValue,
 } from '@openathlete/shared';
+
+import { describeSports } from './sport-summary';
 
 interface TrainingZoneTableProps {
   zones: (TrainingZone & { values: TrainingZoneValue[] })[];
@@ -51,21 +52,13 @@ export function TrainingZoneTable({ zones }: TrainingZoneTableProps) {
     }));
   }, [zones]);
 
-  const allSports = Object.values(SPORT_TYPE);
   return (
     <div className="space-y-4">
       {displayData.map((config, configIdx) => {
-        const isAllSports =
-          config.sports.length === allSports.length &&
-          config.sports.every((s) => allSports.includes(s));
-        const sportsLabel = isAllSports
-          ? m.all_sports()
-          : config.sports.map((s) => sportTypeLabelMap[s]).join(', ');
-
         return (
           <div key={configIdx} className="space-y-2">
             <h3 className="text-sm font-semibold text-muted-foreground">
-              {sportsLabel}
+              {describeSports(config.sports)}
             </h3>
             <Table>
               <TableHeader>

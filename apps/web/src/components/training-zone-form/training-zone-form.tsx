@@ -1,14 +1,15 @@
 import { m } from '@/paraglide/messages';
-import { sportTypeLabelMap } from '@/utils/label-map/core';
-import { Controller, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 
 import { SPORT_TYPE } from '@openathlete/shared';
 
-import { FormProvider, RHFTextField } from '../hook-form';
+import {
+  FormProvider,
+  RHFMultiSportSelector,
+  RHFTextField,
+} from '../hook-form';
+import { ALL_SPORTS } from '../training-zone-editor/sport-summary';
 import { Button } from '../ui/button';
-import { Label } from '../ui/label';
-
-const ALL_SPORTS = Object.values(SPORT_TYPE);
 
 export interface TrainingZoneFormValues {
   name: string;
@@ -59,36 +60,7 @@ export function TrainingZoneForm({
         required
         className="w-16 h-10 p-0 border-none radi"
       />
-      <Controller
-        name="sports"
-        control={methods.control}
-        render={({ field }) => (
-          <div>
-            <Label>{m.sports()} </Label>
-            <div className="flex flex-wrap gap-2 mt-1">
-              {ALL_SPORTS.map((sport) => (
-                <label key={sport} className="flex items-center gap-1">
-                  <input
-                    type="checkbox"
-                    value={sport}
-                    checked={field.value?.includes(sport)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        field.onChange([...(field.value || []), sport]);
-                      } else {
-                        field.onChange(
-                          (field.value || []).filter((s) => s !== sport),
-                        );
-                      }
-                    }}
-                  />
-                  {sportTypeLabelMap[sport]}
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
-      />
+      <RHFMultiSportSelector name="sports" label={m.sports()} />
       <Button type="submit" className="w-full" isLoading={isLoading}>
         {m.save()}{' '}
       </Button>

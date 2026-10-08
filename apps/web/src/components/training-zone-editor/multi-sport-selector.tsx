@@ -21,12 +21,12 @@ import { useState } from 'react';
 
 import { SPORT_TYPE } from '@openathlete/shared';
 
+import { ALL_SPORTS, describeSports, summarizeSports } from './sport-summary';
+
 interface MultiSportSelectorProps {
   value: SPORT_TYPE[];
   onChange: (sports: SPORT_TYPE[]) => void;
 }
-
-const ALL_SPORTS = Object.values(SPORT_TYPE);
 
 export function MultiSportSelector({
   value,
@@ -55,7 +55,9 @@ export function MultiSportSelector({
     onChange([]);
   };
 
-  const isAllSelected = value.length === ALL_SPORTS.length;
+  const { kind } = summarizeSports(value);
+  const isAllSelected = kind === 'all';
+  const label = value.length ? describeSports(value) : m.select_sports();
 
   return (
     <div className="space-y-2">
@@ -68,12 +70,8 @@ export function MultiSportSelector({
             className="w-full justify-between"
             type="button"
           >
-            <span className="truncate">
-              {value.length === 0
-                ? m.select_sports()
-                : value.length === ALL_SPORTS.length
-                  ? m.all_sports()
-                  : `${value.length} ${m.sports().toLowerCase()}`}
+            <span className="truncate" title={label}>
+              {label}
             </span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
@@ -116,9 +114,11 @@ export function MultiSportSelector({
         </PopoverContent>
       </Popover>
 
-      {value.length > 0 && (
+      {/* A nearly complete selection reads better as "All sports except …"
+          in the button than as dozens of badges. */}
+      {value.length > 0 && kind !== 'except' && (
         <div className="flex flex-wrap gap-1.5">
-          {value.length === ALL_SPORTS.length ? (
+          {isAllSelected ? (
             <Badge variant="secondary" className="gap-1">
               {m.all_sports()}
               <button
