@@ -43,6 +43,7 @@ export class CoachInvitationService {
         email: true,
         firstName: true,
         lastName: true,
+        language: true,
       },
     });
 
@@ -176,6 +177,8 @@ export class CoachInvitationService {
             athleteName: `${athleteUser.firstName} ${athleteUser.lastName}`,
             url: invitationUrl,
           },
+          // Used when the invitee has no account yet
+          language: athleteUser.language,
         }),
       );
 

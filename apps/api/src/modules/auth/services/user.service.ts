@@ -163,6 +163,7 @@ export class UserService {
     lastName,
     invitationToken,
     coachInvitationToken,
+    language,
   }: CreateAccountDto) => {
     await this.assertSignupAllowed(invitationToken, coachInvitationToken);
     const normalizedEmail = email.toLowerCase();
@@ -227,6 +228,8 @@ export class UserService {
           password: hashedPassword,
           firstName: firstName,
           lastName: lastName,
+          // The language the app was shown in; absent, the column's default
+          language,
           roles: [UserRole.ATHLETE, UserRole.COACH],
           athlete: {
             create: {
@@ -290,6 +293,7 @@ export class UserService {
           name: firstName,
           dashboard_url: `${this.configService.get('APP_URL')}/dashboard`,
         },
+        language,
       }),
     );
 

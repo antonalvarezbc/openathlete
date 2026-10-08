@@ -122,6 +122,13 @@ export class UserController {
           description: 'Optional coach invitation token to link to an athlete',
           example: 'xyz789uvw012...',
         },
+        language: {
+          type: 'string',
+          enum: Object.values(UserLanguage),
+          description:
+            'Optional language of the app at sign-up, saved as the preferred language (default FR)',
+          example: 'EN',
+        },
       },
       required: ['email', 'password', 'firstName', 'lastName'],
     },
