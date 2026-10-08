@@ -1,28 +1,49 @@
 #!/usr/bin/env node
 /**
- * Ensures every locale JSON in `apps/web/messages` exposes the same message keys.
+ * Ensures every locale JSON in each Paraglide catalog (`apps/web/messages`,
+ * `apps/website/messages`) exposes the same message keys.
  *
  * Usage: `node scripts/check-locale-parity.js`
  */
 const fs = require('node:fs/promises');
 const path = require('node:path');
 
-const MESSAGES_DIR = path.resolve(process.cwd(), 'apps', 'web', 'messages');
+const MESSAGES_DIRS = [
+  path.resolve(process.cwd(), 'apps', 'web', 'messages'),
+  path.resolve(process.cwd(), 'apps', 'website', 'messages'),
+];
 
 async function main() {
-  const localeFiles = (await fs.readdir(MESSAGES_DIR))
+  let hasDiff = false;
+  for (const messagesDir of MESSAGES_DIRS) {
+    if (await checkCatalog(messagesDir)) {
+      hasDiff = true;
+    }
+  }
+
+  if (!hasDiff) {
+    console.log('✅ All locale files expose the same set of translation keys.');
+  } else {
+    console.log('Tip: Keep message keys aligned across all locales so Paraglide stays in sync.');
+    process.exitCode = 1;
+  }
+}
+
+/** Returns true when some locale in the catalog misses keys. */
+async function checkCatalog(messagesDir) {
+  const localeFiles = (await fs.readdir(messagesDir))
     .filter((name) => name.endsWith('.json'))
     .sort();
 
   if (localeFiles.length === 0) {
-    console.error(`No locale JSON files found in ${MESSAGES_DIR}`);
+    console.error(`No locale JSON files found in ${messagesDir}`);
     process.exit(1);
   }
 
   const locales = [];
   for (const file of localeFiles) {
     const locale = path.basename(file, '.json');
-    const filePath = path.join(MESSAGES_DIR, file);
+    const filePath = path.join(messagesDir, file);
 
     let content;
     try {
@@ -69,11 +90,7 @@ async function main() {
     console.log('');
   }
 
-  if (!hasDiff) {
-    console.log('✅ All locale files expose the same set of translation keys.');
-  } else {
-    console.log('Tip: Keep message keys aligned across all locales so Paraglide stays in sync.');
-  }
+  return hasDiff;
 }
 
 function flattenKeys(node, prefix = '') {
