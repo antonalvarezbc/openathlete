@@ -4,8 +4,12 @@ import { Cron } from '@nestjs/schedule';
 
 import type { ApiEnvSchemaType } from '@openathlete/shared';
 
+import { Language } from 'src/common/constants/languages.constant';
 import { maskEmail } from 'src/common/utils/mask-email';
-import { buildMessageThreadNotificationEmail } from 'src/modules/notification/emails/templates/message-thread-notification.template';
+import {
+  buildMessageThreadNotificationEmail,
+  messageThreadNotificationSubject,
+} from 'src/modules/notification/emails/templates/message-thread-notification.template';
 import { EmailTransportService } from 'src/modules/notification/services/email-transport.service';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
@@ -46,6 +50,7 @@ export class MessageNotificationScheduler {
               email: true,
               firstName: true,
               lastName: true,
+              language: true,
             },
           },
           thread: {
@@ -126,6 +131,8 @@ export class MessageNotificationScheduler {
         continue;
       }
 
+      const language = participant.user.language ?? Language.FR;
+
       try {
         const htmlContent = buildMessageThreadNotificationEmail({
           threadTitle: participant.thread.title,
@@ -148,11 +155,12 @@ export class MessageNotificationScheduler {
             };
           }),
           inboxUrl,
+          language,
         });
 
         await this.emailTransport.send({
           to: recipientEmail,
-          subject: 'Nouveaux messages dans votre messagerie OpenAthlete',
+          subject: messageThreadNotificationSubject(language),
           html: htmlContent,
           senderName: 'OpenAthlete',
         });

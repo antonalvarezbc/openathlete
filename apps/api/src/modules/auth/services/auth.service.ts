@@ -143,6 +143,7 @@ export class AuthService {
           lastName,
           invitationToken: body.invitationToken,
           coachInvitationToken: body.coachInvitationToken,
+          language: body.language,
         });
         user = { userId: created.userId, email };
       } catch (error) {

@@ -7,6 +7,7 @@ import { layout } from '../core/layout';
 
 const translations = {
   ES: {
+    subject: 'Nuevos mensajes en tu bandeja de entrada de OpenAthlete',
     title: 'Nuevos mensajes en tu bandeja de entrada',
     preview: (count: number) =>
       count > 1
@@ -22,6 +23,7 @@ const translations = {
     from: (senderName: string, time: string) => `De ${senderName} — ${time}`,
   },
   FR: {
+    subject: 'Nouveaux messages dans votre messagerie OpenAthlete',
     title: 'Nouveaux messages dans votre messagerie',
     preview: (count: number) =>
       count > 1
@@ -37,6 +39,7 @@ const translations = {
     from: (senderName: string, time: string) => `De ${senderName} — ${time}`,
   },
   EN: {
+    subject: 'New messages in your OpenAthlete inbox',
     title: 'New messages in your inbox',
     preview: (count: number) =>
       count > 1
@@ -52,6 +55,7 @@ const translations = {
     from: (senderName: string, time: string) => `From ${senderName} — ${time}`,
   },
   IT: {
+    subject: 'Nuovi messaggi nella tua casella OpenAthlete',
     title: 'Nuovi messaggi nella tua casella',
     preview: (count: number) =>
       count > 1
@@ -67,6 +71,12 @@ const translations = {
     from: (senderName: string, time: string) => `Da ${senderName} — ${time}`,
   },
 } as const;
+
+export function messageThreadNotificationSubject(
+  language: EmailLanguage = Language.FR,
+) {
+  return translations[language].subject;
+}
 
 export function buildMessageThreadNotificationEmail({
   threadTitle,
