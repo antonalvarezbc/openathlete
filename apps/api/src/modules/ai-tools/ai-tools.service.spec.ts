@@ -18,11 +18,30 @@ const coach = {
   userId: 3,
   roles: ['COACH'],
 } as unknown as AuthUser;
+// Switched to athlete-only by an administrator: the links to other athletes
+// they coached are kept, but must no longer grant access.
+const formerCoach = {
+  userId: 3,
+  roles: ['ATHLETE'],
+  athlete: { athleteId: 1 },
+  coachAthletes: [{ athleteId: 7 }],
+} as unknown as AuthUser;
+const selfCoach = {
+  userId: 3,
+  roles: ['ATHLETE', 'COACH'],
+  athlete: { athleteId: 1 },
+  coachAthletes: [{ athleteId: 1 }, { athleteId: 7 }],
+} as unknown as AuthUser;
+const ownAthlete = { userId: 3 };
+const coachedAthletes = { coachAthletes: { some: { userId: 3 } } };
 
 function setup() {
   const prisma = {
-    athlete: { findFirst: jest.fn(), findUnique: jest.fn() },
-    coachAthlete: { findMany: jest.fn().mockResolvedValue([]) },
+    athlete: {
+      findFirst: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
+      findUnique: jest.fn(),
+    },
     athleteInjury: { findMany: jest.fn().mockResolvedValue([]) },
     athleteMetric: {
       findMany: jest.fn().mockResolvedValue([]),
@@ -88,45 +107,114 @@ describe('AiToolsService', () => {
     expect(prisma.athlete.findFirst).not.toHaveBeenCalled();
   });
 
-  it('only reads athletes the user owns or coaches', async () => {
+  it('only reads coached athletes with the coach role', async () => {
     const { service, prisma } = setup();
     prisma.athlete.findFirst.mockResolvedValue(null);
     await expect(
       service.run(coach, 'get_injuries', { athleteId: 99 }),
     ).rejects.toThrow('You cannot access this athlete');
     expect(prisma.athlete.findFirst).toHaveBeenCalledWith({
-      where: {
-        athleteId: 99,
-        OR: [{ userId: 3 }, { coachAthletes: { some: { userId: 3 } } }],
-      },
+      where: { athleteId: 99, OR: [coachedAthletes] },
       select: { athleteId: true },
     });
     expect(prisma.athleteInjury.findMany).not.toHaveBeenCalled();
+
+    prisma.athlete.findFirst.mockResolvedValue({ athleteId: 7 });
+    await service.run(coach, 'get_injuries', { athleteId: 7 });
+    expect(prisma.athleteInjury.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ athleteId: 7 }),
+      }),
+    );
   });
 
-  it('lists the own profile and coached athletes once', async () => {
+  it('refuses athletes coached before the coach role was removed', async () => {
     const { service, prisma } = setup();
-    prisma.athlete.findFirst.mockResolvedValue({
-      athleteId: 1,
-      user: { firstName: 'Ana', lastName: 'Coach' },
+    prisma.athlete.findFirst.mockResolvedValue(null);
+    await expect(
+      service.run(formerCoach, 'get_wellness', { athleteId: 7 }),
+    ).rejects.toThrow('You cannot access this athlete');
+    // The coach link is not an alternative any more: only their own profile.
+    expect(prisma.athlete.findFirst).toHaveBeenCalledWith({
+      where: { athleteId: 7, OR: [ownAthlete] },
+      select: { athleteId: true },
     });
-    prisma.coachAthlete.findMany.mockResolvedValue([
+    expect(prisma.athleteMetric.findMany).not.toHaveBeenCalled();
+  });
+
+  it('reads the own profile only with the athlete role', async () => {
+    const { service, prisma } = setup();
+    prisma.athlete.findFirst.mockResolvedValue({ athleteId: 1 });
+
+    await service.run(selfCoach, 'get_injuries', {});
+    expect(prisma.athlete.findFirst).toHaveBeenLastCalledWith({
+      where: { userId: 3 },
+      select: { athleteId: true },
+    });
+    await service.run(selfCoach, 'get_injuries', { athleteId: 1 });
+    expect(prisma.athlete.findFirst).toHaveBeenLastCalledWith({
+      where: { athleteId: 1, OR: [ownAthlete, coachedAthletes] },
+      select: { athleteId: true },
+    });
+    expect(prisma.athleteInjury.findMany).toHaveBeenCalledTimes(2);
+
+    // A coach-only account has no personal athlete space to default to.
+    prisma.athlete.findFirst.mockClear();
+    await expect(service.run(coach, 'get_injuries', {})).rejects.toThrow(
+      'No athlete profile',
+    );
+    const noRoles = { userId: 3, roles: [] } as unknown as AuthUser;
+    await expect(
+      service.run(noRoles, 'get_injuries', { athleteId: 1 }),
+    ).rejects.toThrow('You cannot access this athlete');
+    expect(prisma.athlete.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('lists the own profile first, then coached athletes', async () => {
+    const { service, prisma } = setup();
+    prisma.athlete.findMany.mockResolvedValue([
       {
-        athlete: {
-          athleteId: 1,
-          user: { firstName: 'Ana', lastName: 'Coach' },
-        },
+        athleteId: 1,
+        userId: 9,
+        user: { firstName: 'Leo', lastName: 'Run' },
       },
       {
-        athlete: { athleteId: 7, user: { firstName: 'Leo', lastName: 'Run' } },
+        athleteId: 4,
+        userId: 3,
+        user: { firstName: 'Ana', lastName: 'Coach' },
       },
     ]);
-    expect(await service.run(coach, 'list_athletes', {})).toEqual({
+    expect(await service.run(selfCoach, 'list_athletes', {})).toEqual({
       athletes: [
-        { athleteId: 1, name: 'Ana Coach', self: true },
-        { athleteId: 7, name: 'Leo Run', self: false },
+        { athleteId: 4, name: 'Ana Coach', self: true },
+        { athleteId: 1, name: 'Leo Run', self: false },
       ],
     });
+    expect(prisma.athlete.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { OR: [ownAthlete, coachedAthletes] },
+        take: 200,
+      }),
+    );
+  });
+
+  it('lists only the athletes the roles allow', async () => {
+    const { service, prisma } = setup();
+    await service.run(formerCoach, 'list_athletes', {});
+    expect(prisma.athlete.findMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({ where: { OR: [ownAthlete] } }),
+    );
+    await service.run(coach, 'list_athletes', {});
+    expect(prisma.athlete.findMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({ where: { OR: [coachedAthletes] } }),
+    );
+
+    prisma.athlete.findMany.mockClear();
+    const noRoles = { userId: 3, roles: [] } as unknown as AuthUser;
+    expect(await service.run(noRoles, 'list_athletes', {})).toEqual({
+      athletes: [],
+    });
+    expect(prisma.athlete.findMany).not.toHaveBeenCalled();
   });
 
   it('reports injury pain out of 10 and hides resolved ones by default', async () => {

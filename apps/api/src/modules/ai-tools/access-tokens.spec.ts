@@ -66,9 +66,20 @@ describe('personal access tokens', () => {
       user: owner,
     });
     expect(await tokens.authenticate('oat_valid')).toEqual(owner);
+    // Roles are read on every request, like JWT authentication, so the data
+    // tools stop granting coach access as soon as the role is removed.
     expect(prisma.personalAccessToken.findUnique).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { tokenHash: hashAccessToken('oat_valid') },
+        select: expect.objectContaining({
+          user: {
+            select: expect.objectContaining({
+              roles: true,
+              athlete: { select: { athleteId: true } },
+              coachAthletes: { select: { athleteId: true } },
+            }),
+          },
+        }),
       }),
     );
     expect(prisma.personalAccessToken.update).toHaveBeenCalled();

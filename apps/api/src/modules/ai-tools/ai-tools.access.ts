@@ -1,10 +1,12 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 
 import { AuthUser } from '../auth/decorators/user.decorator';
+import { accessibleAthleteConditions } from '../core/helpers/plan-access';
 import { PrismaService } from '../prisma/services/prisma.service';
 
 /**
- * Athlete the user may read: their own profile, or an athlete they coach.
+ * Athlete the user may read, under the same role rules as the API: their own
+ * profile with the ATHLETE role, an athlete they coach with the COACH role.
  * Without athleteId, the user's own athlete profile.
  */
 export async function resolveAthleteId(
@@ -13,26 +15,25 @@ export async function resolveAthleteId(
   athleteId?: number,
 ): Promise<number> {
   if (!athleteId) {
-    const own = await prisma.athlete.findFirst({
-      where: { userId: user.userId },
-      select: { athleteId: true },
-    });
+    const own = user.roles?.includes('ATHLETE')
+      ? await prisma.athlete.findFirst({
+          where: { userId: user.userId },
+          select: { athleteId: true },
+        })
+      : null;
     if (!own)
       throw new NotFoundException(
         'No athlete profile; pass the athleteId of an athlete you coach',
       );
     return own.athleteId;
   }
-  const athlete = await prisma.athlete.findFirst({
-    where: {
-      athleteId,
-      OR: [
-        { userId: user.userId },
-        { coachAthletes: { some: { userId: user.userId } } },
-      ],
-    },
-    select: { athleteId: true },
-  });
+  const conditions = accessibleAthleteConditions(user);
+  const athlete = conditions.length
+    ? await prisma.athlete.findFirst({
+        where: { athleteId, OR: conditions },
+        select: { athleteId: true },
+      })
+    : null;
   if (!athlete) throw new ForbiddenException('You cannot access this athlete');
   return athlete.athleteId;
 }

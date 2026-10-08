@@ -20,8 +20,11 @@ behalf.
 | `get_plans` | Training plans with cycles, weeks (theme, targets, sessions) and races |
 | `get_records` | Personal records in one sport: best times over distances, best power and heart rate over durations |
 
-Every call validates its input, checks that you own or coach the athlete
-(same rules as the API) and returns bounded data. Units: durations in seconds,
+Every call validates its input, checks that you may read the athlete with the
+same rules as the API (your own profile needs the athlete role, an athlete you
+coach needs the coach role) and returns bounded data. When an administrator
+removes your coach role, the tools stop returning your former athletes at once,
+even though the coach links are kept. Units: durations in seconds,
 distances in km, elevation in m, load in TRIMP; paces are written `m:ss/km`.
 Tools never change data.
 
