@@ -118,11 +118,17 @@ independent setting, `ENABLE_MANUAL_FIT_IMPORT`, also disabled by default.
 - The previous single-athlete connection remains usable until the athlete connects through the UI.
 - New sessions are isolated under `GARMIN_UNOFFICIAL_DIRECTORY/accounts/<athleteId>/.private`.
   This directory is ignored by Git.
-- Deleting the account removes `accounts/<athleteId>` (tokens, link, sync
-  state and FIT cache) once the database deletion has committed, and the
-  command-line connection's tokens, link, state and FIT cache when it belongs
-  to the athlete; the shared lock, request pacing and diagnostic reports stay.
-  This happens whenever `GARMIN_UNOFFICIAL_DIRECTORY` is set, even if the
+- **Disconnect** (a link beside **Change Garmin account or password**, owner
+  only, with a second click to confirm; `POST /provider/garmin-manual/disconnect`)
+  deletes `accounts/<athleteId>`: tokens, link, sync state and FIT cache. When
+  the command-line connection at the root belongs to the athlete, its tokens,
+  link, state and FIT cache go too; the shared lock, request pacing and
+  diagnostic reports stay. Imported activities and metrics stay, and so do the
+  records of workouts sent to Garmin, so the same account can still update or
+  remove them after signing in again. It is refused while an update, a FIT
+  download or a workout export runs.
+- Deleting the account removes the same files once the database deletion has
+  committed, whenever `GARMIN_UNOFFICIAL_DIRECTORY` is set, even if the
   connector has been turned off since. A failure there is logged for the
   administrator and does not fail the deletion.
 - Sync retains the existing manual trigger, two-minute cooldown and database lock.

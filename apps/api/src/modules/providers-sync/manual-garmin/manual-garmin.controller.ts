@@ -109,6 +109,16 @@ export class ManualGarminController {
     return this.service.connect(user, input);
   }
 
+  /** Forget the athlete's Garmin session on this server. */
+  @Post('disconnect')
+  disconnect(
+    @JwtUser() user: AuthUser,
+    @Body(new ZodValidationPipe(targetSchema))
+    target: z.infer<typeof targetSchema>,
+  ) {
+    return this.service.disconnect(user, target.athleteId);
+  }
+
   @Get('workouts')
   workoutStates(
     @JwtUser() user: AuthUser,

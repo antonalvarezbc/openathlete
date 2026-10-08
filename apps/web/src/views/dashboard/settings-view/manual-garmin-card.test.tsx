@@ -159,6 +159,48 @@ describe('ManualGarminCard', () => {
     );
   });
 
+  it('disconnects only after a second click, then offers to sign in again', async () => {
+    await mount('ATHLETE', { ...notConnected, connected: true });
+    await click(summaryButton());
+    const disconnect = buttonNamed('disconnect')!;
+    expect(disconnect.getAttribute('aria-expanded')).toBe('false');
+
+    await click(disconnect);
+    expect(dialog()!.textContent).toContain('garmin_manual_disconnect_help');
+    expect(api.post).not.toHaveBeenCalled();
+    // Cancelling keeps the connection
+    await click(buttonNamed('cancel')!);
+    expect(dialog()!.textContent).not.toContain(
+      'garmin_manual_disconnect_help',
+    );
+
+    await click(buttonNamed('disconnect')!);
+    api.post.mockResolvedValue({ data: notConnected });
+    api.get.mockResolvedValue({ data: notConnected });
+    const confirm = [...dialog()!.querySelectorAll('button')].filter(
+      (button) => button.textContent === 'disconnect',
+    )[1];
+    await click(confirm);
+    expect(api.post).toHaveBeenCalledWith(
+      '/provider/garmin-manual/disconnect',
+      { athleteId: undefined },
+    );
+    await vi.waitFor(() =>
+      expect(dialog()!.querySelector('input[type="password"]')).not.toBeNull(),
+    );
+  });
+
+  it('never lets a coach disconnect an athlete', async () => {
+    await mount(
+      'COACH',
+      { ...notConnected, connected: true, canConfigure: false, athleteId: 40 },
+      { display: 'button', size: 'sm', athleteId: 40 },
+    );
+    await click(summaryButton());
+    expect(buttonNamed('garmin_manual_button')).toBeDefined();
+    expect(buttonNamed('disconnect')).toBeUndefined();
+  });
+
   it('only shows how to connect while not connected', async () => {
     await mount('ATHLETE', notConnected);
     await click(summaryButton());

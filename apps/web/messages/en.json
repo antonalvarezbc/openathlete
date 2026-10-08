@@ -1819,6 +1819,7 @@
   "garmin_backfill_section": "FIT details (GPS, sensors, laps)",
   "garmin_login_change": "Change Garmin account or password",
   "garmin_login_reconnect_help": "Use it if you changed your Garmin password, the session expired or you connected the wrong account. Activities already imported are kept.",
+  "garmin_manual_disconnect_help": "Removes your Garmin session from this server. Activities and metrics already imported are kept. To update from Garmin again, you will need to sign in.",
   "ai_structure_button": "From text (AI)",
   "ai_structure_title": "Turn a written workout into steps",
   "ai_structure_help": "Write the workout as you would say it. The AI turns it into steps and repetition blocks, using the athlete's zones when you mention them. The name, date and goals do not change.",

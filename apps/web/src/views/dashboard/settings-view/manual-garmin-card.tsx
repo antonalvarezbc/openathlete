@@ -159,6 +159,7 @@ export function ManualGarminCard({
   const [code, setCode] = useState('');
   const [mfa, setMfa] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   // Signed in again in this visit: older login errors no longer apply.
   const [reconnected, setReconnected] = useState(false);
   const [open, setOpen] = useState(false);
@@ -298,6 +299,23 @@ export function ManualGarminCard({
       await status.refetch();
     },
   });
+  const disconnect = useMutation({
+    mutationFn: async () =>
+      (await client.post('/provider/garmin-manual/disconnect', { athleteId }))
+        .data,
+    retry: false,
+    onMutate: () => setError(undefined),
+    onSuccess: async () => {
+      setConfirmDisconnect(false);
+      setShowLogin(false);
+      setReconnected(false);
+      await cache.invalidateQueries();
+    },
+    onError: (failure) => setError(actionError(failure)),
+    onSettled: () => {
+      void status.refetch();
+    },
+  });
   if (status.isError && !status.data)
     return <p role="alert">{m.garmin_manual_status_failed()}</p>;
   if (!status.data?.enabled) return null;
@@ -307,7 +325,8 @@ export function ManualGarminCard({
     data.running ||
     activeBackfill ||
     backfill.isPending ||
-    login.isPending;
+    login.isPending ||
+    disconnect.isPending;
   // Only the owner signs in (the API checks it again): in the athlete space,
   // during onboarding, or from their own row of the athletes list when they
   // coach themselves.
@@ -418,7 +437,10 @@ export function ManualGarminCard({
       onOpenChange={(value) => {
         setOpen(value);
         // Changing the account stays tucked away the next time.
-        if (!value) setShowLogin(false);
+        if (!value) {
+          setShowLogin(false);
+          setConfirmDisconnect(false);
+        }
       }}
     >
       <DialogContent
@@ -609,26 +631,71 @@ export function ManualGarminCard({
                 rarely needed, so it waits at the end as a quiet link. */}
             {canLogin && (
               <div className="space-y-3 border-t pt-3 text-sm text-muted-foreground">
-                <Button
-                  variant={loginTrouble ? 'outline' : 'link'}
-                  size="sm"
-                  className={
-                    loginTrouble
-                      ? undefined
-                      : 'h-auto p-0 text-muted-foreground'
-                  }
-                  aria-expanded={showLogin || mfa}
-                  onClick={() => setShowLogin(!showLogin)}
-                  disabled={busy || mfa}
-                >
-                  {m.garmin_login_change()}
-                </Button>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <Button
+                    variant={loginTrouble ? 'outline' : 'link'}
+                    size="sm"
+                    className={
+                      loginTrouble
+                        ? undefined
+                        : 'h-auto p-0 text-muted-foreground'
+                    }
+                    aria-expanded={showLogin || mfa}
+                    onClick={() => {
+                      setShowLogin(!showLogin);
+                      setConfirmDisconnect(false);
+                    }}
+                    disabled={busy || mfa}
+                  >
+                    {m.garmin_login_change()}
+                  </Button>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 text-muted-foreground"
+                    aria-expanded={confirmDisconnect}
+                    onClick={() => {
+                      setConfirmDisconnect(!confirmDisconnect);
+                      setShowLogin(false);
+                    }}
+                    disabled={busy || mfa}
+                  >
+                    {m.disconnect()}
+                  </Button>
+                </div>
                 {(showLogin || mfa) && (
                   <div className="space-y-3 text-foreground">
                     <p className="text-sm text-muted-foreground">
                       {m.garmin_login_reconnect_help()}
                     </p>
                     {loginForm}
+                  </div>
+                )}
+                {/* Forgetting the session needs a second, explicit click. */}
+                {confirmDisconnect && !mfa && (
+                  <div className="space-y-3">
+                    <p className="text-sm">
+                      {m.garmin_manual_disconnect_help()}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        isLoading={disconnect.isPending}
+                        disabled={busy}
+                        onClick={() => disconnect.mutate()}
+                      >
+                        {m.disconnect()}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={disconnect.isPending}
+                        onClick={() => setConfirmDisconnect(false)}
+                      >
+                        {m.cancel()}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>

@@ -32,6 +32,7 @@ describe('Manual Garmin HTTP boundary', () => {
     backfill: jest.fn(),
     stopBackfill: jest.fn(),
     connect: jest.fn(),
+    disconnect: jest.fn(),
   };
   const workouts = {
     list: jest.fn(),
@@ -42,6 +43,7 @@ describe('Manual Garmin HTTP boundary', () => {
     ['sync', 'sync'],
     ['backfill', 'backfill'],
     ['backfill/stop', 'stopBackfill'],
+    ['disconnect', 'disconnect'],
   ] as const;
 
   beforeAll(async () => {
