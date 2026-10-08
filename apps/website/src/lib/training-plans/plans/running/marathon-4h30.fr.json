@@ -89,7 +89,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Sortie Longue",
               "sport": "RUNNING",
               "description": "1h10 en endurance. Ne pas courir vite, l'objectif est la durée.",
@@ -187,7 +187,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Sortie Longue",
               "sport": "RUNNING",
               "description": "1h20 en endurance.",
@@ -395,7 +395,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Sortie Longue",
               "sport": "RUNNING",
               "description": "1h30 Endurance.",
@@ -515,7 +515,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Sortie Longue allégée",
               "sport": "RUNNING",
               "description": "1h00 Endurance.",
@@ -708,7 +708,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Sortie Longue",
               "sport": "RUNNING",
               "description": "1h30 Endurance.",
@@ -849,7 +849,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Sortie Longue avec Bloc",
               "sport": "RUNNING",
               "description": "1h40 dont 2x 15min allure Marathon (4h30) incluses.",
@@ -1033,7 +1033,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Sortie Longue",
               "sport": "RUNNING",
               "description": "1h50 Endurance pure. Habituer le corps à la durée.",
@@ -1174,7 +1174,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Sortie Longue",
               "sport": "RUNNING",
               "description": "1h20 Endurance.",
@@ -1382,7 +1382,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Sortie Longue Spécifique",
               "sport": "RUNNING",
               "description": "2h00 dont 2x 20min Allure Marathon.",
@@ -1566,7 +1566,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Sortie Longue",
               "sport": "RUNNING",
               "description": "2h15 en endurance. C'est long, hydratez-vous bien.",
@@ -1707,7 +1707,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "La Sortie la plus longue",
               "sport": "RUNNING",
               "description": "2h30 dont 3x 15min Allure Marathon. Testez votre ravitaillement course.",
@@ -1894,7 +1894,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Sortie Longue",
               "sport": "RUNNING",
               "description": "1h45 Endurance.",
@@ -2043,7 +2043,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Sortie Longue",
               "sport": "RUNNING",
               "description": "1h15 Endurance.",
@@ -2184,7 +2184,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Sortie Longue",
               "sport": "RUNNING",
               "description": "1h00 Endurance.",
@@ -2289,7 +2289,7 @@
               "goalRpe": 0
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "Sortie courte",
               "sport": "RUNNING",
               "description": "40 min Endurance.",
@@ -2419,7 +2419,7 @@
               }
             },
             {
-              "dayOfWeek": 7,
+              "dayOfWeek": 0,
               "name": "MARATHON",
               "sport": "RUNNING",
               "description": "Jour J. Objectif 4h30. Partez prudemment (6:24/km) et profitez !",
