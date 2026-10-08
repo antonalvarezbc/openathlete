@@ -171,6 +171,8 @@ export const routes = {
       }`,
   },
   coach: {
+    dashboard: (start?: string, end?: string) =>
+      `/coach/dashboard${start && end ? `?start=${start}&end=${end}` : ''}`,
     overview: '/coach/overview',
     getPendingInvitations: '/coach/invitations/pending',
     acceptInvitation: (invitationId: number) =>
@@ -249,6 +251,8 @@ export const routes = {
     resume: '/subscription/resume',
     invoices: '/subscription/invoices',
     portal: '/subscription/portal',
+    appleAccountToken: '/subscription/apple/account-token',
+    appleTransactions: '/subscription/apple/transactions',
   },
   seoPlan: {
     create: '/seo-plan',
@@ -260,6 +264,10 @@ export const routes = {
 const client = axios.create({
   baseURL: API_BASE_URL,
 });
+
+/** The request got no answer: the device is offline or the API unreachable. */
+export const isNetworkError = (error: unknown) =>
+  isAxiosError(error) && !error.response;
 
 client.interceptors.request.use(async (config) => {
   const token = await getAccessToken();

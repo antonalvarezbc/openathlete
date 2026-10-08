@@ -1,4 +1,5 @@
 import { useCoachOverviewQuery } from '@/api/coach';
+import { CoachAthletesSection } from '@/components/coach-dashboard/coach-athletes-section';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -359,6 +360,7 @@ export function CoachDashboardView() {
               </ul>
             </CardContent>
           </Card>
+          <CoachAthletesSection />
         </>
       ) : null}
     </main>

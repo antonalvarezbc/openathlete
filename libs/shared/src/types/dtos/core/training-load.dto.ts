@@ -67,6 +67,8 @@ export const trainingLoadMetricsSchema = z.object({
     max: z.number(),
   }),
   status: z.enum(['overreaching', 'optimal', 'detraining']),
+  /** Acute:chronic workload ratio, null without enough history */
+  acwr: z.number().nullable(),
 });
 
 export type TrainingLoadMetrics = z.infer<typeof trainingLoadMetricsSchema>;

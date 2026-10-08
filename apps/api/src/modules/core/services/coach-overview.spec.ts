@@ -101,7 +101,8 @@ function setup() {
   };
   return {
     prisma,
-    service: new CoachService(prisma as unknown as PrismaService),
+    // The overview reads no training load
+    service: new CoachService(prisma as unknown as PrismaService, {} as never),
   };
 }
 

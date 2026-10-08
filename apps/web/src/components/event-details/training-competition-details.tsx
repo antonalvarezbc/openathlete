@@ -4,6 +4,7 @@ import {
 } from '@/api/event';
 import { m } from '@/paraglide/messages';
 import { getLocale } from '@/paraglide/runtime';
+import { getDateLocale } from '@/utils/locales';
 import { useMemo } from 'react';
 
 import {
@@ -51,7 +52,7 @@ export function TrainingCompetitionDetails({ event }: P) {
   // Time on the session's day, date and time otherwise; then the distance.
   const activityRow = (activity: Event) => {
     const start = new Date(activity.startDate);
-    const locale = getLocale();
+    const locale = getDateLocale(getLocale());
     const when = isSameLocalDay(start, new Date(event.startDate))
       ? start.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
       : start.toLocaleString(locale, {

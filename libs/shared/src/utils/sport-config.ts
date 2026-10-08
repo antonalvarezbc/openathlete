@@ -595,7 +595,7 @@ export const SPORT_CONFIG: Record<SPORT_TYPE, SportStatisticsConfig> = {
     speedUnit: 'km/h',
     speedLabel: 'speed',
   },
-  [SPORT_TYPE.MOBILITY]: {
+  [SPORT_TYPE.PILATES]: {
     showDistance: false,
     showSpeed: false,
     showMaxSpeed: false,
@@ -608,7 +608,7 @@ export const SPORT_CONFIG: Record<SPORT_TYPE, SportStatisticsConfig> = {
     speedUnit: 'km/h',
     speedLabel: 'speed',
   },
-  [SPORT_TYPE.PILATES]: {
+  [SPORT_TYPE.MOBILITY]: {
     showDistance: false,
     showSpeed: false,
     showMaxSpeed: false,

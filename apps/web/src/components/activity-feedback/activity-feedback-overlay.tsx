@@ -117,7 +117,7 @@ export function ActivityFeedbackOverlay({
     return (
       <div className="space-y-3 p-6">
         <p>{m.feedback_not_generated()}</p>
-        <Button onClick={onSkip}>{m.activity_feedback_close()}</Button>
+        <Button onClick={onSkip}>{m.ui_close()}</Button>
       </div>
     );
   }

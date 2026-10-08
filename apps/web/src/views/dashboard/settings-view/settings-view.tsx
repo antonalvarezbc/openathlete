@@ -4,7 +4,7 @@ import { useAuthContext, useUserRoles } from '@/contexts/auth';
 import { useSpaceContext } from '@/contexts/space';
 import { SubscriptionSettingsPage } from '@/pages/dashboard/settings/subscription';
 import { m } from '@/paraglide/messages';
-import { isPaymentDisabled } from '@/utils/capacitor';
+import { purchaseChannel } from '@/utils/capacitor';
 import { useEffect, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 
@@ -27,11 +27,14 @@ export function SettingsView() {
   const isCoach = !!roles?.includes('COACH');
   const { data: subscription } = useCurrentSubscription();
   // Nothing to subscribe to on instances without billing (or in this fork's
-  // self-hosted mode), nor on iOS
+  // self-hosted mode), nor in the Android app; the iOS app sells through the
+  // App Store when it is set up
+  const channel = purchaseChannel();
   const showSubscription =
     Boolean(subscription?.billingEnabled) &&
     !subscription?.selfHosted &&
-    !isPaymentDisabled();
+    (channel === 'stripe' ||
+      (channel === 'app-store' && Boolean(subscription?.appStoreEnabled)));
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(tabParam || 'connectors');

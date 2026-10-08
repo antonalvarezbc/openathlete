@@ -28,6 +28,7 @@ import {
   PieChart,
   TrendingUp,
   User,
+  Users,
   X,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
@@ -157,6 +158,18 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
         icon: MessageCircle,
         spaces: ['ATHLETE'] as UserRole[],
       },
+      // Coaches would otherwise only find their dashboard in the space
+      // switcher
+      ...(athletes?.length
+        ? [
+            {
+              title: m.coach_dashboard_nav(),
+              url: getPath(['dashboard', 'coach']),
+              icon: Users,
+              spaces: ['ATHLETE'] as UserRole[],
+            },
+          ]
+        : []),
     ];
   }, [athletes, space]);
 
@@ -180,7 +193,7 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
               variant="ghost"
               size="icon"
               className="size-11 shrink-0"
-              aria-label={m.activity_feedback_close()}
+              aria-label={m.ui_close()}
               onClick={() => setOpenMobile(false)}
             >
               <X className="size-5" />

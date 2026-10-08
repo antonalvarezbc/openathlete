@@ -215,7 +215,10 @@ export function CalendarEvent({ event, wrapped, detailed }: P) {
     }
   }, [event, coloredBy]);
 
-  const draggable = event.type !== EVENT_TYPE.ACTIVITY && !wrapped;
+  // While selecting, the event is not draggable: dnd-kit would still mark it
+  // aria-disabled, and with it the selection checkbox inside.
+  const draggable =
+    event.type !== EVENT_TYPE.ACTIVITY && !wrapped && !bulk?.selecting;
   const relatedEvents = allEvents.filter(
     (e) =>
       (e.type === EVENT_TYPE.TRAINING || e.type === EVENT_TYPE.COMPETITION) &&

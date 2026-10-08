@@ -34,3 +34,10 @@ project.inlang/.lix/
 project.inlang/.meta.json
 project.inlang/README.md
 project.inlang/cache/
+
+# Mobile release tooling (fastlane)
+.bundle
+vendor/bundle
+fastlane/build
+fastlane/report.xml
+fastlane/README.md

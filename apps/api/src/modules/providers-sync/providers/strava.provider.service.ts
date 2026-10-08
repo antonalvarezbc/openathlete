@@ -35,6 +35,7 @@ import {
 } from '../base';
 import {
   ImportOptions,
+  ImportResult,
   ImportedActivity,
   ProviderImportCapability,
 } from '../base/provider-import.interface';
@@ -324,7 +325,7 @@ export class StravaProviderService
   async importActivity(
     account: ProviderAccount,
     activity: ImportedActivity,
-  ): Promise<EventActivity> {
+  ): Promise<ImportResult> {
     const existing = await this.prisma.eventActivity.findFirst({
       where: {
         externalId: activity.externalId,
@@ -332,7 +333,7 @@ export class StravaProviderService
     });
 
     if (existing) {
-      return existing;
+      return { activity: existing, created: false };
     }
 
     // Get athlete (only need athleteId, no need for user relation)
@@ -364,7 +365,7 @@ export class StravaProviderService
       stravaActivity,
     );
 
-    return savedActivity;
+    return { activity: savedActivity, created: true };
   }
 
   /**

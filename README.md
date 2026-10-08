@@ -7,7 +7,7 @@
   <h3 align="center">OpenAthlete</h3>
 
   <p align="center">
-    The ethical European alternative to TrainingPeaks and Strava.
+    The ethical alternative to TrainingPeaks and Strava.
     <br />
     <br />
     OpenAthlete is open source under the AGPLv3, built so you can own your training data: self-host, export, and avoid vendor lock-in. Core hosting and processing are oriented toward the European Union with GDPR-minded defaults.

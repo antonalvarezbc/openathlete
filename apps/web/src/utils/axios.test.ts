@@ -2,7 +2,7 @@
 import { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import client from './axios';
+import client, { isNetworkError } from './axios';
 import { ACCESS_TOKEN, REFRESH_TOKEN } from './local-storage';
 
 // Answers every request with the given status, without any network.
@@ -45,5 +45,23 @@ describe('API client errors', () => {
       response: { status: 500 },
     });
     expect(localStorage.getItem(ACCESS_TOKEN)).toBe(ACCESS);
+  });
+
+  it('tells a request without any answer from an answered failure', async () => {
+    const offline = client.get('/user/me', {
+      adapter: async (config) => {
+        throw new AxiosError('Network Error', AxiosError.ERR_NETWORK, config);
+      },
+    });
+    const error = await offline.catch((e: unknown) => e);
+    expect(isNetworkError(error)).toBe(true);
+    // The session is kept for when the connection comes back
+    expect(localStorage.getItem(ACCESS_TOKEN)).toBe(ACCESS);
+
+    const unauthorized = await client
+      .get('/user/me', { adapter: respondWith(401) })
+      .catch((e: unknown) => e);
+    expect(isNetworkError(unauthorized)).toBe(false);
+    expect(isNetworkError(new Error('boom'))).toBe(false);
   });
 });
