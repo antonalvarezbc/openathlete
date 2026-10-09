@@ -221,6 +221,45 @@ export const ApiEnvSchema = z
       .optional()
       .describe('Default sender email address for Brevo emails (optional)'),
 
+    // Email through any SMTP server, used when BREVO_API_KEY is not set
+    SMTP_HOST: z
+      .string()
+      .optional()
+      .describe('SMTP server host name, which turns email on (optional)'),
+
+    SMTP_PORT: z
+      .string()
+      .regex(/^\d+$/, 'SMTP_PORT must be a valid port number')
+      .optional()
+      .transform((val) => (val === undefined ? undefined : Number(val)))
+      .describe('SMTP server port. Default: 465 with SMTP_SECURE, else 587'),
+
+    SMTP_SECURE: z
+      .enum(['true', 'false'])
+      .optional()
+      .transform((val) => (val === undefined ? undefined : val === 'true'))
+      .describe(
+        'true for implicit TLS (usually port 465); false upgrades with STARTTLS when the server offers it. Default: true on port 465',
+      ),
+
+    SMTP_USER: z
+      .string()
+      .optional()
+      .describe('SMTP user name, when the server requires authentication'),
+
+    SMTP_PASSWORD: z
+      .string()
+      .optional()
+      .describe('SMTP password, when the server requires authentication'),
+
+    EMAIL_FROM: z
+      .string()
+      .email('EMAIL_FROM must be a valid email address')
+      .optional()
+      .describe(
+        'Sender address of every email, for Brevo and SMTP. Default: BREVO_FROM_EMAIL, else noreply@openathlete.org',
+      ),
+
     // Who may create an account
     SIGNUP_MODE: z
       .enum(['open', 'invite', 'closed'])

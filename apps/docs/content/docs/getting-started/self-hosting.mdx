@@ -50,13 +50,28 @@ To build the images from a clone of the repository instead: `docker compose -f d
 
 Leave a variable empty to disable the feature:
 
-| Feature                                           | Variables                                     |
-| ------------------------------------------------- | --------------------------------------------- |
-| Transactional email (password reset, invitations) | `BREVO_API_KEY`, `BREVO_FROM_EMAIL`           |
-| An email to you for each new account              | `SIGNUP_NOTIFICATION_EMAIL` (needs Brevo)     |
-| Device sync                                       | `STRAVA_*`, `GARMIN_*`, `POLAR_*`, `SUUNTO_*` |
-| AI load estimation of planned sessions            | `ENABLE_TRAINING_LOAD_ESTIMATION`             |
-| Billing                                           | `STRIPE_*` (not needed for self-hosting)      |
+| Feature                                           | Variables                                                  |
+| ------------------------------------------------- | ---------------------------------------------------------- |
+| Transactional email (password reset, invitations) | `SMTP_*` and `EMAIL_FROM`, or `BREVO_API_KEY` (see below)  |
+| An email to you for each new account              | `SIGNUP_NOTIFICATION_EMAIL` (needs email)                  |
+| Device sync                                       | `STRAVA_*`, `GARMIN_*`, `POLAR_*`, `SUUNTO_*`              |
+| AI load estimation of planned sessions            | `ENABLE_TRAINING_LOAD_ESTIMATION`                          |
+| Billing                                           | `STRIPE_*` (not needed for self-hosting)                   |
+
+#### Email
+
+Any SMTP server works: your mail provider's, a relay such as Postmark or Amazon SES, or your own.
+
+| Variable        | Value                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------- |
+| `SMTP_HOST`     | The server, e.g. `smtp.example.org`. Setting it turns email on.                             |
+| `SMTP_PORT`     | Default: `465` when `SMTP_SECURE=true`, else `587`                                          |
+| `SMTP_SECURE`   | `true` for implicit TLS (port 465). Otherwise the connection upgrades with STARTTLS when the server offers it. |
+| `SMTP_USER`     | User name, if the server asks for one                                                       |
+| `SMTP_PASSWORD` | Password                                                                                    |
+| `EMAIL_FROM`    | The sender address, which the server must accept, e.g. `openathlete@example.org`           |
+
+Brevo works too, through its API: set `BREVO_API_KEY` instead (it wins when both are set) and `EMAIL_FROM` or `BREVO_FROM_EMAIL`.
 
 Without Stripe, the instance sells nothing and limits nobody: every account can coach any number of athletes. With Stripe, free accounts coach up to 5 athletes and the Supporter subscription (`STRIPE_PRICE_SUPPORTER_MONTHLY`, `STRIPE_PRICE_SUPPORTER_YEARLY`) removes the limit and includes AI on the instance keys.
 
@@ -129,7 +144,7 @@ docker compose exec api openathlete delete-user ana@example.com --yes
 - `reset-password` prints a link to set a new password, valid 15 minutes, to pass on to the person.
 - `delete-user` deletes the account and all its data, as the user would from Settings; it asks for `--yes`.
 
-Without email (`BREVO_API_KEY` empty), "Forgot your password?" still works: the reset link is written to the API logs instead of being sent, and the app tells the user to ask you for it. Find it with `docker compose logs api | grep "reset link"`.
+Without email (`SMTP_HOST` and `BREVO_API_KEY` empty), "Forgot your password?" still works: the reset link is written to the API logs instead of being sent, and the app tells the user to ask you for it. Find it with `docker compose logs api | grep "reset link"`.
 
 ### Updating
 

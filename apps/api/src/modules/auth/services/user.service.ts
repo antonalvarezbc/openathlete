@@ -33,6 +33,7 @@ import {
 import { Language } from 'src/common/constants/languages.constant';
 import { maskEmail } from 'src/common/utils/mask-email';
 import { SendEmailEvent } from 'src/events';
+import { emailTransportKind } from 'src/modules/notification/services/email-transport.service';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 
 import { AuthUser } from '../decorators/user.decorator';
@@ -366,7 +367,7 @@ export class UserService {
       token.token,
     );
 
-    if (!this.configService.get('BREVO_API_KEY')) {
+    if (!emailTransportKind((key) => this.configService.get(key))) {
       // Nothing can carry the link to the user: the instance administrator
       // reads it here and passes it on
       this.logger.warn(

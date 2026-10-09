@@ -42,10 +42,13 @@ describe('password reset request', () => {
   const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
   afterEach(() => warn.mockClear());
 
-  it('emails the link when the instance can send emails', async () => {
+  it.each([
+    ['Brevo', { BREVO_API_KEY: 'key' }],
+    ['SMTP', { SMTP_HOST: 'smtp.example.org' }],
+  ])('emails the link when the instance sends through %s', async (_, env) => {
     const { service, emitter } = setup({
       APP_URL: 'https://train.example.org',
-      BREVO_API_KEY: 'key',
+      ...env,
     });
     await service.passwordResetRequest({ email: 'ana@example.com' });
     expect(emitter.emit).toHaveBeenCalledWith(

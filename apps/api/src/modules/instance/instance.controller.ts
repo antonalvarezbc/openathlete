@@ -5,6 +5,7 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ConnectorProvider } from '@openathlete/database';
 import { ApiEnvSchemaType, InstanceInfoDto } from '@openathlete/shared';
 
+import { emailTransportKind } from '../notification/services/email-transport.service';
 import { PrismaService } from '../prisma/services/prisma.service';
 import { configuredProviders } from '../providers-sync/base/provider-config';
 
@@ -47,7 +48,7 @@ export class InstanceController {
     const mode = this.config.get('SIGNUP_MODE') ?? 'open';
     return {
       googleSignIn: !!get('FIREBASE_SERVICE_ACCOUNT_JSON'),
-      email: !!get('BREVO_API_KEY'),
+      email: !!emailTransportKind(get),
       providers: configuredProviders(get),
       // The first account is always allowed: it is the administrator's
       signup:
