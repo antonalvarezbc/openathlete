@@ -7,6 +7,7 @@ import { saveLanguageChoice } from '@/utils/language-choice';
 import { ACCESS_TOKEN, clear, getItem, setItem } from '@/utils/local-storage';
 import { initializePushNotifications } from '@/utils/push-notifications';
 import { queryClient } from '@/utils/query-client';
+import { saveTimeZone } from '@/utils/time-zone';
 import posthog from 'posthog-js';
 import { useCallback, useEffect, useMemo, useReducer } from 'react';
 
@@ -89,6 +90,8 @@ export function AuthProvider({ children }: Props) {
         const user = await UserAPI.getMe();
 
         await saveLanguageChoice(user.language);
+        // Not awaited: reminders can wait, the app should not
+        void saveTimeZone(user.timeZone);
 
         posthog.identify(user.userId.toString(), {
           roles: user.roles,
@@ -119,6 +122,8 @@ export function AuthProvider({ children }: Props) {
           const user = await UserAPI.getMe();
 
           await saveLanguageChoice(user.language);
+          // Not awaited: reminders can wait, the app should not
+          void saveTimeZone(user.timeZone);
 
           posthog.identify(user.userId.toString(), {
             roles: user.roles,

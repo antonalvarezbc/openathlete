@@ -5,6 +5,7 @@ import {
   EmailTransportService,
   NotificationService,
   PushNotificationService,
+  TrainingReminderScheduler,
 } from './services';
 
 @Module({
@@ -12,6 +13,7 @@ import {
     EmailTransportService,
     NotificationService,
     PushNotificationService,
+    TrainingReminderScheduler,
     PrismaService,
   ],
   controllers: [],

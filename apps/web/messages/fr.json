@@ -1322,5 +1322,9 @@
   "activity_ai_notes_title": "Relevé par l'IA",
   "activity_ai_notes_pending": "L'IA lit les réponses…",
   "activity_ai_notes_none": "Aucune douleur ni blessure relevée dans les réponses.",
-  "activity_ai_notes_pain": "Douleur {score}/10"
+  "activity_ai_notes_pain": "Douleur {score}/10",
+  "notifications": "Notifications",
+  "training_reminders": "Séances du lendemain",
+  "training_reminders_description": "Sur l'application mobile, une notification à 19 h la veille des séances prévues.",
+  "training_reminders_update_failed": "Impossible de modifier les rappels"
 }

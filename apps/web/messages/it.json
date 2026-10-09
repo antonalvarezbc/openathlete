@@ -1322,5 +1322,9 @@
   "activity_ai_notes_title": "Rilevato dall'IA",
   "activity_ai_notes_pending": "L'IA sta leggendo le risposte…",
   "activity_ai_notes_none": "Nessun dolore o infortunio rilevato nelle risposte.",
-  "activity_ai_notes_pain": "Dolore {score}/10"
+  "activity_ai_notes_pain": "Dolore {score}/10",
+  "notifications": "Notifiche",
+  "training_reminders": "Sedute del giorno dopo",
+  "training_reminders_description": "Sull'app mobile, una notifica alle 19:00 il giorno prima delle sedute pianificate.",
+  "training_reminders_update_failed": "Impossibile modificare i promemoria"
 }

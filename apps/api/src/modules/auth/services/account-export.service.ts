@@ -42,6 +42,8 @@ export class AccountExportService {
         lastName: true,
         gender: true,
         language: true,
+        timeZone: true,
+        trainingReminders: true,
         roles: true,
         onboardingCompleted: true,
         createdAt: true,

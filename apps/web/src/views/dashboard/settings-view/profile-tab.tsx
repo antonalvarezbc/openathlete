@@ -24,6 +24,7 @@ import {
 
 import { PrivacySection } from './privacy-section';
 import { SettingsSection } from './settings-section';
+import { TrainingRemindersSection } from './training-reminders-section';
 
 export function ProfileTab() {
   const { user, logout } = useAuthContext();
@@ -110,6 +111,7 @@ export function ProfileTab() {
       {athlete?.athleteId && (
         <SessionValidationSettingsCard athleteId={athlete.athleteId} />
       )}
+      {athlete?.athleteId && <TrainingRemindersSection />}
       <PrivacySection />
       <SettingsSection
         title={m.delete_account()}

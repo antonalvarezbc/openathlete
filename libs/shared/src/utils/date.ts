@@ -39,3 +39,17 @@ export const getQuarterPeriod = (date: Date): { start: Date; end: Date } => {
   const end = new Date(date.getFullYear(), (quarter + 1) * 3, 0);
   return { start: startOfDay(start), end: endOfDay(end) };
 };
+
+/** Whether `value` is an IANA time zone this runtime knows (e.g. Europe/Paris). */
+export const isTimeZone = (value: string): boolean => {
+  if (!value || value.length > 64) return false;
+  try {
+    // Use the result: a bundler drops an unused constructor call, and the
+    // check with it
+    return !!new Intl.DateTimeFormat('en-US', {
+      timeZone: value,
+    }).resolvedOptions().timeZone;
+  } catch {
+    return false;
+  }
+};

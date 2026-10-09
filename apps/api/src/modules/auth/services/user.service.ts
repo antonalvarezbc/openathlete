@@ -91,6 +91,8 @@ export class UserService {
         roles: true,
         onboardingCompleted: true,
         language: true,
+        timeZone: true,
+        trainingReminders: true,
       },
     });
   };
@@ -318,11 +320,15 @@ export class UserService {
         firstName: data.firstName,
         lastName: data.lastName,
         gender: data.gender,
+        timeZone: data.timeZone,
+        trainingReminders: data.trainingReminders,
       },
       select: {
         firstName: true,
         lastName: true,
         gender: true,
+        timeZone: true,
+        trainingReminders: true,
       },
     });
   };

@@ -166,7 +166,7 @@ export class UserController {
   @ApiOperation({
     summary: 'Update user account information',
     description:
-      "Updates the authenticated user's personal information including first name, last name, and gender. Only the provided fields will be updated.",
+      "Updates the authenticated user's personal information (first name, last name, gender), the device's time zone and whether to get training reminders. Only the provided fields will be updated.",
   })
   @ApiBody({
     description: 'Account update data',
@@ -185,6 +185,17 @@ export class UserController {
           type: 'string',
           enum: Object.values(Gender),
           example: 'FEMALE',
+        },
+        timeZone: {
+          type: 'string',
+          description:
+            'IANA time zone of the device, for reminders at local time',
+          example: 'Europe/Paris',
+        },
+        trainingReminders: {
+          type: 'boolean',
+          description:
+            'Push notification the evening before planned training sessions',
         },
       },
     },

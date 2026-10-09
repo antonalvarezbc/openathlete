@@ -33,6 +33,12 @@ model User {
   language            UserLanguage @default(FR)
   /// Push notification token for mobile devices
   pushToken           String?      @map("push_token")
+  /// IANA time zone of the user's device (e.g. Europe/Paris), set by the app
+  timeZone            String?      @map("time_zone")
+  /// Push the evening before planned training sessions
+  trainingReminders   Boolean      @default(true) @map("training_reminders")
+  /// Local date of the last evening reminded, so it goes out once
+  trainingReminderSentOn DateTime? @map("training_reminder_sent_on") @db.Date
 
   // relationships
   athlete                   Athlete?

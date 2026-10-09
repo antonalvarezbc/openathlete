@@ -1,0 +1,20 @@
+---
+title: Training reminders
+description: A notification the evening before planned sessions.
+---
+
+On the iOS and Android apps, OpenAthlete sends a notification at 7 pm the day
+before planned training sessions: the session's name, or how many there are
+and their names.
+
+- **Local time**: the app saves your phone's time zone each time it opens, so
+  the reminder follows you when you travel.
+- **Which sessions**: planned training sessions of the next day, as the
+  calendar shows them. Races and notes are left out.
+- **Once an evening**: if the server restarts around 7 pm, the reminder still
+  goes out later that evening, until 11 pm, and never twice.
+
+Turn it off in **Settings > Profile > Notifications**.
+
+Reminders are push notifications, so they need the mobile app and an instance
+that can send them (`FIREBASE_SERVICE_ACCOUNT_JSON`).

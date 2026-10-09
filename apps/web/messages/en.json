@@ -1322,5 +1322,9 @@
   "activity_ai_notes_title": "Noted by the AI",
   "activity_ai_notes_pending": "The AI is reading the answers…",
   "activity_ai_notes_none": "No pain or injury noted in the answers.",
-  "activity_ai_notes_pain": "Pain {score}/10"
+  "activity_ai_notes_pain": "Pain {score}/10",
+  "notifications": "Notifications",
+  "training_reminders": "Tomorrow's sessions",
+  "training_reminders_description": "On the mobile app, a notification at 7 pm the day before planned training sessions.",
+  "training_reminders_update_failed": "Could not update the reminders"
 }
