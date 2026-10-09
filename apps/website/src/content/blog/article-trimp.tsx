@@ -6,14 +6,17 @@ export const articleTrimp: BlogPost = {
     title: {
       en: 'What is TRIMP and How to Use It?',
       fr: "Qu'est-ce que le TRIMP et Comment l'Utiliser ?",
+      es: '¿Qué es el TRIMP y cómo usarlo?',
     },
     description: {
       en: "Technical definition of TRIMP (Training Impulse). Explain it's good but cardio-only. Show how our algorithm goes further.",
       fr: "Définition technique du TRIMP (Training Impulse). Expliquez qu'il est bon mais cardio-seulement. Montrez comment notre algorithme va plus loin.",
+      es: 'Definición técnica del TRIMP (Training Impulse): por qué es útil pero solo mide la carga cardiovascular, y cómo nuestro algoritmo va más allá.',
     },
     excerpt: {
       en: "TRIMP calculates training load based on heart rate and duration. It's useful but limited to cardiovascular stress. Learn how OpenAthlete's algorithm incorporates more factors.",
       fr: "Le TRIMP calcule la charge d'entraînement basée sur la fréquence cardiaque et la durée. C'est utile mais limité au stress cardiovasculaire. Découvrez comment l'algorithme d'OpenAthlete intègre plus de facteurs.",
+      es: 'El TRIMP calcula la carga de entrenamiento a partir de la frecuencia cardíaca y la duración. Es útil, pero se limita al estrés cardiovascular. Descubre cómo el algoritmo de OpenAthlete incorpora más factores.',
     },
     author: {
       name: 'OpenAthlete Team',
@@ -264,6 +267,129 @@ export const articleTrimp: BlogPost = {
             Inscrivez-vous sur OpenAthlete
           </a>{' '}
           et obtenez une analyse de charge d'entraînement qui va au-delà du
+          TRIMP.
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          <strong>
+            El TRIMP (Training Impulse) es una métrica que cuantifica la carga
+            de entrenamiento. Lleva décadas utilizándose para medir el estrés
+            cardiovascular. Pero ¿es suficiente?
+          </strong>
+        </p>
+
+        <p>
+          Este artículo explica qué es el TRIMP, cómo funciona, cuáles son sus
+          limitaciones y cómo el algoritmo de OpenAthlete va más allá del TRIMP
+          para ofrecer una evaluación más completa de la carga de entrenamiento.
+        </p>
+
+        <h2>¿Qué es el TRIMP?</h2>
+        <p>
+          El TRIMP (Training Impulse) lo desarrolló el Dr. Eric Bannister en los
+          años setenta. Calcula la carga de entrenamiento a partir de:
+        </p>
+        <ul>
+          <li>La duración del ejercicio (minutos)</li>
+          <li>La frecuencia cardíaca media</li>
+          <li>
+            La reserva de frecuencia cardíaca (diferencia entre la FC máxima y
+            la FC en reposo)
+          </li>
+        </ul>
+
+        <p>
+          Fórmula: TRIMP = Duración × FC media × Factor de reserva de frecuencia
+          cardíaca
+        </p>
+
+        <p>
+          El resultado es un único número que representa el estrés
+          cardiovascular del entrenamiento.
+        </p>
+
+        <h2>Los puntos fuertes del TRIMP</h2>
+        <p>El TRIMP es valioso porque:</p>
+        <ul>
+          <li>Cuantifica la carga de entrenamiento de forma objetiva</li>
+          <li>
+            Tiene en cuenta las zonas de frecuencia cardíaca de cada persona
+          </li>
+          <li>Ofrece una única métrica con la que comparar</li>
+          <li>Cuenta con décadas de validación científica</li>
+        </ul>
+
+        <h2>Las limitaciones del TRIMP</h2>
+        <p>Sin embargo, el TRIMP tiene limitaciones importantes:</p>
+        <ul>
+          <li>
+            <strong>Solo cardiovascular:</strong> no tiene en cuenta el estrés
+            muscular
+          </li>
+          <li>
+            <strong>Sin RPE:</strong> ignora la carga interna (cómo te sentiste)
+          </li>
+          <li>
+            <strong>Sin factores ambientales:</strong> no considera el calor, la
+            altitud, etc.
+          </li>
+          <li>
+            <strong>Sin estado de recuperación:</strong> el mismo TRIMP no se
+            vive igual cansado que descansado
+          </li>
+          <li>
+            <strong>Sin riesgo de lesión:</strong> no detecta los picos de carga
+            que provocan lesiones
+          </li>
+        </ul>
+
+        <h2>Más allá del TRIMP: el enfoque de OpenAthlete</h2>
+        <p>El algoritmo de OpenAthlete incorpora el TRIMP, pero va más allá:</p>
+        <ul>
+          <li>
+            <strong>TRIMP (carga cardiovascular)</strong>
+          </li>
+          <li>
+            <strong>RPE (carga interna)</strong>
+          </li>
+          <li>
+            <strong>ACWR (progresión de la carga)</strong>
+          </li>
+          <li>
+            <strong>Indicadores de recuperación (sueño, estrés)</strong>
+          </li>
+          <li>
+            <strong>Factores ambientales</strong>
+          </li>
+          <li>
+            <strong>Detección del riesgo de lesión</strong>
+          </li>
+        </ul>
+
+        <p>
+          Este enfoque global ofrece una imagen más precisa del estrés del
+          entrenamiento y de la adaptación.
+        </p>
+
+        <h2>En resumen</h2>
+        <p>
+          El TRIMP es una métrica útil, pero incompleta. OpenAthlete utiliza el
+          TRIMP como una pieza más de un análisis completo de la carga de
+          entrenamiento que incluye el RPE, el ACWR, la recuperación y la
+          prevención de lesiones.
+        </p>
+
+        <p>
+          <strong>Deja de adivinar y empieza hoy a entrenar con IA.</strong>{' '}
+          <a href="https://app.openathlete.org/auth/create-account">
+            Regístrate en OpenAthlete
+          </a>{' '}
+          y obtén un análisis de la carga de entrenamiento que va más allá del
           TRIMP.
         </p>
       </div>

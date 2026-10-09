@@ -7,6 +7,7 @@ import { Footer, Navbar, TopBar } from '@/components/landing/sections';
 import { WebPageStructuredData } from '@/components/seo/structured-data';
 import { SITE_URL } from '@/config';
 import { m } from '@/paraglide/messages';
+import { isSupportedLocale, localePrefix } from '@/utils/locales';
 import { notFound } from 'next/navigation';
 
 import { generateMetadata as generatePageMetadata } from '../../../metadata';
@@ -58,7 +59,7 @@ export default async function ConnectProviderPage({
   const { locale, provider } = await params;
 
   // Validate locale
-  if (locale !== 'en' && locale !== 'fr') {
+  if (!isSupportedLocale(locale)) {
     notFound();
   }
 
@@ -80,7 +81,7 @@ export default async function ConnectProviderPage({
             `connect_${provider}_seo_description` as keyof typeof m
           ] as () => string
         )()}
-        url={`${SITE_URL}${locale === 'en' ? '' : `/${locale}`}/connect/${provider}`}
+        url={`${SITE_URL}${localePrefix(locale)}/connect/${provider}`}
       />
       <div className="min-h-screen bg-background">
         <TopBar />

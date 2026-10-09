@@ -6,14 +6,17 @@ export const articleOpenathleteFreeAlternativeTrainingpeaks: BlogPost = {
     title: {
       en: 'OpenAthlete: The Best Free Alternative to TrainingPeaks and Competitors in 2025',
       fr: 'OpenAthlete : La Meilleure Alternative Gratuite à TrainingPeaks et ses Concurrents en 2025',
+      es: 'OpenAthlete: la mejor alternativa gratuita a TrainingPeaks y sus competidores en 2025',
     },
     description: {
       en: "Discover why OpenAthlete is the best free alternative to TrainingPeaks, TrainerRoad, Today's Plan, Final Surge, and other paid training platforms. Compare features, pricing, and benefits.",
       fr: "Découvrez pourquoi OpenAthlete est la meilleure alternative gratuite à TrainingPeaks, TrainerRoad, Today's Plan, Final Surge et autres plateformes d'entraînement payantes. Comparez les fonctionnalités, tarifs et avantages.",
+      es: "Descubre por qué OpenAthlete es la mejor alternativa gratuita a TrainingPeaks, TrainerRoad, Today's Plan, Final Surge y otras plataformas de entrenamiento de pago. Compara funciones, precios y ventajas.",
     },
     excerpt: {
       en: "Looking for a free alternative to TrainingPeaks? OpenAthlete offers AI-powered training planning, injury prevention, and advanced analytics—completely free. Compare with TrainingPeaks, TrainerRoad, Today's Plan, and more.",
       fr: "Vous cherchez une alternative gratuite à TrainingPeaks ? OpenAthlete propose une planification d'entraînement assistée par IA, la prévention des blessures et des analyses avancées—entièrement gratuit. Comparez avec TrainingPeaks, TrainerRoad, Today's Plan et plus encore.",
+      es: "¿Buscas una alternativa gratuita a TrainingPeaks? OpenAthlete ofrece planificación del entrenamiento con IA, prevención de lesiones y análisis avanzados, totalmente gratis. Compárala con TrainingPeaks, TrainerRoad, Today's Plan y muchas más.",
     },
     author: {
       name: 'OpenAthlete Team',
@@ -923,6 +926,460 @@ export const articleOpenathleteFreeAlternativeTrainingpeaks: BlogPost = {
           Absolument ! OpenAthlete supporte la collaboration coach-athlète.
           Votre coach peut accéder à vos données, valider les suggestions IA et
           fournir des commentaires—le tout dans la plateforme.
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          A la hora de elegir una plataforma de entrenamiento, atletas y
+          entrenadores tienen muchas opciones. Desde plataformas consolidadas
+          como TrainingPeaks hasta soluciones más recientes, cada una ofrece
+          funciones, modelos de precios y enfoques distintos para gestionar el
+          entrenamiento.
+        </p>
+
+        <p>
+          <strong>OpenAthlete</strong> es una plataforma de entrenamiento
+          gratuita y de código abierto que ofrece planificación completa,
+          análisis y funciones basadas en IA. En este artículo vemos cómo se
+          compara OpenAthlete con las alternativas de pago más populares y por
+          qué es una opción viable para atletas y entrenadores.
+        </p>
+
+        <h2>Las opciones de plataformas de entrenamiento</h2>
+
+        <p>
+          Las plataformas de entrenamiento suelen dividirse en dos categorías:
+          servicios de suscripción de pago y soluciones gratuitas o de código
+          abierto. Las plataformas de pago como TrainingPeaks, TrainerRoad y
+          Today's Plan ofrecen funciones completas, pero exigen una suscripción
+          mensual. Las alternativas de código abierto como OpenAthlete ofrecen
+          capacidades similares sin coste, con la ventaja añadida de la
+          transparencia y de un desarrollo impulsado por la comunidad.
+        </p>
+
+        <h2>OpenAthlete vs. TrainingPeaks: la comparativa completa</h2>
+
+        <h3>TrainingPeaks en resumen</h3>
+        <p>
+          TrainingPeaks es el referente del sector en software de entrenamiento
+          de resistencia. Lleva décadas en el mercado y ofrece un análisis de
+          datos completo, una amplia integración con dispositivos y métricas
+          avanzadas como TSS, CTL y ATL.
+        </p>
+
+        <p>
+          <strong>Precio de TrainingPeaks:</strong> 19,95 $/mes (Premium) o 9,95
+          $/mes (Basic)
+        </p>
+
+        <p>
+          <strong>Puntos fuertes de TrainingPeaks:</strong>
+        </p>
+        <ul>
+          <li>Análisis de datos y gráficos completos</li>
+          <li>Amplia integración con dispositivos (Garmin, Strava, etc.)</li>
+          <li>Métricas avanzadas (TSS, CTL, ATL, TSB)</li>
+          <li>Gran base de usuarios y comunidad</li>
+          <li>Plataforma consolidada con años de desarrollo</li>
+        </ul>
+
+        <p>
+          <strong>Aspectos a tener en cuenta de TrainingPeaks:</strong>
+        </p>
+        <ul>
+          <li>Requiere una suscripción de pago (9,95-19,95 $/mes)</li>
+          <li>Interfaz completa que puede llevar tiempo dominar</li>
+          <li>
+            Se centra en el análisis de datos más que en la planificación con IA
+          </li>
+          <li>No incluye seguimiento del RPE integrado</li>
+          <li>Funciones básicas de prevención de lesiones</li>
+          <li>Enfoque de planificación estático</li>
+          <li>Plataforma propietaria</li>
+        </ul>
+
+        <h3>OpenAthlete: la alternativa gratuita</h3>
+        <p>
+          <strong>Precio de OpenAthlete:</strong>{' '}
+          <strong>Gratis para siempre</strong> (con una suscripción Supporter
+          opcional de 5 €/mes)
+        </p>
+
+        <p>
+          <strong>Funciones de OpenAthlete:</strong>
+        </p>
+        <ul>
+          <li>
+            <strong>Funciones básicas 100 % gratuitas:</strong> planificación
+            ilimitada, centralización de datos y análisis básicos, totalmente
+            gratis
+          </li>
+          <li>
+            <strong>Planificación con IA:</strong> recibe sugerencias de
+            entrenamiento inteligentes que se adaptan a tu fatiga y a tu estado
+            de recuperación
+          </li>
+          <li>
+            <strong>Seguimiento del RPE:</strong> registra tu esfuerzo percibido
+            para controlar la carga con más precisión
+          </li>
+          <li>
+            <strong>Prevención avanzada de lesiones:</strong> seguimiento del
+            ACWR (ratio de carga aguda:crónica) y detección temprana de la
+            sobrecarga
+          </li>
+          <li>
+            <strong>Adaptación dinámica del plan:</strong> la IA te sugiere
+            ajustes automáticamente cuando te saltas sesiones o muestras signos
+            de fatiga
+          </li>
+          <li>
+            <strong>Generador de sesiones con IA:</strong> crea sesiones de
+            entrenamiento complejas en segundos describiéndolas con tus propias
+            palabras
+          </li>
+          <li>
+            <strong>Código abierto:</strong> transparente, auditable y con
+            posibilidad de autoalojamiento: tus datos, bajo tu control
+          </li>
+          <li>
+            <strong>Privacidad ante todo:</strong> datos alojados en la UE,
+            cumplimiento del RGPD y sin venta de datos
+          </li>
+          <li>
+            <strong>Interfaz moderna:</strong> un diseño intuitivo, fácil de
+            aprender y de usar
+          </li>
+          <li>
+            <strong>Comentarios por audio:</strong> graba notas de voz después
+            de tus sesiones para dar un feedback natural y cualitativo
+          </li>
+        </ul>
+
+        <h2>OpenAthlete frente a otros competidores</h2>
+
+        <h3>TrainerRoad</h3>
+        <p>
+          <strong>Precio:</strong> 19,95 $/mes
+        </p>
+        <p>
+          TrainerRoad se centra en entrenamientos estructurados y planes de
+          entrenamiento, sobre todo para ciclistas. Ofrece una amplia biblioteca
+          de entrenamientos y programas estructurados. OpenAthlete apuesta por
+          un enfoque distinto, con planificación basada en IA, soporte
+          multideporte y funciones avanzadas de prevención de lesiones, y además
+          es gratuito.
+        </p>
+
+        <h3>Today's Plan</h3>
+        <p>
+          <strong>Precio:</strong> 15-25 $/mes
+        </p>
+        <p>
+          Today's Plan ofrece herramientas completas de análisis y planificación
+          del entrenamiento con un modelo de suscripción (15-25 $/mes).
+          OpenAthlete ofrece capacidades de análisis similares, junto con
+          sugerencias basadas en IA, seguimiento del RPE y funciones avanzadas
+          de prevención de lesiones, dentro de su oferta gratuita.
+        </p>
+
+        <h3>Final Surge</h3>
+        <p>
+          <strong>Precio:</strong> 10-20 $/mes
+        </p>
+        <p>
+          Final Surge es popular entre los entrenadores por sus funciones de
+          gestión de atletas y funciona con un modelo de suscripción (10-20
+          $/mes). OpenAthlete ofrece capacidades similares de gestión de
+          atletas, además de planificación con IA, análisis avanzados y
+          funciones modernas, como alternativa gratuita y de código abierto.
+        </p>
+
+        <h3>TrainerPlan</h3>
+        <p>
+          <strong>Precio:</strong> 12-25 €/mes
+        </p>
+        <p>
+          TrainerPlan es una alternativa europea con buenas herramientas de
+          planificación, disponible mediante suscripción (12-25 €/mes).
+          OpenAthlete ofrece capacidades de planificación similares y añade
+          funciones basadas en IA y la flexibilidad del código abierto, sin
+          coste alguno.
+        </p>
+
+        <h3>Nolio</h3>
+        <p>
+          <strong>Precio:</strong> 9-15 €/mes
+        </p>
+        <p>
+          Nolio es una plataforma francesa centrada en la comunidad y las
+          funciones sociales, con un modelo de suscripción (9-15 €/mes).
+          OpenAthlete propone un enfoque diferente, con planificación basada en
+          IA, análisis avanzados y funciones de prevención de lesiones, como
+          plataforma gratuita y de código abierto.
+        </p>
+
+        <h2>Tabla comparativa de funciones</h2>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Función</th>
+              <th>TrainingPeaks</th>
+              <th>TrainerRoad</th>
+              <th>OpenAthlete</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Precio</td>
+              <td>19,95 $/mes</td>
+              <td>19,95 $/mes</td>
+              <td>
+                <strong>Gratis</strong>
+              </td>
+            </tr>
+            <tr>
+              <td>Planificación con IA</td>
+              <td>❌</td>
+              <td>❌</td>
+              <td>✅</td>
+            </tr>
+            <tr>
+              <td>Seguimiento del RPE</td>
+              <td>❌</td>
+              <td>❌</td>
+              <td>✅</td>
+            </tr>
+            <tr>
+              <td>Prevención de lesiones</td>
+              <td>Básica</td>
+              <td>Básica</td>
+              <td>Avanzada (ACWR)</td>
+            </tr>
+            <tr>
+              <td>Adaptación dinámica</td>
+              <td>❌</td>
+              <td>❌</td>
+              <td>✅</td>
+            </tr>
+            <tr>
+              <td>Generador de sesiones con IA</td>
+              <td>❌</td>
+              <td>❌</td>
+              <td>✅</td>
+            </tr>
+            <tr>
+              <td>Código abierto</td>
+              <td>❌</td>
+              <td>❌</td>
+              <td>✅</td>
+            </tr>
+            <tr>
+              <td>Privacidad de los datos (alojados en la UE)</td>
+              <td>❌</td>
+              <td>❌</td>
+              <td>✅</td>
+            </tr>
+            <tr>
+              <td>Comentarios por audio</td>
+              <td>❌</td>
+              <td>❌</td>
+              <td>✅</td>
+            </tr>
+            <tr>
+              <td>Integración con dispositivos</td>
+              <td>✅ Amplia</td>
+              <td>✅ Buena</td>
+              <td>✅ Buena (Garmin, Strava, Suunto, Polar)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>Principales ventajas de OpenAthlete</h2>
+
+        <h3>1. Una solución rentable</h3>
+        <p>
+          Las funciones básicas de OpenAthlete no tienen coste, lo que la hace
+          accesible para atletas y entrenadores sea cual sea su presupuesto. El
+          plan gratuito incluye planificación completa del entrenamiento,
+          centralización de datos y análisis básicos.
+        </p>
+
+        <h3>2. Funciones basadas en IA</h3>
+        <p>
+          OpenAthlete incorpora IA para ayudar a adaptar los planes de
+          entrenamiento según la fatiga, la recuperación y los datos de
+          rendimiento. Así ofrece sugerencias inteligentes para ajustar el plan
+          y generar sesiones.
+        </p>
+
+        <h3>3. Prevención avanzada de lesiones</h3>
+        <p>
+          OpenAthlete incluye el seguimiento del ACWR (ratio de carga
+          aguda:crónica) y la detección temprana de la sobrecarga para ayudarte
+          a identificar posibles riesgos de lesión antes de que se conviertan en
+          un problema.
+        </p>
+
+        <h3>4. Privacidad y control de los datos</h3>
+        <p>
+          Al ser una plataforma de código abierto, OpenAthlete es transparente
+          sobre cómo se tratan los datos. Los datos de entrenamiento se alojan
+          en la UE, cumplen el RGPD y los usuarios mantienen el control sobre su
+          información.
+        </p>
+
+        <h3>5. Una experiencia de usuario moderna</h3>
+        <p>
+          OpenAthlete cuenta con una interfaz limpia e intuitiva, pensada para
+          ser fácil de usar, accesible tanto para principiantes como para
+          usuarios experimentados.
+        </p>
+
+        <h2>Testimonios de usuarios reales</h2>
+
+        <blockquote>
+          <p>
+            «OpenAthlete me ofrece todas las funciones que necesito para
+            gestionar el entrenamiento, y las sugerencias de la IA me ayudan a
+            adaptar los planes con más eficacia. Que sea gratis es una ventaja
+            importante.»
+          </p>
+          <p>— Sarah M., entrenadora de triatlón</p>
+        </blockquote>
+
+        <blockquote>
+          <p>
+            «Las sugerencias de la IA me ayudan a adaptar el plan cuando estoy
+            cansado o me salto una sesión. Este enfoque dinámico encaja muy bien
+            con mi entrenamiento.»
+          </p>
+          <p>— Marc D., triatleta autoentrenado</p>
+        </blockquote>
+
+        <blockquote>
+          <p>
+            «Al ser de código abierto y tan completo, OpenAthlete es una gran
+            opción para gestionar a varios atletas. El ahorro es considerable
+            para nuestro equipo.»
+          </p>
+          <p>— Thomas B., entrenador de trail running</p>
+        </blockquote>
+
+        <h2>Cómo pasar de TrainingPeaks a OpenAthlete</h2>
+
+        <p>Cambiar es muy fácil:</p>
+
+        <ol>
+          <li>
+            <strong>Crea una cuenta gratuita:</strong> regístrate en{' '}
+            <a href="https://app.openathlete.org/auth/create-account">
+              app.openathlete.org
+            </a>
+            , sin tarjeta de crédito
+          </li>
+          <li>
+            <strong>Conecta tus dispositivos:</strong> vincula tu Garmin, Strava
+            u otros dispositivos para importar tu historial de entrenamiento
+          </li>
+          <li>
+            <strong>Importa tus datos:</strong> OpenAthlete importa
+            automáticamente todo tu historial de entrenamiento
+          </li>
+          <li>
+            <strong>Empieza a planificar:</strong> usa la planificación con IA o
+            crea tus planes a mano; ambas opciones son gratuitas
+          </li>
+          <li>
+            <strong>Cancela tu antigua suscripción:</strong> cuando te sientas
+            cómodo, cancela TrainingPeaks y ahórrate más de 240 $ al año
+          </li>
+        </ol>
+
+        <h2>Conclusión</h2>
+
+        <p>
+          OpenAthlete es una alternativa completa y gratuita a las plataformas
+          de entrenamiento de pago. Con funciones basadas en IA, análisis
+          avanzados y la transparencia del código abierto, es una opción viable
+          para atletas y entrenadores que buscan herramientas eficaces para
+          gestionar el entrenamiento.
+        </p>
+
+        <p>
+          Mientras que plataformas de pago como TrainingPeaks, TrainerRoad y
+          otras ofrecen soluciones consolidadas con modelos de suscripción,
+          OpenAthlete ofrece capacidades similares sin coste. Como plataforma de
+          código abierto, aporta además otras ventajas, como la transparencia de
+          los datos, la posibilidad de autoalojamiento y un desarrollo impulsado
+          por la comunidad.
+        </p>
+
+        <p>
+          La elección de plataforma depende de tus necesidades, tu presupuesto y
+          tus preferencias. Merece la pena tener en cuenta OpenAthlete si buscas
+          una plataforma de entrenamiento gratuita, completa, con capacidades de
+          IA modernas y las ventajas del código abierto.
+        </p>
+
+        <p>
+          <a
+            href="https://app.openathlete.org/auth/create-account"
+            className="inline-flex items-center rounded-md bg-primary px-6 py-3 text-base font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
+          >
+            Crea tu cuenta gratuita →
+          </a>
+        </p>
+
+        <h2>Preguntas frecuentes</h2>
+
+        <h3>¿De verdad OpenAthlete es gratis?</h3>
+        <p>
+          ¡Sí! Las funciones básicas de OpenAthlete son 100 % gratuitas para
+          siempre. Esto incluye planificación ilimitada, centralización de
+          datos, integración con dispositivos y análisis básicos. Las funciones
+          de IA son gratuitas si usas tu propia clave de un proveedor de IA; la
+          suscripción Supporter opcional (5 €/mes o 50 €/año) incluye IA cada
+          mes, elimina el límite de 5 atletas entrenados y financia el proyecto.
+        </p>
+
+        <h3>¿Puedo importar mis datos de TrainingPeaks?</h3>
+        <p>
+          ¡Sí! OpenAthlete puede importar todo tu historial de entrenamiento
+          desde Garmin, Strava y otros dispositivos. Solo tienes que conectar
+          tus dispositivos y tus datos se importarán automáticamente.
+        </p>
+
+        <h3>¿Cómo se compara OpenAthlete con TrainingPeaks?</h3>
+        <p>
+          Ambas plataformas ofrecen una gestión completa del entrenamiento, pero
+          con enfoques distintos. TrainingPeaks cuenta con una base de usuarios
+          consolidada y un amplio histórico de datos. OpenAthlete se centra en
+          la planificación con IA, el seguimiento del RPE, la prevención
+          avanzada de lesiones y la adaptación dinámica. La elección depende de
+          si prefieres una plataforma consolidada con un modelo de suscripción o
+          una solución gratuita y de código abierto con funciones de IA
+          modernas.
+        </p>
+
+        <h3>¿Y si necesito ayuda para cambiar?</h3>
+        <p>
+          ¡Estamos aquí para ayudarte! Escríbenos a{' '}
+          <a href="mailto:contact@openathlete.org">contact@openathlete.org</a> y
+          te acompañaremos en el proceso de migración.
+        </p>
+
+        <h3>¿Puedo usar OpenAthlete junto con mi entrenador?</h3>
+        <p>
+          ¡Por supuesto! OpenAthlete permite la colaboración entre entrenador y
+          atleta. Tu entrenador puede acceder a tus datos, validar las
+          sugerencias de la IA y darte su feedback, todo dentro de la
+          plataforma.
         </p>
       </div>
     );

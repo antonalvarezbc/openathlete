@@ -6,14 +6,17 @@ export const articleFutureAiCoaching: BlogPost = {
     title: {
       en: 'The Future of AI in Sports Coaching',
       fr: "L'Avenir de l'IA dans le Coaching Sportif",
+      es: 'El futuro de la IA en el entrenamiento deportivo',
     },
     description: {
       en: 'Thought Leadership: "AI won\'t replace coaches, but coaches using AI will replace those who don\'t."',
       fr: "Leadership d'Opinion : \"L'IA ne remplacera pas les coachs, mais les coachs utilisant l'IA remplaceront ceux qui ne le font pas.\"",
+      es: 'Visión de futuro: «La IA no sustituirá a los entrenadores, pero los entrenadores que usen IA sustituirán a los que no lo hagan».',
     },
     excerpt: {
       en: "Explore the future of AI in sports coaching. AI won't replace coaches, but coaches who embrace AI will dominate the market.",
       fr: "Explorez l'avenir de l'IA dans le coaching sportif. L'IA ne remplacera pas les coachs, mais les coachs qui adoptent l'IA domineront le marché.",
+      es: 'Explora el futuro de la IA en el entrenamiento deportivo. La IA no sustituirá a los entrenadores, pero los entrenadores que la adopten dominarán el mercado.',
     },
     author: {
       name: 'OpenAthlete Team',
@@ -195,6 +198,92 @@ export const articleFutureAiCoaching: BlogPost = {
             Inscrivez-vous sur OpenAthlete
           </a>{' '}
           et rejoignez les coachs qui façonnent l'avenir du coaching sportif.
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          <strong>
+            «La IA no sustituirá a los entrenadores, pero los entrenadores que
+            usen IA sustituirán a los que no lo hagan».
+          </strong>
+        </p>
+
+        <p>
+          No es una predicción: ya está pasando. Los entrenadores que adoptan la
+          IA están haciendo crecer su negocio, mejorando sus resultados y
+          dominando el mercado. Los que se resisten se están quedando atrás.
+        </p>
+
+        <h2>Un cambio inevitable</h2>
+        <p>
+          La IA en el entrenamiento deportivo no es una moda: es un cambio de
+          fondo. Igual que:
+        </p>
+        <ul>
+          <li>El correo electrónico sustituyó al fax</li>
+          <li>Los smartphones sustituyeron a los móviles de tapa</li>
+          <li>
+            El almacenamiento en la nube sustituyó a los servidores físicos
+          </li>
+        </ul>
+
+        <p>
+          El entrenamiento apoyado en la IA sustituirá al entrenamiento manual
+          basado en hojas de cálculo. La pregunta no es «si» ocurrirá, sino
+          «cuándo».
+        </p>
+
+        <h2>Qué hará la IA</h2>
+        <p>La IA se encargará de:</p>
+        <ul>
+          <li>El análisis de datos y la detección de patrones</li>
+          <li>La generación y optimización de planes</li>
+          <li>El control de la carga y la prevención de lesiones</li>
+          <li>Los ajustes y reprogramaciones automáticos</li>
+          <li>El seguimiento de los atletas las 24 horas, todos los días</li>
+        </ul>
+
+        <h2>Qué harán los entrenadores</h2>
+        <p>Los entrenadores se centrarán en:</p>
+        <ul>
+          <li>La estrategia y la planificación a largo plazo</li>
+          <li>La motivación y la relación con el atleta</li>
+          <li>Comprender el contexto más allá de los datos</li>
+          <li>Decidir en los casos límite</li>
+          <li>El vínculo humano y el apoyo</li>
+        </ul>
+
+        <h2>La ventaja competitiva</h2>
+        <p>Los entrenadores que usen IA:</p>
+        <ul>
+          <li>Podrán llevar a más de 50 atletas (frente a 20 sin IA)</li>
+          <li>Obtendrán mejores resultados (decisiones basadas en datos)</li>
+          <li>Evitarán más lesiones (seguimiento proactivo)</li>
+          <li>Fidelizarán a más atletas (mayor implicación)</li>
+          <li>Ganarán más (más atletas, mejores resultados)</li>
+        </ul>
+
+        <p>A los entrenadores que se resistan a la IA les costará competir.</p>
+
+        <h2>En resumen</h2>
+        <p>
+          El futuro es de los entrenadores que adopten la IA. No porque la IA
+          los sustituya, sino porque multiplica lo que pueden hacer. La pregunta
+          no es si la IA transformará el entrenamiento: ya lo está haciendo. La
+          pregunta es: ¿te adaptarás o te quedarás atrás?
+        </p>
+
+        <p>
+          <strong>Deja de adivinar y empieza hoy a entrenar con IA.</strong>{' '}
+          <a href="https://app.openathlete.org/auth/create-account">
+            Regístrate en OpenAthlete
+          </a>{' '}
+          y únete a los entrenadores que están dando forma al futuro del
+          entrenamiento deportivo.
         </p>
       </div>
     );

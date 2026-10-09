@@ -1,8 +1,14 @@
 'use client';
 
 import { setLocale } from '@/paraglide/runtime.js';
+import { DEFAULT_LOCALE, isSupportedLocale } from '@/utils/locales';
 import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
+
+function browserLocale(): string {
+  const language = navigator.language.split('-')[0];
+  return isSupportedLocale(language) ? language : DEFAULT_LOCALE;
+}
 
 interface ParaglideProviderProps {
   children: React.ReactNode;
@@ -33,17 +39,19 @@ export function ParaglideProvider({
       const pathSegments = pathname.split('/').filter(Boolean);
       const localeFromPath = pathSegments[0];
 
-      if (localeFromPath === 'fr' || localeFromPath === 'en') {
+      if (isSupportedLocale(localeFromPath)) {
         localeToSet = localeFromPath;
       }
       // Default to browser language or 'en'
       else {
-        localeToSet = navigator.language.split('-')[0] === 'fr' ? 'fr' : 'en';
+        localeToSet = browserLocale();
       }
     }
 
     // Set locale synchronously during render (before children render)
-    setLocale(localeToSet as 'fr' | 'en', { reload: false });
+    if (isSupportedLocale(localeToSet)) {
+      setLocale(localeToSet, { reload: false });
+    }
   }
 
   // Also update when pathname or initialLocale changes
@@ -59,15 +67,14 @@ export function ParaglideProvider({
     } else {
       const pathSegments = pathname.split('/').filter(Boolean);
       const localeFromPath = pathSegments[0];
-      localeToSet =
-        localeFromPath === 'fr' || localeFromPath === 'en'
-          ? localeFromPath
-          : navigator.language.split('-')[0] === 'fr'
-            ? 'fr'
-            : 'en';
+      localeToSet = isSupportedLocale(localeFromPath)
+        ? localeFromPath
+        : browserLocale();
     }
 
-    setLocale(localeToSet as 'fr' | 'en', { reload: false });
+    if (isSupportedLocale(localeToSet)) {
+      setLocale(localeToSet, { reload: false });
+    }
   }, [pathname, initialLocale]);
 
   return <>{children}</>;

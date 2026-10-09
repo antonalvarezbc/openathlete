@@ -16,6 +16,7 @@ import {
 import { WebPageStructuredData } from '@/components/seo/structured-data';
 import { SITE_URL } from '@/config';
 import { m } from '@/paraglide/messages';
+import { isSupportedLocale, localePrefix } from '@/utils/locales';
 import { notFound } from 'next/navigation';
 
 import { generateMetadata as generatePageMetadata } from '../metadata';
@@ -38,7 +39,7 @@ export default async function HomePage({
 }) {
   const { locale } = await params;
 
-  if (locale !== 'en' && locale !== 'fr') {
+  if (!isSupportedLocale(locale)) {
     notFound();
   }
 
@@ -47,7 +48,7 @@ export default async function HomePage({
       <WebPageStructuredData
         title={m.landing_seo_title()}
         description={m.landing_seo_description()}
-        url={`${SITE_URL}${locale === 'en' ? '' : `/${locale}`}`}
+        url={`${SITE_URL}${localePrefix(locale)}`}
       />
       <div className="min-h-screen bg-background">
         <TopBar />

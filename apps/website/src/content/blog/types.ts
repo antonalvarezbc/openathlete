@@ -1,19 +1,17 @@
 import type { ReactNode } from 'react';
 
+/** English and French are required; other locales fall back to English. */
+export interface LocalizedText {
+  en: string;
+  fr: string;
+  es?: string;
+}
+
 export interface BlogPostMetadata {
   slug: string;
-  title: {
-    en: string;
-    fr: string;
-  };
-  description: {
-    en: string;
-    fr: string;
-  };
-  excerpt: {
-    en: string;
-    fr: string;
-  };
+  title: LocalizedText;
+  description: LocalizedText;
+  excerpt: LocalizedText;
   author: {
     name: string;
     email?: string;
@@ -29,4 +27,6 @@ export interface BlogPost {
   metadata: BlogPostMetadata;
   ContentEn: () => ReactNode;
   ContentFr: () => ReactNode;
+  /** Without it, the Spanish page shows the English body. */
+  ContentEs?: () => ReactNode;
 }

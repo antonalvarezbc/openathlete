@@ -1,5 +1,6 @@
 import { HtmlLang } from '@/components/seo/html-lang';
 import { setLocale } from '@/paraglide/runtime.js';
+import { isSupportedLocale } from '@/utils/locales';
 import { notFound } from 'next/navigation';
 import Script from 'next/script';
 
@@ -15,15 +16,15 @@ export default async function LocaleLayout({
   const { locale } = await params;
 
   // Validate locale
-  if (locale !== 'en' && locale !== 'fr') {
+  if (!isSupportedLocale(locale)) {
     notFound();
   }
 
   // Set locale for Paraglide (server-side)
   setLocale(locale);
 
-  // Map locale to HTML lang attribute
-  const htmlLang = locale === 'fr' ? 'fr' : 'en';
+  // The locale codes are valid HTML lang values
+  const htmlLang = locale;
 
   return (
     <>

@@ -9,7 +9,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { m } from '@/paraglide/messages';
 import { getLocale, setLocale } from '@/paraglide/runtime';
-import { getLocaleName } from '@/utils/locales';
+import {
+  SUPPORTED_LOCALES,
+  type SupportedLocale,
+  getLocaleName,
+  isSupportedLocale,
+} from '@/utils/locales';
 import { cn } from '@/utils/shadcn';
 import { Globe } from 'lucide-react';
 import { usePathname } from 'next/navigation';
@@ -17,9 +22,6 @@ import { ComponentProps } from 'react';
 
 type ButtonVariant = ComponentProps<typeof Button>['variant'];
 type ButtonSize = ComponentProps<typeof Button>['size'];
-
-const SUPPORTED_LOCALES = ['en', 'fr'] as const;
-type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 
 interface LanguageSwitcherProps {
   className?: string;
@@ -36,10 +38,8 @@ export function LanguageSwitcher({
 }: LanguageSwitcherProps) {
   const locale = getLocale();
   const pathname = usePathname();
-  const currentLocale: SupportedLocale = SUPPORTED_LOCALES.includes(
-    locale as SupportedLocale,
-  )
-    ? (locale as SupportedLocale)
+  const currentLocale: SupportedLocale = isSupportedLocale(locale)
+    ? locale
     : 'en';
 
   const handleLanguageChange = (newLocale: SupportedLocale) => {
@@ -56,9 +56,7 @@ export function LanguageSwitcher({
 
     // Extract current path without locale
     const pathSegments = pathname.split('/').filter(Boolean);
-    const hasLocale = SUPPORTED_LOCALES.includes(
-      pathSegments[0] as SupportedLocale,
-    );
+    const hasLocale = isSupportedLocale(pathSegments[0]);
     const pathWithoutLocale = hasLocale ? pathSegments.slice(1) : pathSegments;
 
     // Always use explicit locale in URL to avoid middleware rewriting

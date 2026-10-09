@@ -6,14 +6,17 @@ export const articleOvertrainingSigns: BlogPost = {
     title: {
       en: '5 Signs of Overtraining (and How to Avoid It)',
       fr: "5 Signes de Surentraînement (et Comment l'Éviter)",
+      es: '5 señales de sobreentrenamiento (y cómo evitarlo)',
     },
     description: {
       en: 'Classic list: mood, sleep, performance. Solution: Continuous monitoring via OpenAthlete as a safeguard.',
       fr: 'Liste classique : humeur, sommeil, performance. Solution : Surveillance continue via OpenAthlete comme sauvegarde.',
+      es: 'La lista clásica: estado de ánimo, sueño, rendimiento. La solución: la monitorización continua de OpenAthlete como red de seguridad.',
     },
     excerpt: {
       en: 'Learn the 5 key signs of overtraining: mood changes, sleep disruption, performance decline, elevated RPE, and persistent fatigue. Discover how continuous monitoring prevents it.',
       fr: "Apprenez les 5 signes clés du surentraînement : changements d'humeur, perturbation du sommeil, déclin de performance, RPE élevé et fatigue persistante. Découvrez comment la surveillance continue le prévient.",
+      es: 'Conoce las 5 señales clave del sobreentrenamiento: cambios de humor, alteraciones del sueño, caída del rendimiento, RPE elevado y fatiga persistente. Descubre cómo la monitorización continua ayuda a prevenirlo.',
     },
     author: {
       name: 'OpenAthlete Team',
@@ -266,6 +269,128 @@ export const articleOvertrainingSigns: BlogPost = {
           </a>{' '}
           et laissez la surveillance continue prévenir le surentraînement avant
           qu'il ne fasse dérailler vos progrès.
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          <strong>
+            Entrenas duro. Llevas tus límites al máximo. Progresas. Y, de
+            repente, dejas de hacerlo. El rendimiento cae. El ánimo se
+            ensombrece. El sueño se resiente. Estás sobreentrenado y no lo has
+            visto venir.
+          </strong>
+        </p>
+
+        <p>
+          El sobreentrenamiento es traicionero. Avanza poco a poco y, de pronto,
+          te golpea. Cuando te das cuenta, ya has perdido semanas de progreso.
+          Pero se puede prevenir, si sabes en qué fijarte.
+        </p>
+
+        <h2>Las 5 señales clave</h2>
+        <p>
+          <strong>1. Cambios de humor</strong>
+        </p>
+        <p>
+          El sobreentrenamiento afecta a tu sistema nervioso central y provoca:
+        </p>
+        <ul>
+          <li>Irritabilidad</li>
+          <li>Depresión</li>
+          <li>Pérdida de motivación</li>
+          <li>Ansiedad</li>
+        </ul>
+
+        <p>
+          <strong>2. Alteraciones del sueño</strong>
+        </p>
+        <p>El sobreentrenamiento altera tus patrones de sueño:</p>
+        <ul>
+          <li>Dificultad para conciliar el sueño</li>
+          <li>Despertares frecuentes</li>
+          <li>Sueño de mala calidad</li>
+          <li>Sensación de no haber descansado aunque hayas dormido</li>
+        </ul>
+
+        <p>
+          <strong>3. Caída del rendimiento</strong>
+        </p>
+        <p>Aunque entrenes duro, tu rendimiento baja:</p>
+        <ul>
+          <li>No llegas a los ritmos objetivo</li>
+          <li>La potencia cae</li>
+          <li>La frecuencia cardíaca no responde con normalidad</li>
+          <li>La recuperación entre sesiones es más lenta</li>
+        </ul>
+
+        <p>
+          <strong>4. RPE elevado</strong>
+        </p>
+        <p>Las sesiones se hacen más duras de lo que deberían:</p>
+        <ul>
+          <li>El mismo ritmo te cuesta mucho más</li>
+          <li>El RPE es sistemáticamente 2-3 puntos más alto</li>
+          <li>Piernas pesadas desde el principio</li>
+          <li>Te cuestan incluso las sesiones suaves</li>
+        </ul>
+
+        <p>
+          <strong>5. Fatiga persistente</strong>
+        </p>
+        <p>Una fatiga que no desaparece con el descanso:</p>
+        <ul>
+          <li>Te sientes cansado todo el tiempo</li>
+          <li>No te recuperas entre sesiones</li>
+          <li>Necesitas más días de descanso</li>
+          <li>Falta de energía general</li>
+        </ul>
+
+        <h2>Cómo prevenir el sobreentrenamiento</h2>
+        <p>
+          Más vale prevenir que curar. OpenAthlete previene el
+          sobreentrenamiento gracias a:
+        </p>
+        <ul>
+          <li>
+            <strong>Monitorización del ACWR:</strong> avisa cuando la carga se
+            dispara
+          </li>
+          <li>
+            <strong>Seguimiento del RPE:</strong> detecta patrones de esfuerzo
+            elevado
+          </li>
+          <li>
+            <strong>Análisis de la recuperación:</strong> vigila el sueño y el
+            estrés
+          </li>
+          <li>
+            <strong>Ajustes automáticos:</strong> reduce la carga cuando detecta
+            riesgos
+          </li>
+          <li>
+            <strong>Alertas proactivas:</strong> te avisa antes de que surjan
+            los problemas
+          </li>
+        </ul>
+
+        <h2>En resumen</h2>
+        <p>
+          El sobreentrenamiento se puede prevenir. Conoce las señales. Controla
+          tus datos. Usa la IA para detectar patrones a tiempo. No esperes a que
+          sea demasiado tarde.
+        </p>
+
+        <p>
+          <strong>Deja de adivinar y empieza hoy a entrenar con IA.</strong>{' '}
+          <a href="https://app.openathlete.org/auth/create-account">
+            Regístrate en OpenAthlete
+          </a>{' '}
+          y deja que la monitorización continua frene el sobreentrenamiento
+          antes de que eche por tierra tu progreso.
         </p>
       </div>
     );

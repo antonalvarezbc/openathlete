@@ -1,6 +1,11 @@
 import { WebPageStructuredData } from '@/components/seo/structured-data';
 import { SITE_URL } from '@/config';
 import { m } from '@/paraglide/messages';
+import {
+  isSupportedLocale,
+  languageAlternates,
+  localePrefix,
+} from '@/utils/locales';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
@@ -11,7 +16,7 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  if (locale !== 'en' && locale !== 'fr') {
+  if (!isSupportedLocale(locale)) {
     notFound();
   }
 
@@ -22,11 +27,7 @@ export async function generateMetadata({
     description: m.privacy_policy_intro(),
     alternates: {
       canonical: canonicalUrl,
-      languages: {
-        en: `${SITE_URL}/privacy-policy`,
-        fr: `${SITE_URL}/fr/privacy-policy`,
-        'x-default': `${SITE_URL}/privacy-policy`,
-      },
+      languages: languageAlternates('/privacy-policy'),
     },
   };
 }
@@ -38,7 +39,7 @@ export default async function PrivacyPolicyPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  if (locale !== 'en' && locale !== 'fr') {
+  if (!isSupportedLocale(locale)) {
     notFound();
   }
 
@@ -50,7 +51,7 @@ export default async function PrivacyPolicyPage({
       <WebPageStructuredData
         title={m.privacy_policy_title()}
         description={m.privacy_policy_intro()}
-        url={`${SITE_URL}${locale === 'en' ? '' : `/${locale}`}/privacy-policy`}
+        url={`${SITE_URL}${localePrefix(locale)}/privacy-policy`}
       />
       <div className="mx-auto max-w-3xl p-8 space-y-8">
         <header className="space-y-2">

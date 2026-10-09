@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/button';
 import { APP_URL } from '@/config';
 import { m } from '@/paraglide/messages';
 import { getLocale } from '@/paraglide/runtime';
+import { localePrefix } from '@/utils/locales';
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 export function ClubsCTA() {
   const locale = getLocale();
-  const localePath = locale === 'fr' ? '/fr' : '';
+  const localePath = localePrefix(locale);
   const signupUrl = `${APP_URL}/auth/create-account`;
   const pricingUrl = `${localePath}/#pricing`;
 

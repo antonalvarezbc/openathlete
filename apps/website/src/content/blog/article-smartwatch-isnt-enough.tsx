@@ -6,14 +6,17 @@ export const articleSmartwatchIsntEnough: BlogPost = {
     title: {
       en: "Why Your Smartwatch Isn't Enough",
       fr: 'Pourquoi Votre Montre Connectée ne Suffit Pas',
+      es: 'Por qué tu reloj inteligente no basta',
     },
     description: {
       en: 'Watches capture "What", not "Why". They don\'t know you\'re prepping for an Ultra. You need a software layer (OpenAthlete) to give context to raw watch data.',
       fr: 'Les montres capturent "Quoi", pas "Pourquoi". Elles ne savent pas que vous préparez un Ultra. Vous avez besoin d\'une couche logicielle (OpenAthlete) pour donner du contexte aux données brutes de la montre.',
+      es: 'Los relojes registran el «qué», no el «porqué». No saben que estás preparando un ultra. Necesitas una capa de software (OpenAthlete) que dé contexto a los datos en bruto del reloj.',
     },
     excerpt: {
       en: "Your Garmin or Apple Watch tracks metrics but can't interpret them. Learn why you need software to analyze patterns, provide context, and guide training decisions.",
       fr: "Votre Garmin ou Apple Watch suit les métriques mais ne peut pas les interpréter. Découvrez pourquoi vous avez besoin d'un logiciel pour analyser les modèles, fournir du contexte et guider les décisions d'entraînement.",
+      es: 'Tu Garmin o tu Apple Watch registran métricas, pero no saben interpretarlas. Descubre por qué necesitas un software que analice patrones, aporte contexto y guíe tus decisiones de entrenamiento.',
     },
     author: {
       name: 'OpenAthlete Team',
@@ -524,6 +527,254 @@ export const articleSmartwatchIsntEnough: BlogPost = {
           </a>{' '}
           et ajoutez la couche d'intelligence que votre montre manque. Obtenez
           du contexte, des informations et des conseils—pas juste des données.
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          <strong>
+            Tu Garmin indica que has corrido 10 km a 4:30/km con una frecuencia
+            cardíaca media de 165 ppm. Buenos datos. Pero ¿qué significan?
+            ¿Deberías correr más fuerte mañana? ¿Más suave? ¿Descansar? Tu reloj
+            no lo sabe, y tampoco le importa.
+          </strong>
+        </p>
+
+        <p>
+          Esta es la limitación fundamental de los relojes inteligentes. Son
+          excelentes registrando datos: distancia, ritmo, frecuencia cardíaca,
+          potencia. Pero son pésimos interpretándolos. Pueden decirte{' '}
+          <strong>qué</strong> ha pasado, pero no <strong>por qué</strong> ha
+          pasado ni <strong>qué hacer a continuación</strong>.
+        </p>
+
+        <h2>La brecha entre datos e inteligencia</h2>
+        <p>Tu reloj es un dispositivo de recogida de datos. Mide:</p>
+        <ul>
+          <li>Distancia y ritmo</li>
+          <li>Zonas de frecuencia cardíaca</li>
+          <li>Potencia</li>
+          <li>Desnivel y cadencia</li>
+          <li>Recorrido GPS</li>
+        </ul>
+
+        <p>Pero no sabe:</p>
+        <ul>
+          <li>Cuáles son tus objetivos de entrenamiento</li>
+          <li>Cómo encaja esta sesión en tu plan general</li>
+          <li>Si estás progresando hacia tus objetivos</li>
+          <li>Si corres riesgo de sobreentrenamiento</li>
+          <li>Qué deberías hacer a continuación</li>
+        </ul>
+
+        <p>
+          Los datos sin contexto son solo números. La inteligencia nace de
+          analizar patrones, entender los objetivos y ofrecer conclusiones
+          accionables.
+        </p>
+
+        <h2>El problema del contexto</h2>
+        <p>
+          Imagina esta situación: corres 10 km a 4:30/km. Tu reloj lo registra.
+          Pero:
+        </p>
+        <ul>
+          <li>
+            ¿Forma parte de una fase de construcción de base o de una puesta a
+            punto?
+          </li>
+          <li>¿Te preparas para un 5K o para un ultramaratón?</li>
+          <li>¿Es tu tercera sesión dura de la semana o la primera?</li>
+          <li>¿Cómo se compara con tu nivel de forma de hace 3 meses?</li>
+        </ul>
+
+        <p>
+          Tu reloj no sabe nada de esto. Solo registra: «10 km, 4:30/km, 165
+          ppm». Sin contexto, esos datos no sirven para tomar decisiones de
+          entrenamiento.
+        </p>
+
+        <h2>La brecha del reconocimiento de patrones</h2>
+        <p>
+          Tu reloj puede mostrarte sesiones sueltas, pero no sabe reconocer
+          patrones:
+        </p>
+        <ul>
+          <li>
+            ¿Tus rodajes suaves son más rápidos a la misma frecuencia cardíaca?
+            (Mejora de la forma)
+          </li>
+          <li>¿Tu RPE aumenta para un mismo ritmo? (Acumulación de fatiga)</li>
+          <li>
+            ¿No llegas una y otra vez a los ritmos objetivo? (Riesgo de
+            sobreentrenamiento)
+          </li>
+          <li>
+            ¿Tu carga de entrenamiento sube demasiado deprisa? (Riesgo de
+            lesión)
+          </li>
+        </ul>
+
+        <p>
+          Estos patrones exigen analizar muchas sesiones, semanas y meses. Tu
+          reloj no hace ese análisis: se limita a guardar los datos.
+        </p>
+
+        <h2>La brecha de los objetivos</h2>
+        <p>Tu reloj no conoce tus objetivos. No sabe si estás:</p>
+        <ul>
+          <li>Preparando un maratón (necesitas mucho volumen)</li>
+          <li>Preparando un 5K (necesitas mucha intensidad)</li>
+          <li>
+            Recuperándote de una lesión (necesitas una progresión cuidadosa)
+          </li>
+          <li>Construyendo tu base aeróbica (necesitas constancia)</li>
+        </ul>
+
+        <p>
+          Si no entiende tus objetivos, tu reloj no puede guiar tu
+          entrenamiento. No puede decirte si vas por buen camino, si tienes que
+          ajustar algo o si estás haciendo el tipo de entrenamiento adecuado.
+        </p>
+
+        <h2>La solución: una capa de software</h2>
+        <p>
+          Aquí es donde entra OpenAthlete. Piensa en él como la capa de
+          inteligencia por encima de tu reloj:
+        </p>
+
+        <p>
+          <strong>
+            Tu reloj recoge los datos → OpenAthlete los analiza → Tú obtienes
+            conclusiones
+          </strong>
+        </p>
+
+        <p>OpenAthlete:</p>
+        <ul>
+          <li>
+            <strong>Importa los datos del reloj automáticamente:</strong> sin
+            introducir nada a mano
+          </li>
+          <li>
+            <strong>Analiza patrones:</strong> detecta tendencias, mejoras y
+            riesgos
+          </li>
+          <li>
+            <strong>Aporta contexto:</strong> relaciona las sesiones con tus
+            objetivos y tu plan
+          </li>
+          <li>
+            <strong>Genera conclusiones:</strong> te explica qué significan los
+            datos
+          </li>
+          <li>
+            <strong>Propone acciones:</strong> te recomienda qué hacer a
+            continuación
+          </li>
+        </ul>
+
+        <h2>Un ejemplo real</h2>
+        <p>
+          Tu reloj muestra: «Rodaje tempo de 10 km, 4:15/km, 170 ppm de media»
+        </p>
+
+        <p>
+          <strong>Lo que te dice tu reloj:</strong> has corrido 10 km a 4:15/km
+          con una frecuencia cardíaca de 170 ppm.
+        </p>
+
+        <p>
+          <strong>Lo que te dice OpenAthlete:</strong>
+        </p>
+        <ul>
+          <li>
+            «Este rodaje tempo ha sido 8 segundos/km más rápido que los de hace
+            6 semanas a la misma frecuencia cardíaca: estás en mejor forma».
+          </li>
+          <li>
+            «Tu RPE fue de 7/10, lo normal en un rodaje tempo. Nada que
+            preocupe».
+          </li>
+          <li>
+            «Es tu segunda sesión dura de la semana. Mañana toca un rodaje suave
+            de recuperación».
+          </li>
+          <li>
+            «Vas por buen camino para tu objetivo de maratón. Mantén este ritmo
+            en los rodajes tempo».
+          </li>
+        </ul>
+
+        <p>
+          ¿Ves la diferencia? Tu reloj te da datos. OpenAthlete te da
+          inteligencia.
+        </p>
+
+        <h2>Las limitaciones de Strava</h2>
+        <p>
+          Muchos atletas usan Strava para analizar sus entrenamientos. Strava es
+          mejor que el reloj solo: muestra tendencias, compara segmentos y sigue
+          tu progreso. Pero sigue teniendo limitaciones:
+        </p>
+        <ul>
+          <li>
+            <strong>No se orienta a objetivos:</strong> no sabe para qué te
+            estás preparando
+          </li>
+          <li>
+            <strong>No se integra con un plan:</strong> no relaciona las
+            sesiones con un plan de entrenamiento
+          </li>
+          <li>
+            <strong>No registra el RPE:</strong> no puede captar la carga
+            interna
+          </li>
+          <li>
+            <strong>No previene lesiones:</strong> no analiza cómo progresa la
+            carga
+          </li>
+          <li>
+            <strong>No da recomendaciones:</strong> muestra lo que ha pasado, no
+            lo que debes hacer después
+          </li>
+        </ul>
+
+        <p>
+          Strava es una red social con datos. OpenAthlete es una plataforma de
+          inteligencia para el entrenamiento.
+        </p>
+
+        <h2>En resumen</h2>
+        <p>
+          Tu reloj inteligente es una herramienta potente, pero incompleta.
+          Registra los datos de maravilla, pero no sabe interpretarlos.
+          Necesitas una capa de software que:
+        </p>
+        <ul>
+          <li>Entienda tus objetivos</li>
+          <li>Analice patrones</li>
+          <li>Aporte contexto</li>
+          <li>Genere conclusiones</li>
+          <li>Guíe tus decisiones</li>
+        </ul>
+
+        <p>
+          No confundas recoger datos con entrenar con inteligencia. Tu reloj te
+          dice lo que ha pasado. OpenAthlete te dice lo que significa y qué
+          hacer al respecto.
+        </p>
+
+        <p>
+          <strong>Deja de adivinar y empieza hoy a entrenar con IA.</strong>{' '}
+          <a href="https://app.openathlete.org/auth/create-account">
+            Regístrate en OpenAthlete
+          </a>{' '}
+          y añade la capa de inteligencia que le falta a tu reloj. Consigue
+          contexto, conclusiones y orientación, no solo datos.
         </p>
       </div>
     );

@@ -280,6 +280,8 @@
   "blog_related_articles": "Similaires",
   "blog_no_articles": "Vide",
   "blog_by_author": "Par {author}",
+  "blog_breadcrumb_home": "Accueil",
+  "blog_translation_unavailable": "Cet article n'est pas encore disponible dans votre langue : il est affiché en anglais.",
   "footer_description": "Entraînement d'endurance éthique et open source. Hébergement prioritaire en Europe, AGPLv3, vos données sous votre contrôle.",
   "footer_product": "Plateforme",
   "footer_resources": "Ressources",

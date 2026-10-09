@@ -6,14 +6,17 @@ export const articleNolioTrainingpeaksComparison: BlogPost = {
     title: {
       en: 'Nolio vs TrainingPeaks vs OpenAthlete: 2025 Comparison',
       fr: 'Nolio vs TrainingPeaks vs OpenAthlete : Comparaison 2025',
+      es: 'Nolio vs TrainingPeaks vs OpenAthlete: comparativa 2025',
     },
     description: {
       en: 'Honest comparison: TP = Complex/Data. Nolio = Community. OpenAthlete = AI, RPE, Injury Prevention. Best value/innovation ratio.',
       fr: 'Comparaison honnête : TP = Complexe/Données. Nolio = Communauté. OpenAthlete = IA, RPE, Prévention Blessures. Meilleur ratio valeur/innovation.',
+      es: 'Una comparativa honesta: TP = complejidad y datos. Nolio = comunidad. OpenAthlete = IA, RPE y prevención de lesiones. La mejor relación entre valor e innovación.',
     },
     excerpt: {
       en: 'Compare the top sports planning platforms. TrainingPeaks excels at data but is complex. Nolio focuses on community. OpenAthlete combines AI, RPE tracking, and injury prevention.',
       fr: 'Comparez les meilleures plateformes de planification sportive. TrainingPeaks excelle aux données mais est complexe. Nolio se concentre sur la communauté. OpenAthlete combine IA, suivi RPE et prévention des blessures.',
+      es: 'Compara las principales plataformas de planificación deportiva. TrainingPeaks destaca en datos, pero es complejo. Nolio se centra en la comunidad. OpenAthlete combina IA, seguimiento del RPE y prevención de lesiones.',
     },
     author: {
       name: 'OpenAthlete Team',
@@ -257,6 +260,121 @@ export const articleNolioTrainingpeaksComparison: BlogPost = {
           </a>{' '}
           et découvrez le meilleur ratio valeur/innovation dans les logiciels de
           planification sportive.
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          <strong>
+            Estás eligiendo una plataforma de entrenamiento. ¿TrainingPeaks?
+            ¿Nolio? ¿OpenAthlete? Todas prometen ayudarte a entrenar mejor. Pero
+            ¿cuál lo consigue de verdad?
+          </strong>
+        </p>
+
+        <p>
+          Esta es una comparativa honesta de las tres plataformas líderes. Sin
+          palabrería de marketing: solo las diferencias reales que importan a
+          entrenadores y atletas.
+        </p>
+
+        <h2>TrainingPeaks: el gigante de los datos</h2>
+        <p>
+          <strong>Puntos fuertes:</strong>
+        </p>
+        <ul>
+          <li>Análisis de datos muy completo</li>
+          <li>Amplia integración con dispositivos</li>
+          <li>Métricas avanzadas (TSS, CTL, ATL)</li>
+          <li>Gran base de usuarios</li>
+        </ul>
+
+        <p>
+          <strong>Puntos débiles:</strong>
+        </p>
+        <ul>
+          <li>Interfaz compleja (curva de aprendizaje pronunciada)</li>
+          <li>Sin planificación con IA</li>
+          <li>Sin seguimiento del RPE</li>
+          <li>Funciones de prevención de lesiones limitadas</li>
+          <li>Caro para lo que ofrece</li>
+        </ul>
+
+        <p>
+          <strong>Ideal para:</strong> atletas y entrenadores obsesionados con
+          los datos que quieren el máximo de métricas y no les importa la
+          complejidad.
+        </p>
+
+        <h2>Nolio: la plataforma comunitaria</h2>
+        <p>
+          <strong>Puntos fuertes:</strong>
+        </p>
+        <ul>
+          <li>Buenas funciones de comunidad</li>
+          <li>Componente social del entrenamiento</li>
+          <li>Interfaz fácil de usar</li>
+        </ul>
+
+        <p>
+          <strong>Puntos débiles:</strong>
+        </p>
+        <ul>
+          <li>Análisis de datos limitado</li>
+          <li>Sin planificación con IA</li>
+          <li>Sin seguimiento del RPE</li>
+          <li>Prevención de lesiones básica</li>
+        </ul>
+
+        <p>
+          <strong>Ideal para:</strong> atletas que valoran la comunidad y el
+          componente social por encima del análisis en profundidad.
+        </p>
+
+        <h2>OpenAthlete: la innovación con IA</h2>
+        <p>
+          <strong>Puntos fuertes:</strong>
+        </p>
+        <ul>
+          <li>Generación de planes con IA</li>
+          <li>Seguimiento y análisis del RPE</li>
+          <li>Prevención de lesiones avanzada (monitorización del ACWR)</li>
+          <li>Reprogramación dinámica</li>
+          <li>Interfaz intuitiva</li>
+          <li>La mejor relación entre valor e innovación</li>
+        </ul>
+
+        <p>
+          <strong>Puntos débiles:</strong>
+        </p>
+        <ul>
+          <li>Menor base de usuarios (plataforma más reciente)</li>
+          <li>Menos datos históricos</li>
+        </ul>
+
+        <p>
+          <strong>Ideal para:</strong> entrenadores y atletas que quieren
+          planificación con IA, seguimiento del RPE y prevención de lesiones sin
+          complicaciones.
+        </p>
+
+        <h2>En resumen</h2>
+        <p>
+          TrainingPeaks = complejidad de datos. Nolio = enfoque comunitario.
+          OpenAthlete = innovación con IA, RPE y prevención de lesiones. Elige
+          según lo que más te importe.
+        </p>
+
+        <p>
+          <strong>Deja de adivinar y empieza hoy a entrenar con IA.</strong>{' '}
+          <a href="https://app.openathlete.org/auth/create-account">
+            Regístrate en OpenAthlete
+          </a>{' '}
+          y descubre la mejor relación entre valor e innovación del software de
+          planificación deportiva.
         </p>
       </div>
     );

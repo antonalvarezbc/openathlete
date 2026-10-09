@@ -30,7 +30,7 @@ Supported languages: English (`en`), French (`fr`), Italian (`it`), Spanish (`es
 
 ## Website
 
-`apps/website/messages/{en,fr}.json`, compiled by `pnpm website translate`.
+`apps/website/messages/{en,fr,es}.json`, compiled by `pnpm website translate`. `pnpm check:locale-parity` covers these catalogs too. Blog posts live in `apps/website/src/content/blog/`: English and French are required, Spanish (`es` metadata, `ContentEs`) is optional and falls back to English.
 
 ## Verify
 

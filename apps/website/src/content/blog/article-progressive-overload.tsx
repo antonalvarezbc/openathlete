@@ -6,14 +6,17 @@ export const articleProgressiveOverload: BlogPost = {
     title: {
       en: 'Progressive Overload: Increasing Intensity Without Breaking',
       fr: "Surcharge Progressive : Augmenter l'Intensité Sans Casser",
+      es: 'Sobrecarga progresiva: aumentar la intensidad sin romperte',
     },
     description: {
       en: 'Educational guide on mesocycles and microcycles. Learn how AI smooths load increases to keep you in the progress zone, not the red zone.',
       fr: "Guide éducatif sur les mésocycles et microcycles. Découvrez comment l'IA lisse les augmentations de charge pour vous garder dans la zone de progrès, pas la zone rouge.",
+      es: 'Guía didáctica sobre mesociclos y microciclos. Descubre cómo la IA suaviza los aumentos de carga para mantenerte en la zona de progreso y no en la zona roja.',
     },
     excerpt: {
       en: 'Progressive overload is essential for improvement, but increasing too fast causes injury. Learn how AI manages mesocycles and microcycles to optimize progress safely.',
       fr: "La surcharge progressive est essentielle pour l'amélioration, mais augmenter trop vite cause des blessures. Découvrez comment l'IA gère les mésocycles et microcycles pour optimiser le progrès en sécurité.",
+      es: 'La sobrecarga progresiva es imprescindible para mejorar, pero subir demasiado rápido provoca lesiones. Descubre cómo la IA gestiona mesociclos y microciclos para que progreses de forma segura.',
     },
     author: {
       name: 'OpenAthlete Team',
@@ -479,6 +482,230 @@ export const articleProgressiveOverload: BlogPost = {
           </a>{' '}
           et laissez l'IA gérer votre surcharge progressive, assurant que vous
           vous améliorez constamment sans vous casser.
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          <strong>
+            Quieres ser más rápido. Así que entrenas más fuerte. Semana 1: 40
+            km. Semana 2: 50 km. Semana 3: 60 km. Semana 4: estás lesionado.
+            ¿Qué ha fallado?
+          </strong>
+        </p>
+
+        <p>
+          La respuesta: aumentaste la carga demasiado deprisa. La sobrecarga
+          progresiva es imprescindible para mejorar, pero hay una forma correcta
+          y una incorrecta de aplicarla. La correcta pasa por entender los
+          mesociclos, los microciclos y el delicado equilibrio entre progreso y
+          riesgo de lesión.
+        </p>
+
+        <h2>¿Qué es la sobrecarga progresiva?</h2>
+        <p>
+          La sobrecarga progresiva es el principio fundamental del
+          entrenamiento: para mejorar, tienes que aumentar el estímulo de forma
+          gradual. Tu cuerpo se adapta al estrés haciéndose más fuerte, pero
+          solo si ese estrés aumenta con cabeza.
+        </p>
+
+        <p>
+          ¿La dificultad? Si aumentas demasiado despacio, no progresas. Si
+          aumentas demasiado deprisa, te lesionas. El punto óptimo está en
+          medio: lo bastante progresivo para provocar adaptaciones, pero lo
+          bastante controlado para evitar que te rompas.
+        </p>
+
+        <h2>Entender los mesociclos y los microciclos</h2>
+        <p>El entrenamiento se organiza en ciclos:</p>
+
+        <p>
+          <strong>Microciclo (1 semana):</strong> la unidad básica de
+          entrenamiento. Suele incluir:
+        </p>
+        <ul>
+          <li>2-3 sesiones duras</li>
+          <li>2-3 sesiones suaves o de recuperación</li>
+          <li>1-2 días de descanso</li>
+        </ul>
+
+        <p>
+          <strong>Mesociclo (3-6 semanas):</strong> un bloque de entrenamiento
+          con un objetivo concreto:
+        </p>
+        <ul>
+          <li>Construcción de base (mucho volumen, baja intensidad)</li>
+          <li>Fase de desarrollo (intensidad creciente)</li>
+          <li>Fase de pico (entrenamiento específico para la carrera)</li>
+          <li>Fase de recuperación (carga reducida)</li>
+        </ul>
+
+        <p>
+          La sobrecarga progresiva ocurre dentro de los mesociclos. Cada
+          microciclo va un poco más allá que el anterior, pero los mesociclos
+          incluyen semanas de recuperación para que el cuerpo se adapte.
+        </p>
+
+        <h2>El problema de siempre</h2>
+        <p>
+          La mayoría de los atletas (y muchos entrenadores) tienen problemas con
+          la sobrecarga progresiva porque:
+        </p>
+        <ul>
+          <li>
+            <strong>Aumentan demasiado deprisa:</strong> pasan de 40 km a 60 km
+            en 3 semanas
+          </li>
+          <li>
+            <strong>No planifican la recuperación:</strong> no hay semanas de
+            descarga
+          </li>
+          <li>
+            <strong>Ignoran las señales:</strong> siguen apretando pese a la
+            fatiga
+          </li>
+          <li>
+            <strong>No controlan la carga:</strong> no hay seguimiento del ACWR
+          </li>
+        </ul>
+
+        <p>¿El resultado? Lesiones, agotamiento y progresos estancados.</p>
+
+        <h2>Cómo gestiona la IA la sobrecarga progresiva</h2>
+        <p>La IA de OpenAthlete lo resuelve así:</p>
+
+        <p>
+          <strong>1. Calcula los aumentos de carga óptimos</strong>
+        </p>
+        <p>
+          A partir de tu forma actual, tus objetivos y tu historial, la IA
+          determina aumentos de carga seguros. Normalmente entre un 5 y un 10 %
+          por semana, con semanas de descarga cada 3-4 semanas.
+        </p>
+
+        <p>
+          <strong>2. Vigila el ACWR</strong>
+        </p>
+        <p>
+          La IA sigue de forma continua tu ratio de carga aguda:crónica (ACWR).
+          Cuando el ACWR se acerca a 1,5 (zona de peligro), reduce la carga
+          automáticamente. Así evita los picos que provocan lesiones.
+        </p>
+
+        <p>
+          <strong>3. Planifica los mesociclos</strong>
+        </p>
+        <p>La IA organiza el entrenamiento en mesociclos con fases claras:</p>
+        <ul>
+          <li>Semanas 1-3: fase de desarrollo (carga creciente)</li>
+          <li>Semana 4: semana de descarga (carga reducida para asimilar)</li>
+          <li>Semanas 5-7: fase de desarrollo (se retoma la progresión)</li>
+          <li>Semana 8: semana de descarga</li>
+        </ul>
+
+        <p>
+          Este patrón se repite y garantiza un progreso constante sin
+          sobrecarga.
+        </p>
+
+        <p>
+          <strong>4. Ajusta según el RPE</strong>
+        </p>
+        <p>
+          Si tu RPE se mantiene elevado, la IA reduce la carga aunque el volumen
+          parezca «seguro» sobre el papel. Así frena la sobrecarga excesiva
+          antes de que se convierta en sobreentrenamiento.
+        </p>
+
+        <h2>Zona de progreso frente a zona roja</h2>
+        <p>
+          <strong>Zona de progreso (ACWR 0,8-1,3):</strong>
+        </p>
+        <ul>
+          <li>Adaptación óptima</li>
+          <li>Riesgo de lesión bajo</li>
+          <li>Mejora constante</li>
+          <li>Sostenible a largo plazo</li>
+        </ul>
+
+        <p>
+          <strong>Zona roja (ACWR {'>'} 1,5):</strong>
+        </p>
+        <ul>
+          <li>Riesgo de lesión alto</li>
+          <li>Acumulación de fatiga</li>
+          <li>Rendimientos decrecientes</li>
+          <li>Insostenible</li>
+        </ul>
+
+        <p>
+          La IA te mantiene en la zona de progreso. Cuando te desvías hacia la
+          zona roja, interviene: reduce la carga, añade recuperación y evita los
+          problemas antes de que aparezcan.
+        </p>
+
+        <h2>Un ejemplo real</h2>
+        <p>
+          Sarah quería pasar de 40 km a 60 km semanales en 8 semanas. Sin IA:
+        </p>
+        <ul>
+          <li>Semana 1: 40 km</li>
+          <li>Semana 2: 50 km (un 25 % más, demasiado)</li>
+          <li>Semana 3: 55 km</li>
+          <li>Semana 4: 60 km (ACWR = 1,6, zona roja)</li>
+          <li>Semana 5: lesionada</li>
+        </ul>
+
+        <p>Con la IA de OpenAthlete:</p>
+        <ul>
+          <li>Semana 1: 40 km</li>
+          <li>Semana 2: 42 km (un 5 % más)</li>
+          <li>Semana 3: 44 km (un 5 % más)</li>
+          <li>Semana 4: 35 km (semana de descarga)</li>
+          <li>Semana 5: 46 km (se retoma la progresión)</li>
+          <li>Semana 6: 48 km</li>
+          <li>Semana 7: 50 km</li>
+          <li>Semana 8: 40 km (semana de descarga)</li>
+          <li>Semana 9: 52 km (sigue la construcción)</li>
+        </ul>
+
+        <p>
+          Resultado: Sarah llegó a 60 km por semana de forma segura en 12
+          semanas en lugar de 4, sin lesiones y con un progreso constante.
+        </p>
+
+        <h2>En resumen</h2>
+        <p>
+          La sobrecarga progresiva es imprescindible, pero hay que gestionarla
+          con cabeza. Demasiado rápido = lesión. Demasiado lento =
+          estancamiento. El punto óptimo requiere:
+        </p>
+        <ul>
+          <li>Aumentos graduales (5-10 % por semana)</li>
+          <li>Semanas de descarga periódicas</li>
+          <li>Seguimiento del ACWR</li>
+          <li>Control del RPE</li>
+          <li>Una estructura por mesociclos</li>
+        </ul>
+
+        <p>
+          La IA gestiona todo esto automáticamente. No tienes que calcular los
+          aumentos de carga, planificar las semanas de descarga ni vigilar el
+          ACWR a mano. El sistema lo hace por ti y te mantiene en la zona de
+          progreso, lejos de la zona roja.
+        </p>
+
+        <p>
+          <strong>Deja de adivinar y empieza hoy a entrenar con IA.</strong>{' '}
+          <a href="https://app.openathlete.org/auth/create-account">
+            Regístrate en OpenAthlete
+          </a>{' '}
+          y deja que la IA gestione tu sobrecarga progresiva para que mejores de
+          forma constante sin romperte.
         </p>
       </div>
     );
