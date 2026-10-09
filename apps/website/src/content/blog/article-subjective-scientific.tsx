@@ -6,14 +6,17 @@ export const articleSubjectiveScientific: BlogPost = {
     title: {
       en: 'Subjective but Scientific: Quantifying Mental Fatigue',
       fr: 'Subjectif mais Scientifique : Quantifier la Fatigue Mentale',
+      es: 'Subjetivo pero científico: cómo cuantificar la fatiga mental',
     },
     description: {
       en: 'Discover the brain-muscle connection in endurance sports. Learn why a session feels hard after a bad day at work and how RPE captures what watches miss.',
       fr: "Découvrez la connexion cerveau-muscle dans les sports d'endurance. Apprenez pourquoi une séance semble dure après une mauvaise journée au travail et comment le RPE capture ce que les montres manquent.",
+      es: 'Descubre la conexión entre cerebro y músculo en los deportes de resistencia. Entiende por qué una sesión se te hace dura después de un mal día en el trabajo y cómo el RPE capta lo que los relojes no ven.',
     },
     excerpt: {
       en: "Mental fatigue affects performance in ways your watch can't measure. RPE bridges the gap between objective data and subjective reality, filling the void left by Strava and Garmin.",
       fr: "La fatigue mentale affecte les performances de manière que votre montre ne peut pas mesurer. Le RPE comble l'écart entre les données objectives et la réalité subjective, comblant le vide laissé par Strava et Garmin.",
+      es: 'La fatiga mental afecta al rendimiento de formas que tu reloj no puede medir. El RPE tiende un puente entre los datos objetivos y la realidad subjetiva, y cubre el vacío que dejan Strava y Garmin.',
     },
     author: {
       name: 'OpenAthlete Team',
@@ -585,6 +588,291 @@ export const articleSubjectiveScientific: BlogPost = {
           et laissez l'IA analyser vos modèles de RPE, détecter la fatigue
           mentale et adapter votre entraînement à votre état réel—pas seulement
           ce que votre montre mesure.
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          <strong>
+            Has tenido un día horrible en el trabajo. Plazos, conflictos,
+            estrés. Sales a rastras a correr por la tarde. La misma ruta y el
+            mismo ritmo que la semana pasada. Pero se te hace imposible.
+          </strong>{' '}
+          Tu reloj muestra las mismas métricas: frecuencia cardíaca, ritmo,
+          potencia. Todo parece normal. Entonces, ¿por qué te cuesta tanto más?
+        </p>
+
+        <p>
+          La respuesta está en la conexión entre tu cerebro y tus músculos. La
+          fatiga mental no solo afecta a tu estado de ánimo: repercute
+          directamente en tu rendimiento físico. Y aquí está la clave:{' '}
+          <strong>tu reloj no puede medirla, pero el RPE sí.</strong>
+        </p>
+
+        <h2>La conexión entre cerebro y músculo</h2>
+        <p>
+          El rendimiento en resistencia no es puramente físico. Tu sistema
+          nervioso central (SNC) desempeña un papel crucial. Cuando tienes
+          fatiga mental, tu cerebro:
+        </p>
+        <ul>
+          <li>
+            <strong>Reduce el impulso nervioso:</strong> Envía señales más
+            débiles a tus músculos
+          </li>
+          <li>
+            <strong>Aumenta el esfuerzo percibido:</strong> Hace que la misma
+            carga de trabajo parezca más dura
+          </li>
+          <li>
+            <strong>Empeora la gestión del ritmo:</strong> Altera tu capacidad
+            para juzgar el esfuerzo con precisión
+          </li>
+          <li>
+            <strong>Acelera la fatiga:</strong> Hace que llegues antes al
+            agotamiento
+          </li>
+        </ul>
+
+        <p>
+          Las investigaciones muestran que la fatiga mental puede reducir el
+          tiempo hasta el agotamiento en un 15-20 % a la misma intensidad
+          fisiológica. Tu frecuencia cardíaca puede ser idéntica, pero tu
+          rendimiento no.
+        </p>
+
+        <h2>Por qué los relojes no lo detectan</h2>
+        <p>Tu Garmin, tu Apple Watch o Strava registran métricas objetivas:</p>
+        <ul>
+          <li>Frecuencia cardíaca (respuesta cardiovascular)</li>
+          <li>Ritmo/potencia (rendimiento externo)</li>
+          <li>Datos GPS (distancia, desnivel)</li>
+          <li>Cadencia (patrones de movimiento)</li>
+        </ul>
+
+        <p>
+          Son valiosas, pero incompletas. Miden{' '}
+          <strong>lo que hace tu cuerpo</strong>, no{' '}
+          <strong>cómo responde tu cuerpo</strong>. No pueden detectar:
+        </p>
+        <ul>
+          <li>La fatiga mental causada por el estrés laboral</li>
+          <li>El estado emocional (ansiedad, depresión, motivación)</li>
+          <li>
+            La carga cognitiva (fatiga por tomar decisiones, sobrecarga de
+            información)
+          </li>
+          <li>
+            El impacto de la calidad del sueño en el funcionamiento del SNC
+          </li>
+        </ul>
+
+        <p>
+          Aquí es donde el RPE se vuelve imprescindible. Cuando valoras una
+          sesión con un «8/10» en lugar del «6/10» habitual para el mismo ritmo
+          y la misma frecuencia cardíaca, estás cuantificando algo que tu reloj
+          no puede medir.
+        </p>
+
+        <h2>La ciencia del RPE</h2>
+        <p>
+          El esfuerzo percibido (RPE, por sus siglas en inglés) no es solo «cómo
+          te sientes»: es una herramienta científica validada. La escala de Borg
+          (6-20) y la escala de Borg modificada (0-10) se utilizan en ciencias
+          del deporte desde hace décadas. Las investigaciones muestran de forma
+          sistemática que el RPE:
+        </p>
+        <ul>
+          <li>Se correlaciona estrechamente con el estrés fisiológico real</li>
+          <li>
+            En algunos contextos, predice el rendimiento mejor que la frecuencia
+            cardíaca por sí sola
+          </li>
+          <li>Recoge la interacción entre los factores físicos y mentales</li>
+          <li>Da señales de alerta temprana de sobrecarga (overreaching)</li>
+        </ul>
+
+        <p>
+          Cuando tu RPE está por encima de lo que indican las métricas
+          objetivas, eso es un dato. Te está diciendo algo importante sobre tu
+          estado actual, algo que tu reloj no puede ver.
+        </p>
+
+        <h2>Lo que aporta OpenAthlete</h2>
+        <p>
+          Después de cada sesión, OpenAthlete te pide tu RPE. No es opcional: es
+          esencial. Te explicamos por qué:
+        </p>
+
+        <p>La plataforma analiza tu RPE en contexto:</p>
+        <ul>
+          <li>
+            <strong>Patrones históricos:</strong> ¿Es esta sesión más dura de lo
+            habitual para este ritmo?
+          </li>
+          <li>
+            <strong>Comparación objetiva:</strong> ¿Cómo se compara el RPE con
+            la frecuencia cardíaca y la potencia?
+          </li>
+          <li>
+            <strong>Análisis de tendencias:</strong> ¿Se te hacen las sesiones
+            más duras de forma sistemática?
+          </li>
+          <li>
+            <strong>Relación con la recuperación:</strong> ¿Encaja el RPE con
+            los indicadores de sueño y estrés?
+          </li>
+        </ul>
+
+        <p>
+          Cuando aparecen patrones, como un RPE elevado después de días
+          estresantes, la IA se adapta. Puede sugerirte:
+        </p>
+        <ul>
+          <li>Reducir la intensidad de la siguiente sesión</li>
+          <li>Añadir un día extra de recuperación</li>
+          <li>Pasar a actividades menos exigentes</li>
+          <li>Centrarte en el sueño y en la gestión del estrés</li>
+        </ul>
+
+        <h2>El impacto en la práctica</h2>
+        <p>Imagina dos sesiones de entrenamiento idénticas:</p>
+
+        <p>
+          <strong>Sesión A (lunes, después de un buen fin de semana):</strong>
+        </p>
+        <ul>
+          <li>Ritmo: 4:30/km</li>
+          <li>Frecuencia cardíaca: 155 ppm</li>
+          <li>RPE: 6/10</li>
+          <li>Sensaciones: fuerte, con el esfuerzo bajo control</li>
+        </ul>
+
+        <p>
+          <strong>
+            Sesión B (miércoles, después de un día de trabajo estresante):
+          </strong>
+        </p>
+        <ul>
+          <li>Ritmo: 4:30/km</li>
+          <li>Frecuencia cardíaca: 155 ppm</li>
+          <li>RPE: 8/10</li>
+          <li>Sensaciones: sufriendo, piernas pesadas</li>
+        </ul>
+
+        <p>
+          Tu reloj ve dos sesiones idénticas. Pero el RPE revela la verdad: la
+          sesión B generó más estrés interno, aunque las métricas externas
+          fueran idénticas. Sin el RPE, nunca lo sabrías. Podrías seguir
+          apretando pensando que simplemente has tenido un «mal día», cuando en
+          realidad tu SNC está fatigado y necesita recuperarse.
+        </p>
+
+        <h2>Cubrir el vacío de Strava y Garmin</h2>
+        <p>
+          Strava y Garmin son excelentes para registrar lo que hiciste. Pero no
+          entienden en absoluto cómo te sentiste. Este vacío importa porque:
+        </p>
+        <ul>
+          <li>
+            <strong>
+              La adaptación al entrenamiento depende de la carga interna, no
+              solo de la externa
+            </strong>
+          </li>
+          <li>
+            <strong>
+              El riesgo de lesión aumenta cuando la carga interna supera tu
+              capacidad
+            </strong>
+          </li>
+          <li>
+            <strong>
+              Rendir al máximo exige ajustar el entrenamiento a tu estado actual
+            </strong>
+          </li>
+        </ul>
+
+        <p>
+          OpenAthlete cubre este vacío combinando datos objetivos (de tu reloj)
+          con datos subjetivos (el RPE). ¿El resultado? Una visión completa que
+          ninguno de los dos podría ofrecer por separado.
+        </p>
+
+        <h2>El círculo vicioso de la fatiga mental</h2>
+        <p>La fatiga mental crea un círculo vicioso:</p>
+        <ol>
+          <li>Un día estresante aumenta la fatiga mental</li>
+          <li>
+            La fatiga mental hace que el entrenamiento se sienta más duro (RPE
+            elevado)
+          </li>
+          <li>
+            Las sesiones que se sienten más duras aumentan el estrés percibido
+          </li>
+          <li>Más estrés agrava la fatiga mental</li>
+          <li>El ciclo se repite y acaba en agotamiento (burnout)</li>
+        </ol>
+
+        <p>
+          Controlar el RPE rompe este círculo. Cuando detectas patrones de RPE
+          elevado, puedes intervenir pronto: reducir el estrés del
+          entrenamiento, priorizar la recuperación y atacar las causas de fondo
+          de la fatiga mental.
+        </p>
+
+        <h2>Aplicación práctica</h2>
+        <p>Así puedes sacar partido al RPE:</p>
+        <ul>
+          <li>
+            <strong>Valora la sesión justo al terminar:</strong> No esperes: tu
+            percepción es más precisa justo después de acabar
+          </li>
+          <li>
+            <strong>Sé sincero:</strong> No hay un RPE «incorrecto». Tu
+            percepción es tu realidad
+          </li>
+          <li>
+            <strong>Busca patrones:</strong> ¿Tu RPE sube después de cierto tipo
+            de días?
+          </li>
+          <li>
+            <strong>Confía en los datos:</strong> Si el RPE indica que necesitas
+            recuperarte, hazle caso
+          </li>
+        </ul>
+
+        <p>
+          OpenAthlete te lo pone fácil. Después de cada sesión importada, te
+          pide tu RPE. Te lleva 5 segundos, pero aporta datos valiosísimos que
+          transforman tu forma de entrenar.
+        </p>
+
+        <h2>En resumen</h2>
+        <p>
+          La fatiga mental es real, medible y tiene consecuencias. Tu reloj no
+          puede detectarla, pero el RPE sí. Al combinar métricas objetivas con
+          la percepción subjetiva, obtienes una visión completa de tu estado de
+          entrenamiento.
+        </p>
+
+        <p>
+          No ignores la diferencia entre lo que dice tu reloj y cómo te sientes.
+          Esa diferencia contiene información clave sobre lo preparado que
+          estás, tu recuperación y tu riesgo de lesión.
+        </p>
+
+        <p>
+          <strong>Deja de adivinar y empieza hoy a entrenar con IA.</strong>{' '}
+          <a href="https://app.openathlete.org/auth/create-account">
+            Regístrate en OpenAthlete
+          </a>{' '}
+          y deja que la IA analice tus patrones de RPE, detecte la fatiga mental
+          y adapte tu entrenamiento a tu estado real, no solo a lo que mide tu
+          reloj.
         </p>
       </div>
     );

@@ -30,6 +30,7 @@ After changing API or web code, run `stack:up` again: it rebuilds the images. Th
 | `api` | `tests/api/*.spec.ts` | Playwright `request`, no browser |
 | `desktop` | `tests/web/*.spec.ts` | Desktop Chrome, logged in as the shared athlete |
 | `mobile` | `tests/mobile/*.spec.ts` | iPhone 13 viewport and touch input on Chromium, logged in |
+| `android` | `tests/mobile/*.spec.ts` | The same phone tests as a Pixel 8 (Chromium), logged in |
 
 ## Writing tests
 

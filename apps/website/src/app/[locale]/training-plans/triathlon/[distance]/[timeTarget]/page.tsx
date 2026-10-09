@@ -8,7 +8,11 @@ import {
 import { TrainingPlanPage } from '@/components/training-plan/training-plan-page';
 import { SITE_URL } from '@/config';
 import { loadPlan } from '@/lib/training-plans/plan-loader';
-import { parseTimeTarget } from '@/lib/training-plans/utils/parse-time-target';
+import {
+  formatTimeTarget,
+  parseTimeTarget,
+} from '@/lib/training-plans/utils/parse-time-target';
+import { isSupportedLocale, localePrefix } from '@/utils/locales';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
@@ -19,25 +23,25 @@ export async function generateMetadata({
   params: Promise<{ locale: string; distance: string; timeTarget: string }>;
 }): Promise<Metadata> {
   const { locale, distance, timeTarget } = await params;
-  if (locale !== 'en' && locale !== 'fr') {
+  if (!isSupportedLocale(locale)) {
     notFound();
   }
 
   try {
     const timeInSeconds = parseTimeTarget(timeTarget);
     const timeDisplay =
-      timeInSeconds !== null
-        ? `${Math.floor(timeInSeconds / 3600)}h${Math.floor((timeInSeconds % 3600) / 60)}`
-        : timeTarget;
+      timeInSeconds !== null ? formatTimeTarget(timeInSeconds) : timeTarget;
 
-    const title =
-      locale === 'fr'
-        ? `Plan d'entraînement Triathlon ${distance} ${timeDisplay} gratuit | OpenAthlete`
-        : `Free Triathlon ${distance} ${timeDisplay} Training Plan | OpenAthlete`;
-    const description =
-      locale === 'fr'
-        ? `Plan d'entraînement gratuit pour triathlon ${distance} en ${timeDisplay}. Plan complet avec conseils et tableau d'entraînement semaine par semaine.`
-        : `Free training plan for triathlon ${distance} in ${timeDisplay}. Complete plan with tips and week-by-week training schedule.`;
+    const title = {
+      en: `Free Triathlon ${distance} ${timeDisplay} Training Plan`,
+      fr: `Plan d'entraînement Triathlon ${distance} ${timeDisplay} gratuit`,
+      es: `Plan de entrenamiento gratuito de triatlón ${distance} en ${timeDisplay}`,
+    }[locale];
+    const description = {
+      en: `Free training plan for triathlon ${distance} in ${timeDisplay}. Complete plan with tips and week-by-week training schedule.`,
+      fr: `Plan d'entraînement gratuit pour triathlon ${distance} en ${timeDisplay}. Plan complet avec conseils et tableau d'entraînement semaine par semaine.`,
+      es: `Plan de entrenamiento gratuito para triatlón ${distance} en ${timeDisplay}. Plan completo con consejos y calendario de entrenamiento semana a semana.`,
+    }[locale];
 
     const path = `/training-plans/triathlon/${distance}/${timeTarget}`;
     const metadata = generatePageMetadata({ locale, title, description, path });
@@ -55,7 +59,7 @@ export default async function TriathlonTrainingPlanPage({
 }) {
   const { locale, distance, timeTarget } = await params;
 
-  if (locale !== 'en' && locale !== 'fr') {
+  if (!isSupportedLocale(locale)) {
     notFound();
   }
 
@@ -63,20 +67,24 @@ export default async function TriathlonTrainingPlanPage({
     const planData = await loadPlan('triathlon', distance, timeTarget, locale);
     const path = `/training-plans/triathlon/${distance}/${timeTarget}`;
 
-    const pageUrl = `${SITE_URL}${locale === 'en' ? '' : `/${locale}`}${path}`;
+    const pageUrl = `${SITE_URL}${localePrefix(locale)}${path}`;
 
     return (
       <>
         <WebPageStructuredData
           title={
-            locale === 'fr'
-              ? `Plan d'entraînement Triathlon ${distance} ${timeTarget}`
-              : `Triathlon ${distance} ${timeTarget} Training Plan`
+            {
+              en: `Triathlon ${distance} ${timeTarget} Training Plan`,
+              fr: `Plan d'entraînement Triathlon ${distance} ${timeTarget}`,
+              es: `Plan de entrenamiento de triatlón ${distance} ${timeTarget}`,
+            }[locale]
           }
           description={
-            locale === 'fr'
-              ? `Plan d'entraînement gratuit pour triathlon ${distance}`
-              : `Free training plan for triathlon ${distance}`
+            {
+              en: `Free training plan for triathlon ${distance}`,
+              fr: `Plan d'entraînement gratuit pour triathlon ${distance}`,
+              es: `Plan de entrenamiento gratuito para triatlón ${distance}`,
+            }[locale]
           }
           url={pageUrl}
         />

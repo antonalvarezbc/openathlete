@@ -6,14 +6,17 @@ export const articleInjuryPrevention2: BlogPost = {
     title: {
       en: 'Injury Prevention 2.0: When Algorithms Predict the Break',
       fr: 'Prévention des Blessures 2.0 : Quand les Algorithmes Prédissent la Rupture',
+      es: 'Prevención de lesiones 2.0: cuando los algoritmos predicen la rotura',
     },
     description: {
       en: "Learn how Acute:Chronic Workload Ratio (ACWR) analysis prevents injuries. The danger isn't training hard—it's increasing load too fast. AI alerts you before it's too late.",
       fr: "Apprenez comment l'analyse du Ratio Charge Aiguë:Chronique (ACWR) prévient les blessures. Le danger n'est pas de s'entraîner dur—c'est d'augmenter la charge trop vite. L'IA vous alerte avant qu'il ne soit trop tard.",
+      es: 'Descubre cómo el análisis del ratio de carga aguda:crónica (ACWR) previene lesiones. El peligro no es entrenar duro, sino aumentar la carga demasiado rápido. La IA te avisa antes de que sea tarde.',
     },
     excerpt: {
       en: "Most injuries happen when training load increases too quickly. ACWR analysis detects these spikes before they become problems. OpenAthlete alerts athletes before it's too late.",
       fr: "La plupart des blessures surviennent quand la charge d'entraînement augmente trop rapidement. L'analyse ACWR détecte ces pics avant qu'ils ne deviennent des problèmes. OpenAthlete alerte les athlètes avant qu'il ne soit trop tard.",
+      es: 'La mayoría de las lesiones se producen cuando la carga de entrenamiento aumenta demasiado deprisa. El análisis del ACWR detecta estos picos antes de que se conviertan en problemas. OpenAthlete avisa a los atletas antes de que sea tarde.',
     },
     author: {
       name: 'OpenAthlete Team',
@@ -504,6 +507,242 @@ export const articleInjuryPrevention2: BlogPost = {
           </a>{' '}
           et laissez l'IA surveiller votre ACWR, vous alerter des risques et
           vous garder en entraînement constant vers vos objectifs.
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          <strong>
+            Te sientes genial. Tus entrenamientos van de maravilla. Decides
+            apretar más y subes un 20% el volumen esta semana. Tres semanas
+            después estás parado con una fractura por estrés.
+          </strong>{' '}
+          ¿Qué ha fallado?
+        </p>
+
+        <p>
+          La respuesta no es que entrenaras demasiado duro. La respuesta es que
+          aumentaste tu carga de entrenamiento demasiado deprisa. Este es el
+          principio fundamental de la prevención de lesiones 2.0:{' '}
+          <strong>
+            no se trata de evitar el entrenamiento duro, sino de gestionar con
+            inteligencia la progresión de la carga.
+          </strong>
+        </p>
+
+        <h2>La ciencia: carga aguda frente a carga crónica</h2>
+        <p>
+          Los científicos del deporte han identificado una métrica clave: el
+          ratio de carga aguda:crónica (ACWR, por sus siglas en inglés). Esto es
+          lo que significa:
+        </p>
+        <ul>
+          <li>
+            <strong>Carga aguda:</strong> tu carga de entrenamiento de la última
+            semana (7 días). Es tu estrés reciente.
+          </li>
+          <li>
+            <strong>Carga crónica:</strong> tu carga de entrenamiento media de
+            las últimas 4 semanas (28 días). Es tu nivel de forma de base.
+          </li>
+          <li>
+            <strong>ACWR:</strong> la relación entre la carga aguda y la
+            crónica. Te indica si estás progresando de forma segura.
+          </li>
+        </ul>
+
+        <p>
+          Los estudios muestran que, cuando el ACWR supera 1,5, el riesgo de
+          lesión se dispara. Cuando está por debajo de 0,8, lo más probable es
+          que estés perdiendo forma. ¿El punto óptimo? Entre 0,8 y 1,3:
+          sobrecarga progresiva sin un riesgo excesivo.
+        </p>
+
+        <h2>Por qué los picos de carga provocan lesiones</h2>
+        <p>
+          Tu cuerpo se adapta al estrés del entrenamiento poco a poco. Cuando de
+          repente aumentas la carga un 30%, tus tejidos (músculos, tendones,
+          huesos) no han tenido tiempo de adaptarse. ¿El resultado? Los
+          microtraumatismos se acumulan más rápido de lo que tu cuerpo puede
+          repararlos. Y eso lleva a:
+        </p>
+        <ul>
+          <li>Fracturas por estrés</li>
+          <li>Tendinopatías</li>
+          <li>Distensiones musculares</li>
+          <li>Lesiones por sobreuso</li>
+        </ul>
+
+        <p>
+          ¿Lo peligroso? Estas lesiones a menudo no dan síntomas hasta que es
+          demasiado tarde. Cuando notas el dolor, el daño ya es considerable.
+        </p>
+
+        <h2>El problema de siempre</h2>
+        <p>
+          La mayoría de los atletas y entrenadores controlan el volumen y la
+          intensidad por separado. Puede que sepan que esta semana han corrido
+          50 km frente a los 40 km de la anterior, pero no ven la relación entre
+          la carga reciente y el nivel de forma de base. Es en ese punto ciego
+          donde se producen las lesiones.
+        </p>
+
+        <p>Imagina esta situación:</p>
+        <ul>
+          <li>Semanas 1-3: media de 40 km/semana (carga crónica = 40 km)</li>
+          <li>
+            Semana 4: te sientes genial y corres 60 km (carga aguda = 60 km)
+          </li>
+          <li>ACWR = 60/40 = 1,5 (zona de peligro)</li>
+        </ul>
+
+        <p>
+          Sin un análisis del ACWR, parece que todo va bien: simplemente
+          entrenas más. Pero las cuentas revelan el riesgo. Tu cuerpo todavía no
+          se ha adaptado para asumir 60 km/semana. Estás en la zona de riesgo de
+          lesión.
+        </p>
+
+        <h2>Cómo lo previene la IA</h2>
+        <p>
+          OpenAthlete calcula el ACWR automáticamente después de cada sesión.
+          Controla:
+        </p>
+        <ul>
+          <li>Tu carga aguda (últimos 7 días)</li>
+          <li>Tu carga crónica (últimos 28 días)</li>
+          <li>La relación entre ambas</li>
+          <li>Las tendencias a lo largo del tiempo</li>
+        </ul>
+
+        <p>
+          Cuando el ACWR se acerca a 1,5, el sistema os avisa a ti y a tu
+          entrenador. Puede proponer:
+        </p>
+        <ul>
+          <li>Reducir el volumen de esta semana un 10-15%</li>
+          <li>Mantener la carga actual una semana más antes de aumentarla</li>
+          <li>Añadir un día de recuperación extra</li>
+          <li>Jugar con la intensidad en lugar del volumen</li>
+        </ul>
+
+        <p>
+          Todo esto ocurre de forma proactiva: antes de que sientas dolor, antes
+          de que tengas que parar, antes de que tus objetivos se vayan al
+          traste.
+        </p>
+
+        <h2>Más allá del simple volumen</h2>
+        <p>
+          El ACWR no va solo de distancia. OpenAthlete calcula la carga teniendo
+          en cuenta varios factores:
+        </p>
+        <ul>
+          <li>
+            <strong>Volumen:</strong> distancia, duración, repeticiones
+          </li>
+          <li>
+            <strong>Intensidad:</strong> ritmo, potencia, zonas de frecuencia
+            cardíaca
+          </li>
+          <li>
+            <strong>RPE:</strong> esfuerzo percibido (carga interna)
+          </li>
+          <li>
+            <strong>Modalidad:</strong> carrera, ciclismo o natación (cada una
+            genera un estrés distinto)
+          </li>
+        </ul>
+
+        <p>
+          Este enfoque global ofrece una imagen real del estrés del
+          entrenamiento, no solo del volumen. Un rodaje de 10 km a ritmo tempo
+          genera más carga que un rodaje suave de 10 km, aunque la distancia sea
+          idéntica.
+        </p>
+
+        <h2>Un ejemplo real</h2>
+        <p>
+          Marcus, triatleta, se estaba preparando para un Ironman. Sus
+          entrenamientos iban bien y se sentía fuerte. Después de una semana
+          especialmente buena, decidió añadir sesiones extra.
+        </p>
+
+        <p>
+          OpenAthlete detectó que su ACWR se disparaba hasta 1,6, de lleno en la
+          zona de peligro. Envió una alerta a Marcus y a su entrenador y propuso
+          reducir el volumen un 15% la semana siguiente.
+        </p>
+
+        <p>
+          Al principio Marcus se frustró: se sentía genial, ¿por qué iba a
+          entrenar menos? Pero su entrenador le explicó la ciencia que había
+          detrás y siguieron la recomendación.
+        </p>
+
+        <p>
+          Dos semanas después, su compañero de entrenamiento, que no controlaba
+          su carga, sufrió una fractura por estrés y tuvo que retirarse de la
+          carrera. Marcus terminó su Ironman sin lesiones.
+        </p>
+
+        <p>
+          ¿La diferencia? Uno de los atletas tenía la protección de los datos.
+          El otro se fiaba de las «sensaciones».
+        </p>
+
+        <h2>El análisis después de cada sesión</h2>
+        <p>
+          Aquí es donde el enfoque de OpenAthlete marca la diferencia. Después
+          de cada sesión, la plataforma te pide tu RPE. Este dato subjetivo,
+          combinado con métricas objetivas (ritmo, FC, potencia), ofrece una
+          imagen completa de la carga.
+        </p>
+
+        <p>
+          Si tu RPE es elevado en relación con tu ritmo y tu frecuencia
+          cardíaca, es una señal. Tu carga interna es mayor de lo que sugiere tu
+          carga externa. Puede indicar:
+        </p>
+        <ul>
+          <li>Acumulación de fatiga</li>
+          <li>Recuperación insuficiente</li>
+          <li>Primeros signos de sobrecarga</li>
+        </ul>
+
+        <p>
+          La IA cruza este dato con el ACWR. Si ambas métricas apuntan a un
+          riesgo, actúa: ajusta las siguientes sesiones, propone recuperación y
+          avisa a tu entrenador.
+        </p>
+
+        <h2>En resumen</h2>
+        <p>
+          Prevenir lesiones no consiste en evitar el entrenamiento duro, sino en
+          progresar con inteligencia. El análisis del ACWR te da los datos que
+          necesitas para llevar tus límites más allá con seguridad.
+        </p>
+
+        <p>
+          El enfoque de siempre: entrenar duro, cruzar los dedos para no
+          lesionarse y reaccionar cuando ocurre.
+        </p>
+
+        <p>
+          El nuevo enfoque: entrenar duro, controlar la progresión de la carga y
+          prevenir las lesiones antes de que aparezcan.
+        </p>
+
+        <p>
+          <strong>Deja de adivinar y empieza hoy a entrenar con IA.</strong>{' '}
+          <a href="https://app.openathlete.org/auth/create-account">
+            Regístrate en OpenAthlete
+          </a>{' '}
+          y deja que la IA controle tu ACWR, te avise de los riesgos y te ayude
+          a entrenar con regularidad hacia tus objetivos.
         </p>
       </div>
     );

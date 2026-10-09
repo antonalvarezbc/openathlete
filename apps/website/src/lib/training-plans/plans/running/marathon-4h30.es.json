@@ -1,8 +1,8 @@
 {
   "plan": {
-    "name": "Objectif Marathon 4h30",
-    "description": "Plan complet de 16 semaines pour finir le marathon en 4h30. Conçu pour une progression sécuritaire avec 4 séances hebdomadaires.",
-    "goal": "Marathon en 4h30",
+    "name": "Objetivo maratón 4h30",
+    "description": "Plan de entrenamiento completo de 16 semanas para terminar un maratón en 4h30. Diseñado para progresar con seguridad con 4 sesiones semanales.",
+    "goal": "Maratón en 4h30",
     "sportType": "RUNNING",
     "distance": 42195,
     "duration": 16,
@@ -10,20 +10,20 @@
   },
   "cycles": [
     {
-      "name": "Cycle 1 : Préparation Générale",
-      "description": "Mise en route, développement de l'endurance fondamentale et introduction de la vitesse.",
+      "name": "Ciclo 1: preparación general",
+      "description": "Puesta en marcha, desarrollo de la resistencia aeróbica de base e introducción al trabajo de velocidad.",
       "phase": "BASE",
       "color": "#3b82f6",
       "weeks": [
         {
           "weekNumber": 1,
-          "theme": "Reprise en douceur",
+          "theme": "Vuelta suave",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Footing d'aisance",
+              "name": "Rodaje suave",
               "sport": "RUNNING",
-              "description": "45 min en endurance fondamentale. Aisance respiratoire totale.",
+              "description": "45 min de resistencia aeróbica de base. Respiración totalmente cómoda.",
               "goalDuration": 2700,
               "goalRpe": 3,
               "workout": {
@@ -44,9 +44,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Endurance",
+              "name": "Rodaje de resistencia",
               "sport": "RUNNING",
-              "description": "50 min allure stable.",
+              "description": "50 min a ritmo estable.",
               "goalDuration": 3000,
               "goalRpe": 3,
               "workout": {
@@ -67,9 +67,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Réveil musculaire",
+              "name": "Rodaje de activación",
               "sport": "RUNNING",
-              "description": "30 min très cool + 5 lignes droites (accélérations progressives).",
+              "description": "30 min muy suave + 5 progresiones (aceleraciones progresivas).",
               "goalDuration": 1800,
               "goalRpe": 2,
               "workout": {
@@ -90,9 +90,9 @@
             },
             {
               "dayOfWeek": 0,
-              "name": "Sortie Longue",
+              "name": "Tirada larga",
               "sport": "RUNNING",
-              "description": "1h10 en endurance. Ne pas courir vite, l'objectif est la durée.",
+              "description": "1h10 de resistencia aeróbica. No corras rápido: el objetivo es la duración.",
               "goalDuration": 4200,
               "goalRpe": 3,
               "workout": {
@@ -115,13 +115,13 @@
         },
         {
           "weekNumber": 2,
-          "theme": "Augmentation du volume",
+          "theme": "Aumento de volumen",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Footing + Variations",
+              "name": "Rodaje con cambios de ritmo",
               "sport": "RUNNING",
-              "description": "45 min dont 3 variations de vitesse de 2 min.",
+              "description": "45 min con 3 cambios de ritmo de 2 min.",
               "goalDuration": 2700,
               "goalRpe": 4,
               "workout": {
@@ -142,9 +142,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Endurance",
+              "name": "Rodaje de resistencia",
               "sport": "RUNNING",
-              "description": "50 min allure confortable.",
+              "description": "50 min a ritmo cómodo.",
               "goalDuration": 3000,
               "goalRpe": 3,
               "workout": {
@@ -165,9 +165,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Footing léger",
+              "name": "Trote ligero",
               "sport": "RUNNING",
-              "description": "40 min facile.",
+              "description": "40 min suave.",
               "goalDuration": 2400,
               "goalRpe": 2,
               "workout": {
@@ -188,9 +188,9 @@
             },
             {
               "dayOfWeek": 0,
-              "name": "Sortie Longue",
+              "name": "Tirada larga",
               "sport": "RUNNING",
-              "description": "1h20 en endurance.",
+              "description": "1h20 de resistencia aeróbica.",
               "goalDuration": 4800,
               "goalRpe": 3,
               "workout": {
@@ -213,13 +213,13 @@
         },
         {
           "weekNumber": 3,
-          "theme": "Introduction Vitesse (Fartlek)",
+          "theme": "Introducción a la velocidad (fartlek)",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Fartlek Pyramidal",
+              "name": "Fartlek en pirámide",
               "sport": "RUNNING",
-              "description": "20' écho + (1'-2'-3'-2'-1' rapide / récup égale) + 10' calme.",
+              "description": "20' de calentamiento + (1'-2'-3'-2'-1' rápido / misma recuperación) + 10' de vuelta a la calma.",
               "goalDuration": 3300,
               "goalRpe": 7,
               "workout": {
@@ -350,9 +350,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Endurance",
+              "name": "Rodaje de resistencia",
               "sport": "RUNNING",
-              "description": "50 min cool.",
+              "description": "50 min suave.",
               "goalDuration": 3000,
               "goalRpe": 3,
               "workout": {
@@ -373,9 +373,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Footing",
+              "name": "Rodaje suave",
               "sport": "RUNNING",
-              "description": "45 min facile.",
+              "description": "45 min suave.",
               "goalDuration": 2700,
               "goalRpe": 2,
               "workout": {
@@ -396,9 +396,9 @@
             },
             {
               "dayOfWeek": 0,
-              "name": "Sortie Longue",
+              "name": "Tirada larga",
               "sport": "RUNNING",
-              "description": "1h30 Endurance.",
+              "description": "1h30 de resistencia aeróbica.",
               "goalDuration": 5400,
               "goalRpe": 3,
               "workout": {
@@ -421,13 +421,13 @@
         },
         {
           "weekNumber": 4,
-          "theme": "Semaine d'assimilation (Repos relatif)",
+          "theme": "Semana de asimilación (descanso relativo)",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Footing court",
+              "name": "Trote corto",
               "sport": "RUNNING",
-              "description": "40 min facile.",
+              "description": "40 min suave.",
               "goalDuration": 2400,
               "goalRpe": 2,
               "workout": {
@@ -448,9 +448,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Rappel allure",
+              "name": "Toque de ritmo",
               "sport": "RUNNING",
-              "description": "15' écho + 10' un peu plus vite (allure marathon) + 10' calme.",
+              "description": "15' de calentamiento + 10' algo más rápido (ritmo maratón) + 10' de vuelta a la calma.",
               "goalDuration": 2100,
               "goalRpe": 4,
               "workout": {
@@ -493,9 +493,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Footing très léger",
+              "name": "Trote muy suave",
               "sport": "RUNNING",
-              "description": "30 min récupération.",
+              "description": "30 min de recuperación.",
               "goalDuration": 1800,
               "goalRpe": 1,
               "workout": {
@@ -516,9 +516,9 @@
             },
             {
               "dayOfWeek": 0,
-              "name": "Sortie Longue allégée",
+              "name": "Tirada larga reducida",
               "sport": "RUNNING",
-              "description": "1h00 Endurance.",
+              "description": "1h00 de resistencia aeróbica.",
               "goalDuration": 3600,
               "goalRpe": 3,
               "workout": {
@@ -542,20 +542,20 @@
       ]
     },
     {
-      "name": "Cycle 2 : Développement Spécifique",
-      "description": "Augmentation de la durée des sorties longues et travail aux allures cibles.",
+      "name": "Ciclo 2: desarrollo específico",
+      "description": "Aumento de la duración de las tiradas largas y trabajo a los ritmos objetivo.",
       "phase": "SPECIFIC",
       "color": "#10b981",
       "weeks": [
         {
           "weekNumber": 5,
-          "theme": "Travail de VMA courte",
+          "theme": "Trabajo de series cortas",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Fractionné 30/30",
+              "name": "Series 30/30",
               "sport": "RUNNING",
-              "description": "20' écho + 2x(8x 30s vite / 30s lent) R=3' + 10' calme. Pour développer la cylindrée.",
+              "description": "20' de calentamiento + 2x (8x 30 s rápido / 30 s lento) R=3' + 10' de vuelta a la calma. Para desarrollar el motor.",
               "goalDuration": 3600,
               "goalRpe": 8,
               "workout": {
@@ -573,7 +573,7 @@
                   },
                   {
                     "stepType": "REPEAT",
-                    "name": "Bloc 1 30/30",
+                    "name": "Bloque 1 30/30",
                     "durationType": "OPEN",
                     "repeatBlock": {
                       "repetitions": 8,
@@ -605,7 +605,7 @@
                   },
                   {
                     "stepType": "INTERVAL_REST",
-                    "name": "Récup série",
+                    "name": "Recuperación entre series",
                     "durationType": "TIME",
                     "durationValue": 180,
                     "targets": [
@@ -617,7 +617,7 @@
                   },
                   {
                     "stepType": "REPEAT",
-                    "name": "Bloc 2 30/30",
+                    "name": "Bloque 2 30/30",
                     "durationType": "OPEN",
                     "repeatBlock": {
                       "repetitions": 8,
@@ -663,9 +663,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Endurance",
+              "name": "Rodaje de resistencia",
               "sport": "RUNNING",
-              "description": "1h00 footing cool.",
+              "description": "1h00 de rodaje suave.",
               "goalDuration": 3600,
               "goalRpe": 3,
               "workout": {
@@ -686,9 +686,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Footing",
+              "name": "Rodaje de recuperación",
               "sport": "RUNNING",
-              "description": "45 min récupération active.",
+              "description": "45 min de recuperación activa.",
               "goalDuration": 2700,
               "goalRpe": 2,
               "workout": {
@@ -709,9 +709,9 @@
             },
             {
               "dayOfWeek": 0,
-              "name": "Sortie Longue",
+              "name": "Tirada larga",
               "sport": "RUNNING",
-              "description": "1h30 Endurance.",
+              "description": "1h30 de resistencia aeróbica.",
               "goalDuration": 5400,
               "goalRpe": 3,
               "workout": {
@@ -734,13 +734,13 @@
         },
         {
           "weekNumber": 6,
-          "theme": "Seuil & Allure",
+          "theme": "Umbral y ritmo",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Séance au Seuil",
+              "name": "Sesión de umbral",
               "sport": "RUNNING",
-              "description": "20' écho + 3x 8 min au seuil (allure 10km/Semi) R=2' + 10' calme.",
+              "description": "20' de calentamiento + 3x 8 min a umbral (ritmo de 10 km/media) R=2' + 10' de vuelta a la calma.",
               "goalDuration": 3600,
               "goalRpe": 7,
               "workout": {
@@ -758,7 +758,7 @@
                   },
                   {
                     "stepType": "REPEAT",
-                    "name": "3x8min Seuil",
+                    "name": "3x 8 min umbral",
                     "durationType": "OPEN",
                     "repeatBlock": {
                       "repetitions": 3,
@@ -804,9 +804,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Endurance",
+              "name": "Rodaje de resistencia",
               "sport": "RUNNING",
-              "description": "1h00 Endurance.",
+              "description": "1h00 de resistencia aeróbica.",
               "goalDuration": 3600,
               "goalRpe": 3,
               "workout": {
@@ -827,9 +827,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Footing",
+              "name": "Rodaje suave",
               "sport": "RUNNING",
-              "description": "45 min cool.",
+              "description": "45 min suave.",
               "goalDuration": 2700,
               "goalRpe": 2,
               "workout": {
@@ -850,9 +850,9 @@
             },
             {
               "dayOfWeek": 0,
-              "name": "Sortie Longue avec Bloc",
+              "name": "Tirada larga con bloque",
               "sport": "RUNNING",
-              "description": "1h40 dont 2x 15min allure Marathon (4h30) incluses.",
+              "description": "1h40 con 2x 15 min a ritmo maratón (4h30).",
               "goalDuration": 6000,
               "goalRpe": 5,
               "workout": {
@@ -870,7 +870,7 @@
                   },
                   {
                     "stepType": "REPEAT",
-                    "name": "2x15' AS42",
+                    "name": "2x 15' RM",
                     "durationType": "OPEN",
                     "repeatBlock": {
                       "repetitions": 2,
@@ -918,13 +918,13 @@
         },
         {
           "weekNumber": 7,
-          "theme": "Volume et Endurance",
+          "theme": "Volumen y resistencia",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "VMA Longue",
+              "name": "Series largas",
               "sport": "RUNNING",
-              "description": "20' écho + 6x 800m (allure soutenue) R=2'30 + 10' calme.",
+              "description": "20' de calentamiento + 6x 800 m (ritmo exigente) R=2'30 + 10' de vuelta a la calma.",
               "goalDuration": 3900,
               "goalRpe": 8,
               "workout": {
@@ -942,7 +942,7 @@
                   },
                   {
                     "stepType": "REPEAT",
-                    "name": "6x800m",
+                    "name": "6x 800 m",
                     "durationType": "OPEN",
                     "repeatBlock": {
                       "repetitions": 6,
@@ -988,9 +988,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Endurance",
+              "name": "Rodaje de resistencia",
               "sport": "RUNNING",
-              "description": "1h00 Endurance.",
+              "description": "1h00 de resistencia aeróbica.",
               "goalDuration": 3600,
               "goalRpe": 3,
               "workout": {
@@ -1011,9 +1011,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Footing",
+              "name": "Rodaje suave",
               "sport": "RUNNING",
-              "description": "45 min cool.",
+              "description": "45 min suave.",
               "goalDuration": 2700,
               "goalRpe": 2,
               "workout": {
@@ -1034,9 +1034,9 @@
             },
             {
               "dayOfWeek": 0,
-              "name": "Sortie Longue",
+              "name": "Tirada larga",
               "sport": "RUNNING",
-              "description": "1h50 Endurance pure. Habituer le corps à la durée.",
+              "description": "1h50 de resistencia aeróbica pura. Para acostumbrar el cuerpo a la duración.",
               "goalDuration": 6600,
               "goalRpe": 4,
               "workout": {
@@ -1059,13 +1059,13 @@
         },
         {
           "weekNumber": 8,
-          "theme": "Semaine allégée",
+          "theme": "Semana de descarga",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Rappel Seuil court",
+              "name": "Toque corto de umbral",
               "sport": "RUNNING",
-              "description": "20' écho + 2x 10min seuil R=3' + 10' calme.",
+              "description": "20' de calentamiento + 2x 10 min a umbral R=3' + 10' de vuelta a la calma.",
               "goalDuration": 2880,
               "goalRpe": 6,
               "workout": {
@@ -1083,7 +1083,7 @@
                   },
                   {
                     "stepType": "REPEAT",
-                    "name": "2x10' Seuil",
+                    "name": "2x 10' umbral",
                     "durationType": "OPEN",
                     "repeatBlock": {
                       "repetitions": 2,
@@ -1129,9 +1129,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Endurance",
+              "name": "Rodaje de resistencia",
               "sport": "RUNNING",
-              "description": "45 min cool.",
+              "description": "45 min suave.",
               "goalDuration": 2700,
               "goalRpe": 3,
               "workout": {
@@ -1152,9 +1152,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Footing",
+              "name": "Rodaje suave",
               "sport": "RUNNING",
-              "description": "30 min très cool.",
+              "description": "30 min muy suave.",
               "goalDuration": 1800,
               "goalRpe": 2,
               "workout": {
@@ -1175,9 +1175,9 @@
             },
             {
               "dayOfWeek": 0,
-              "name": "Sortie Longue",
+              "name": "Tirada larga",
               "sport": "RUNNING",
-              "description": "1h20 Endurance.",
+              "description": "1h20 de resistencia aeróbica.",
               "goalDuration": 4800,
               "goalRpe": 3,
               "workout": {
@@ -1200,13 +1200,13 @@
         },
         {
           "weekNumber": 9,
-          "theme": "Intensité Marathon",
+          "theme": "Intensidad de maratón",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Pyramide",
+              "name": "Pirámide",
               "sport": "RUNNING",
-              "description": "Fartlek : 20' écho + 2'-4'-6'-4'-2' rapide / R= moitié temps + 10' calme.",
+              "description": "Fartlek: 20' de calentamiento + 2'-4'-6'-4'-2' rápido / R= la mitad del tiempo + 10' de vuelta a la calma.",
               "goalDuration": 3300,
               "goalRpe": 7,
               "workout": {
@@ -1337,9 +1337,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Endurance",
+              "name": "Rodaje de resistencia",
               "sport": "RUNNING",
-              "description": "1h00 footing.",
+              "description": "1h00 de rodaje.",
               "goalDuration": 3600,
               "goalRpe": 3,
               "workout": {
@@ -1360,9 +1360,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Footing",
+              "name": "Rodaje suave",
               "sport": "RUNNING",
-              "description": "45 min cool.",
+              "description": "45 min suave.",
               "goalDuration": 2700,
               "goalRpe": 2,
               "workout": {
@@ -1383,9 +1383,9 @@
             },
             {
               "dayOfWeek": 0,
-              "name": "Sortie Longue Spécifique",
+              "name": "Tirada larga específica",
               "sport": "RUNNING",
-              "description": "2h00 dont 2x 20min Allure Marathon.",
+              "description": "2h00 con 2x 20 min a ritmo maratón.",
               "goalDuration": 7200,
               "goalRpe": 6,
               "workout": {
@@ -1403,7 +1403,7 @@
                   },
                   {
                     "stepType": "REPEAT",
-                    "name": "2x20' AS42",
+                    "name": "2x 20' RM",
                     "durationType": "OPEN",
                     "repeatBlock": {
                       "repetitions": 2,
@@ -1451,13 +1451,13 @@
         },
         {
           "weekNumber": 10,
-          "theme": "Pic de volume - Semaine 1",
+          "theme": "Pico de volumen - semana 1",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Seuil Long",
+              "name": "Umbral largo",
               "sport": "RUNNING",
-              "description": "20' écho + 3x 12 min seuil R=3' + 10' calme.",
+              "description": "20' de calentamiento + 3x 12 min a umbral R=3' + 10' de vuelta a la calma.",
               "goalDuration": 3900,
               "goalRpe": 7,
               "workout": {
@@ -1475,7 +1475,7 @@
                   },
                   {
                     "stepType": "REPEAT",
-                    "name": "3x12' Seuil",
+                    "name": "3x 12' umbral",
                     "durationType": "OPEN",
                     "repeatBlock": {
                       "repetitions": 3,
@@ -1521,9 +1521,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Endurance",
+              "name": "Rodaje de resistencia",
               "sport": "RUNNING",
-              "description": "1h00 footing.",
+              "description": "1h00 de rodaje.",
               "goalDuration": 3600,
               "goalRpe": 3,
               "workout": {
@@ -1544,9 +1544,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Footing",
+              "name": "Rodaje suave",
               "sport": "RUNNING",
-              "description": "50 min cool.",
+              "description": "50 min suave.",
               "goalDuration": 3000,
               "goalRpe": 2,
               "workout": {
@@ -1567,9 +1567,9 @@
             },
             {
               "dayOfWeek": 0,
-              "name": "Sortie Longue",
+              "name": "Tirada larga",
               "sport": "RUNNING",
-              "description": "2h15 en endurance. C'est long, hydratez-vous bien.",
+              "description": "2h15 de resistencia aeróbica. Es larga: hidrátate bien.",
               "goalDuration": 8100,
               "goalRpe": 5,
               "workout": {
@@ -1592,13 +1592,13 @@
         },
         {
           "weekNumber": 11,
-          "theme": "Pic de volume - Semaine 2",
+          "theme": "Pico de volumen - semana 2",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "VMA Entretien",
+              "name": "Series de mantenimiento",
               "sport": "RUNNING",
-              "description": "20' écho + 10x 400m R=1'30 + 10' calme.",
+              "description": "20' de calentamiento + 10x 400 m R=1'30 + 10' de vuelta a la calma.",
               "goalDuration": 3600,
               "goalRpe": 8,
               "workout": {
@@ -1616,7 +1616,7 @@
                   },
                   {
                     "stepType": "REPEAT",
-                    "name": "10x400m",
+                    "name": "10x 400 m",
                     "durationType": "OPEN",
                     "repeatBlock": {
                       "repetitions": 10,
@@ -1662,9 +1662,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Endurance",
+              "name": "Rodaje de resistencia",
               "sport": "RUNNING",
-              "description": "1h00 footing.",
+              "description": "1h00 de rodaje.",
               "goalDuration": 3600,
               "goalRpe": 3,
               "workout": {
@@ -1685,9 +1685,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Footing",
+              "name": "Rodaje suave",
               "sport": "RUNNING",
-              "description": "45 min cool.",
+              "description": "45 min suave.",
               "goalDuration": 2700,
               "goalRpe": 2,
               "workout": {
@@ -1708,9 +1708,9 @@
             },
             {
               "dayOfWeek": 0,
-              "name": "La Sortie la plus longue",
+              "name": "La tirada más larga",
               "sport": "RUNNING",
-              "description": "2h30 dont 3x 15min Allure Marathon. Testez votre ravitaillement course.",
+              "description": "2h30 con 3x 15 min a ritmo maratón. Prueba tu avituallamiento de carrera.",
               "goalDuration": 9000,
               "goalRpe": 6,
               "workout": {
@@ -1728,7 +1728,7 @@
                   },
                   {
                     "stepType": "REPEAT",
-                    "name": "3x15' AS42",
+                    "name": "3x 15' RM",
                     "durationType": "OPEN",
                     "repeatBlock": {
                       "repetitions": 3,
@@ -1776,13 +1776,13 @@
         },
         {
           "weekNumber": 12,
-          "theme": "Début de la descente",
+          "theme": "Inicio de la puesta a punto",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Seuil",
+              "name": "Umbral",
               "sport": "RUNNING",
-              "description": "20' écho + 20 min seuil + 3' récup + 10 min seuil + 10' calme.",
+              "description": "20' de calentamiento + 20 min a umbral + 3' de recuperación + 10 min a umbral + 10' de vuelta a la calma.",
               "goalDuration": 3780,
               "goalRpe": 7,
               "workout": {
@@ -1800,7 +1800,7 @@
                   },
                   {
                     "stepType": "INTERVAL_ACTIVE",
-                    "name": "20min Seuil",
+                    "name": "20 min umbral",
                     "durationType": "TIME",
                     "durationValue": 1200,
                     "targets": [
@@ -1823,7 +1823,7 @@
                   },
                   {
                     "stepType": "INTERVAL_ACTIVE",
-                    "name": "10min Seuil",
+                    "name": "10 min umbral",
                     "durationType": "TIME",
                     "durationValue": 600,
                     "targets": [
@@ -1849,9 +1849,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Endurance",
+              "name": "Rodaje de resistencia",
               "sport": "RUNNING",
-              "description": "50 min footing.",
+              "description": "50 min de rodaje.",
               "goalDuration": 3000,
               "goalRpe": 3,
               "workout": {
@@ -1872,9 +1872,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Footing",
+              "name": "Rodaje suave",
               "sport": "RUNNING",
-              "description": "45 min cool.",
+              "description": "45 min suave.",
               "goalDuration": 2700,
               "goalRpe": 2,
               "workout": {
@@ -1895,9 +1895,9 @@
             },
             {
               "dayOfWeek": 0,
-              "name": "Sortie Longue",
+              "name": "Tirada larga",
               "sport": "RUNNING",
-              "description": "1h45 Endurance.",
+              "description": "1h45 de resistencia aeróbica.",
               "goalDuration": 6300,
               "goalRpe": 4,
               "workout": {
@@ -1921,20 +1921,20 @@
       ]
     },
     {
-      "name": "Cycle 3 : Affûtage & Compétition",
-      "description": "Réduction drastique du volume pour arriver frais le jour J (Tapering).",
+      "name": "Ciclo 3: puesta a punto y carrera",
+      "description": "Reducción drástica del volumen para llegar fresco el día de la carrera.",
       "phase": "TAPER",
       "color": "#f59e0b",
       "weeks": [
         {
           "weekNumber": 13,
-          "theme": "Affûtage - 70% du volume",
+          "theme": "Puesta a punto - 70 % del volumen",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Rappel Allure 42",
+              "name": "Toque de ritmo maratón",
               "sport": "RUNNING",
-              "description": "15' écho + 2x 10min AS42 R=2' + 10' calme.",
+              "description": "15' de calentamiento + 2x 10 min a RM R=2' + 10' de vuelta a la calma.",
               "goalDuration": 2820,
               "goalRpe": 5,
               "workout": {
@@ -1952,7 +1952,7 @@
                   },
                   {
                     "stepType": "REPEAT",
-                    "name": "2x10' AS42",
+                    "name": "2x 10' RM",
                     "durationType": "OPEN",
                     "repeatBlock": {
                       "repetitions": 2,
@@ -1998,9 +1998,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Endurance",
+              "name": "Rodaje de resistencia",
               "sport": "RUNNING",
-              "description": "45 min footing.",
+              "description": "45 min de rodaje.",
               "goalDuration": 2700,
               "goalRpe": 3,
               "workout": {
@@ -2021,9 +2021,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Footing",
+              "name": "Rodaje suave",
               "sport": "RUNNING",
-              "description": "30 min cool.",
+              "description": "30 min suave.",
               "goalDuration": 1800,
               "goalRpe": 2,
               "workout": {
@@ -2044,9 +2044,9 @@
             },
             {
               "dayOfWeek": 0,
-              "name": "Sortie Longue",
+              "name": "Tirada larga",
               "sport": "RUNNING",
-              "description": "1h15 Endurance.",
+              "description": "1h15 de resistencia aeróbica.",
               "goalDuration": 4500,
               "goalRpe": 3,
               "workout": {
@@ -2069,13 +2069,13 @@
         },
         {
           "weekNumber": 14,
-          "theme": "Affûtage - 50% du volume",
+          "theme": "Puesta a punto - 50 % del volumen",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Vitesse légère",
+              "name": "Velocidad suave",
               "sport": "RUNNING",
-              "description": "15' écho + 8x 1min vite / 1min lent + 10' calme. Juste pour tourner les jambes.",
+              "description": "15' de calentamiento + 8x 1 min rápido / 1 min lento + 10' de vuelta a la calma. Solo para soltar las piernas.",
               "goalDuration": 2460,
               "goalRpe": 6,
               "workout": {
@@ -2093,7 +2093,7 @@
                   },
                   {
                     "stepType": "REPEAT",
-                    "name": "8x1'/1'",
+                    "name": "8x 1'/1'",
                     "durationType": "OPEN",
                     "repeatBlock": {
                       "repetitions": 8,
@@ -2139,9 +2139,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Endurance",
+              "name": "Rodaje de resistencia",
               "sport": "RUNNING",
-              "description": "40 min footing.",
+              "description": "40 min de rodaje.",
               "goalDuration": 2400,
               "goalRpe": 3,
               "workout": {
@@ -2162,9 +2162,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Footing",
+              "name": "Rodaje suave",
               "sport": "RUNNING",
-              "description": "30 min très cool.",
+              "description": "30 min muy suave.",
               "goalDuration": 1800,
               "goalRpe": 2,
               "workout": {
@@ -2185,9 +2185,9 @@
             },
             {
               "dayOfWeek": 0,
-              "name": "Sortie Longue",
+              "name": "Tirada larga",
               "sport": "RUNNING",
-              "description": "1h00 Endurance.",
+              "description": "1h00 de resistencia aeróbica.",
               "goalDuration": 3600,
               "goalRpe": 3,
               "workout": {
@@ -2210,13 +2210,13 @@
         },
         {
           "weekNumber": 15,
-          "theme": "Semaine pré-course",
+          "theme": "Semana previa a la carrera",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Dernier rappel AS42",
+              "name": "Último toque de RM",
               "sport": "RUNNING",
-              "description": "15' écho + 10min AS42 + 10' calme.",
+              "description": "15' de calentamiento + 10 min a RM + 10' de vuelta a la calma.",
               "goalDuration": 2100,
               "goalRpe": 4,
               "workout": {
@@ -2259,9 +2259,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Endurance très cool",
+              "name": "Resistencia aeróbica muy suave",
               "sport": "RUNNING",
-              "description": "30 min footing lent.",
+              "description": "30 min de rodaje lento.",
               "goalDuration": 1800,
               "goalRpe": 2,
               "workout": {
@@ -2282,17 +2282,17 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Repos total",
+              "name": "Descanso total",
               "sport": "RUNNING",
-              "description": "Repos complet.",
+              "description": "Descanso total.",
               "goalDuration": 0,
               "goalRpe": 0
             },
             {
               "dayOfWeek": 0,
-              "name": "Sortie courte",
+              "name": "Rodaje corto",
               "sport": "RUNNING",
-              "description": "40 min Endurance.",
+              "description": "40 min de resistencia aeróbica.",
               "goalDuration": 2400,
               "goalRpe": 3,
               "workout": {
@@ -2315,13 +2315,13 @@
         },
         {
           "weekNumber": 16,
-          "theme": "SEMAINE DU MARATHON",
+          "theme": "SEMANA DEL MARATÓN",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Décrassage",
+              "name": "Rodaje de activación",
               "sport": "RUNNING",
-              "description": "30 min très lent pour faire circuler le sang.",
+              "description": "30 min muy lento para activar la circulación.",
               "goalDuration": 1800,
               "goalRpe": 1,
               "workout": {
@@ -2342,9 +2342,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Activation",
+              "name": "Rodaje de activación",
               "sport": "RUNNING",
-              "description": "20 min très cool + 3 accélérations courtes.",
+              "description": "20 min muy suave + 3 aceleraciones cortas.",
               "goalDuration": 1500,
               "goalRpe": 2,
               "workout": {
@@ -2362,7 +2362,7 @@
                   },
                   {
                     "stepType": "REPEAT",
-                    "name": "3 accels",
+                    "name": "3 aceleraciones",
                     "durationType": "OPEN",
                     "repeatBlock": {
                       "repetitions": 3,
@@ -2397,9 +2397,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Veille de course (Optionnel)",
+              "name": "Víspera de la carrera (opcional)",
               "sport": "RUNNING",
-              "description": "15 min footing ultra lent ou REPOS.",
+              "description": "15 min de trote ultralento o DESCANSO.",
               "goalDuration": 900,
               "goalRpe": 1,
               "workout": {
@@ -2420,9 +2420,9 @@
             },
             {
               "dayOfWeek": 0,
-              "name": "MARATHON",
+              "name": "MARATÓN",
               "sport": "RUNNING",
-              "description": "Jour J. Objectif 4h30. Partez prudemment (6:24/km) et profitez !",
+              "description": "Día de carrera. Objetivo 4h30. Sal con prudencia (6:24/km) y ¡disfruta!",
               "goalDistance": 42195,
               "goalDuration": 16200,
               "goalRpe": 10,

@@ -6,14 +6,17 @@ export const article2: BlogPost = {
     title: {
       en: 'How AI is Transforming Endurance Training',
       fr: "Comment l'IA transforme l'entraînement d'endurance",
+      es: 'Cómo la IA está transformando el entrenamiento de resistencia',
     },
     description: {
       en: 'Explore the science behind AI-powered training analysis and how it helps prevent injuries while optimizing performance.',
       fr: "Explorez la science derrière l'analyse d'entraînement assistée par IA et comment elle aide à prévenir les blessures tout en optimisant les performances.",
+      es: 'Explora la ciencia que hay detrás del análisis del entrenamiento asistido por IA y cómo ayuda a prevenir lesiones mientras optimiza el rendimiento.',
     },
     excerpt: {
       en: 'Artificial intelligence is revolutionizing how we understand and optimize endurance training, providing insights that were previously impossible to detect.',
       fr: "L'intelligence artificielle révolutionne notre compréhension et notre optimisation de l'entraînement d'endurance, fournissant des informations qu'il était auparavant impossible de détecter.",
+      es: 'La inteligencia artificial está revolucionando la forma en que entendemos y optimizamos el entrenamiento de resistencia, con información que antes era imposible detectar.',
     },
     author: {
       name: 'OpenAthlete Team',
@@ -139,6 +142,65 @@ export const article2: BlogPost = {
           accessibles aux coachs et aux athlètes de tous niveaux. Notre
           plateforme combine une IA de pointe avec un design intuitif, rendant
           l'analyse d'entraînement sophistiquée accessible à tous.
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          La llegada de la inteligencia artificial al entrenamiento de
+          resistencia no es una simple moda: es un cambio de fondo en la forma
+          de abordar el desarrollo de los atletas. En este artículo veremos cómo
+          la IA está transformando el panorama del entrenamiento de resistencia.
+        </p>
+
+        <h2>La ciencia de la carga de entrenamiento</h2>
+        <p>
+          Entender la carga de entrenamiento es clave para optimizar el
+          rendimiento y prevenir lesiones. Los métodos tradicionales se basan en
+          métricas sencillas como el volumen y la intensidad, pero la IA puede
+          analizar patrones complejos a partir de múltiples variables:
+        </p>
+        <ul>
+          <li>Volumen e intensidad del entrenamiento</li>
+          <li>Marcadores de recuperación (HRV, calidad del sueño)</li>
+          <li>Factores ambientales (temperatura, altitud)</li>
+          <li>Patrones de respuesta individuales</li>
+        </ul>
+
+        <h2>Reconocimiento de patrones</h2>
+        <p>
+          Uno de los grandes puntos fuertes de la IA es su capacidad para
+          reconocer patrones que a las personas se nos pueden escapar. Al
+          analizar los datos históricos de miles de sesiones de entrenamiento,
+          la IA puede identificar señales sutiles que preceden al
+          sobreentrenamiento o a una lesión.
+        </p>
+
+        <h2>Personalización a gran escala</h2>
+        <p>
+          Cada atleta es único, y lo que funciona para uno puede no funcionar
+          para otro. La IA permite una personalización real porque aprende de
+          las respuestas individuales de cada atleta y adapta sus
+          recomendaciones en consecuencia.
+        </p>
+
+        <h2>El futuro del entrenamiento</h2>
+        <p>
+          La IA no sustituye a los entrenadores: los potencia. Al automatizar
+          las tareas repetitivas y aportar información basada en datos, los
+          entrenadores pueden centrarse en lo que mejor saben hacer: construir
+          relaciones, motivar y tomar decisiones estratégicas.
+        </p>
+
+        <p>
+          En OpenAthlete nos hemos propuesto que estas capacidades avanzadas
+          estén al alcance de entrenadores y atletas de todos los niveles.
+          Nuestra plataforma combina una IA de vanguardia con un diseño
+          intuitivo, para que cualquiera pueda acceder a un análisis del
+          entrenamiento sofisticado.
         </p>
       </div>
     );

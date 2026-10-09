@@ -2,6 +2,7 @@ import {
   OrganizationStructuredData,
   WebSiteStructuredData,
 } from '@/components/seo/structured-data';
+import { DEFAULT_LOCALE, OG_LOCALES, SUPPORTED_LOCALES } from '@/utils/locales';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import Script from 'next/script';
@@ -34,7 +35,9 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    alternateLocale: 'fr_FR',
+    alternateLocale: SUPPORTED_LOCALES.filter(
+      (locale) => locale !== DEFAULT_LOCALE,
+    ).map((locale) => OG_LOCALES[locale]),
     url: 'https://openathlete.org',
     siteName: 'OpenAthlete',
     title: 'OpenAthlete — AI-assisted endurance coaching platform',

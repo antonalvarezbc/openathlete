@@ -6,14 +6,17 @@ export const articleRpeVsHr: BlogPost = {
     title: {
       en: "RPE vs Heart Rate: Why Your Heart Doesn't Tell the Whole Story",
       fr: 'RPE vs Fréquence Cardiaque : Pourquoi votre cœur ne dit pas tout',
+      es: 'RPE o frecuencia cardíaca: por qué tu corazón no lo cuenta todo',
     },
     description: {
       en: 'Discover why RPE (Rate of Perceived Exertion) and internal load matter more than heart rate alone. Learn how AI cross-references both to prevent overtraining.',
       fr: "Découvrez pourquoi le RPE (Ressenti) et la charge interne comptent plus que la fréquence cardiaque seule. Apprenez comment l'IA croise les deux pour prévenir le surentraînement.",
+      es: 'Descubre por qué el RPE (esfuerzo percibido) y la carga interna importan más que la frecuencia cardíaca por sí sola, y cómo la IA cruza ambos datos para prevenir el sobreentrenamiento.',
     },
     excerpt: {
       en: "Your heart rate shows external load, but RPE reveals internal load. Stress, sleep, and mental fatigue impact performance in ways your watch can't measure.",
       fr: 'Votre fréquence cardiaque montre la charge externe, mais le RPE révèle la charge interne. Le stress, le sommeil et la fatigue mentale impactent les performances de manière que votre montre ne peut pas mesurer.',
+      es: 'Tu frecuencia cardíaca refleja la carga externa, pero el RPE revela la carga interna. El estrés, el sueño y la fatiga mental afectan al rendimiento de formas que tu reloj no puede medir.',
     },
     author: {
       name: 'OpenAthlete Team',
@@ -357,6 +360,178 @@ export const articleRpeVsHr: BlogPost = {
           </a>{' '}
           et laissez l'IA croiser votre charge externe et interne pour vous
           garder en bonne santé et progresser.
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          <strong>
+            Acabas de terminar un 10K. Tu frecuencia cardíaca media ha sido de
+            165 ppm, justo lo que marcaba tu plan de entrenamiento. Pero algo no
+            cuadra.
+          </strong>{' '}
+          La sesión se te ha hecho más dura de lo que debería. Tenías las
+          piernas pesadas desde el principio. Te preguntas si estás
+          sobreentrenado, pero tu reloj dice que todo va bien.
+        </p>
+
+        <p>
+          Ese es el problema de fiarse solo de la frecuencia cardíaca. Tu
+          frecuencia cardíaca mide la <strong>carga externa</strong>: lo que
+          hace tu cuerpo. Pero no capta la <strong>carga interna</strong>: cómo
+          responde tu cuerpo. En esa diferencia es donde aparecen las lesiones y
+          se estanca el progreso.
+        </p>
+
+        <h2>La ciencia: carga externa frente a carga interna</h2>
+        <p>
+          Las ciencias del deporte distinguen dos tipos de estrés del
+          entrenamiento:
+        </p>
+        <ul>
+          <li>
+            <strong>Carga externa:</strong> lo que haces: distancia, ritmo,
+            potencia, zonas de frecuencia cardíaca. Es lo que registran Garmin o
+            Strava.
+          </li>
+          <li>
+            <strong>Carga interna:</strong> cómo responde tu cuerpo: fatiga,
+            estrés, estado de recuperación, esfuerzo percibido. Es lo que mide
+            el RPE.
+          </li>
+        </ul>
+
+        <p>
+          Esta es la idea clave:{' '}
+          <strong>
+            una misma carga externa puede producir cargas internas muy distintas
+          </strong>{' '}
+          según tu estado de recuperación, tu nivel de estrés, la calidad de tu
+          sueño y tu estado mental.
+        </p>
+
+        <h2>Por qué la frecuencia cardíaca sola no basta</h2>
+        <p>
+          Tu frecuencia cardíaca depende de muchísimos factores, más allá de la
+          intensidad del entrenamiento:
+        </p>
+        <ul>
+          <li>
+            <strong>Cafeína:</strong> puede elevar la FC entre 10 y 15 ppm
+          </li>
+          <li>
+            <strong>Deshidratación:</strong> reduce el volumen sistólico y
+            aumenta la FC
+          </li>
+          <li>
+            <strong>Calor:</strong> la deriva cardiovascular puede sumar entre
+            10 y 20 ppm
+          </li>
+          <li>
+            <strong>Estrés:</strong> el cortisol elevado afecta a la
+            variabilidad de la FC
+          </li>
+          <li>
+            <strong>Falta de sueño:</strong> altera el funcionamiento del
+            sistema nervioso autónomo
+          </li>
+        </ul>
+
+        <p>
+          Y, sobre todo, la frecuencia cardíaca no te dice si una sesión ha sido
+          «fácil» o «dura» en relación con tu estado actual. Un rodaje a 160 ppm
+          después de una buena noche de sueño no se parece en nada a uno a 160
+          ppm tras tres noches durmiendo mal, aunque los números sean idénticos.
+        </p>
+
+        <h2>La solución: el RPE</h2>
+        <p>
+          El esfuerzo percibido (RPE) cubre ese hueco. Cuando valoras una sesión
+          en una escala del 1 al 10, estás cuantificando tu carga interna. Los
+          estudios muestran que el RPE se correlaciona mucho con el estrés
+          fisiológico real, a menudo con más precisión que la frecuencia
+          cardíaca por sí sola.
+        </p>
+
+        <p>
+          Pero aquí está el reto: el RPE es subjetivo. Varía de un atleta a
+          otro. Puede verse influido por el estado de ánimo, la motivación e
+          incluso el tiempo que hace. Por eso necesitas ambos datos, la carga
+          externa (FC, ritmo, potencia) y la carga interna (RPE), cruzados de
+          forma inteligente.
+        </p>
+
+        <h2>Cómo la IA une ambos mundos</h2>
+        <p>
+          Aquí es donde la IA de OpenAthlete se vuelve imprescindible. Después
+          de cada sesión, la plataforma te pide tu RPE. Luego analiza:
+        </p>
+        <ul>
+          <li>Tu RPE en relación con tus patrones históricos</li>
+          <li>Tu RPE en relación con la carga externa (ritmo, FC, potencia)</li>
+          <li>
+            Las tendencias a lo largo del tiempo: ¿se te hacen más duras las
+            sesiones?
+          </li>
+          <li>
+            La correlación con el sueño, el estrés y los marcadores de
+            recuperación
+          </li>
+        </ul>
+
+        <p>
+          Cuando tu RPE se dispara mientras tu frecuencia cardíaca sigue normal,
+          es una señal de alarma. Puede indicar:
+        </p>
+        <ul>
+          <li>Síndrome de sobreentrenamiento</li>
+          <li>Recuperación insuficiente</li>
+          <li>Fatiga mental</li>
+          <li>Primeros síntomas de una enfermedad</li>
+        </ul>
+
+        <p>
+          La IA detecta estos patrones antes de que se conviertan en problemas.
+          Puede proponerte bajar la intensidad, añadir un día de recuperación o
+          revisar la calidad de tu sueño. Este enfoque proactivo evita las
+          lesiones y el agotamiento que frenan a tantos atletas.
+        </p>
+
+        <h2>Un ejemplo real</h2>
+        <p>
+          Sarah, maratoniana, se dio cuenta de que su RPE era sistemáticamente 2
+          o 3 puntos más alto de lo normal para el mismo ritmo y la misma
+          frecuencia cardíaca. Su reloj decía que todo iba bien: estaba dentro
+          de sus zonas. Pero OpenAthlete detectó el patrón y le propuso reducir
+          el volumen un 20% durante una semana.
+        </p>
+
+        <p>
+          Dos semanas después, su RPE había vuelto a la normalidad. Se libró de
+          lo que probablemente habría acabado en una fractura por estrés. Su
+          reloj nunca lo habría detectado: los números parecían perfectos. Pero
+          su cuerpo le estaba contando otra historia a través del RPE.
+        </p>
+
+        <h2>En resumen</h2>
+        <p>
+          La frecuencia cardíaca es un dato valioso, pero incompleto. La
+          respuesta de tu cuerpo al entrenamiento, recogida a través del RPE, es
+          igual de importante. Combinando ambos con un análisis inteligente,
+          puedes entrenar mejor, prevenir lesiones y progresar de forma
+          constante.
+        </p>
+
+        <p>
+          <strong>Deja de adivinar y empieza hoy a entrenar con IA.</strong>{' '}
+          <a href="https://app.openathlete.org/auth/create-account">
+            Regístrate en OpenAthlete
+          </a>{' '}
+          y deja que la IA cruce tu carga externa y tu carga interna para que
+          sigas sano y progresando.
         </p>
       </div>
     );

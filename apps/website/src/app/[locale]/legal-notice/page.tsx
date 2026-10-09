@@ -1,6 +1,11 @@
 import { WebPageStructuredData } from '@/components/seo/structured-data';
 import { SITE_URL } from '@/config';
 import { m } from '@/paraglide/messages';
+import {
+  isSupportedLocale,
+  languageAlternates,
+  localePrefix,
+} from '@/utils/locales';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
@@ -11,7 +16,7 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  if (locale !== 'en' && locale !== 'fr') {
+  if (!isSupportedLocale(locale)) {
     notFound();
   }
 
@@ -21,11 +26,7 @@ export async function generateMetadata({
     title: m.legal_notice_title(),
     alternates: {
       canonical: canonicalUrl,
-      languages: {
-        en: `${SITE_URL}/legal-notice`,
-        fr: `${SITE_URL}/fr/legal-notice`,
-        'x-default': `${SITE_URL}/legal-notice`,
-      },
+      languages: languageAlternates('/legal-notice'),
     },
   };
 }
@@ -37,7 +38,7 @@ export default async function LegalNoticePage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  if (locale !== 'en' && locale !== 'fr') {
+  if (!isSupportedLocale(locale)) {
     notFound();
   }
 
@@ -48,7 +49,7 @@ export default async function LegalNoticePage({
       <WebPageStructuredData
         title={m.legal_notice_title()}
         description={m.legal_notice_identification_content()}
-        url={`${SITE_URL}${locale === 'en' ? '' : `/${locale}`}/legal-notice`}
+        url={`${SITE_URL}${localePrefix(locale)}/legal-notice`}
       />
       <div className="mx-auto max-w-3xl p-8 space-y-8">
         <header className="space-y-2">

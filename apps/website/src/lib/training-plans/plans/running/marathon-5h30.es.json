@@ -1,8 +1,8 @@
 {
   "plan": {
-    "name": "Marathon Plan 5h30 - Finisher Goal",
-    "description": "12-week training plan designed to complete a marathon in approximately 5h30. Ideal for recreational runners wishing to structure their preparation with 3 sessions per week. The progression is gentle to avoid injury.",
-    "goal": "Complete the marathon in 5h30",
+    "name": "Plan de maratón 5h30 - objetivo: terminar",
+    "description": "Plan de entrenamiento de 12 semanas para completar un maratón en unas 5h30. Ideal para corredores populares que quieren estructurar su preparación con 3 sesiones a la semana. La progresión es suave para evitar lesiones.",
+    "goal": "Completar el maratón en 5h30",
     "sportType": "RUNNING",
     "distance": 42195,
     "duration": 12,
@@ -10,20 +10,20 @@
   },
   "cycles": [
     {
-      "name": "Cycle 1: General Development",
-      "description": "Building base endurance and developing VMA (aerobic capacity). Getting the body used to regular effort.",
+      "name": "Ciclo 1: desarrollo general",
+      "description": "Construcción de la resistencia de base y desarrollo de la VAM (capacidad aeróbica). El cuerpo se acostumbra al esfuerzo regular.",
       "phase": "BASE",
       "color": "#3b82f6",
       "weeks": [
         {
           "weekNumber": 1,
-          "theme": "Resuming Training & Muscle Awakening",
+          "theme": "Vuelta al entrenamiento y activación muscular",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Base Endurance",
+              "name": "Resistencia de base",
               "sport": "RUNNING",
-              "description": "Run in total respiratory comfort. You should be able to speak without being out of breath.",
+              "description": "Corre con una respiración totalmente cómoda. Deberías poder hablar sin quedarte sin aliento.",
               "goalDuration": 2400,
               "goalRpe": 3,
               "workout": {
@@ -44,9 +44,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Speed Initiation (30/30)",
+              "name": "Iniciación a la velocidad (30/30)",
               "sport": "RUNNING",
-              "description": "Fun session to energize the stride without exhaustion.",
+              "description": "Sesión divertida para dar dinamismo a la zancada sin agotarte.",
               "goalDuration": 2400,
               "goalRpe": 7,
               "workout": {
@@ -64,7 +64,7 @@
                   },
                   {
                     "stepType": "REPEAT",
-                    "name": "8x 30s/30s",
+                    "name": "8x 30 s/30 s",
                     "durationType": "OPEN",
                     "repeatBlock": {
                       "repetitions": 8,
@@ -110,9 +110,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Weekly Long Run",
+              "name": "Tirada larga semanal",
               "sport": "RUNNING",
-              "description": "Endurance run. Feel free to walk 1 minute every 15 minutes if needed.",
+              "description": "Rodaje de resistencia aeróbica. Si lo necesitas, camina 1 minuto cada 15 minutos sin problema.",
               "goalDuration": 3000,
               "goalRpe": 3,
               "workout": {
@@ -135,13 +135,13 @@
         },
         {
           "weekNumber": 2,
-          "theme": "Volume Increase",
+          "theme": "Aumento de volumen",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Base Endurance",
+              "name": "Resistencia de base",
               "sport": "RUNNING",
-              "description": "Easy run. Slightly increasing duration.",
+              "description": "Rodaje suave. Alargamos un poco la duración.",
               "goalDuration": 2700,
               "goalRpe": 3,
               "workout": {
@@ -162,9 +162,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Short Intervals (45/45)",
+              "name": "Series cortas (45/45)",
               "sport": "RUNNING",
-              "description": "Sustaining a slightly longer effort.",
+              "description": "Mantener un esfuerzo algo más largo.",
               "goalDuration": 2700,
               "goalRpe": 7,
               "workout": {
@@ -182,7 +182,7 @@
                   },
                   {
                     "stepType": "REPEAT",
-                    "name": "8x 45s/45s",
+                    "name": "8x 45 s/45 s",
                     "durationType": "OPEN",
                     "repeatBlock": {
                       "repetitions": 8,
@@ -228,9 +228,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Weekly Long Run",
+              "name": "Tirada larga semanal",
               "sport": "RUNNING",
-              "description": "1h00 of calm running. Hydrate well.",
+              "description": "1h00 de carrera tranquila. Hidrátate bien.",
               "goalDuration": 3600,
               "goalRpe": 3,
               "workout": {
@@ -253,13 +253,13 @@
         },
         {
           "weekNumber": 3,
-          "theme": "Consolidation",
+          "theme": "Consolidación",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Base Endurance",
+              "name": "Resistencia de base",
               "sport": "RUNNING",
-              "description": "50 minutes at easy pace.",
+              "description": "50 minutos a ritmo suave.",
               "goalDuration": 3000,
               "goalRpe": 3,
               "workout": {
@@ -280,9 +280,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Speed Pyramid",
+              "name": "Pirámide de velocidad",
               "sport": "RUNNING",
-              "description": "Varying paces and effort durations.",
+              "description": "Variar los ritmos y la duración de los esfuerzos.",
               "goalDuration": 3000,
               "goalRpe": 7,
               "workout": {
@@ -300,7 +300,7 @@
                   },
                   {
                     "stepType": "REPEAT",
-                    "name": "Pyramid (1-2-3-2-1 min)",
+                    "name": "Pirámide (1-2-3-2-1 min)",
                     "durationType": "OPEN",
                     "repeatBlock": {
                       "repetitions": 1,
@@ -423,9 +423,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Weekly Long Run",
+              "name": "Tirada larga semanal",
               "sport": "RUNNING",
-              "description": "1h10 run. Test your gear (socks, shoes).",
+              "description": "1h10 de carrera. Prueba tu equipamiento (calcetines, zapatillas).",
               "goalDuration": 4200,
               "goalRpe": 3,
               "workout": {
@@ -448,13 +448,13 @@
         },
         {
           "weekNumber": 4,
-          "theme": "Assimilation (Recovery Week)",
+          "theme": "Asimilación (semana de recuperación)",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Easy Jog",
+              "name": "Trote suave",
               "sport": "RUNNING",
-              "description": "Reducing duration to recover.",
+              "description": "Reducimos la duración para recuperar.",
               "goalDuration": 2100,
               "goalRpe": 2,
               "workout": {
@@ -475,9 +475,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Pace Reminders",
+              "name": "Toques de ritmo",
               "sport": "RUNNING",
-              "description": "Some short accelerations without pushing hard.",
+              "description": "Unas cuantas aceleraciones cortas sin forzar.",
               "goalDuration": 2400,
               "goalRpe": 5,
               "workout": {
@@ -495,7 +495,7 @@
                   },
                   {
                     "stepType": "REPEAT",
-                    "name": "6x 1min / 1min",
+                    "name": "6x 1 min / 1 min",
                     "durationType": "OPEN",
                     "repeatBlock": {
                       "repetitions": 6,
@@ -541,9 +541,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Recovery Long Run",
+              "name": "Tirada larga de recuperación",
               "sport": "RUNNING",
-              "description": "Only 50min this weekend to start fresh next week.",
+              "description": "Solo 50 min este fin de semana para empezar fresco la semana siguiente.",
               "goalDuration": 3000,
               "goalRpe": 3,
               "workout": {
@@ -567,20 +567,20 @@
       ]
     },
     {
-      "name": "Cycle 2: Specific Development",
-      "description": "Increasing long run duration and integrating Marathon Pace (approx. 7:50 min/km).",
+      "name": "Ciclo 2: desarrollo específico",
+      "description": "Aumento de la duración de las tiradas largas e integración del ritmo maratón (aprox. 7:50 min/km).",
       "phase": "SPECIFIC",
       "color": "#10b981",
       "weeks": [
         {
           "weekNumber": 5,
-          "theme": "Aerobic Threshold Work",
+          "theme": "Trabajo de umbral aeróbico",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Base Endurance",
+              "name": "Resistencia de base",
               "sport": "RUNNING",
-              "description": "Resuming volume.",
+              "description": "Retomamos el volumen.",
               "goalDuration": 2700,
               "goalRpe": 3,
               "workout": {
@@ -601,9 +601,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Long Intervals",
+              "name": "Series largas",
               "sport": "RUNNING",
-              "description": "5-minute efforts at a sustained but controlled pace (threshold).",
+              "description": "Esfuerzos de 5 minutos a un ritmo sostenido pero controlado (umbral).",
               "goalDuration": 3000,
               "goalRpe": 6,
               "workout": {
@@ -621,7 +621,7 @@
                   },
                   {
                     "stepType": "REPEAT",
-                    "name": "3x 5min Threshold",
+                    "name": "3x 5 min umbral",
                     "durationType": "OPEN",
                     "repeatBlock": {
                       "repetitions": 3,
@@ -667,9 +667,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Long Run (1h20)",
+              "name": "Tirada larga (1h20)",
               "sport": "RUNNING",
-              "description": "Passing the 1h20 mark. Bring water.",
+              "description": "Superas la marca de 1h20. Lleva agua.",
               "goalDuration": 4800,
               "goalRpe": 3,
               "workout": {
@@ -692,13 +692,13 @@
         },
         {
           "weekNumber": 6,
-          "theme": "Marathon Pace (MP)",
+          "theme": "Ritmo maratón (RM)",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Endurance",
+              "name": "Resistencia aeróbica",
               "sport": "RUNNING",
-              "description": "50-minute jog.",
+              "description": "Rodaje de 50 minutos.",
               "goalDuration": 3000,
               "goalRpe": 3,
               "workout": {
@@ -719,9 +719,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Discovering Marathon Pace",
+              "name": "Descubrir el ritmo maratón",
               "sport": "RUNNING",
-              "description": "2 blocks of 10 min at your target pace (approx. 7:50/km).",
+              "description": "2 bloques de 10 min a tu ritmo objetivo (aprox. 7:50/km).",
               "goalDuration": 3300,
               "goalRpe": 5,
               "workout": {
@@ -739,7 +739,7 @@
                   },
                   {
                     "stepType": "REPEAT",
-                    "name": "2x 10min MP",
+                    "name": "2x 10 min RM",
                     "durationType": "OPEN",
                     "repeatBlock": {
                       "repetitions": 2,
@@ -785,9 +785,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Long Run 1h30",
+              "name": "Tirada larga de 1h30",
               "sport": "RUNNING",
-              "description": "Base endurance. 1h30 is an important milestone.",
+              "description": "Resistencia de base. 1h30 es un hito importante.",
               "goalDuration": 5400,
               "goalRpe": 3,
               "workout": {
@@ -810,13 +810,13 @@
         },
         {
           "weekNumber": 7,
-          "theme": "Volume and Endurance",
+          "theme": "Volumen y resistencia",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Endurance",
+              "name": "Resistencia aeróbica",
               "sport": "RUNNING",
-              "description": "Steady 1-hour jog.",
+              "description": "Rodaje regular de 1 hora.",
               "goalDuration": 3600,
               "goalRpe": 3,
               "workout": {
@@ -837,9 +837,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Long Repetitions",
+              "name": "Repeticiones largas",
               "sport": "RUNNING",
-              "description": "3x 8min at aerobic threshold (slightly faster than marathon pace).",
+              "description": "3x 8 min a umbral aeróbico (algo más rápido que el ritmo maratón).",
               "goalDuration": 3600,
               "goalRpe": 6,
               "workout": {
@@ -857,7 +857,7 @@
                   },
                   {
                     "stepType": "REPEAT",
-                    "name": "3x 8min Threshold",
+                    "name": "3x 8 min umbral",
                     "durationType": "OPEN",
                     "repeatBlock": {
                       "repetitions": 3,
@@ -903,9 +903,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Long Run 1h45",
+              "name": "Tirada larga de 1h45",
               "sport": "RUNNING",
-              "description": "Long run. Start testing your gels or energy bars.",
+              "description": "Tirada larga. Empieza a probar tus geles o barritas energéticas.",
               "goalDuration": 6300,
               "goalRpe": 3,
               "workout": {
@@ -928,13 +928,13 @@
         },
         {
           "weekNumber": 8,
-          "theme": "Recovery Week",
+          "theme": "Semana de recuperación",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Short Jog",
+              "name": "Trote corto",
               "sport": "RUNNING",
-              "description": "Only 40 minutes.",
+              "description": "Solo 40 minutos.",
               "goalDuration": 2400,
               "goalRpe": 2,
               "workout": {
@@ -955,9 +955,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Light Fartlek",
+              "name": "Fartlek suave",
               "sport": "RUNNING",
-              "description": "Speed play by feel, without forcing.",
+              "description": "Juego de ritmos por sensaciones, sin forzar.",
               "goalDuration": 2400,
               "goalRpe": 4,
               "workout": {
@@ -977,7 +977,7 @@
                     "stepType": "STEADY",
                     "durationType": "TIME",
                     "durationValue": 1200,
-                    "name": "Free Fartlek",
+                    "name": "Fartlek libre",
                     "targets": [
                       {
                         "targetType": "RPE",
@@ -1001,9 +1001,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "1h15 Run",
+              "name": "Rodaje de 1h15",
               "sport": "RUNNING",
-              "description": "Reduced volume to assimilate the work of previous weeks.",
+              "description": "Volumen reducido para asimilar el trabajo de las semanas anteriores.",
               "goalDuration": 4500,
               "goalRpe": 3,
               "workout": {
@@ -1026,13 +1026,13 @@
         },
         {
           "weekNumber": 9,
-          "theme": "High Volume - Peak Form",
+          "theme": "Gran volumen - pico de forma",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Endurance",
+              "name": "Resistencia aeróbica",
               "sport": "RUNNING",
-              "description": "50 minutes cool.",
+              "description": "50 minutos suave.",
               "goalDuration": 3000,
               "goalRpe": 3,
               "workout": {
@@ -1053,9 +1053,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Marathon Pace Blocks",
+              "name": "Bloques a ritmo maratón",
               "sport": "RUNNING",
-              "description": "2x 20 minutes at marathon pace. You must memorize this pace.",
+              "description": "2x 20 minutos a ritmo maratón. Tienes que memorizar este ritmo.",
               "goalDuration": 4200,
               "goalRpe": 5,
               "workout": {
@@ -1073,7 +1073,7 @@
                   },
                   {
                     "stepType": "REPEAT",
-                    "name": "2x 20min MP",
+                    "name": "2x 20 min RM",
                     "durationType": "OPEN",
                     "repeatBlock": {
                       "repetitions": 2,
@@ -1119,9 +1119,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "The Max Long Run (2h15)",
+              "name": "La tirada larga máxima (2h15)",
               "sport": "RUNNING",
-              "description": "Longest run of the plan. Do not exceed 2h30 to avoid exhaustion.",
+              "description": "La tirada más larga del plan. No pases de 2h30 para no agotarte.",
               "goalDuration": 8100,
               "goalRpe": 3,
               "workout": {
@@ -1145,20 +1145,20 @@
       ]
     },
     {
-      "name": "Cycle 3: Tapering and Competition",
-      "description": "Progressive reduction of volume (Tapering) to arrive fresh on race day.",
+      "name": "Ciclo 3: puesta a punto y competición",
+      "description": "Reducción progresiva del volumen (tapering) para llegar fresco el día de la carrera.",
       "phase": "TAPER",
       "color": "#f59e0b",
       "weeks": [
         {
           "weekNumber": 10,
-          "theme": "Start of Tapering",
+          "theme": "Inicio de la puesta a punto",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Endurance",
+              "name": "Resistencia aeróbica",
               "sport": "RUNNING",
-              "description": "45 minutes smooth running.",
+              "description": "45 minutos de rodaje suelto.",
               "goalDuration": 2700,
               "goalRpe": 3,
               "workout": {
@@ -1179,9 +1179,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "MP Reminder",
+              "name": "Toque de RM",
               "sport": "RUNNING",
-              "description": "Only 1 block of 20 min at marathon pace to keep the rhythm.",
+              "description": "Un único bloque de 20 min a ritmo maratón para mantener el ritmo.",
               "goalDuration": 3000,
               "goalRpe": 5,
               "workout": {
@@ -1201,7 +1201,7 @@
                     "stepType": "INTERVAL_ACTIVE",
                     "durationType": "TIME",
                     "durationValue": 1200,
-                    "name": "20min MP",
+                    "name": "20 min RM",
                     "targets": [
                       {
                         "targetType": "PACE",
@@ -1225,9 +1225,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Long Run (Decreasing)",
+              "name": "Tirada larga (decreciente)",
               "sport": "RUNNING",
-              "description": "1h30 max. Reducing duration.",
+              "description": "1h30 como máximo. Reducimos la duración.",
               "goalDuration": 5400,
               "goalRpe": 3,
               "workout": {
@@ -1250,13 +1250,13 @@
         },
         {
           "weekNumber": 11,
-          "theme": "Maximum Freshness",
+          "theme": "Máxima frescura",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Easy Jog",
+              "name": "Trote suave",
               "sport": "RUNNING",
-              "description": "40 minutes very cool.",
+              "description": "40 minutos muy suave.",
               "goalDuration": 2400,
               "goalRpe": 2,
               "workout": {
@@ -1277,9 +1277,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Short Speed Reminder",
+              "name": "Toque corto de velocidad",
               "sport": "RUNNING",
-              "description": "A few short accelerations to keep muscle tone (5x 1min fast/1min slow).",
+              "description": "Unas cuantas aceleraciones cortas para mantener el tono muscular (5x 1 min rápido / 1 min lento).",
               "goalDuration": 2400,
               "goalRpe": 4,
               "workout": {
@@ -1297,7 +1297,7 @@
                   },
                   {
                     "stepType": "REPEAT",
-                    "name": "5x 1min/1min",
+                    "name": "5x 1 min/1 min",
                     "durationType": "OPEN",
                     "repeatBlock": {
                       "repetitions": 5,
@@ -1343,9 +1343,9 @@
             },
             {
               "dayOfWeek": 6,
-              "name": "Last Run",
+              "name": "Último rodaje",
               "sport": "RUNNING",
-              "description": "1h00 maximum. No unnecessary fatigue.",
+              "description": "1h00 como máximo. Nada de fatiga innecesaria.",
               "goalDuration": 3600,
               "goalRpe": 3,
               "workout": {
@@ -1368,13 +1368,13 @@
         },
         {
           "weekNumber": 12,
-          "theme": "Marathon Week",
+          "theme": "Semana del maratón",
           "sessions": [
             {
               "dayOfWeek": 2,
-              "name": "Shake-out Run",
+              "name": "Rodaje de soltura",
               "sport": "RUNNING",
-              "description": "30 minutes very slow to spin the legs.",
+              "description": "30 minutos muy lento para soltar las piernas.",
               "goalDuration": 1800,
               "goalRpe": 2,
               "workout": {
@@ -1395,9 +1395,9 @@
             },
             {
               "dayOfWeek": 4,
-              "name": "Total Rest or Walk",
+              "name": "Descanso total o caminar",
               "sport": "RUNNING",
-              "description": "Complete rest advised. Hydrate and eat carbohydrates.",
+              "description": "Se recomienda descanso total. Hidrátate y come hidratos de carbono.",
               "goalDuration": 0,
               "goalRpe": 1,
               "workout": {
@@ -1406,9 +1406,9 @@
             },
             {
               "dayOfWeek": 0,
-              "name": "MARATHON DAY",
+              "name": "DÍA DEL MARATÓN",
               "sport": "RUNNING",
-              "description": "The big day! Start cautiously (7:50/km). Enjoy the atmosphere.",
+              "description": "¡Llegó el gran día! Sal con prudencia (7:50/km). Disfruta del ambiente.",
               "goalDistance": 42195,
               "goalDuration": 19800,
               "goalRpe": 8,
@@ -1418,7 +1418,7 @@
                     "stepType": "STEADY",
                     "durationType": "DISTANCE",
                     "durationValue": 42195,
-                    "name": "Marathon",
+                    "name": "Maratón",
                     "targets": [
                       {
                         "targetType": "PACE",

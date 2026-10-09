@@ -1,6 +1,7 @@
 import { WebPageStructuredData } from '@/components/seo/structured-data';
 import { SITE_URL } from '@/config';
 import { m } from '@/paraglide/messages';
+import { isSupportedLocale, languageAlternates } from '@/utils/locales';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -15,7 +16,7 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  if (locale !== 'en' && locale !== 'fr') {
+  if (!isSupportedLocale(locale)) {
     notFound();
   }
 
@@ -25,11 +26,7 @@ export async function generateMetadata({
     title: m.terms_title(),
     alternates: {
       canonical: canonicalUrl,
-      languages: {
-        en: `${SITE_URL}/terms-of-sale`,
-        fr: `${SITE_URL}/fr/terms-of-sale`,
-        'x-default': `${SITE_URL}/terms-of-sale`,
-      },
+      languages: languageAlternates('/terms-of-sale'),
     },
   };
 }
@@ -41,7 +38,7 @@ export default async function TermsOfSalePage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  if (locale !== 'en' && locale !== 'fr') {
+  if (!isSupportedLocale(locale)) {
     notFound();
   }
   const prefix = locale === 'en' ? '' : `/${locale}`;

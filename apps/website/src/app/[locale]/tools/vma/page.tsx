@@ -8,6 +8,7 @@ import {
 import { VMACalculator } from '@/components/tools/vma-calculator';
 import { SITE_URL } from '@/config';
 import { m } from '@/paraglide/messages';
+import { isSupportedLocale } from '@/utils/locales';
 import { notFound } from 'next/navigation';
 
 import { generateMetadata as generatePageMetadata } from '../../../metadata';
@@ -20,7 +21,7 @@ export async function generateMetadata({
 }) {
   const { locale } = await params;
 
-  if (locale !== 'en' && locale !== 'fr') {
+  if (!isSupportedLocale(locale)) {
     notFound();
   }
 
@@ -58,7 +59,7 @@ export default async function VMACalculatorPage({
   const { locale } = await params;
 
   // Validate locale
-  if (locale !== 'en' && locale !== 'fr') {
+  if (!isSupportedLocale(locale)) {
     notFound();
   }
 

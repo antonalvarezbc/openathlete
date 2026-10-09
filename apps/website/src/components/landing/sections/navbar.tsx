@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { APP_URL } from '@/config';
 import { m } from '@/paraglide/messages';
 import { getLocale } from '@/paraglide/runtime';
+import { DEFAULT_LOCALE, isSupportedLocale } from '@/utils/locales';
 import { cn } from '@/utils/shadcn';
 import { Github, Menu, X } from 'lucide-react';
 import Link from 'next/link';
@@ -20,12 +21,11 @@ export function Navbar() {
 
   // Extract locale from pathname or use current locale
   const pathSegments = pathname.split('/').filter(Boolean);
-  const currentLocale =
-    pathSegments[0] === 'fr' || pathSegments[0] === 'en'
-      ? pathSegments[0]
-      : locale === 'fr'
-        ? 'fr'
-        : 'en';
+  const currentLocale = isSupportedLocale(pathSegments[0])
+    ? pathSegments[0]
+    : isSupportedLocale(locale)
+      ? locale
+      : DEFAULT_LOCALE;
 
   // Build localized home URL - always use explicit locale to avoid middleware rewriting
   const homeUrl = `/${currentLocale}`;

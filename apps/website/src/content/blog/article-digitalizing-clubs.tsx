@@ -6,14 +6,17 @@ export const articleDigitalizingClubs: BlogPost = {
     title: {
       en: 'Digitalizing Your Sports Club: Centralize to Conquer',
       fr: 'Digitaliser votre Club Sportif : Centraliser pour Conquérir',
+      es: 'Digitaliza tu club deportivo: centraliza para ganar',
     },
     description: {
       en: 'Club challenges: lost paper plans, level disparity. Using a platform to push "Template Plans" to groups (Beginner vs Elite) while monitoring individual health.',
       fr: 'Défis des clubs : plans papier perdus, disparité de niveau. Utiliser une plateforme pour pousser des "Plans Modèles" aux groupes (Débutant vs Elite) tout en surveillant la santé individuelle.',
+      es: 'Los retos de los clubes: planes en papel que se pierden y niveles muy dispares. Usa una plataforma para enviar «planes plantilla» a cada grupo (principiante o élite) sin dejar de vigilar la salud de cada miembro.',
     },
     excerpt: {
       en: 'Sports clubs struggle with lost plans, level disparities, and individual monitoring. Learn how digital platforms centralize training while maintaining individual attention.',
       fr: "Les clubs sportifs luttent avec les plans perdus, les disparités de niveau et le suivi individuel. Découvrez comment les plateformes numériques centralisent l'entraînement tout en maintenant l'attention individuelle.",
+      es: 'Los clubes deportivos lidian con planes perdidos, niveles dispares y un seguimiento individual imposible. Descubre cómo una plataforma digital centraliza el entrenamiento sin perder la atención personalizada.',
     },
     author: {
       name: 'OpenAthlete Team',
@@ -289,6 +292,137 @@ export const articleDigitalizingClubs: BlogPost = {
           </a>{' '}
           et découvrez comment la gestion numérique de club fait évoluer votre
           impact tout en maintenant l'attention individuelle.
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          <strong>
+            Tu club de triatlón tiene 50 miembros. Imprimes planes de
+            entrenamiento para tres grupos: principiantes, intermedios y élite.
+            Dos semanas después, la mitad de los miembros ha perdido su plan. La
+            otra mitad te pide ajustes. Te ahogas entre papeles y preguntas.
+          </strong>
+        </p>
+
+        <p>
+          Esta es la realidad de la mayoría de los clubes deportivos. Gestionar
+          el entrenamiento en grupo y, a la vez, atender las necesidades de cada
+          persona es un reto constante. Los planes en papel se pierden. Los
+          miembros de distintos niveles necesitan orientaciones distintas. Y el
+          seguimiento individual se vuelve imposible cuando el grupo crece.
+        </p>
+
+        <h2>El reto de gestionar un club</h2>
+        <p>Los clubes deportivos se enfrentan a retos muy particulares:</p>
+        <ul>
+          <li>
+            <strong>Planes perdidos:</strong> los documentos en papel
+            desaparecen
+          </li>
+          <li>
+            <strong>Niveles dispares:</strong> principiantes y élite necesitan
+            planes diferentes
+          </li>
+          <li>
+            <strong>Seguimiento individual:</strong> no se puede seguir a mano a
+            50 atletas
+          </li>
+          <li>
+            <strong>Comunicación:</strong> las novedades no llegan a todo el
+            mundo
+          </li>
+          <li>
+            <strong>Constancia:</strong> cuesta asegurarse de que todos siguen
+            el plan
+          </li>
+        </ul>
+
+        <p>
+          Las soluciones tradicionales (planes en papel, correos al grupo, hojas
+          de cálculo de Excel) no escalan. Crean más problemas de los que
+          resuelven.
+        </p>
+
+        <h2>La solución digital</h2>
+        <p>OpenAthlete lo resuelve con planes plantilla y gestión de grupos:</p>
+
+        <p>
+          <strong>Planes plantilla:</strong>
+        </p>
+        <ul>
+          <li>Crea un plan para «Principiantes»</li>
+          <li>Crea un plan para «Intermedios»</li>
+          <li>Crea un plan para «Élite»</li>
+          <li>Envía cada plantilla al grupo que corresponda</li>
+          <li>
+            Todos los miembros reciben el plan al instante en sus dispositivos
+          </li>
+        </ul>
+
+        <p>
+          <strong>Seguimiento individual:</strong>
+        </p>
+        <ul>
+          <li>Comprueba qué sesiones completa cada miembro</li>
+          <li>Vigila el RPE y la recuperación</li>
+          <li>Detecta riesgos de sobreentrenamiento</li>
+          <li>Avisa a los entrenadores cuando algo preocupa</li>
+        </ul>
+
+        <p>
+          <strong>Comunicación centralizada:</strong>
+        </p>
+        <ul>
+          <li>Los anuncios llegan a todos los miembros</li>
+          <li>Las conversaciones de grupo siguen ordenadas</li>
+          <li>Los comentarios individuales llegan con su contexto</li>
+        </ul>
+
+        <h2>Un ejemplo real</h2>
+        <p>
+          El Riverside Triathlon Club tenía 60 miembros repartidos en tres
+          niveles. Sus problemas eran:
+        </p>
+        <ul>
+          <li>Planes en papel perdidos (el 30 % de los miembros)</li>
+          <li>Miembros preguntando «¿qué me toca hoy?»</li>
+          <li>Ninguna visibilidad sobre quién entrenaba</li>
+          <li>Señales de lesión que pasaban desapercibidas</li>
+        </ul>
+
+        <p>Después de adoptar OpenAthlete:</p>
+        <ul>
+          <li>Planes plantilla enviados a los tres grupos</li>
+          <li>Todos los miembros recibieron los planes en su reloj</li>
+          <li>Los entrenadores siguieron el grado de cumplimiento</li>
+          <li>La IA avisó de patrones de fatiga</li>
+          <li>Los ajustes individuales se hicieron sin esfuerzo</li>
+        </ul>
+
+        <p>
+          Resultado: un 90 % de cumplimiento del plan (frente al 60 %), ningún
+          plan perdido, mejor prevención de lesiones y miembros más contentos.
+        </p>
+
+        <h2>En resumen</h2>
+        <p>
+          Digitalizar tu club no significa perder el trato personal: significa
+          poder ofrecer atención personal a más gente. Los planes plantilla
+          garantizan la coherencia. El seguimiento individual garantiza la
+          seguridad. La comunicación centralizada garantiza la claridad.
+        </p>
+
+        <p>
+          <strong>Deja de adivinar y empieza hoy a entrenar con IA.</strong>{' '}
+          <a href="https://app.openathlete.org/auth/create-account">
+            Regístrate en OpenAthlete
+          </a>{' '}
+          y descubre cómo la gestión digital del club multiplica tu impacto sin
+          renunciar a la atención individual.
         </p>
       </div>
     );

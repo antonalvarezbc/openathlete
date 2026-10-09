@@ -8,6 +8,7 @@ import {
 import { TrainingPlanPage } from '@/components/training-plan/training-plan-page';
 import { SITE_URL } from '@/config';
 import { loadPlan } from '@/lib/training-plans/plan-loader';
+import { isSupportedLocale, localePrefix } from '@/utils/locales';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
@@ -22,21 +23,23 @@ export async function generateMetadata({
   }>;
 }): Promise<Metadata> {
   const { locale, distance, elevationRange } = await params;
-  if (locale !== 'en' && locale !== 'fr') {
+  if (!isSupportedLocale(locale)) {
     notFound();
   }
 
   try {
     const elevationDisplay = elevationRange;
 
-    const title =
-      locale === 'fr'
-        ? `Plan d'entraînement Trail ${distance} ${elevationDisplay} gratuit | OpenAthlete`
-        : `Free Trail ${distance} ${elevationDisplay} Training Plan | OpenAthlete`;
-    const description =
-      locale === 'fr'
-        ? `Plan d'entraînement gratuit pour trail ${distance} avec ${elevationDisplay} de dénivelé. Plan complet avec conseils et tableau d'entraînement semaine par semaine.`
-        : `Free training plan for trail ${distance} with ${elevationDisplay} elevation gain. Complete plan with tips and week-by-week training schedule.`;
+    const title = {
+      en: `Free Trail ${distance} ${elevationDisplay} Training Plan`,
+      fr: `Plan d'entraînement Trail ${distance} ${elevationDisplay} gratuit`,
+      es: `Plan de entrenamiento gratuito de trail ${distance} ${elevationDisplay}`,
+    }[locale];
+    const description = {
+      en: `Free training plan for trail ${distance} with ${elevationDisplay} elevation gain. Complete plan with tips and week-by-week training schedule.`,
+      fr: `Plan d'entraînement gratuit pour trail ${distance} avec ${elevationDisplay} de dénivelé. Plan complet avec conseils et tableau d'entraînement semaine par semaine.`,
+      es: `Plan de entrenamiento gratuito para trail ${distance} con ${elevationDisplay} de desnivel positivo. Plan completo con consejos y calendario de entrenamiento semana a semana.`,
+    }[locale];
 
     const path = `/training-plans/trail/${distance}/${elevationRange}`;
     const metadata = generatePageMetadata({ locale, title, description, path });
@@ -58,7 +61,7 @@ export default async function TrailTrainingPlanPage({
 }) {
   const { locale, distance, elevationRange } = await params;
 
-  if (locale !== 'en' && locale !== 'fr') {
+  if (!isSupportedLocale(locale)) {
     notFound();
   }
 
@@ -66,20 +69,24 @@ export default async function TrailTrainingPlanPage({
     const planData = await loadPlan('trail', distance, elevationRange, locale);
     const path = `/training-plans/trail/${distance}/${elevationRange}`;
 
-    const pageUrl = `${SITE_URL}${locale === 'en' ? '' : `/${locale}`}${path}`;
+    const pageUrl = `${SITE_URL}${localePrefix(locale)}${path}`;
 
     return (
       <>
         <WebPageStructuredData
           title={
-            locale === 'fr'
-              ? `Plan d'entraînement Trail ${distance} ${elevationRange}`
-              : `Trail ${distance} ${elevationRange} Training Plan`
+            {
+              en: `Trail ${distance} ${elevationRange} Training Plan`,
+              fr: `Plan d'entraînement Trail ${distance} ${elevationRange}`,
+              es: `Plan de entrenamiento de trail ${distance} ${elevationRange}`,
+            }[locale]
           }
           description={
-            locale === 'fr'
-              ? `Plan d'entraînement gratuit pour trail ${distance}`
-              : `Free training plan for trail ${distance}`
+            {
+              en: `Free training plan for trail ${distance}`,
+              fr: `Plan d'entraînement gratuit pour trail ${distance}`,
+              es: `Plan de entrenamiento gratuito para trail ${distance}`,
+            }[locale]
           }
           url={pageUrl}
         />

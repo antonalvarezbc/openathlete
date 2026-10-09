@@ -6,14 +6,17 @@ export const articleExcelIsDead: BlogPost = {
     title: {
       en: 'Excel is Dead: Why Static Spreadsheets Hold Your Athletes Back',
       fr: 'Excel est Mort : Pourquoi les Tableurs Statiques Freinent vos Athlètes',
+      es: 'Excel ha muerto: por qué las hojas de cálculo estáticas frenan a tus atletas',
     },
     description: {
       en: 'Direct comparison: Excel vs modern coaching software. Excel = no notifications, no sync, no auto-analysis. OpenAthlete = alive, interactive, time-saving.',
       fr: "Comparaison directe : Excel vs logiciel de coaching moderne. Excel = pas de notifications, pas de synchronisation, pas d'analyse auto. OpenAthlete = vivant, interactif, gain de temps.",
+      es: 'Comparativa directa: Excel frente a un software de entrenamiento moderno. Excel = sin notificaciones, sin sincronización, sin análisis automático. OpenAthlete = vivo, interactivo y te ahorra tiempo.',
     },
     excerpt: {
       en: "Excel spreadsheets can't notify athletes, sync with watches, or analyze patterns. See how much time you're wasting copying and pasting cells when AI could do it automatically.",
       fr: "Les tableurs Excel ne peuvent pas notifier les athlètes, synchroniser avec les montres ou analyser les modèles. Voyez combien de temps vous perdez à copier et coller des cellules quand l'IA pourrait le faire automatiquement.",
+      es: 'Las hojas de Excel no pueden avisar a tus atletas, sincronizarse con sus relojes ni analizar patrones. Descubre cuánto tiempo pierdes copiando y pegando celdas cuando la IA podría hacerlo automáticamente.',
     },
     author: {
       name: 'OpenAthlete Team',
@@ -208,9 +211,9 @@ export const articleExcelIsDead: BlogPost = {
         </p>
 
         <p>
-          OpenAthlete syncs directly to Garmin, Polar, Polar, and other devices.
-          When you create a plan, it automatically appears on the athlete's
-          watch. No manual entry. No errors. No excuses.
+          OpenAthlete syncs directly to Garmin, Suunto, Polar, and other
+          devices. When you create a plan, it automatically appears on the
+          athlete's watch. No manual entry. No errors. No excuses.
         </p>
 
         <h2>Real-World Comparison</h2>
@@ -470,7 +473,7 @@ export const articleExcelIsDead: BlogPost = {
         </p>
 
         <p>
-          OpenAthlete se synchronise directement avec Garmin, Polar, Polar et
+          OpenAthlete se synchronise directement avec Garmin, Suunto, Polar et
           d'autres appareils. Quand vous créez un plan, il apparaît
           automatiquement sur la montre de l'athlète. Pas d'entrée manuelle. Pas
           d'erreurs. Pas d'excuses.
@@ -537,6 +540,261 @@ export const articleExcelIsDead: BlogPost = {
           athlètes vous remercieront. Votre entreprise vous remerciera. Et vous
           aurez enfin le temps de faire ce pour quoi vous êtes devenu
           coach—coacher.
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          <strong>
+            Es domingo por la noche. Estás copiando y pegando datos de
+            entrenamiento de 15 archivos de Excel distintos en una hoja maestra.
+            Calculas totales semanales, comparas lo previsto con lo realizado,
+            intentas detectar patrones. Tres horas después, has terminado. Y la
+            semana que viene volverás a hacerlo.
+          </strong>
+        </p>
+
+        <p>
+          Esta es la realidad de miles de entrenadores que siguen usando Excel.
+          Pasas horas con tareas que un software resuelve en segundos. Y, lo que
+          es más importante, dejas pasar oportunidades de ayudar a tus atletas
+          porque tus herramientas no están a la altura de lo que exige el
+          entrenamiento actual.
+        </p>
+
+        <h2>El problema de Excel</h2>
+        <p>
+          Excel es potente, pero en el fondo es un{' '}
+          <strong>documento estático</strong>. No puede:
+        </p>
+        <ul>
+          <li>
+            <strong>Avisar a los atletas:</strong> Cuando actualizas un plan,
+            los atletas no se enteran a menos que lo consulten
+          </li>
+          <li>
+            <strong>Sincronizarse con dispositivos:</strong> No importa nada
+            automáticamente desde Garmin, Strava ni otras plataformas
+          </li>
+          <li>
+            <strong>Analizar patrones:</strong> No detecta el
+            sobreentrenamiento, los picos de carga ni los problemas de
+            recuperación
+          </li>
+          <li>
+            <strong>Adaptarse automáticamente:</strong> No recalcula los planes
+            cuando se pierden sesiones
+          </li>
+          <li>
+            <strong>Dar feedback en tiempo real:</strong> Los atletas no pueden
+            ver cómo progresan
+          </li>
+        </ul>
+
+        <p>
+          En la práctica, gestionas el entrenamiento de 2025 con herramientas de
+          1995. El mundo ha avanzado. Tus atletas han avanzado. Ya es hora de
+          que tú también lo hagas.
+        </p>
+
+        <h2>El coste en tiempo</h2>
+        <p>Veamos lo que Excel te cuesta realmente:</p>
+
+        <p>
+          <strong>Por atleta y por semana:</strong>
+        </p>
+        <ul>
+          <li>30 minutos: crear o actualizar el plan de entrenamiento</li>
+          <li>20 minutos: importar y organizar datos de distintas fuentes</li>
+          <li>15 minutos: calcular métricas (carga, volumen, intensidad)</li>
+          <li>10 minutos: comparar lo previsto con lo realizado</li>
+          <li>15 minutos: escribir comentarios y enviar correos</li>
+          <li>
+            <strong>Total: 90 minutos por atleta y semana</strong>
+          </li>
+        </ul>
+
+        <p>
+          Con 20 atletas: <strong>30 horas a la semana</strong> solo en tareas
+          administrativas. Es casi una jornada completa antes siquiera de llegar
+          a la estrategia, la comunicación y el entrenamiento propiamente dicho.
+        </p>
+
+        <p>
+          Con un software de entrenamiento moderno, esto baja a 15-20 minutos
+          por atleta y semana. Las cuentas son sencillas:{' '}
+          <strong>ahorras 70 horas a la semana</strong> con una plantilla de 20
+          atletas. Es tiempo que puedes dedicar a lo que de verdad importa:
+          entrenar.
+        </p>
+
+        <h2>La brecha de comunicación</h2>
+        <p>
+          Excel crea una barrera de comunicación. Cuando actualizas un plan:
+        </p>
+        <ol>
+          <li>Modificas la hoja de cálculo</li>
+          <li>La guardas</li>
+          <li>Se la envías por correo al atleta (o la subes a Google Drive)</li>
+          <li>El atleta revisa su correo</li>
+          <li>El atleta descarga el archivo</li>
+          <li>El atleta lo abre</li>
+          <li>El atleta ve los cambios</li>
+        </ol>
+
+        <p>
+          Son 7 pasos. ¿Y si el atleta no mira el correo? Estará entrenando con
+          un plan desactualizado.
+        </p>
+
+        <p>Con OpenAthlete:</p>
+        <ol>
+          <li>Actualizas el plan</li>
+          <li>El atleta recibe una notificación al instante</li>
+          <li>El plan se sincroniza automáticamente con su reloj</li>
+        </ol>
+
+        <p>
+          Son 3 pasos. Y ocurre al instante. Sin correos. Sin descargas. Sin
+          confusiones.
+        </p>
+
+        <h2>El problema de los datos</h2>
+        <p>
+          Excel no puede importar datos automáticamente. Cada semana, tienes que
+          hacer a mano lo siguiente:
+        </p>
+        <ul>
+          <li>Copiar los datos de ritmo de Strava</li>
+          <li>Pegar la frecuencia cardíaca de Garmin Connect</li>
+          <li>Introducir el RPE a mano (si es que lo registras)</li>
+          <li>Calcular los totales semanales</li>
+          <li>Compararlos con los objetivos</li>
+        </ul>
+
+        <p>
+          Es tedioso, propenso a errores y consume mucho tiempo. Y, sobre todo,
+          significa que siempre estás mirando{' '}
+          <strong>los datos de la semana pasada</strong>, no{' '}
+          <strong>información en tiempo real</strong>.
+        </p>
+
+        <p>
+          OpenAthlete importa automáticamente desde Strava, Garmin,
+          TrainingPeaks y otras plataformas. Los datos llegan en tiempo real.
+          Ves los patrones mientras se forman, no cuando ya se han convertido en
+          problemas.
+        </p>
+
+        <h2>La brecha del análisis</h2>
+        <p>Excel puede calcular totales y medias. Pero no puede:</p>
+        <ul>
+          <li>
+            Detectar cuándo el ACWR (ratio de carga aguda:crónica) supera los
+            umbrales seguros
+          </li>
+          <li>Identificar patrones de RPE que apuntan a sobreentrenamiento</li>
+          <li>
+            Relacionar la calidad del sueño con la evolución del rendimiento
+          </li>
+          <li>Avisarte cuando un atleta necesita que intervengas</li>
+          <li>Sugerir ajustes del plan basados en datos</li>
+        </ul>
+
+        <p>
+          Intentas detectar estos patrones a mano entre filas y columnas. Es
+          como buscar una aguja en un pajar: posible, pero ineficiente y
+          propenso a errores.
+        </p>
+
+        <p>
+          La IA de OpenAthlete analiza todo esto automáticamente. Detecta
+          patrones que podrías pasar por alto. Te avisa de los riesgos antes de
+          que se conviertan en problemas. Sugiere ajustes basados en datos, no
+          en conjeturas.
+        </p>
+
+        <h2>El problema de la sincronización</h2>
+        <p>
+          Tus atletas entrenan con relojes. Esos relojes se sincronizan con
+          apps. ¿Y Excel? Excel está aislado. No hay ningún puente entre tu hoja
+          de cálculo y el reloj de tu atleta.
+        </p>
+
+        <p>
+          Así que los atletas introducen los entrenamientos a mano en el reloj.
+          O entrenan sin estructura porque les resulta demasiado engorroso. En
+          cualquier caso, no están siguiendo tu plan de la mejor manera.
+        </p>
+
+        <p>
+          OpenAthlete se sincroniza directamente con Garmin, Suunto, Polar y
+          otros dispositivos. Cuando creas un plan, aparece automáticamente en
+          el reloj del atleta. Sin introducir nada a mano. Sin errores. Sin
+          excusas.
+        </p>
+
+        <h2>Comparativa real</h2>
+        <p>
+          <strong>Entrenador A (Excel):</strong>
+        </p>
+        <ul>
+          <li>Dedica 30 horas/semana a tareas administrativas</li>
+          <li>Gestiona 20 atletas como máximo</li>
+          <li>Da feedback cada semana (con retraso)</li>
+          <li>Reacciona a los problemas cuando ya han ocurrido</li>
+          <li>Pierde atletas por falta de implicación</li>
+        </ul>
+
+        <p>
+          <strong>Entrenador B (OpenAthlete):</strong>
+        </p>
+        <ul>
+          <li>Dedica 5 horas/semana a tareas administrativas</li>
+          <li>Gestiona 50 atletas con eficacia</li>
+          <li>Da feedback en tiempo real</li>
+          <li>Previene los problemas de forma proactiva</li>
+          <li>Fideliza a sus atletas gracias a un mejor servicio</li>
+        </ul>
+
+        <p>
+          Los mismos conocimientos. La misma pasión. Herramientas distintas.
+          Resultados distintos.
+        </p>
+
+        <h2>En resumen</h2>
+        <p>
+          Excel no es el enemigo. Simplemente se ha quedado anticuado para el
+          entrenamiento moderno. Se diseñó para la contabilidad, no para
+          gestionar atletas. Usar Excel para entrenar a atletas es como usar una
+          máquina de escribir para mandar correos: técnicamente posible, pero
+          ¿para qué?
+        </p>
+
+        <p>
+          Un software de entrenamiento moderno no es un lujo: es una necesidad.
+          Tus atletas esperan actualizaciones en tiempo real, sincronización
+          automática e información basada en datos. Excel no puede ofrecerlo.
+          OpenAthlete, sí.
+        </p>
+
+        <p>
+          La pregunta no es si deberías cambiar. La pregunta es: ¿cuánto tiempo
+          más puedes permitirte perder en tareas que un software hace mejor?
+        </p>
+
+        <p>
+          <strong>Deja de adivinar y empieza hoy a entrenar con IA.</strong>{' '}
+          <a href="https://app.openathlete.org/auth/create-account">
+            Regístrate en OpenAthlete
+          </a>{' '}
+          y recupera las más de 30 horas semanales que dedicas a Excel. Tus
+          atletas te lo agradecerán. Tu negocio te lo agradecerá. Y por fin
+          tendrás tiempo para hacer aquello por lo que te hiciste entrenador:
+          entrenar.
         </p>
       </div>
     );

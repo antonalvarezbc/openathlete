@@ -6,8 +6,22 @@ import {
   WebPageStructuredData,
 } from '@/components/seo/structured-data';
 import { SITE_URL } from '@/config';
-import { getAllPosts, getPostBySlug } from '@/content/blog';
+import {
+  getAllPosts,
+  getPostBySlug,
+  getPostContent,
+  getPostLocales,
+  getPostText,
+} from '@/content/blog';
 import { m } from '@/paraglide/messages';
+import {
+  DEFAULT_LOCALE,
+  SUPPORTED_LOCALES,
+  formatLongDate,
+  isSupportedLocale,
+  languageAlternates,
+  localePrefix,
+} from '@/utils/locales';
 import { ArrowLeft, Calendar, Clock } from 'lucide-react';
 import type { Metadata } from 'next';
 import Image from 'next/image';
@@ -23,7 +37,7 @@ export async function generateMetadata({
   params: Promise<{ locale: string; slug: string }>;
 }): Promise<Metadata> {
   const { locale, slug } = await params;
-  if (locale !== 'en' && locale !== 'fr') {
+  if (!isSupportedLocale(locale)) {
     notFound();
   }
 
@@ -32,15 +46,12 @@ export async function generateMetadata({
     notFound();
   }
 
-  const title =
-    locale === 'fr' ? post.metadata.title.fr : post.metadata.title.en;
-  const description =
-    locale === 'fr'
-      ? post.metadata.description.fr
-      : post.metadata.description.en;
+  const title = getPostText(post.metadata.title, locale);
+  const description = getPostText(post.metadata.description, locale);
+  const postLocales = getPostLocales(post);
 
-  const metadata = generatePageMetadata({ locale });
-  const postUrl = `${SITE_URL}${locale === 'en' ? '' : `/${locale}`}/blog/${slug}`;
+  const metadata = generatePageMetadata({ locale, locales: postLocales });
+  const postUrl = `${SITE_URL}${localePrefix(locale)}/blog/${slug}`;
   // Canonical URL should always point to the English version
   const canonicalUrl = `${SITE_URL}/blog/${slug}`;
 
@@ -77,11 +88,7 @@ export async function generateMetadata({
     },
     alternates: {
       canonical: canonicalUrl,
-      languages: {
-        en: `${SITE_URL}/blog/${slug}`,
-        fr: `${SITE_URL}/fr/blog/${slug}`,
-        'x-default': `${SITE_URL}/blog/${slug}`,
-      },
+      languages: languageAlternates(`/blog/${slug}`, postLocales),
     },
   };
 }
@@ -91,8 +98,9 @@ export async function generateStaticParams() {
   const params: Array<{ locale: string; slug: string }> = [];
 
   for (const post of posts) {
-    params.push({ locale: 'en', slug: post.metadata.slug });
-    params.push({ locale: 'fr', slug: post.metadata.slug });
+    for (const locale of SUPPORTED_LOCALES) {
+      params.push({ locale, slug: post.metadata.slug });
+    }
   }
 
   return params;
@@ -104,7 +112,7 @@ export default async function BlogPostPage({
   params: Promise<{ locale: string; slug: string }>;
 }) {
   const { locale, slug } = await params;
-  if (locale !== 'en' && locale !== 'fr') {
+  if (!isSupportedLocale(locale)) {
     notFound();
   }
 
@@ -113,34 +121,20 @@ export default async function BlogPostPage({
     notFound();
   }
 
-  const title =
-    locale === 'fr' ? post.metadata.title.fr : post.metadata.title.en;
-  const description =
-    locale === 'fr'
-      ? post.metadata.description.fr
-      : post.metadata.description.en;
+  const title = getPostText(post.metadata.title, locale);
+  const description = getPostText(post.metadata.description, locale);
+  // Untranslated posts show the English body, marked as such
+  const TranslatedContent = getPostContent(post, locale);
+  const PostContent = TranslatedContent ?? post.ContentEn;
+  const contentLocale = TranslatedContent ? locale : DEFAULT_LOCALE;
 
-  const postUrl = `${SITE_URL}${locale === 'en' ? '' : `/${locale}`}/blog/${slug}`;
-  const blogUrl = `${SITE_URL}${locale === 'en' ? '' : `/${locale}`}/blog`;
+  const postUrl = `${SITE_URL}${localePrefix(locale)}/blog/${slug}`;
+  const blogUrl = `${SITE_URL}${localePrefix(locale)}/blog`;
 
-  const publishedDate = new Date(post.metadata.publishedAt).toLocaleDateString(
-    locale === 'fr' ? 'fr-FR' : 'en-US',
-    {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    },
-  );
+  const publishedDate = formatLongDate(post.metadata.publishedAt, locale);
 
   const updatedDate = post.metadata.updatedAt
-    ? new Date(post.metadata.updatedAt).toLocaleDateString(
-        locale === 'fr' ? 'fr-FR' : 'en-US',
-        {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        },
-      )
+    ? formatLongDate(post.metadata.updatedAt, locale)
     : null;
 
   // Get related posts (excluding current post)
@@ -163,10 +157,11 @@ export default async function BlogPostPage({
         updatedAt={post.metadata.updatedAt}
         author={post.metadata.author}
         image={post.metadata.image}
+        inLanguage={contentLocale}
       />
       <BreadcrumbListStructuredData
         items={[
-          { name: locale === 'fr' ? 'Accueil' : 'Home', url: SITE_URL },
+          { name: m.blog_breadcrumb_home(), url: SITE_URL },
           { name: m.blog_title(), url: blogUrl },
           { name: title, url: postUrl },
         ]}
@@ -251,8 +246,16 @@ export default async function BlogPostPage({
                   )}
                 </header>
 
-                <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  {locale === 'fr' ? <post.ContentFr /> : <post.ContentEn />}
+                {contentLocale !== locale && (
+                  <p className="mb-8 rounded-lg border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+                    {m.blog_translation_unavailable()}
+                  </p>
+                )}
+                <div
+                  className="prose prose-neutral dark:prose-invert max-w-none"
+                  lang={contentLocale !== locale ? contentLocale : undefined}
+                >
+                  <PostContent />
                 </div>
               </article>
 
@@ -263,14 +266,14 @@ export default async function BlogPostPage({
                   </h2>
                   <div className="space-y-4">
                     {relatedPosts.map((relatedPost) => {
-                      const relatedTitle =
-                        locale === 'fr'
-                          ? relatedPost.metadata.title.fr
-                          : relatedPost.metadata.title.en;
-                      const relatedExcerpt =
-                        locale === 'fr'
-                          ? relatedPost.metadata.excerpt.fr
-                          : relatedPost.metadata.excerpt.en;
+                      const relatedTitle = getPostText(
+                        relatedPost.metadata.title,
+                        locale,
+                      );
+                      const relatedExcerpt = getPostText(
+                        relatedPost.metadata.excerpt,
+                        locale,
+                      );
 
                       return (
                         <Link

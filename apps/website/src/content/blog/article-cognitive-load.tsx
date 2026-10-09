@@ -6,14 +6,17 @@ export const articleCognitiveLoad: BlogPost = {
     title: {
       en: 'Understanding Cognitive Load in Endurance Sports',
       fr: "Comprendre la Charge Cognitive dans les Sports d'Endurance",
+      es: 'Entender la carga cognitiva en los deportes de resistencia',
     },
     description: {
       en: 'Brain/Legs link. How mental fatigue affects performance. How the app notes mental RPE to adapt future sessions.',
       fr: "Lien Cerveau/Jambes. Comment la fatigue mentale affecte les performances. Comment l'app note le RPE mental pour adapter les séances futures.",
+      es: 'El vínculo entre cerebro y piernas. Cómo la fatiga mental afecta al rendimiento. Cómo la app registra el RPE mental para adaptar las próximas sesiones.',
     },
     excerpt: {
       en: 'Mental fatigue directly impacts physical performance. Learn how cognitive load affects endurance and how RPE tracking helps adapt training.',
       fr: "La fatigue mentale impacte directement les performances physiques. Découvrez comment la charge cognitive affecte l'endurance et comment le suivi RPE aide à adapter l'entraînement.",
+      es: 'La fatiga mental repercute directamente en el rendimiento físico. Descubre cómo la carga cognitiva afecta a la resistencia y cómo el seguimiento del RPE ayuda a adaptar el entrenamiento.',
     },
     author: {
       name: 'OpenAthlete Team',
@@ -181,6 +184,84 @@ export const articleCognitiveLoad: BlogPost = {
           </a>{' '}
           et laissez l'IA suivre la charge cognitive et adapter votre
           entraînement en conséquence.
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          <strong>
+            Estás corriendo un ultramaratón. Las piernas responden. Tu
+            frecuencia cardíaca es normal. Pero tu cerebro está agotado. Cada
+            paso te cuesta más de lo que debería. No estás cansado físicamente:
+            sufres fatiga cognitiva.
+          </strong>
+        </p>
+
+        <p>
+          Esto es la carga cognitiva en los deportes de resistencia. La fatiga
+          mental no solo afecta a tu estado de ánimo: repercute directamente en
+          tu rendimiento físico. Entender esta conexión es clave para optimizar
+          el entrenamiento y el rendimiento.
+        </p>
+
+        <h2>La conexión entre cerebro y músculos</h2>
+        <p>
+          Tu sistema nervioso central controla la activación muscular. Cuando
+          estás mentalmente fatigado:
+        </p>
+        <ul>
+          <li>Disminuye el impulso nervioso hacia los músculos</li>
+          <li>Aumenta el esfuerzo percibido</li>
+          <li>Te cuesta más regular el ritmo</li>
+          <li>Disminuye el tiempo hasta el agotamiento</li>
+        </ul>
+
+        <p>
+          Las investigaciones muestran que la fatiga mental puede reducir el
+          rendimiento en resistencia entre un 15 y un 20 % a la misma intensidad
+          fisiológica.
+        </p>
+
+        <h2>Fuentes de carga cognitiva</h2>
+        <p>La carga cognitiva procede de:</p>
+        <ul>
+          <li>El estrés laboral y la toma de decisiones</li>
+          <li>La sobrecarga de información</li>
+          <li>El estrés emocional</li>
+          <li>La falta de sueño</li>
+          <li>Un esfuerzo mental previo</li>
+        </ul>
+
+        <h2>Medir la carga cognitiva</h2>
+        <p>
+          El RPE refleja la carga cognitiva. Cuando tu RPE es alto en relación
+          con tu ritmo y tu frecuencia cardíaca, a menudo se trata de fatiga
+          cognitiva, no física.
+        </p>
+
+        <p>
+          OpenAthlete detecta este patrón y adapta el entrenamiento en
+          consecuencia: reduce la intensidad cuando la carga cognitiva es alta y
+          te deja recuperar cuando lo necesitas.
+        </p>
+
+        <h2>En resumen</h2>
+        <p>
+          La carga cognitiva importa. La fatiga mental afecta al rendimiento. El
+          seguimiento del RPE ayuda a detectarla. La IA ayuda a adaptar el
+          entrenamiento para tenerla en cuenta.
+        </p>
+
+        <p>
+          <strong>Deja de adivinar y empieza hoy a entrenar con IA.</strong>{' '}
+          <a href="https://app.openathlete.org/auth/create-account">
+            Regístrate en OpenAthlete
+          </a>{' '}
+          y deja que la IA siga tu carga cognitiva y adapte tu entrenamiento en
+          consecuencia.
         </p>
       </div>
     );

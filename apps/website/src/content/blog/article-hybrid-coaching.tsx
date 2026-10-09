@@ -6,14 +6,17 @@ export const articleHybridCoaching: BlogPost = {
     title: {
       en: 'Hybrid Coaching: Scaling Your Business with AI',
       fr: "Coaching Hybride : Faire Évoluer votre Business avec l'IA",
+      es: 'Coaching híbrido: haz crecer tu negocio con IA',
     },
     description: {
       en: 'Problem: Coaches cap at 20 athletes. Solution: AI generates structure (80%), coach adds human touch (20%). Result: Coach 50 people better than you coached 20.',
       fr: "Problème : Les coachs plafonnent à 20 athlètes. Solution : L'IA génère la structure (80%), le coach ajoute la touche humaine (20%). Résultat : Coacher 50 personnes mieux que vous n'en coachiez 20.",
+      es: 'Problema: los entrenadores se estancan en 20 atletas. Solución: la IA genera la estructura (80 %) y el entrenador aporta el toque humano (20 %). Resultado: entrenas a 50 personas mejor de lo que entrenabas a 20.',
     },
     excerpt: {
       en: 'Learn how AI handles the repetitive planning tasks (80%) while coaches focus on strategy and relationships (20%). Scale from 20 to 50+ athletes without sacrificing quality.',
       fr: "Découvrez comment l'IA gère les tâches de planification répétitives (80%) pendant que les coachs se concentrent sur la stratégie et les relations (20%). Passez de 20 à 50+ athlètes sans sacrifier la qualité.",
+      es: 'Descubre cómo la IA se encarga de las tareas repetitivas de planificación (80 %) mientras los entrenadores se centran en la estrategia y las relaciones (20 %). Pasa de 20 a más de 50 atletas sin sacrificar la calidad.',
     },
     author: {
       name: 'OpenAthlete Team',
@@ -552,6 +555,278 @@ export const articleHybridCoaching: BlogPost = {
           et découvrez comment le coaching hybride peut faire évoluer votre
           entreprise tout en améliorant les résultats de vos athlètes et votre
           équilibre travail-vie.
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          <strong>
+            Eres un gran entrenador. Tus atletas consiguen resultados. Se corre
+            la voz. Cada vez más atletas quieren trabajar contigo. Pero ya estás
+            al límite: 20 atletas y más de 60 horas a la semana. No puedes
+            aceptar a nadie más sin sacrificar la calidad. Así que rechazas a
+            gente. Tu negocio toca techo.
+          </strong>
+        </p>
+
+        <p>
+          Este es el cuello de botella del coaching. No es falta de demanda: es
+          falta de escalabilidad. El coaching tradicional no escala porque se
+          basa en procesos manuales que consumen mucho tiempo. Pero ¿y si la IA
+          pudiera encargarse del trabajo repetitivo y dejarte libre para
+          centrarte en lo que solo una persona puede hacer?
+        </p>
+
+        <h2>La regla del 80/20</h2>
+        <p>Veamos qué implica realmente entrenar a atletas:</p>
+
+        <p>
+          <strong>El 80 % (repetitivo, basado en datos):</strong>
+        </p>
+        <ul>
+          <li>Calcular la carga y el volumen de entrenamiento</li>
+          <li>Mantener la estructura de periodización</li>
+          <li>Ajustar los planes cuando se pierden sesiones</li>
+          <li>Analizar patrones en los datos</li>
+          <li>Detectar señales de sobreentrenamiento</li>
+          <li>Recalcular la planificación semanal</li>
+          <li>Sincronizar los planes con los dispositivos de los atletas</li>
+        </ul>
+
+        <p>
+          <strong>El 20 % (estratégico, humano):</strong>
+        </p>
+        <ul>
+          <li>Fijar los objetivos y la estrategia a largo plazo</li>
+          <li>Motivar a los atletas en los momentos difíciles</li>
+          <li>Construir relaciones y confianza</li>
+          <li>Entender el contexto más allá de los datos</li>
+          <li>Decidir con criterio en los casos excepcionales</li>
+          <li>Ofrecer apoyo emocional</li>
+          <li>Adaptarse a las necesidades particulares de cada atleta</li>
+        </ul>
+
+        <p>
+          La clave:{' '}
+          <strong>
+            La IA destaca en el 80 %. Las personas destacan en el 20 %.
+          </strong>{' '}
+          El coaching híbrido aprovecha ambos.
+        </p>
+
+        <h2>Cómo funciona el coaching híbrido</h2>
+        <p>Con la plataforma de OpenAthlete impulsada por IA:</p>
+
+        <p>
+          <strong>La IA se encarga de la estructura:</strong> El sistema genera
+          planes de entrenamiento basados en:
+        </p>
+        <ul>
+          <li>Los objetivos y la forma actual del atleta</li>
+          <li>Los principios de periodización</li>
+          <li>Las reglas de sobrecarga progresiva</li>
+          <li>Las necesidades de recuperación</li>
+          <li>El historial de rendimiento</li>
+        </ul>
+
+        <p>
+          <strong>El entrenador aporta la estrategia:</strong> Tú:
+        </p>
+        <ul>
+          <li>Revisas y apruebas los planes generados por la IA</li>
+          <li>Ajustas según los factores propios de cada atleta</li>
+          <li>Fijas las prioridades estratégicas</li>
+          <li>Aportas motivación y contexto</li>
+          <li>Decides con criterio cuando hace falta</li>
+        </ul>
+
+        <p>
+          ¿El resultado? Dedicas un 80 % menos de tiempo a planificar y
+          calcular, pero tus atletas reciben mejores planes, porque la IA nunca
+          olvida los principios de periodización ni comete errores de cálculo.
+        </p>
+
+        <h2>Las cuentas del crecimiento</h2>
+        <p>
+          <strong>Coaching tradicional (20 atletas):</strong>
+        </p>
+        <ul>
+          <li>60 horas/semana en total</li>
+          <li>48 horas/semana de planificación/administración (80 %)</li>
+          <li>12 horas/semana de estrategia/comunicación (20 %)</li>
+          <li>Ingresos: 20 atletas × cuota mensual</li>
+        </ul>
+
+        <p>
+          <strong>Coaching híbrido (50 atletas):</strong>
+        </p>
+        <ul>
+          <li>25 horas/semana en total</li>
+          <li>
+            5 horas/semana de planificación/administración (la IA se encarga del
+            resto)
+          </li>
+          <li>
+            20 horas/semana de estrategia/comunicación (más tiempo para lo que
+            importa)
+          </li>
+          <li>Ingresos: 50 atletas × cuota mensual</li>
+        </ul>
+
+        <p>
+          La misma calidad. 2,5 veces más atletas. 2,5 veces más ingresos. Menos
+          tiempo en total. Ese es el poder del coaching híbrido.
+        </p>
+
+        <h2>La calidad no se resiente: mejora</h2>
+        <p>
+          El miedo a que la IA reduzca la calidad del entrenamiento es
+          comprensible, pero infundado. Te explicamos por qué:
+        </p>
+
+        <p>
+          <strong>La IA elimina el error humano:</strong> Nunca se olvida de
+          tener en cuenta la recuperación. Nunca calcula mal la carga. Nunca
+          pierde el hilo de la periodización. Tus planes ganan en coherencia, no
+          la pierden.
+        </p>
+
+        <p>
+          <strong>La IA vigila las 24 horas:</strong> Mientras duermes, la IA
+          está atenta a las señales de sobreentrenamiento, los picos de carga y
+          los problemas de recuperación. Te avisa antes de que los problemas se
+          conviertan en crisis.
+        </p>
+
+        <p>
+          <strong>Te centras en el trabajo que más valor aporta:</strong> En
+          lugar de pasar horas calculando volúmenes semanales, dedicas tu tiempo
+          a entender a tus atletas, construir relaciones y tomar decisiones
+          estratégicas.
+        </p>
+
+        <p>
+          ¿El resultado? Los atletas reciben mejores planes Y un mejor
+          acompañamiento. La calidad mejora, no empeora.
+        </p>
+
+        <h2>Un ejemplo real</h2>
+        <p>
+          Sarah, entrenadora de triatlón, había tocado techo con 18 atletas.
+          Trabajaba 65 horas a la semana, sobre todo planificando e
+          introduciendo datos. Rechazaba a posibles clientes porque,
+          sencillamente, no podía asumir más.
+        </p>
+
+        <p>Tras pasarse al enfoque híbrido de OpenAthlete:</p>
+        <ul>
+          <li>La IA genera los planes iniciales de todos sus atletas</li>
+          <li>Sarah los revisa y ajusta (15 minutos por atleta a la semana)</li>
+          <li>
+            La IA se encarga de toda la importación y el análisis de datos
+          </li>
+          <li>La IA vigila posibles problemas y avisa a Sarah</li>
+          <li>
+            Sarah se centra en la estrategia, la motivación y las relaciones
+          </li>
+        </ul>
+
+        <p>
+          Resultado: Sarah entrena ahora a 45 atletas en 35 horas a la semana.
+          Sus atletas dicen obtener mejores resultados porque los planes son más
+          coherentes y ella tiene más tiempo para el trabajo estratégico. Sus
+          ingresos se han multiplicado por 2,5. Y su equilibrio entre trabajo y
+          vida personal ha mejorado muchísimo.
+        </p>
+
+        <h2>La ventaja competitiva</h2>
+        <p>
+          Mientras otros entrenadores siguen estancados en 20 atletas, tú puedes
+          llegar a más de 50. Eso te da:
+        </p>
+        <ul>
+          <li>
+            <strong>Margen en los precios:</strong> Puedes ofrecer tarifas
+            competitivas sin renunciar a unos márgenes sanos
+          </li>
+          <li>
+            <strong>Liderazgo en el mercado:</strong> Puedes atender a más
+            atletas que tu competencia
+          </li>
+          <li>
+            <strong>Estabilidad para tu negocio:</strong> Con 50 atletas, perder
+            2 o 3 no hunde tus ingresos
+          </li>
+          <li>
+            <strong>Equilibrio entre trabajo y vida personal:</strong> Trabajas
+            menos horas y ganas más
+          </li>
+        </ul>
+
+        <p>
+          Los entrenadores que se adapten al coaching híbrido dominarán el
+          mercado. Los que no, seguirán estancados en 20 atletas viendo cómo
+          crece su competencia.
+        </p>
+
+        <h2>Cómo hacer la transición</h2>
+        <p>
+          Pasar al coaching híbrido no significa despedirte a ti mismo.
+          Significa:
+        </p>
+        <ol>
+          <li>
+            <strong>Empezar con planes generados por la IA:</strong> Deja que la
+            IA cree la estructura
+          </li>
+          <li>
+            <strong>Revisar y ajustar:</strong> Añade tu visión estratégica
+          </li>
+          <li>
+            <strong>Seguir las alertas de la IA:</strong> Usa la información de
+            la IA para guiar tus decisiones
+          </li>
+          <li>
+            <strong>Centrarte en las relaciones:</strong> Dedica el tiempo que
+            ganas a lo que importa
+          </li>
+          <li>
+            <strong>Crecer poco a poco:</strong> Suma atletas a medida que te
+            sientas cómodo
+          </li>
+        </ol>
+
+        <p>
+          La mayoría de los entrenadores ven resultados durante el primer mes.
+          Al tercer mes, ya entrenan a más atletas en menos tiempo y con mejores
+          resultados.
+        </p>
+
+        <h2>En resumen</h2>
+        <p>
+          El coaching híbrido no consiste en sustituir a los entrenadores, sino
+          en potenciarlos. La IA se encarga del trabajo repetitivo que, de todos
+          modos, no te apetece hacer. Tú te centras en el trabajo estratégico y
+          humano que aporta valor de verdad.
+        </p>
+
+        <p>
+          La pregunta no es si el coaching híbrido funciona: funciona. La
+          pregunta es: ¿cuánto tiempo puedes permitirte seguir estancado en 20
+          atletas cuando podrías entrenar a más de 50?
+        </p>
+
+        <p>
+          <strong>Deja de adivinar y empieza hoy a entrenar con IA.</strong>{' '}
+          <a href="https://app.openathlete.org/auth/create-account">
+            Regístrate en OpenAthlete
+          </a>{' '}
+          y descubre cómo el coaching híbrido puede hacer crecer tu negocio a la
+          vez que mejora los resultados de tus atletas y tu equilibrio entre
+          trabajo y vida personal.
         </p>
       </div>
     );

@@ -1,3 +1,6 @@
+import { SUPPORTED_LOCALES, type SupportedLocale } from '@/utils/locales';
+import type { ReactNode } from 'react';
+
 import { article1 } from './article-1';
 import { article2 } from './article-2';
 import { article3 } from './article-3';
@@ -23,7 +26,7 @@ import { articleSubjectiveScientific } from './article-subjective-scientific';
 import { articleSyncWorkouts } from './article-sync-workouts';
 import { articleTrimp } from './article-trimp';
 import { articleYouthTalentDetection } from './article-youth-talent-detection';
-import type { BlogPost } from './types';
+import type { BlogPost, LocalizedText } from './types';
 
 // Export all blog posts
 export const blogPosts: BlogPost[] = [
@@ -75,4 +78,30 @@ export function getPostsByTag(tag: string): BlogPost[] {
       t.toLowerCase().includes(tag.toLowerCase()),
     ),
   );
+}
+
+const CONTENT_BY_LOCALE = {
+  en: 'ContentEn',
+  fr: 'ContentFr',
+  es: 'ContentEs',
+} as const satisfies Record<SupportedLocale, keyof BlogPost>;
+
+/** The post body in `locale`, or undefined when it is not translated. */
+export function getPostContent(
+  post: BlogPost,
+  locale: SupportedLocale,
+): (() => ReactNode) | undefined {
+  return post[CONTENT_BY_LOCALE[locale]];
+}
+
+/** Locales the post body is written in. */
+export function getPostLocales(post: BlogPost): SupportedLocale[] {
+  return SUPPORTED_LOCALES.filter((locale) => getPostContent(post, locale));
+}
+
+export function getPostText(
+  text: LocalizedText,
+  locale: SupportedLocale,
+): string {
+  return text[locale] ?? text.en;
 }

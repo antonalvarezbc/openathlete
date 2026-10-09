@@ -3,8 +3,14 @@ import { Footer, Navbar } from '@/components/landing/sections';
 import { BreadcrumbListStructuredData } from '@/components/seo/structured-data';
 import { WebPageStructuredData } from '@/components/seo/structured-data';
 import { SITE_URL } from '@/config';
-import { getAllPosts } from '@/content/blog';
+import { getAllPosts, getPostText } from '@/content/blog';
 import { m } from '@/paraglide/messages';
+import {
+  formatLongDate,
+  isSupportedLocale,
+  languageAlternates,
+  localePrefix,
+} from '@/utils/locales';
 import { Calendar, Clock } from 'lucide-react';
 import type { Metadata } from 'next';
 import Image from 'next/image';
@@ -20,7 +26,7 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  if (locale !== 'en' && locale !== 'fr') {
+  if (!isSupportedLocale(locale)) {
     notFound();
   }
 
@@ -33,11 +39,7 @@ export async function generateMetadata({
     description: m.blog_description(),
     alternates: {
       canonical: canonicalUrl,
-      languages: {
-        en: `${SITE_URL}/blog`,
-        fr: `${SITE_URL}/fr/blog`,
-        'x-default': `${SITE_URL}/blog`,
-      },
+      languages: languageAlternates('/blog'),
     },
   };
 }
@@ -49,12 +51,12 @@ export default async function BlogPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  if (locale !== 'en' && locale !== 'fr') {
+  if (!isSupportedLocale(locale)) {
     notFound();
   }
 
   const posts = getAllPosts();
-  const blogUrl = `${SITE_URL}${locale === 'en' ? '' : `/${locale}`}/blog`;
+  const blogUrl = `${SITE_URL}${localePrefix(locale)}/blog`;
 
   return (
     <>
@@ -65,7 +67,7 @@ export default async function BlogPage({
       />
       <BreadcrumbListStructuredData
         items={[
-          { name: locale === 'fr' ? 'Accueil' : 'Home', url: SITE_URL },
+          { name: m.blog_breadcrumb_home(), url: SITE_URL },
           { name: m.blog_title(), url: blogUrl },
         ]}
       />
@@ -92,21 +94,12 @@ export default async function BlogPage({
               ) : (
                 <div className="space-y-8">
                   {posts.map((post) => {
-                    const title =
-                      locale === 'fr'
-                        ? post.metadata.title.fr
-                        : post.metadata.title.en;
-                    const excerpt =
-                      locale === 'fr'
-                        ? post.metadata.excerpt.fr
-                        : post.metadata.excerpt.en;
-                    const publishedDate = new Date(
+                    const title = getPostText(post.metadata.title, locale);
+                    const excerpt = getPostText(post.metadata.excerpt, locale);
+                    const publishedDate = formatLongDate(
                       post.metadata.publishedAt,
-                    ).toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    });
+                      locale,
+                    );
 
                     return (
                       <article

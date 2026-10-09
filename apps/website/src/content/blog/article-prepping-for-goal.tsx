@@ -6,14 +6,17 @@ export const articlePreppingForGoal: BlogPost = {
     title: {
       en: 'Prepping for a Goal: Adapting When Life Happens',
       fr: "Préparer un Objectif : S'Adapter quand la Vie Arrive",
+      es: 'Preparar un objetivo: adaptarse cuando la vida se cruza',
     },
     description: {
       en: 'The problem with rigid PDF plans: "Missed Tuesday due to a meeting, now what?" Discover how dynamic AI rescheduling keeps you on track toward your goals.',
       fr: 'Le problème avec les plans PDF rigides : "Manqué mardi à cause d\'une réunion, maintenant quoi ?" Découvrez comment le rééchelonnement dynamique de l\'IA vous garde sur la voie de vos objectifs.',
+      es: 'El problema de los planes rígidos en PDF: «Me salté el martes por una reunión, ¿y ahora qué?». Descubre cómo la reprogramación dinámica con IA te mantiene en el camino hacia tus objetivos.',
     },
     excerpt: {
       en: 'Life happens. Meetings, travel, illness. Rigid training plans break when reality intervenes. AI-powered dynamic rescheduling adapts your plan instantly, keeping you on track.',
       fr: "La vie arrive. Réunions, voyages, maladie. Les plans d'entraînement rigides se cassent quand la réalité intervient. Le rééchelonnement dynamique alimenté par l'IA adapte votre plan instantanément, vous gardant sur la voie.",
+      es: 'La vida pasa: reuniones, viajes, enfermedades. Los planes de entrenamiento rígidos se rompen en cuanto la realidad se impone. La reprogramación dinámica con IA adapta tu plan al instante y te mantiene en el buen camino.',
     },
     author: {
       name: 'OpenAthlete Team',
@@ -446,6 +449,222 @@ export const articlePreppingForGoal: BlogPost = {
           </a>{' '}
           et découvrez comment le rééchelonnement dynamique vous garde sur la
           voie vers vos objectifs, peu importe ce que la vie vous lance.
+        </p>
+      </div>
+    );
+  },
+  ContentEs: () => {
+    return (
+      <div className="prose prose-neutral dark:prose-invert max-w-none">
+        <p>
+          <strong>
+            Llevas 6 semanas de un plan de maratón de 16. El martes tocaba un
+            rodaje a ritmo tempo, pero tuviste una urgencia en el trabajo. El
+            miércoles tocaba rodaje suave, pero estás de viaje. ¿La tirada larga
+            del jueves? Estás agotado de toda la semana. Tu plan en PDF ya no
+            sirve para nada.
+          </strong>
+        </p>
+
+        <p>
+          Esta es la realidad de entrenar para un objetivo: la vida se cruza. El
+          trabajo, los viajes, la familia, las enfermedades… todo interfiere
+          hasta con el plan mejor pensado. La pregunta no es si tu plan se va a
+          desbaratar. La pregunta es: ¿cómo te adaptas cuando ocurra?
+        </p>
+
+        <h2>El problema de los planes rígidos</h2>
+        <p>
+          Los planes de entrenamiento tradicionales son documentos estáticos:
+        </p>
+        <ul>
+          <li>
+            Semana 1: lunes tempo, miércoles suave, viernes series, domingo
+            tirada larga
+          </li>
+          <li>
+            Semana 2: lunes tempo, miércoles suave, viernes series, domingo
+            tirada larga
+          </li>
+          <li>Semana 3: (el mismo patrón)</li>
+        </ul>
+
+        <p>
+          Cuando te saltas una sesión, el plan no se adapta. Te toca adivinar:
+        </p>
+        <ul>
+          <li>¿Me la salto?</li>
+          <li>¿La paso a mañana?</li>
+          <li>¿Hago dos sesiones el mismo día?</li>
+          <li>¿Cómo afecta esto al resto de la semana?</li>
+          <li>¿Sigo en camino de lograr mi objetivo?</li>
+        </ul>
+
+        <p>
+          Sin respuestas, o abandonas el plan o entrenas mal. Las dos opciones
+          llevan a resultados por debajo de lo que podrías lograr.
+        </p>
+
+        <h2>La solución dinámica</h2>
+        <p>La IA de OpenAthlete lo resuelve con la reprogramación dinámica:</p>
+
+        <p>
+          <strong>Cuando te saltas una sesión:</strong>
+        </p>
+        <ul>
+          <li>La IA recalcula la semana al instante</li>
+          <li>
+            Prioriza las sesiones clave (entrenamientos duros, tiradas largas)
+          </li>
+          <li>Mueve o ajusta las sesiones menos importantes</li>
+          <li>Respeta los principios de periodización</li>
+          <li>Mantiene el calendario hacia tu objetivo</li>
+        </ul>
+
+        <p>
+          <strong>Cuando estás de viaje:</strong>
+        </p>
+        <ul>
+          <li>La IA propone alternativas compatibles con el viaje</li>
+          <li>Ajusta la intensidad según el material disponible</li>
+          <li>Mantiene la carga de entrenamiento pese a las limitaciones</li>
+        </ul>
+
+        <p>
+          <strong>Cuando estás fatigado:</strong>
+        </p>
+        <ul>
+          <li>La IA detecta patrones de RPE elevado</li>
+          <li>Reduce la intensidad automáticamente</li>
+          <li>Añade días de recuperación</li>
+          <li>Retoma la progresión cuando estás listo</li>
+        </ul>
+
+        <h2>Un ejemplo real</h2>
+        <p>Mark llevaba 8 semanas preparando un maratón. Su plan original:</p>
+        <ul>
+          <li>Lunes: descanso</li>
+          <li>Martes: rodaje a ritmo tempo (clave)</li>
+          <li>Miércoles: rodaje suave</li>
+          <li>Jueves: series (clave)</li>
+          <li>Viernes: rodaje suave</li>
+          <li>Sábado: descanso</li>
+          <li>Domingo: tirada larga (clave)</li>
+        </ul>
+
+        <p>
+          La realidad: urgencia en el trabajo el martes, viaje el jueves y
+          agotamiento el viernes.
+        </p>
+
+        <p>
+          <strong>Sin IA:</strong> Mark se habría saltado el martes, habría
+          intentado hacer las series el miércoles (el día equivocado), se habría
+          saltado el jueves y el viernes, y habría intentado la tirada larga del
+          domingo agotado. Resultado: una mala semana, forma perdida y la
+          motivación por los suelos.
+        </p>
+
+        <p>
+          <strong>Con la IA de OpenAthlete:</strong>
+        </p>
+        <ul>
+          <li>Martes: sesión saltada (urgencia en el trabajo)</li>
+          <li>
+            Miércoles: el rodaje tempo pasa a este día (sesión clave conservada)
+          </li>
+          <li>
+            Jueves: rodaje suave compatible con el viaje (mantiene el volumen)
+          </li>
+          <li>Viernes: descanso (recuperación del viaje)</li>
+          <li>Sábado: las series pasan a este día (sesión clave conservada)</li>
+          <li>
+            Domingo: tirada larga ajustada al 80 % (tiene en cuenta la fatiga)
+          </li>
+        </ul>
+
+        <p>
+          Resultado: Mark completó todas las sesiones clave, mantuvo su carga de
+          entrenamiento y siguió en camino hacia su objetivo. El plan se adaptó
+          a la realidad en lugar de romperse.
+        </p>
+
+        <h2>Preservar el objetivo</h2>
+        <p>
+          La idea clave: la reprogramación dinámica preserva tus objetivos.
+          Cuando la vida desbarata tu plan, la IA no renuncia a tu objetivo:
+          busca un nuevo camino para alcanzarlo.
+        </p>
+
+        <p>Piensa en tu objetivo de maratón. Los elementos clave son:</p>
+        <ul>
+          <li>El volumen total de entrenamiento a lo largo de 16 semanas</li>
+          <li>
+            Completar los entrenamientos clave (tempo, series, tiradas largas)
+          </li>
+          <li>Un patrón de sobrecarga progresiva</li>
+          <li>Una buena puesta a punto antes de la carrera</li>
+        </ul>
+
+        <p>
+          Cuando te saltas el rodaje tempo del martes, la IA no dice «objetivo
+          fallido». Se pregunta «¿cómo preservamos estos elementos clave a pesar
+          del imprevisto?». Recalcula, reprograma y te sigue acercando a tu
+          objetivo.
+        </p>
+
+        <h2>La ventaja de la flexibilidad</h2>
+        <p>La reprogramación dinámica te ofrece:</p>
+        <ul>
+          <li>
+            <strong>Menos estrés:</strong> sin culpa por las sesiones perdidas
+          </li>
+          <li>
+            <strong>Constancia:</strong> el entrenamiento continúa pese a los
+            imprevistos
+          </li>
+          <li>
+            <strong>Optimización:</strong> los planes se adaptan a tu vida real
+          </li>
+          <li>
+            <strong>Objetivos cumplidos:</strong> alcanzas tus metas pese a los
+            obstáculos
+          </li>
+        </ul>
+
+        <p>
+          En lugar de abandonar el plan cuando la vida se cruza, te adaptas y
+          sigues adelante. Esa es la diferencia entre lograr un objetivo y
+          quedarse a medio camino.
+        </p>
+
+        <h2>En resumen</h2>
+        <p>
+          La vida va a desbaratar tu entrenamiento. No es una posibilidad: es
+          una certeza. La pregunta es: ¿tienes un plan que se adapta o uno que
+          se rompe?
+        </p>
+
+        <p>
+          Los planes rígidos en PDF se rompen cuando la realidad se impone. Los
+          planes dinámicos con IA se adaptan. Recalculan al instante, conservan
+          las sesiones clave, mantienen la carga de entrenamiento y te mantienen
+          en el camino hacia tus objetivos, pase lo que pase.
+        </p>
+
+        <p>
+          No dejes que un martes perdido descarrile tu objetivo de maratón. No
+          dejes que los viajes acaben con tu constancia. No dejes que la fatiga
+          te obligue a abandonar tu plan.
+        </p>
+
+        <p>
+          <strong>Deja de adivinar y empieza hoy a entrenar con IA.</strong>{' '}
+          <a href="https://app.openathlete.org/auth/create-account">
+            Regístrate en OpenAthlete
+          </a>{' '}
+          y comprueba cómo la reprogramación dinámica te mantiene en el camino
+          hacia tus objetivos, te ponga la vida lo que te ponga por delante.
         </p>
       </div>
     );

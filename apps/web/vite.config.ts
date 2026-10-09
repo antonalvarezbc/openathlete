@@ -4,12 +4,18 @@ import react from '@vitejs/plugin-react-swc';
 import path from 'path';
 import { defineConfig } from 'vite';
 
+import { APP_LOCALE_COOKIE } from './src/utils/locale-cookie';
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     paraglideVitePlugin({
       project: './project.inlang',
       outdir: './src/paraglide',
+      // Not Paraglide's default name: another site under the same parent
+      // domain can set PARAGLIDE_LOCALE for every subdomain, and the first
+      // cookie of that name wins over the one the app sets
+      cookieName: APP_LOCALE_COOKIE,
     }),
     react(),
     tailwindcss(),

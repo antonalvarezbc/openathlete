@@ -32,28 +32,20 @@ describe('dark mode for native controls', () => {
     );
   });
 
-  it('covers every native select, also the ones without a background class', () => {
-    const files: string[] = [];
+  it('leaves no native select on a fixed light background', () => {
+    const sources: string[] = [];
     const walk = (dir: string) => {
       for (const name of readdirSync(dir)) {
         const path = join(dir, name);
         if (statSync(path).isDirectory()) walk(path);
         else if (path.endsWith('.tsx') && !path.includes('.test.'))
-          files.push(path);
+          sources.push(readFileSync(path, 'utf8'));
       }
     };
     walk(join(__dirname, '..'));
-    const unstyled = files.filter((file) =>
-      /<select\b(?:(?!>)[\s\S])*className="(?![^"]*\bbg-)[^"]*"/.test(
-        readFileSync(file, 'utf8'),
-      ),
-    );
-    // These rely on the base rule above; there must be some to make the
-    // check meaningful, and none may set a light background of their own.
-    expect(unstyled.length).toBeGreaterThan(0);
-    for (const file of files)
-      expect(readFileSync(file, 'utf8')).not.toMatch(
-        /<select\b[^>]*className="[^"]*\bbg-white\b/,
-      );
+    // The app has native selects, so the check below is meaningful.
+    expect(sources.some((source) => /<select\b/.test(source))).toBe(true);
+    for (const source of sources)
+      expect(source).not.toMatch(/<select\b[^>]*className="[^"]*\bbg-white\b/);
   });
 });

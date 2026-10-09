@@ -1,10 +1,9 @@
 import { SITE_URL } from '@/config';
-import { getAllPosts } from '@/content/blog';
+import { getAllPosts, getPostLocales } from '@/content/blog';
+import { SUPPORTED_LOCALES } from '@/utils/locales';
 import { existsSync, readdirSync, statSync } from 'fs';
 import type { MetadataRoute } from 'next';
 import { join } from 'path';
-
-const locales = ['en', 'fr'] as const;
 
 /**
  * Recursively scan directory for page.tsx files and return their routes
@@ -87,11 +86,12 @@ function getRouteMetadata(path: string): {
 }
 
 /**
- * Scan the plans directory to find all available training plans
- * Returns an array of route paths like ['/training-plans/running/marathon/4h30', ...]
+ * Scan the plans directory to find all available training plans.
+ * Returns each route (like '/training-plans/running/marathon/4h30') with the
+ * locales it has a plan file for.
  */
-function getTrainingPlanRoutes(): string[] {
-  const routes: string[] = [];
+function getTrainingPlanRoutes(): Map<string, string[]> {
+  const routes = new Map<string, string[]>();
   const plansDir = join(process.cwd(), 'src/lib/training-plans/plans');
 
   if (!existsSync(plansDir)) {
@@ -112,18 +112,19 @@ function getTrainingPlanRoutes(): string[] {
       );
 
       for (const planFile of planFiles) {
-        // Extract distance and variant from filename
-        // Format: {distance}-{variant}.json
-        // Example: marathon-4h30.json, 50km-2000d+.json
-        const fileName = planFile.replace('.json', '');
-        const lastDashIndex = fileName.lastIndexOf('-');
-        if (lastDashIndex === -1) continue;
+        // Format: {distance}-{variant}.{locale}.json, the locale being
+        // optional on legacy English files.
+        // Example: marathon-4h30.fr.json, 50km-2000d+.en.json
+        const match = planFile.match(/^(.+)-([^-]+?)(?:\.([a-z]{2}))?\.json$/);
+        if (!match) continue;
 
-        const distance = fileName.substring(0, lastDashIndex);
-        const variant = fileName.substring(lastDashIndex + 1);
-
+        const [, distance, variant, locale = 'en'] = match;
         const route = `/training-plans/${sport}/${distance}/${variant}`;
-        routes.push(route);
+        const planLocales = routes.get(route) ?? [];
+        if (!planLocales.includes(locale)) {
+          planLocales.push(locale);
+        }
+        routes.set(route, planLocales);
       }
     }
   } catch (error) {
@@ -162,7 +163,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         ? now
         : new Date('2024-01-01');
 
-    for (const locale of locales) {
+    for (const locale of SUPPORTED_LOCALES) {
       const url =
         locale === 'en' ? `${baseUrl}${route}` : `${baseUrl}/${locale}${route}`;
 
@@ -173,7 +174,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         priority: routeMetadata.priority,
         alternates: {
           languages: Object.fromEntries(
-            locales.map((loc) => [
+            SUPPORTED_LOCALES.map((loc) => [
               loc,
               loc === 'en' ? `${baseUrl}${route}` : `${baseUrl}/${loc}${route}`,
             ]),
@@ -184,16 +185,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }
 
   // Add training plan pages (dynamic routes)
-  let trainingPlanRoutes: string[] = [];
+  let trainingPlanRoutes = new Map<string, string[]>();
   try {
     trainingPlanRoutes = getTrainingPlanRoutes();
   } catch (error) {
     console.error('Error getting training plan routes for sitemap:', error);
   }
 
-  for (const route of trainingPlanRoutes) {
+  for (const [route, planLocales] of trainingPlanRoutes) {
     const routeMetadata = getRouteMetadata(route);
-    for (const locale of locales) {
+    // Pages without a plan file in their locale fall back to English: only
+    // list the real translations.
+    const routeLocales = SUPPORTED_LOCALES.filter((locale) =>
+      planLocales.includes(locale),
+    );
+    for (const locale of routeLocales) {
       const url =
         locale === 'en' ? `${baseUrl}${route}` : `${baseUrl}/${locale}${route}`;
 
@@ -204,7 +210,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         priority: routeMetadata.priority,
         alternates: {
           languages: Object.fromEntries(
-            locales.map((loc) => [
+            routeLocales.map((loc) => [
               loc,
               loc === 'en' ? `${baseUrl}${route}` : `${baseUrl}/${loc}${route}`,
             ]),
@@ -223,7 +229,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }
 
   for (const post of blogPosts) {
-    for (const locale of locales) {
+    // Untranslated posts show the English body: only list real translations.
+    const postLocales = getPostLocales(post);
+    for (const locale of postLocales) {
       const url =
         locale === 'en'
           ? `${baseUrl}/blog/${post.metadata.slug}`
@@ -238,7 +246,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         priority: 0.7,
         alternates: {
           languages: Object.fromEntries(
-            locales.map((loc) => [
+            postLocales.map((loc) => [
               loc,
               loc === 'en'
                 ? `${baseUrl}/blog/${post.metadata.slug}`

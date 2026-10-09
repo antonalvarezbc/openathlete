@@ -8,36 +8,50 @@ import {
 import { TrainingPlanPage } from '@/components/training-plan/training-plan-page';
 import { SITE_URL } from '@/config';
 import { loadPlan } from '@/lib/training-plans/plan-loader';
-import { parseTimeTarget } from '@/lib/training-plans/utils/parse-time-target';
+import {
+  formatTimeTarget,
+  parseTimeTarget,
+} from '@/lib/training-plans/utils/parse-time-target';
+import { isSupportedLocale, localePrefix } from '@/utils/locales';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 /* eslint-disable react-refresh/only-export-components */
+// The URL slug is English: Spanish titles name the race in Spanish
+const SPANISH_DISTANCES: Record<string, string> = {
+  marathon: 'maratón',
+  'half-marathon': 'media maratón',
+};
+
+function spanishDistance(distance: string) {
+  return SPANISH_DISTANCES[distance] ?? distance;
+}
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ locale: string; distance: string; timeTarget: string }>;
 }): Promise<Metadata> {
   const { locale, distance, timeTarget } = await params;
-  if (locale !== 'en' && locale !== 'fr') {
+  if (!isSupportedLocale(locale)) {
     notFound();
   }
 
   try {
     const timeInSeconds = parseTimeTarget(timeTarget);
     const timeDisplay =
-      timeInSeconds !== null
-        ? `${Math.floor(timeInSeconds / 3600)}h${Math.floor((timeInSeconds % 3600) / 60)}`
-        : timeTarget;
+      timeInSeconds !== null ? formatTimeTarget(timeInSeconds) : timeTarget;
 
-    const title =
-      locale === 'fr'
-        ? `Plan d'entraînement ${distance} ${timeDisplay} gratuit | OpenAthlete`
-        : `Free ${distance} ${timeDisplay} Training Plan | OpenAthlete`;
-    const description =
-      locale === 'fr'
-        ? `Plan d'entraînement gratuit pour ${distance} en ${timeDisplay}. Plan complet avec conseils et tableau d'entraînement semaine par semaine.`
-        : `Free training plan for ${distance} in ${timeDisplay}. Complete plan with tips and week-by-week training schedule.`;
+    const title = {
+      en: `Free ${distance} ${timeDisplay} Training Plan`,
+      fr: `Plan d'entraînement ${distance} ${timeDisplay} gratuit`,
+      es: `Plan de entrenamiento gratuito para ${spanishDistance(distance)} en ${timeDisplay}`,
+    }[locale];
+    const description = {
+      en: `Free training plan for ${distance} in ${timeDisplay}. Complete plan with tips and week-by-week training schedule.`,
+      fr: `Plan d'entraînement gratuit pour ${distance} en ${timeDisplay}. Plan complet avec conseils et tableau d'entraînement semaine par semaine.`,
+      es: `Plan de entrenamiento gratuito para ${spanishDistance(distance)} en ${timeDisplay}. Plan completo con consejos y calendario de entrenamiento semana a semana.`,
+    }[locale];
 
     const path = `/training-plans/running/${distance}/${timeTarget}`;
     const metadata = generatePageMetadata({ locale, title, description, path });
@@ -55,7 +69,7 @@ export default async function RunningTrainingPlanPage({
 }) {
   const { locale, distance, timeTarget } = await params;
 
-  if (locale !== 'en' && locale !== 'fr') {
+  if (!isSupportedLocale(locale)) {
     notFound();
   }
 
@@ -63,20 +77,24 @@ export default async function RunningTrainingPlanPage({
     const planData = await loadPlan('running', distance, timeTarget, locale);
     const path = `/training-plans/running/${distance}/${timeTarget}`;
 
-    const pageUrl = `${SITE_URL}${locale === 'en' ? '' : `/${locale}`}${path}`;
+    const pageUrl = `${SITE_URL}${localePrefix(locale)}${path}`;
 
     return (
       <>
         <WebPageStructuredData
           title={
-            locale === 'fr'
-              ? `Plan d'entraînement ${distance} ${timeTarget}`
-              : `${distance} ${timeTarget} Training Plan`
+            {
+              en: `${distance} ${timeTarget} Training Plan`,
+              fr: `Plan d'entraînement ${distance} ${timeTarget}`,
+              es: `Plan de entrenamiento ${spanishDistance(distance)} ${timeTarget}`,
+            }[locale]
           }
           description={
-            locale === 'fr'
-              ? `Plan d'entraînement gratuit pour ${distance}`
-              : `Free training plan for ${distance}`
+            {
+              en: `Free training plan for ${distance}`,
+              fr: `Plan d'entraînement gratuit pour ${distance}`,
+              es: `Plan de entrenamiento gratuito para ${spanishDistance(distance)}`,
+            }[locale]
           }
           url={pageUrl}
         />
