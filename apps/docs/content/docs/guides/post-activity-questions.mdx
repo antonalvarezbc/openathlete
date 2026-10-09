@@ -1,0 +1,34 @@
+---
+title: Post-activity questions
+description: Three or four questions after each session, and what the AI notes from the answers.
+---
+
+After a synced or imported activity, OpenAthlete can ask the athlete three or
+four short questions about the session: how it felt, fatigue, sleep, and any
+pain. The questions adapt to the session and to the injuries already logged.
+
+Athletes answer them from the activity. A coach reads the answers on the
+athlete's activity.
+
+## What the AI notes
+
+Once every question is answered, the AI reads the answers and the comment and
+looks for two things:
+
+- **Pain or injury**: where, how bad (out of 10) and whether it is getting
+  worse, stable or better. It goes to the athlete's injury logs (Metrics) and
+  to the coach dashboard's alerts.
+- **RPE**: the perceived effort, when the answers give one. It fills the
+  activity's RPE, which the athlete can still change.
+
+The activity shows what was noted under **Noted by the AI**: the pain it found,
+or that the answers mention none. Editing the answers analyses them again, and
+the new result replaces the previous one.
+
+## Turning it off
+
+The questions and the analysis need AI: the athlete's own key, their coach's,
+or the instance's (see [Self-hosting](/docs/getting-started/self-hosting)).
+The athlete, in Settings > Profile, or their coach, in the athlete's settings,
+can turn off **AI feedback questions and analysis**: nothing is then sent to
+the AI.

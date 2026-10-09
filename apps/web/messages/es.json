@@ -975,7 +975,6 @@
   "or_continue_with": "O continúa con",
   "continue_with_google": "Continuar con Google",
   "continue_with_apple": "Continuar con Apple",
-  "continue_with_apple": "Continuar con Apple",
   "continue_with_github": "Continuar con GitHub",
   "oauth_login_failed": "No se ha podido iniciar sesión mediante OAuth. Inténtalo de nuevo.",
   "oauth_garmin_code_verifier_missing": "No se ha podido completar la conexión con Garmin. Vuelve a intentarlo desde los ajustes.",
@@ -1319,5 +1318,9 @@
   "coach_column_volume": "Volumen",
   "coach_column_form": "Forma/fatiga",
   "coach_form_value": "Frescura {tsb}",
-  "coach_dashboard_nav": "Panel del entrenador"
+  "coach_dashboard_nav": "Panel del entrenador",
+  "activity_ai_notes_title": "Detectado por la IA",
+  "activity_ai_notes_pending": "La IA está leyendo las respuestas…",
+  "activity_ai_notes_none": "No se ha detectado ningún dolor ni lesión en las respuestas.",
+  "activity_ai_notes_pain": "Dolor {score}/10"
 }

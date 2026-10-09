@@ -13,6 +13,8 @@ import {
   AiTask,
 } from '@openathlete/shared';
 
+import { ActivityAiNotes } from './activity-ai-notes';
+
 interface P {
   event: ActivityEvent;
 }
@@ -68,6 +70,11 @@ export function ActivityFeedbackDisplayCard({ event }: P) {
               </p>
             </div>
           ))}
+          {answeredQuestions.length > 0 && (
+            <div className="pt-4 border-t">
+              <ActivityAiNotes event={event} />
+            </div>
+          )}
           {answeredQuestions.length === 0 && !showPaywallAlert && (
             <p className="text-sm text-muted-foreground">
               {m.activity_feedback_no_feedback()}

@@ -17,10 +17,11 @@ import {
 } from '@/components/ui/table';
 import { m } from '@/paraglide/messages';
 import { getPainScoreColor } from '@/utils/color';
+import { injuryStatusLabelMap } from '@/utils/label-map/core';
 import { cn } from '@/utils/shadcn';
 import { format } from 'date-fns';
 
-import { AthleteInjury, INJURY_STATUS } from '@openathlete/shared';
+import { AthleteInjury } from '@openathlete/shared';
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
@@ -28,19 +29,6 @@ interface InjuryLogsTableProps {
   athleteId?: number;
   className?: string;
 }
-
-const getStatusLabel = (status: INJURY_STATUS): string => {
-  switch (status) {
-    case INJURY_STATUS.WORSENING:
-      return m.injury_status_worsening();
-    case INJURY_STATUS.IMPROVING:
-      return m.injury_status_improving();
-    case INJURY_STATUS.STABLE:
-      return m.injury_status_stable();
-    case INJURY_STATUS.RESOLVED:
-      return m.injury_status_resolved();
-  }
-};
 
 export function InjuryLogsTable({
   athleteId,
@@ -125,7 +113,7 @@ export function InjuryLogsTable({
                     {(injury.painScore * 10).toFixed(0)}/10
                   </div>
                 </TableCell>
-                <TableCell>{getStatusLabel(injury.status)}</TableCell>
+                <TableCell>{injuryStatusLabelMap[injury.status]}</TableCell>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <TableCell className="max-w-md truncate">

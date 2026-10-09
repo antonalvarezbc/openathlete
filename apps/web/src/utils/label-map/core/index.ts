@@ -4,3 +4,4 @@ export * from './training-zone-type.label-map';
 export * from './user-role.label-map';
 export * from './connector-provider.label-map';
 export * from './record-type.label-map';
+export * from './injury-status.label-map';

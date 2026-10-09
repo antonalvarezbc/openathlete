@@ -183,6 +183,12 @@ export class ActivityFeedbackExtractionListener {
 
       // Store everything in a transaction
       await this.prisma.$transaction(async (tx) => {
+        // Answers edited later are analysed again: this analysis replaces
+        // what the previous one found, instead of logging the pain twice
+        await tx.athleteInjury.deleteMany({
+          where: { sourceActivityId: eventActivityId },
+        });
+
         // Store injuries
         if (injuries.length > 0) {
           for (const injury of injuries) {
@@ -202,23 +208,24 @@ export class ActivityFeedbackExtractionListener {
           );
         }
 
-        // Update RPE if extracted (the schema bounds it to 0-1)
+        // RPE when extracted (the schema bounds it to 0-1), and the time of
+        // this analysis, so the app can show it found nothing
+        await tx.eventActivity.update({
+          where: { eventActivityId: eventActivityId },
+          data: {
+            feedbackAnalyzedAt: new Date(),
+            ...(rpeResult !== null && { rpe: rpeResult }),
+          },
+        });
         if (rpeResult !== null) {
-          await tx.eventActivity.update({
-            where: { eventActivityId: eventActivityId },
-            data: { rpe: rpeResult },
-          });
           this.logger.log(
             `✓ Updated RPE to ${rpeResult} for activity ${eventActivityId}`,
           );
-
-          // Notify calendar via WebSocket that activity was updated
-          this.calendarWebSocketService.notifyActivityProcessed(
-            eventId,
-            athleteId,
-          );
         }
       });
+
+      // The activity's page shows what the analysis found
+      this.calendarWebSocketService.notifyActivityProcessed(eventId, athleteId);
 
       this.logger.log(
         `✓ Completed feedback extraction for activity ${eventActivityId}`,

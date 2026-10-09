@@ -70,6 +70,7 @@ export const EVENT_INCLUDES = {
       equipmentId: true,
       isRace: true,
       feedbackSkipped: true,
+      feedbackAnalyzedAt: true,
       equipment: {
         select: {
           equipmentId: true,
@@ -119,6 +120,16 @@ export const EVENT_INCLUDES = {
           answerText: true,
           createdAt: true,
           updatedAt: true,
+        },
+      },
+      extractedInjuries: {
+        orderBy: { painScore: 'desc' as const },
+        select: {
+          athleteInjuryId: true,
+          location: true,
+          painScore: true,
+          context: true,
+          status: true,
         },
       },
     },

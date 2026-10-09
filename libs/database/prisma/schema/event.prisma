@@ -188,6 +188,8 @@ model EventActivity {
   averageNormalizedSpeed Float?             @map("average_normalized_speed")
   /// Whether the user skipped the post-activity feedback flow
   feedbackSkipped        Boolean            @default(false) @map("feedback_skipped")
+  /// When the AI last read the feedback answers for pain and RPE (null: not yet)
+  feedbackAnalyzedAt     DateTime?          @map("feedback_analyzed_at")
 
   // relationships
   event               Event                       @relation(fields: [eventId], references: [eventId])

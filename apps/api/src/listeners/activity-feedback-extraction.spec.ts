@@ -33,7 +33,7 @@ function setup() {
     ],
   };
   const tx = {
-    athleteInjury: { create: jest.fn() },
+    athleteInjury: { create: jest.fn(), deleteMany: jest.fn() },
     eventActivity: { update: jest.fn() },
   };
   const prisma = {
@@ -50,7 +50,8 @@ function setup() {
   };
   const resolver = { tryResolveForAthlete: jest.fn().mockResolvedValue(model) };
   const ai = {
-    generateObject: jest.fn(async (agent: { id: string }) =>
+    // Typed loosely so a test can make the agents find nothing
+    generateObject: jest.fn(async (agent: { id: string }): Promise<unknown> =>
       agent.id === 'extract-injury'
         ? {
             injuries: [
@@ -112,9 +113,34 @@ describe('ActivityFeedbackExtractionListener', () => {
     });
     expect(tx.eventActivity.update).toHaveBeenCalledWith({
       where: { eventActivityId: 10 },
-      data: { rpe: 0.8 },
+      data: { rpe: 0.8, feedbackAnalyzedAt: expect.any(Date) },
     });
     expect(calendar.notifyActivityProcessed).toHaveBeenCalledWith(30, 2);
+  });
+
+  it('records an analysis that found nothing, so the app can say so', async () => {
+    const { tx, ai, calendar, run } = setup();
+    ai.generateObject.mockImplementation(async (agent: { id: string }) =>
+      agent.id === 'extract-injury' ? { injuries: [] } : { extractedRpe: null },
+    );
+    await run();
+    expect(tx.athleteInjury.create).not.toHaveBeenCalled();
+    expect(tx.eventActivity.update).toHaveBeenCalledWith({
+      where: { eventActivityId: 10 },
+      data: { feedbackAnalyzedAt: expect.any(Date) },
+    });
+    expect(calendar.notifyActivityProcessed).toHaveBeenCalledWith(30, 2);
+  });
+
+  it('replaces what an earlier analysis of the activity found', async () => {
+    const { tx, run } = setup();
+    await run('rpe_comment_updated');
+    expect(tx.athleteInjury.deleteMany).toHaveBeenCalledWith({
+      where: { sourceActivityId: 10 },
+    });
+    expect(
+      tx.athleteInjury.deleteMany.mock.invocationCallOrder[0],
+    ).toBeLessThan(tx.athleteInjury.create.mock.invocationCallOrder[0]);
   });
 
   it.each([

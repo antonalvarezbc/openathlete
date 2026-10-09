@@ -2,6 +2,7 @@ import {
   type ActivityFeedbackQuestion as PrismaActivityFeedbackQuestion,
   type ActivitySegment as PrismaActivitySegment,
   type Athlete as PrismaAthlete,
+  type AthleteInjury as PrismaAthleteInjury,
   type AthleteSettings as PrismaAthleteSettings,
   ConnectorProvider as PrismaConnectorProvider,
   type Cycle as PrismaCycle,
@@ -24,7 +25,12 @@ import {
   type WorkoutStepTarget as PrismaWorkoutStepTarget,
 } from '@openathlete/database';
 
-import { EQUIPMENT_TYPE, EVENT_TYPE, SPORT_TYPE } from '../types/misc';
+import {
+  EQUIPMENT_TYPE,
+  EVENT_TYPE,
+  INJURY_STATUS,
+  SPORT_TYPE,
+} from '../types/misc';
 
 export type UserRole = PrismaUserRole;
 
@@ -99,6 +105,12 @@ export interface ActivitySegment extends PrismaActivitySegment {
 
 export type ActivityFeedbackQuestion = PrismaActivityFeedbackQuestion;
 
+/** Pain the AI read in the athlete's answers about an activity. */
+export type ActivityInjuryNote = Pick<
+  PrismaAthleteInjury,
+  'athleteInjuryId' | 'location' | 'painScore' | 'context'
+> & { status: INJURY_STATUS };
+
 export type ActivityEvent = Omit<
   PrismaEvent,
   'type' | 'activity' | 'training' | 'competition' | 'note'
@@ -110,6 +122,7 @@ export type ActivityEvent = Omit<
     equipment?: Equipment;
     segments?: ActivitySegment[];
     feedbackQuestions?: ActivityFeedbackQuestion[];
+    extractedInjuries?: ActivityInjuryNote[];
   };
 
 export type Event =

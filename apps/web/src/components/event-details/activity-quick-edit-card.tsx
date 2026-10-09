@@ -19,6 +19,8 @@ import { z } from 'zod';
 
 import { ActivityEvent, AiTask } from '@openathlete/shared';
 
+import { ActivityAiNotes } from './activity-ai-notes';
+
 const quickEditSchema = z.object({
   description: z.string().optional(),
   rpe: z.number().min(0).max(1).optional().nullable(),
@@ -143,18 +145,21 @@ export function ActivityQuickEditCard({
                   </Button>
                 </div>
               ) : allAnswered ? (
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                  <p className="text-sm text-muted-foreground">
-                    {m.activity_feedback_completed_via_questions()}
-                  </p>
-                  <Button
-                    onClick={handleEditFeedback}
-                    variant="outline"
-                    size="sm"
-                    className="w-full sm:w-auto"
-                  >
-                    {m.activity_feedback_edit()}
-                  </Button>
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <p className="text-sm text-muted-foreground">
+                      {m.activity_feedback_completed_via_questions()}
+                    </p>
+                    <Button
+                      onClick={handleEditFeedback}
+                      variant="outline"
+                      size="sm"
+                      className="w-full sm:w-auto"
+                    >
+                      {m.activity_feedback_edit()}
+                    </Button>
+                  </div>
+                  <ActivityAiNotes event={event} />
                 </div>
               ) : null}
             </div>

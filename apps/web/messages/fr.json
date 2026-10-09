@@ -975,7 +975,6 @@
   "or_continue_with": "Ou continuer avec",
   "continue_with_google": "Continuer avec Google",
   "continue_with_apple": "Continuer avec Apple",
-  "continue_with_apple": "Continuer avec Apple",
   "continue_with_github": "Continuer avec GitHub",
   "oauth_login_failed": "Échec de la connexion OAuth. Veuillez réessayer.",
   "oauth_garmin_code_verifier_missing": "La connexion Garmin n'a pas pu être finalisée. Veuillez réessayer depuis les paramètres.",
@@ -1319,5 +1318,9 @@
   "coach_column_volume": "Volume",
   "coach_column_form": "Forme/fatigue",
   "coach_form_value": "Fraîcheur {tsb}",
-  "coach_dashboard_nav": "Tableau de bord coach"
+  "coach_dashboard_nav": "Tableau de bord coach",
+  "activity_ai_notes_title": "Relevé par l'IA",
+  "activity_ai_notes_pending": "L'IA lit les réponses…",
+  "activity_ai_notes_none": "Aucune douleur ni blessure relevée dans les réponses.",
+  "activity_ai_notes_pain": "Douleur {score}/10"
 }
