@@ -1,4 +1,5 @@
 import { athleteKeys } from '@/api/athlete/athlete.keys';
+import { useUserRoles } from '@/contexts/auth';
 import {
   MutationOptions,
   QueryOptions,
@@ -16,15 +17,21 @@ import { coachKeys } from './coach.keys';
 export function useCoachDashboardQuery(
   start?: Date,
   end?: Date,
-  options?: UseQueryOptions<CoachDashboardResponseDto>,
+  options?: Omit<
+    UseQueryOptions<CoachDashboardResponseDto>,
+    'queryKey' | 'queryFn' | 'enabled'
+  > & { enabled?: boolean },
 ) {
   const startIso = start?.toISOString();
   const endIso = end?.toISOString();
+  // Refused by the API without the coach role, like the coached athletes.
+  const isCoach = !!useUserRoles()?.includes('COACH');
   return useQuery<CoachDashboardResponseDto>({
     queryKey: coachKeys.dashboard(startIso, endIso),
     queryFn: () => CoachAPI.getDashboard(start, end),
     staleTime: 60 * 1000,
     ...options,
+    enabled: isCoach && (options?.enabled ?? true),
   });
 }
 

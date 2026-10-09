@@ -43,7 +43,8 @@ import { SettingsSection } from './settings-section';
 
 export function AthletesTab() {
   const { manualGarminSync } = useInstallationFeatures();
-  const { data: athletes, isPending: isLoadingAthletes } =
+  // isLoading, not isPending: without the coach role the query never runs.
+  const { data: athletes, isLoading: isLoadingAthletes } =
     useGetMyCoachedAthletesQuery();
   const nav = useNavigate();
   const [alertsAthleteId, setAlertsAthleteId] = useState<number | null>(null);

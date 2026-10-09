@@ -1,6 +1,8 @@
+import { useUserRoles } from '@/contexts/auth';
 import {
   MutationOptions,
   QueryOptions,
+  UseQueryOptions,
   useMutation,
   useQuery,
   useQueryClient,
@@ -19,13 +21,21 @@ export const useGetMyAthleteQuery = (
   });
 
 export const useGetMyCoachedAthletesQuery = (
-  opt?: QueryOptions<Awaited<ReturnType<typeof AthleteAPI.getCoachedAthletes>>>,
-) =>
-  useQuery({
+  opt?: Omit<
+    UseQueryOptions<Awaited<ReturnType<typeof AthleteAPI.getCoachedAthletes>>>,
+    'queryKey' | 'queryFn' | 'enabled'
+  > & { enabled?: boolean },
+) => {
+  // The API refuses this list without the coach role (athlete-only
+  // accounts): callers get no data, the same as having no athletes.
+  const isCoach = !!useUserRoles()?.includes('COACH');
+  return useQuery({
     ...opt,
     queryFn: AthleteAPI.getCoachedAthletes,
     queryKey: [athleteKeys.getCoachedAthletes],
+    enabled: isCoach && (opt?.enabled ?? true),
   });
+};
 
 export const useGetMyCoachesQuery = (
   opt?: QueryOptions<Awaited<ReturnType<typeof AthleteAPI.getMyCoaches>>>,
