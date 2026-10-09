@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useAuthContext } from '@/contexts/auth';
 import { m } from '@/paraglide/messages';
 import { getPath } from '@/routes/paths';
+import { currentLanguage } from '@/utils/language-choice';
 import { localizedNewPasswordSchema } from '@/utils/password';
 import { RETURN_TO_PARAM, rememberReturnTo } from '@/utils/return-to';
 import { cn } from '@/utils/shadcn';
@@ -112,6 +113,8 @@ export function CreateAccountView({ className }: React.ComponentProps<'form'>) {
       ...data,
       invitationToken: invitationToken || undefined,
       coachInvitationToken: coachInvitationToken || undefined,
+      // Emails, starting with the welcome one, follow the app's language
+      language: currentLanguage(),
     };
     createAccountMutation.mutate(submitData);
   });

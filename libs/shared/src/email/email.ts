@@ -1,4 +1,9 @@
-export type EmailLanguage = 'FR' | 'EN' | 'IT' | 'ES';
+import { z } from 'zod';
+
+/** A user's saved language, which their emails are written in. */
+export const emailLanguageSchema = z.enum(['FR', 'EN', 'IT', 'ES']);
+
+export type EmailLanguage = z.infer<typeof emailLanguageSchema>;
 
 const emailSubjects: {
   'password-reset': Record<EmailLanguage, string>;

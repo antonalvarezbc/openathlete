@@ -4,7 +4,7 @@ import { act } from 'react';
 import { type Root, createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { TRAINING_ZONE_TYPE } from '@openathlete/shared';
+import { SPORT_TYPE, TRAINING_ZONE_TYPE } from '@openathlete/shared';
 
 import { TrainingZoneBulkEditor } from './training-zone-bulk-editor';
 
@@ -136,6 +136,10 @@ describe('TrainingZoneBulkEditor', () => {
     [...container.querySelectorAll('[data-testid=hr-zone-preview]')].map(
       (item) => item.textContent,
     );
+  const sportSelectors = () =>
+    [...container.querySelectorAll('[role=combobox]')].map((item) =>
+      item.textContent?.trim(),
+    );
   const saveDisabled = () => button('save').disabled;
   const alerts = () =>
     [...document.body.querySelectorAll('[role=alert]')].map(
@@ -179,6 +183,16 @@ describe('TrainingZoneBulkEditor', () => {
       { name: 'zone_4', min: 160, max: 179 },
       { name: 'zone_5', min: 180, max: 200 },
     ]);
+  });
+
+  it('starts new zones with every sport, shown as "All sports"', async () => {
+    await render();
+    expect(sportSelectors()).toEqual(Array(6).fill('all_sports'));
+
+    await save();
+    expect(api.post).toHaveBeenCalledTimes(6);
+    for (const [, body] of api.post.mock.calls)
+      expect(body.sports).toEqual(Object.values(SPORT_TYPE));
   });
 
   it('calculates the reserve from the resting heart rate', async () => {
@@ -264,6 +278,7 @@ describe('TrainingZoneBulkEditor', () => {
     expect(field('zones-hr-max')).toBeNull();
     expect(container.textContent).not.toContain('hr_zones_percentage_help');
     expect(field('zone-0-min')!.value).toBe('100');
+    expect(sportSelectors()).toEqual(Array(5).fill('sport_running'));
 
     await click('percent_of_max_heart_rate');
     expect(field('zone-0-min')!.value).toBe('50');

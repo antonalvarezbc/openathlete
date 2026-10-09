@@ -13,6 +13,7 @@
   "statistics_of": "Estadísticas de {firstName} {lastName}",
   "calendar_of_athlete": "Calendario de {firstName} {lastName} de {month}",
   "all_sports": "Todos los deportes",
+  "all_sports_except": "Todos los deportes excepto {sports}",
   "no_records_found": "No hay marcas personales {sport}",
   "planned_done": "Planificado + realizado",
   "planned": "Planificado",

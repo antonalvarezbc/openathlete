@@ -1,7 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
-import { ApiEnvSchemaType } from '@openathlete/shared';
+import { ApiEnvSchemaType, EmailId } from '@openathlete/shared';
 
 import { SendEmailEvent } from 'src/events';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
@@ -49,11 +49,12 @@ function setup(env: Record<string, string> = {}) {
       lastName: 'Lopez',
       ...extra,
     });
-  const emailsTo = () =>
+  const emails = () =>
     emitter.emit.mock.calls
       .filter(([slug]) => slug === SendEmailEvent.SLUG)
-      .map(([, event]) => (event as { payload: { to: string } }).payload.to);
-  return { prisma, signUp, emailsTo };
+      .map(([, event]) => (event as SendEmailEvent<EmailId>).payload);
+  const emailsTo = () => emails().map((email) => email.to);
+  return { prisma, signUp, emails, emailsTo };
 }
 
 describe('sign-up notification', () => {
@@ -105,5 +106,29 @@ describe('sign-up mode', () => {
       prisma.user.count.mockResolvedValue(0);
       await expect(signUp()).resolves.toEqual({ userId: 42 });
     }
+  });
+});
+
+describe('sign-up language', () => {
+  it('saves the language the app was shown in and welcomes in it', async () => {
+    const { signUp, prisma, emails } = setup();
+    await signUp({ language: 'ES' });
+    expect(prisma.user.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ language: 'ES' }),
+      }),
+    );
+    expect(emails()).toEqual([
+      expect.objectContaining({ type: 'welcome', language: 'ES' }),
+    ]);
+  });
+
+  it('keeps the default language when the app sends none', async () => {
+    const { signUp, prisma } = setup();
+    await signUp();
+    const { data } = prisma.user.create.mock.calls[0][0] as {
+      data: { language?: string };
+    };
+    expect(data.language).toBeUndefined();
   });
 });

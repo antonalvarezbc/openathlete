@@ -181,6 +181,27 @@ html[data-capacitor-platform='android'] {
   body {
     @apply bg-background text-foreground;
   }
+  /* Native controls (dropdown lists, date pickers, scrollbars) follow the
+     theme. next-themes also sets it, but only once its script has run. */
+  :root {
+    color-scheme: light;
+  }
+  .dark {
+    color-scheme: dark;
+  }
+  /* Native dropdowns get the theme colours. Without a background of their
+     own, some browsers (Firefox on Linux) draw the list in the system's light
+     colours while the text inherits the light text of the dark theme: white
+     on white. Utility classes on a select still take precedence. */
+  select {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+  option,
+  optgroup {
+    background-color: var(--popover);
+    color: var(--popover-foreground);
+  }
 }
 
 /* Hide scrollbar utility */

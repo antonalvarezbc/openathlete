@@ -3,8 +3,10 @@ import { getPath } from '@/routes/paths';
 import { isValidToken } from '@/utils/auth';
 import { isNetworkError } from '@/utils/axios';
 import { signOutFirebase } from '@/utils/firebase-auth';
+import { saveLanguageChoice } from '@/utils/language-choice';
 import { ACCESS_TOKEN, clear, getItem, setItem } from '@/utils/local-storage';
 import { initializePushNotifications } from '@/utils/push-notifications';
+import { queryClient } from '@/utils/query-client';
 import posthog from 'posthog-js';
 import { useCallback, useEffect, useMemo, useReducer } from 'react';
 
@@ -86,18 +88,7 @@ export function AuthProvider({ children }: Props) {
 
         const user = await UserAPI.getMe();
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlLang = urlParams.get('lang');
-        if (urlLang && ['fr', 'en', 'it', 'es'].includes(urlLang)) {
-          const language = urlLang.toUpperCase() as 'FR' | 'EN' | 'IT' | 'ES';
-          if (user.language !== language) {
-            try {
-              await UserAPI.updateLanguage(language);
-            } catch (error) {
-              console.error('Failed to update language:', error);
-            }
-          }
-        }
+        await saveLanguageChoice(user.language);
 
         posthog.identify(user.userId.toString(), {
           roles: user.roles,
@@ -127,18 +118,7 @@ export function AuthProvider({ children }: Props) {
         try {
           const user = await UserAPI.getMe();
 
-          const urlParams = new URLSearchParams(window.location.search);
-          const urlLang = urlParams.get('lang');
-          if (urlLang && ['fr', 'en', 'it', 'es'].includes(urlLang)) {
-            const language = urlLang.toUpperCase() as 'FR' | 'EN' | 'IT' | 'ES';
-            if (user.language !== language) {
-              try {
-                await UserAPI.updateLanguage(language);
-              } catch (error) {
-                console.error('Failed to update language:', error);
-              }
-            }
-          }
+          await saveLanguageChoice(user.language);
 
           posthog.identify(user.userId.toString(), {
             roles: user.roles,
@@ -177,6 +157,10 @@ export function AuthProvider({ children }: Props) {
     posthog.capture('user_logged_out');
     posthog.reset();
     clear();
+    // The cache outlives an in-app logout. The next account to sign in on
+    // this tab would get this one's data, including the profile that tells
+    // the guard whether to send a new account to the onboarding.
+    queryClient.clear();
     signOutFirebase().catch((error) => {
       console.error('Failed to sign out Firebase:', error);
     });
